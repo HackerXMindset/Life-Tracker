@@ -6,7 +6,7 @@ Built with Kotlin and Jetpack Compose. All data stays on the phone.
 
 ## Status
 
-Step 1 of the plan: the app skeleton. Five tabs (Timeline, Food, Habits, Money, Stats), where Timeline shows sample entries and the others describe what is coming. The database and real logging are step 2.
+Step 2 of the plan: a real on-phone database (Room/SQLite) and a working Log button. Timeline lets you pick a day, log an activity with start and end times (or just a moment), see daily study time against an 8h goal, and tap an entry to delete it. The Food, Habits, Money and Stats tabs are still placeholders.
 
 ## Installing on your phone
 
