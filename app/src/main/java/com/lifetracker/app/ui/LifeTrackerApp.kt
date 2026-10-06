@@ -1,0 +1,105 @@
+package com.lifetracker.app.ui
+
+import androidx.annotation.DrawableRes
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.lifetracker.app.R
+
+enum class Tab(val title: String, @DrawableRes val icon: Int) {
+    Timeline("Timeline", R.drawable.ic_tab_timeline),
+    Food("Food", R.drawable.ic_tab_food),
+    Habits("Habits", R.drawable.ic_tab_habits),
+    Money("Money", R.drawable.ic_tab_money),
+    Stats("Stats", R.drawable.ic_tab_stats),
+}
+
+@Composable
+fun LifeTrackerApp() {
+    var tab by rememberSaveable { mutableStateOf(Tab.Timeline) }
+
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        bottomBar = {
+            NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
+                Tab.entries.forEach { item ->
+                    NavigationBarItem(
+                        selected = tab == item,
+                        onClick = { tab = item },
+                        icon = { Icon(painter = painterResource(item.icon), contentDescription = null) },
+                        label = { Text(item.title) },
+                    )
+                }
+            }
+        },
+    ) { padding ->
+        Box(modifier = Modifier.padding(padding).fillMaxSize()) {
+            when (tab) {
+                Tab.Timeline -> TimelineScreen()
+                else -> ComingNextScreen(tab)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ComingNextScreen(tab: Tab) {
+    val text = when (tab) {
+        Tab.Food -> "Meals, calories and macros against your goals, plus water. It will import your OpenNutriTracker export."
+        Tab.Habits -> "A 14-day grid, streaks and totals for each habit. It will import your Streak backup."
+        Tab.Money -> "Income by source, spending by category and the monthly net."
+        Tab.Stats -> "Pick any metric and see it by day, week, month or year, with a heatmap and short insights."
+        Tab.Timeline -> ""
+    }
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp),
+    ) {
+        item {
+            ScreenHeader(label = tab.title, badge = "Not built yet", title = tab.title)
+        }
+        item {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+            ) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Coming next",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(text = text, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+    }
+}
