@@ -45,4 +45,13 @@ class DataSources(context: Context) {
     var lastBackupText: String?
         get() = prefs.getString("last_backup_text", null)
         set(value) = prefs.edit().putString("last_backup_text", value).apply()
+
+    /** The `exportedAt` stamp of the newest Streak backup already imported. */
+    var streakSeenExportedAt: String?
+        get() = prefs.getString("streak_seen_exported_at", null)
+        set(value) = prefs.edit().putString("streak_seen_exported_at", value).apply()
+
+    var lastStreakImportText: String?
+        get() = prefs.getString("last_streak_import", null)
+        set(value) = prefs.edit().putString("last_streak_import", value).apply()
 }

@@ -108,19 +108,25 @@ fun DataSourcesScreen(onBack: () -> Unit, vm: DataSourcesViewModel = viewModel()
         item {
             SourceCard(
                 title = "Streak",
-                description = "Where Streak saves its backups. The newest one will be imported in the Habits step.",
+                description = "Where Streak saves its backups. When you open the app, the newest one is imported: " +
+                    "habits, notes, to-dos, and focus sessions, which appear on your Timeline. " +
+                    "Nothing in Streak is changed, and importing twice never doubles anything.",
                 folderName = state.streakFolder,
                 onChoose = { pickStreak.launch(startHint("Streak")) },
             ) {
                 if (state.streakFolder != null) {
                     NewestFile(state.streakNewest, "No Streak backup found in this folder.")
+                    Detail(if (state.lastStreakImport != null) "Last import: ${state.lastStreakImport}" else "Not imported yet.")
+                    Button(onClick = vm::importStreak, enabled = !state.busy && state.streakNewest != null) {
+                        Text("Import now")
+                    }
                 }
             }
         }
         item {
             SourceCard(
                 title = "OpenNutriTracker",
-                description = "Where OpenNutriTracker saves its export. The newest one will be imported in the Food step.",
+                description = "Where OpenNutriTracker saves its export. Importing it comes in the Food step.",
                 folderName = state.nutriFolder,
                 onChoose = { pickNutri.launch(startHint("OpenNutritracker")) },
             ) {

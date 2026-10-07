@@ -2,6 +2,7 @@ package com.lifetracker.app.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -43,16 +44,20 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lifetracker.app.R
 import com.lifetracker.app.data.EntryEntity
+import com.lifetracker.app.data.NoteEntity
+import com.lifetracker.app.data.TodoEntity
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 private const val STUDY_GOAL_MINUTES = 8 * 60
-private const val DAYS_SHOWN = 60
+private const val DAYS_BACK = 60
+private const val DAYS_AHEAD = 30
 
 private fun EntryEntity.minutes(): Int = ((endMinute ?: startMinute) - startMinute).coerceAtLeast(0)
 
@@ -60,6 +65,10 @@ private fun EntryEntity.minutes(): Int = ((endMinute ?: startMinute) - startMinu
 fun TimelineScreen(onOpenData: () -> Unit, vm: TimelineViewModel = viewModel()) {
     val date by vm.date.collectAsState()
     val entries by vm.entries.collectAsState()
+    val todos by vm.todos.collectAsState()
+    val notes by vm.notes.collectAsState()
+    val projectNames by vm.projectNames.collectAsState()
+    val habitNames by vm.habitNames.collectAsState()
     val datesWithEntries by vm.datesWithEntries.collectAsState()
 
     var showLog by remember { mutableStateOf(false) }
@@ -68,6 +77,16 @@ fun TimelineScreen(onOpenData: () -> Unit, vm: TimelineViewModel = viewModel()) 
     val studyMinutes = entries.filter { it.category == ActivityCategory.Study.name }.sumOf { it.minutes() }
     val trackedMinutes = entries.sumOf { it.minutes() }
     val title = remember(date) { date.format(DateTimeFormatter.ofPattern("EEEE d MMMM")) }
+
+    // Timed items sit in order with the entries; items without a time get their own sections below.
+    val timed: List<TimelineItem> = buildList {
+        entries.forEach { add(EntryItem(it)) }
+        todos.filter { it.minutes != null }.forEach { add(TodoItem(it)) }
+        notes.filter { it.minutes != null }.forEach { add(NoteItem(it)) }
+    }.sortedBy { it.minute ?: 0 }
+    val anyTimeTodos = todos.filter { it.minutes == null }
+    val anyTimeNotes = notes.filter { it.minutes == null }
+    val plannedMinutes = todos.filter { !it.done }.sumOf { it.estimate ?: 0 }
 
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
@@ -100,7 +119,7 @@ fun TimelineScreen(onOpenData: () -> Unit, vm: TimelineViewModel = viewModel()) 
             item {
                 GoalBar(studyMinutes)
             }
-            if (entries.isEmpty()) {
+            if (timed.isEmpty() && anyTimeTodos.isEmpty() && anyTimeNotes.isEmpty()) {
                 item {
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
@@ -110,7 +129,7 @@ fun TimelineScreen(onOpenData: () -> Unit, vm: TimelineViewModel = viewModel()) 
                     ) {
                         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(
-                                text = "Nothing logged for this day",
+                                text = "Nothing on this day",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface,
@@ -123,15 +142,36 @@ fun TimelineScreen(onOpenData: () -> Unit, vm: TimelineViewModel = viewModel()) 
                     }
                 }
             } else {
-                items(entries, key = { it.id }) { entry ->
-                    EntryRow(entry, onClick = { toDelete = entry })
+                items(timed, key = { it.key }) { item ->
+                    when (item) {
+                        is EntryItem -> EntryRow(item.entry, onClick = { toDelete = item.entry })
+                        is TodoItem -> TodoRow(item.todo, projectNames[item.todo.project], onToggle = { vm.toggleTodo(item.todo) })
+                        is NoteItem -> NoteRow(item.note, habitNames[item.note.habitId])
+                    }
                 }
-                item {
-                    Text(
-                        text = "Tap an entry to delete it.",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                if (anyTimeTodos.isNotEmpty()) {
+                    item(key = "todos-header") {
+                        val estimate = if (plannedMinutes > 0) " · ${formatDuration(plannedMinutes)} planned" else ""
+                        MonoLabel("To do on this day$estimate")
+                    }
+                    items(anyTimeTodos, key = { "t" + it.id }) { todo ->
+                        TodoRow(todo, projectNames[todo.project], onToggle = { vm.toggleTodo(todo) })
+                    }
+                }
+                if (anyTimeNotes.isNotEmpty()) {
+                    item(key = "notes-header") { MonoLabel("Notes") }
+                    items(anyTimeNotes, key = { "n" + it.id }) { note ->
+                        NoteRow(note, habitNames[note.habitId])
+                    }
+                }
+                if (entries.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = "Tap an entry to delete it. Tap a to-do to tick it off.",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
         }
@@ -179,10 +219,11 @@ fun TimelineScreen(onOpenData: () -> Unit, vm: TimelineViewModel = viewModel()) 
 @Composable
 private fun DayStrip(selected: LocalDate, datesWithEntries: Set<String>, onSelect: (LocalDate) -> Unit) {
     val today = remember { LocalDate.now() }
-    // Oldest on the left, today on the right.
-    val days = remember { (DAYS_SHOWN - 1 downTo 0).map { today.minusDays(it.toLong()) } }
+    // Oldest on the left; the coming month is on the right, so planned to-dos can be seen ahead of time.
+    val days = remember { (-DAYS_BACK..DAYS_AHEAD).map { today.plusDays(it.toLong()) } }
     val listState = rememberLazyListState()
-    LaunchedEffect(Unit) { listState.scrollToItem(days.lastIndex) }
+    // Bring today into view near the right edge, with a few coming days visible after it.
+    LaunchedEffect(Unit) { listState.scrollToItem((DAYS_BACK - 3).coerceAtLeast(0)) }
 
     LazyRow(
         state = listState,
@@ -364,6 +405,129 @@ private fun EntryRow(entry: EntryEntity, onClick: () -> Unit) {
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+        }
+    }
+}
+
+private sealed interface TimelineItem {
+    val minute: Int?
+    val key: String
+}
+
+private class EntryItem(val entry: EntryEntity) : TimelineItem {
+    override val minute: Int? = entry.startMinute
+    override val key: String = "e" + entry.id
+}
+
+private class TodoItem(val todo: TodoEntity) : TimelineItem {
+    override val minute: Int? = todo.minutes
+    override val key: String = "t" + todo.id
+}
+
+private class NoteItem(val note: NoteEntity) : TimelineItem {
+    override val minute: Int? = note.minutes
+    override val key: String = "n" + note.id
+}
+
+@Composable
+private fun TodoRow(todo: TodoEntity, projectName: String?, onToggle: () -> Unit) {
+    val color = MaterialTheme.colorScheme.primary
+    val lines = todo.text.trim().split('\n')
+    val title = lines.first().ifBlank { "To-do" }
+    val body = lines.drop(1).joinToString("\n").trim()
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = 44.dp)
+            .clickable(onClick = onToggle),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(
+            text = todo.minutes?.let { formatMinute(it) } ?: "Any time",
+            modifier = Modifier
+                .width(68.dp)
+                .padding(top = 3.dp),
+            fontSize = 12.sp,
+            fontFamily = FontFamily.Monospace,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Box(modifier = Modifier.width(10.dp), contentAlignment = Alignment.TopCenter) {
+            Box(
+                modifier = Modifier
+                    .padding(top = 5.dp)
+                    .size(10.dp)
+                    .clip(CircleShape)
+                    .then(if (todo.done) Modifier.background(color) else Modifier.border(2.dp, color, CircleShape)),
+            )
+        }
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = title,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                textDecoration = if (todo.done) TextDecoration.LineThrough else null,
+                color = if (todo.done) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onBackground,
+            )
+            val detail = listOfNotNull(
+                "To do",
+                projectName?.takeIf { it.isNotBlank() },
+                todo.estimate?.takeIf { it > 0 }?.let { formatDuration(it) },
+            ).joinToString(" · ")
+            Text(text = detail, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (body.isNotEmpty()) {
+                Text(text = body, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+@Composable
+private fun NoteRow(note: NoteEntity, habitName: String?) {
+    val lines = note.text.trim().split('\n')
+    val title = lines.first().ifBlank { "Note" }
+    val body = lines.drop(1).joinToString("\n").trim()
+    val kind = listOf("Note", "Planned", "Completed").getOrElse(note.type) { "Note" }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = 44.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(
+            text = note.minutes?.let { formatMinute(it) } ?: "",
+            modifier = Modifier
+                .width(68.dp)
+                .padding(top = 3.dp),
+            fontSize = 12.sp,
+            fontFamily = FontFamily.Monospace,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Box(modifier = Modifier.width(10.dp), contentAlignment = Alignment.TopCenter) {
+            Box(
+                modifier = Modifier
+                    .padding(top = 6.dp)
+                    .size(8.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(MaterialTheme.colorScheme.onSurfaceVariant),
+            )
+        }
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = title,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+            Text(
+                text = listOfNotNull(kind, habitName?.takeIf { it.isNotBlank() }).joinToString(" · "),
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (body.isNotEmpty()) {
+                Text(text = body, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
