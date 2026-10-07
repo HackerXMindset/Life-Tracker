@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.lifetracker.app.data.AppDatabase
 import com.lifetracker.app.data.EntryEntity
+import com.lifetracker.app.data.MealEntity
 import com.lifetracker.app.data.NoteEntity
 import com.lifetracker.app.data.TodoEntity
 import java.time.LocalDate
@@ -43,6 +44,11 @@ class TimelineViewModel(app: Application) : AndroidViewModel(app) {
     val notes: StateFlow<List<NoteEntity>> =
         share(emptyList(), selectedDate.flatMapLatest { plan.notesOn(it.toString()) })
 
+    /** Meals eaten on the selected day (read-only here; they are edited on the Food tab). */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val meals: StateFlow<List<MealEntity>> =
+        share(emptyList(), selectedDate.flatMapLatest { db.foodDao().mealsOn(it.toString()) })
+
     /** Project name by id, for labelling to-dos. */
     val projectNames: StateFlow<Map<String, String>> =
         share(emptyMap(), plan.observeTodoTags().map { tags -> tags.associate { it.id to it.name } })
@@ -51,14 +57,20 @@ class TimelineViewModel(app: Application) : AndroidViewModel(app) {
     val habitNames: StateFlow<Map<String, String>> =
         share(emptyMap(), db.habitDao().observeHabits().map { list -> list.associate { it.id to it.name } })
 
-    /** Days that have anything on them: entries, planned to-dos or notes. */
+    /** Days that have anything on them: entries, planned to-dos, notes or meals. */
     val datesWithEntries: StateFlow<Set<String>> = share(
         emptySet(),
-        combine(dao.datesWithEntries(), plan.datesWithTodos(), plan.datesWithNotes()) { a, b, c ->
+        combine(
+            dao.datesWithEntries(),
+            plan.datesWithTodos(),
+            plan.datesWithNotes(),
+            db.foodDao().datesWithMeals(),
+        ) { a, b, c, d ->
             val all = HashSet<String>()
             all.addAll(a)
             all.addAll(b)
             all.addAll(c)
+            all.addAll(d)
             all
         },
     )

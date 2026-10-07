@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lifetracker.app.R
 import com.lifetracker.app.data.EntryEntity
+import com.lifetracker.app.data.MealEntity
 import com.lifetracker.app.data.NoteEntity
 import com.lifetracker.app.data.TodoEntity
 import java.time.LocalDate
@@ -67,6 +68,7 @@ fun TimelineScreen(onOpenData: () -> Unit, vm: TimelineViewModel = viewModel()) 
     val entries by vm.entries.collectAsState()
     val todos by vm.todos.collectAsState()
     val notes by vm.notes.collectAsState()
+    val meals by vm.meals.collectAsState()
     val projectNames by vm.projectNames.collectAsState()
     val habitNames by vm.habitNames.collectAsState()
     val datesWithEntries by vm.datesWithEntries.collectAsState()
@@ -83,6 +85,7 @@ fun TimelineScreen(onOpenData: () -> Unit, vm: TimelineViewModel = viewModel()) 
         entries.forEach { add(EntryItem(it)) }
         todos.filter { it.minutes != null }.forEach { add(TodoItem(it)) }
         notes.filter { it.minutes != null }.forEach { add(NoteItem(it)) }
+        meals.forEach { add(MealItem(it)) }
     }.sortedBy { it.minute ?: 0 }
     val anyTimeTodos = todos.filter { it.minutes == null }
     val anyTimeNotes = notes.filter { it.minutes == null }
@@ -147,6 +150,7 @@ fun TimelineScreen(onOpenData: () -> Unit, vm: TimelineViewModel = viewModel()) 
                         is EntryItem -> EntryRow(item.entry, onClick = { toDelete = item.entry })
                         is TodoItem -> TodoRow(item.todo, projectNames[item.todo.project], onToggle = { vm.toggleTodo(item.todo) })
                         is NoteItem -> NoteRow(item.note, habitNames[item.note.habitId])
+                        is MealItem -> MealRow(item.meal)
                     }
                 }
                 if (anyTimeTodos.isNotEmpty()) {
@@ -425,6 +429,11 @@ private class TodoItem(val todo: TodoEntity) : TimelineItem {
     override val key: String = "t" + todo.id
 }
 
+private class MealItem(val meal: MealEntity) : TimelineItem {
+    override val minute: Int? = meal.minuteOfDay
+    override val key: String = "m" + meal.id
+}
+
 private class NoteItem(val note: NoteEntity) : TimelineItem {
     override val minute: Int? = note.minutes
     override val key: String = "n" + note.id
@@ -529,6 +538,50 @@ private fun NoteRow(note: NoteEntity, habitName: String?) {
             if (body.isNotEmpty()) {
                 Text(text = body, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+        }
+    }
+}
+
+@Composable
+private fun MealRow(meal: MealEntity) {
+    val category = ActivityCategory.Food
+    val color = if (isSystemInDarkTheme()) category.dark else category.light
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = 44.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(
+            text = formatMinute(meal.minuteOfDay),
+            modifier = Modifier
+                .width(68.dp)
+                .padding(top = 3.dp),
+            fontSize = 12.sp,
+            fontFamily = FontFamily.Monospace,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Box(modifier = Modifier.width(10.dp), contentAlignment = Alignment.TopCenter) {
+            Box(
+                modifier = Modifier
+                    .padding(top = 5.dp)
+                    .size(10.dp)
+                    .clip(CircleShape)
+                    .background(color),
+            )
+        }
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = meal.name,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+            Text(
+                text = "${mealTypeLabel(meal.mealType)} · ${Math.round(meal.kcal)} kcal · ${Math.round(meal.grams)} g",
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

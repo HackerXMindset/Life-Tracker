@@ -10,6 +10,7 @@ import com.lifetracker.app.data.DataSources
 import com.lifetracker.app.data.DataSources.Slot
 import com.lifetracker.app.data.FoundFile
 import com.lifetracker.app.data.SourceScanner
+import com.lifetracker.app.data.ont.OntImporter
 import com.lifetracker.app.data.streak.StreakImporter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,6 +27,7 @@ data class DataSourcesState(
     val streakFolder: String? = null,
     val streakNewest: FoundFile? = null,
     val lastStreakImport: String? = null,
+    val lastOntImport: String? = null,
     val nutriFolder: String? = null,
     val nutriNewest: FoundFile? = null,
     val message: String? = null,
@@ -73,6 +75,13 @@ class DataSourcesViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun importOpenNutriTracker() {
+        launchAction {
+            OntImporter.importIfNew(context, force = true)?.describe()
+                ?: "The OpenNutriTracker export has nothing in it to import."
+        }
+    }
+
     fun restore(file: BackupFile) {
         launchAction {
             val folder = sources.folder(Slot.Backup) ?: error("Choose a backup folder first.")
@@ -111,6 +120,9 @@ class DataSourcesViewModel(app: Application) : AndroidViewModel(app) {
             },
             nutriFolder = nutri?.let(sources::folderName),
             nutriNewest = nutri?.let { SourceScanner.newestOpenNutriTracker(context, it) },
+            lastOntImport = sources.lastOntImportText?.let {
+                runCatching { formatDateTime(java.time.LocalDateTime.parse(it).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()) }.getOrNull()
+            },
         )
     }
 }

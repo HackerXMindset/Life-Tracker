@@ -64,8 +64,11 @@ interface EntryDao {
         TodoEntity::class,
         NoteEntity::class,
         ImportedItemEntity::class,
+        MealEntity::class,
+        FoodGoalEntity::class,
+        WaterEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -73,6 +76,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun habitDao(): HabitDao
     abstract fun planDao(): PlanDao
     abstract fun importDao(): ImportDao
+    abstract fun foodDao(): FoodDao
 
     companion object {
         @Volatile
@@ -84,7 +88,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "life-tracker.db",
-                ).addMigrations(MIGRATION_1_2).build().also { instance = it }
+                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build().also { instance = it }
             }
     }
 }
@@ -137,6 +141,31 @@ val MIGRATION_1_2: Migration = object : Migration(1, 2) {
         db.execSQL(
             "CREATE TABLE IF NOT EXISTS `imported_items` (`source` TEXT NOT NULL, " +
                 "`sourceId` TEXT NOT NULL, `entryId` INTEGER NOT NULL, PRIMARY KEY(`source`, `sourceId`))",
+        )
+    }
+}
+
+/**
+ * Version 2 -> 3: adds the meal, food goal and water tables. Nothing existing is
+ * touched. The SQL must match the entities in FoodTables.kt exactly.
+ */
+val MIGRATION_2_3: Migration = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `meals` (`id` TEXT NOT NULL, `date` TEXT NOT NULL, " +
+                "`minuteOfDay` INTEGER NOT NULL, `mealType` TEXT NOT NULL, `name` TEXT NOT NULL, " +
+                "`grams` REAL NOT NULL, `kcal100` REAL NOT NULL, `carbs100` REAL NOT NULL, " +
+                "`fat100` REAL NOT NULL, `protein100` REAL NOT NULL, `source` TEXT NOT NULL, " +
+                "`raw` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_meals_date` ON `meals` (`date`)")
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `food_goals` (`date` TEXT NOT NULL, `kcal` REAL NOT NULL, " +
+                "`carbs` REAL NOT NULL, `fat` REAL NOT NULL, `protein` REAL NOT NULL, PRIMARY KEY(`date`))",
+        )
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `water_log` (`date` TEXT NOT NULL, `ml` INTEGER NOT NULL, " +
+                "PRIMARY KEY(`date`))",
         )
     }
 }
