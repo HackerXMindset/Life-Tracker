@@ -48,6 +48,7 @@ enum class Tab(val title: String, @DrawableRes val icon: Int) {
 fun LifeTrackerApp() {
     var tab by rememberSaveable { mutableStateOf(Tab.Timeline) }
     var showData by rememberSaveable { mutableStateOf(false) }
+    var showActivities by rememberSaveable { mutableStateOf(false) }
 
     // One automatic backup per day, the first time the app is opened.
     val context = LocalContext.current
@@ -80,9 +81,11 @@ fun LifeTrackerApp() {
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
             if (showData) {
                 DataSourcesScreen(onBack = { showData = false })
+            } else if (showActivities) {
+                ActivitiesScreen(onBack = { showActivities = false })
             } else {
                 when (tab) {
-                    Tab.Timeline -> TimelineScreen(onOpenData = { showData = true })
+                    Tab.Timeline -> TimelineScreen(onOpenData = { showData = true }, onOpenActivities = { showActivities = true })
                     Tab.Habits -> HabitsScreen()
                     Tab.Food -> FoodScreen()
                     else -> ComingNextScreen(tab)

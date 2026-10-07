@@ -1,7 +1,12 @@
 package com.lifetracker.app.ui
 
 import android.app.TimePickerDialog
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -35,6 +40,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lifetracker.app.data.ActivityTypeEntity
 import com.lifetracker.app.data.EntryEntity
 import java.time.LocalDate
 import java.time.LocalTime
@@ -44,6 +50,8 @@ import java.time.LocalTime
 fun LogSheet(
     date: LocalDate,
     existing: List<EntryEntity>,
+    types: List<ActivityTypeEntity>,
+    onCreateType: (ActivityTypeEntity, (ActivityTypeEntity) -> Unit) -> Unit,
     onDismiss: () -> Unit,
     onSave: (EntryEntity) -> Unit,
 ) {
@@ -63,7 +71,11 @@ fun LogSheet(
         if (isToday && nowMinute > defaultStart) nowMinute else (defaultStart + 30).coerceAtMost(1439)
     }
 
-    var category by remember { mutableStateOf(ActivityCategory.Study) }
+    val choices = types.filter { !it.archived }
+    // The id of the chosen activity. Until one is picked, the first available is used.
+    var chosenId by remember { mutableStateOf<String?>(null) }
+    val category = choices.firstOrNull { it.id == chosenId } ?: choices.firstOrNull { it.id == "Study" } ?: choices.firstOrNull()
+    var showNewType by remember { mutableStateOf(false) }
     var title by remember { mutableStateOf("") }
     var note by remember { mutableStateOf("") }
     var start by remember { mutableIntStateOf(defaultStart) }
@@ -101,13 +113,21 @@ fun LogSheet(
                 modifier = Modifier.horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                ActivityCategory.entries.forEach { c ->
+                choices.forEach { c ->
                     FilterChip(
-                        selected = category == c,
-                        onClick = { category = c },
-                        label = { Text(c.label) },
+                        selected = category?.id == c.id,
+                        onClick = { chosenId = c.id },
+                        label = { Text(c.name) },
+                        leadingIcon = {
+                            Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(c.displayColor()))
+                        },
                     )
                 }
+                FilterChip(
+                    selected = false,
+                    onClick = { showNewType = true },
+                    label = { Text("+ New") },
+                )
             }
 
             OutlinedTextField(
@@ -173,6 +193,7 @@ fun LogSheet(
                 Spacer(Modifier.padding(horizontal = 4.dp))
                 Button(onClick = {
                     when {
+                        category == null -> error = "Pick an activity first."
                         title.isBlank() -> error = "Give it a short name."
                         !moment && end <= start -> error = "End time must be after the start time."
                         else -> onSave(
@@ -180,7 +201,7 @@ fun LogSheet(
                                 date = date.toString(),
                                 startMinute = start,
                                 endMinute = if (moment) null else end,
-                                category = category.name,
+                                category = category!!.id,
                                 title = title.trim(),
                                 note = note.trim(),
                             ),
@@ -190,5 +211,16 @@ fun LogSheet(
             }
             Spacer(Modifier.height(12.dp))
         }
+    }
+
+    if (showNewType) {
+        ActivityEditorDialog(
+            initial = null,
+            onSave = { newType ->
+                onCreateType(newType) { saved -> chosenId = saved.id }
+                showNewType = false
+            },
+            onDismiss = { showNewType = false },
+        )
     }
 }

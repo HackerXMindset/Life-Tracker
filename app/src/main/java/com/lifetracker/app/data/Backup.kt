@@ -19,6 +19,7 @@ data class BackupData(
     val meals: List<MealEntity> = emptyList(),
     val foodGoals: List<FoodGoalEntity> = emptyList(),
     val water: List<WaterEntity> = emptyList(),
+    val activityTypes: List<ActivityTypeEntity> = emptyList(),
 ) {
     val isEmpty: Boolean
         get() = entries.isEmpty() && habits.isEmpty() && completions.isEmpty() && categories.isEmpty() &&
@@ -30,12 +31,12 @@ data class BackupData(
  *
  * `version` lets later steps add more data without breaking old backups.
  * Version 1 held only Timeline entries; version 2 adds habits, to-dos, notes
- * and the record of what was imported; version 3 adds meals, food goals and water. A file from a newer version of the app
+ * and the record of what was imported; version 3 adds meals, food goals and water; version 4 adds your own activities and their goals. A file from a newer version of the app
  * is refused rather than half-read.
  */
 object BackupCodec {
     const val APP_NAME = "life-tracker"
-    const val FORMAT_VERSION = 3
+    const val FORMAT_VERSION = 4
 
     fun encode(data: BackupData): String =
         JSONObject()
@@ -53,6 +54,7 @@ object BackupCodec {
             .put("meals", array(data.meals, ::mealJson))
             .put("foodGoals", array(data.foodGoals, ::goalJson))
             .put("water", array(data.water, ::waterJson))
+            .put("activityTypes", array(data.activityTypes, ::activityJson))
             .toString(2)
 
     /** Reads a backup. Throws [IllegalArgumentException] with a readable reason if it is not usable. */
@@ -78,6 +80,7 @@ object BackupCodec {
                 meals = list(root, "meals", required = false, ::meal),
                 foodGoals = list(root, "foodGoals", required = false, ::goal),
                 water = list(root, "water", required = false, ::waterRow),
+                activityTypes = list(root, "activityTypes", required = false, ::activity),
             )
         } catch (e: JSONException) {
             throw IllegalArgumentException("This file is damaged or is not a backup.")
@@ -252,4 +255,18 @@ object BackupCodec {
     private fun waterJson(w: WaterEntity) = JSONObject().put("date", w.date).put("ml", w.ml)
 
     private fun waterRow(o: JSONObject) = WaterEntity(date = o.getString("date"), ml = o.getInt("ml"))
+
+    private fun activityJson(a: ActivityTypeEntity) = JSONObject()
+        .put("id", a.id).put("name", a.name).put("color", a.color).put("goalMinutes", a.goalMinutes)
+        .put("goalKind", a.goalKind).put("archived", a.archived).put("sortOrder", a.sortOrder)
+
+    private fun activity(o: JSONObject) = ActivityTypeEntity(
+        id = o.getString("id"),
+        name = o.getString("name"),
+        color = o.getLong("color"),
+        goalMinutes = o.getInt("goalMinutes"),
+        goalKind = o.getInt("goalKind"),
+        archived = o.getBoolean("archived"),
+        sortOrder = o.getInt("sortOrder"),
+    )
 }
