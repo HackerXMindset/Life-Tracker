@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import com.lifetracker.app.R
 import com.lifetracker.app.data.BackupManager
 import com.lifetracker.app.data.DataSources
+import com.lifetracker.app.data.ont.OntImporter
 import com.lifetracker.app.data.streak.StreakImporter
 
 enum class Tab(val title: String, @DrawableRes val icon: Int) {
@@ -50,11 +51,14 @@ fun LifeTrackerApp() {
 
     // One automatic backup per day, the first time the app is opened.
     val context = LocalContext.current
-    // Then pick up anything new from Streak. The backup comes first, so it holds the data from before the import.
+    // Then pick up anything new from Streak and OpenNutriTracker. The backup comes first, so it holds the data from before the import.
     LaunchedEffect(Unit) {
         runCatching { BackupManager.autoBackupIfDue(context) }
         runCatching {
             if (DataSources(context).folder(DataSources.Slot.Streak) != null) StreakImporter.importIfNew(context)
+        }
+        runCatching {
+            if (DataSources(context).folder(DataSources.Slot.OpenNutriTracker) != null) OntImporter.importIfNew(context)
         }
     }
 
@@ -80,6 +84,7 @@ fun LifeTrackerApp() {
                 when (tab) {
                     Tab.Timeline -> TimelineScreen(onOpenData = { showData = true })
                     Tab.Habits -> HabitsScreen()
+                    Tab.Food -> FoodScreen()
                     else -> ComingNextScreen(tab)
                 }
             }

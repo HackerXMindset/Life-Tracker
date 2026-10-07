@@ -126,12 +126,18 @@ fun DataSourcesScreen(onBack: () -> Unit, vm: DataSourcesViewModel = viewModel()
         item {
             SourceCard(
                 title = "OpenNutriTracker",
-                description = "Where OpenNutriTracker saves its export. Importing it comes in the Food step.",
+                description = "Where OpenNutriTracker saves its export. When you open the app, the newest one is imported: " +
+                    "meals, daily goals, and activities, which appear on your Timeline. " +
+                    "Nothing in OpenNutriTracker is changed, and importing twice never doubles anything.",
                 folderName = state.nutriFolder,
                 onChoose = { pickNutri.launch(startHint("OpenNutritracker")) },
             ) {
                 if (state.nutriFolder != null) {
                     NewestFile(state.nutriNewest, "No OpenNutriTracker export found in this folder.")
+                    Detail(if (state.lastOntImport != null) "Last import: ${state.lastOntImport}" else "Not imported yet.")
+                    Button(onClick = vm::importOpenNutriTracker, enabled = !state.busy && state.nutriNewest != null) {
+                        Text("Import now")
+                    }
                 }
             }
         }

@@ -98,7 +98,10 @@ object BackupManager {
         }
         replaceAll(db, data)
         // Let the next open import the newest Streak backup again, to catch up on anything newer.
-        DataSources(context).streakSeenExportedAt = null
+        DataSources(context).apply {
+            streakSeenExportedAt = null
+            ontSeenKey = null
+        }
     }
 
     /** All of the app's data as it is right now. */
@@ -113,12 +116,15 @@ object BackupManager {
         todos = db.planDao().allTodos(),
         notes = db.planDao().allNotes(),
         imported = db.importDao().all(),
+        meals = db.foodDao().allMeals(),
+        foodGoals = db.foodDao().allGoals(),
+        water = db.foodDao().allWater(),
     )
 
     /**
-     * A version 2 backup replaces everything. A version 1 backup only ever held
-     * Timeline entries, so it replaces just those and leaves habits, to-dos and
-     * notes alone; the import record is cleared so the next Streak import can
+     * A version 3 backup replaces everything. Older backups never held some of
+     * the data (version 1: only Timeline entries; version 2: no food or water),
+     * so they replace only what they hold and leave the rest alone; the import record is cleared so the next Streak import can
      * bring back any focus sessions the old backup did not have.
      */
     private suspend fun replaceAll(db: AppDatabase, data: BackupData) {
@@ -140,6 +146,14 @@ object BackupManager {
                 db.planDao().upsertTodos(data.todos)
                 db.planDao().upsertNotes(data.notes)
                 db.importDao().insertAll(data.imported)
+            }
+            if (data.version >= 3) {
+                db.foodDao().deleteAllMeals()
+                db.foodDao().deleteAllGoals()
+                db.foodDao().deleteAllWater()
+                db.foodDao().upsertMeals(data.meals)
+                db.foodDao().upsertGoals(data.foodGoals)
+                db.foodDao().upsertWater(data.water)
             }
         }
     }

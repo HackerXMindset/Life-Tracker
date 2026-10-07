@@ -54,4 +54,13 @@ class DataSources(context: Context) {
     var lastStreakImportText: String?
         get() = prefs.getString("last_streak_import", null)
         set(value) = prefs.edit().putString("last_streak_import", value).apply()
+
+    /** Name and modified time of the OpenNutriTracker export already imported. */
+    var ontSeenKey: String?
+        get() = prefs.getString("ont_seen_key", null)
+        set(value) = prefs.edit().putString("ont_seen_key", value).apply()
+
+    var lastOntImportText: String?
+        get() = prefs.getString("last_ont_import", null)
+        set(value) = prefs.edit().putString("last_ont_import", value).apply()
 }

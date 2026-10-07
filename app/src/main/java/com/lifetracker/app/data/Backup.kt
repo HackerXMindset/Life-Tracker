@@ -16,10 +16,13 @@ data class BackupData(
     val todos: List<TodoEntity> = emptyList(),
     val notes: List<NoteEntity> = emptyList(),
     val imported: List<ImportedItemEntity> = emptyList(),
+    val meals: List<MealEntity> = emptyList(),
+    val foodGoals: List<FoodGoalEntity> = emptyList(),
+    val water: List<WaterEntity> = emptyList(),
 ) {
     val isEmpty: Boolean
         get() = entries.isEmpty() && habits.isEmpty() && completions.isEmpty() && categories.isEmpty() &&
-            todoTags.isEmpty() && todos.isEmpty() && notes.isEmpty()
+            todoTags.isEmpty() && todos.isEmpty() && notes.isEmpty() && meals.isEmpty() && water.isEmpty()
 }
 
 /**
@@ -27,12 +30,12 @@ data class BackupData(
  *
  * `version` lets later steps add more data without breaking old backups.
  * Version 1 held only Timeline entries; version 2 adds habits, to-dos, notes
- * and the record of what was imported. A file from a newer version of the app
+ * and the record of what was imported; version 3 adds meals, food goals and water. A file from a newer version of the app
  * is refused rather than half-read.
  */
 object BackupCodec {
     const val APP_NAME = "life-tracker"
-    const val FORMAT_VERSION = 2
+    const val FORMAT_VERSION = 3
 
     fun encode(data: BackupData): String =
         JSONObject()
@@ -47,6 +50,9 @@ object BackupCodec {
             .put("todos", array(data.todos, ::todoJson))
             .put("notes", array(data.notes, ::noteJson))
             .put("imported", array(data.imported, ::importedJson))
+            .put("meals", array(data.meals, ::mealJson))
+            .put("foodGoals", array(data.foodGoals, ::goalJson))
+            .put("water", array(data.water, ::waterJson))
             .toString(2)
 
     /** Reads a backup. Throws [IllegalArgumentException] with a readable reason if it is not usable. */
@@ -69,6 +75,9 @@ object BackupCodec {
                 todos = list(root, "todos", required = false, ::todo),
                 notes = list(root, "notes", required = false, ::note),
                 imported = list(root, "imported", required = false, ::imported),
+                meals = list(root, "meals", required = false, ::meal),
+                foodGoals = list(root, "foodGoals", required = false, ::goal),
+                water = list(root, "water", required = false, ::waterRow),
             )
         } catch (e: JSONException) {
             throw IllegalArgumentException("This file is damaged or is not a backup.")
@@ -208,4 +217,39 @@ object BackupCodec {
         sourceId = o.getString("sourceId"),
         entryId = o.getLong("entryId"),
     )
+
+    private fun mealJson(m: MealEntity) = JSONObject()
+        .put("id", m.id).put("date", m.date).put("minuteOfDay", m.minuteOfDay).put("mealType", m.mealType)
+        .put("name", m.name).put("grams", m.grams).put("kcal100", m.kcal100).put("carbs100", m.carbs100)
+        .put("fat100", m.fat100).put("protein100", m.protein100).put("source", m.source).put("raw", m.raw)
+
+    private fun meal(o: JSONObject) = MealEntity(
+        id = o.getString("id"),
+        date = o.getString("date"),
+        minuteOfDay = o.getInt("minuteOfDay"),
+        mealType = o.getString("mealType"),
+        name = o.getString("name"),
+        grams = o.getDouble("grams"),
+        kcal100 = o.getDouble("kcal100"),
+        carbs100 = o.getDouble("carbs100"),
+        fat100 = o.getDouble("fat100"),
+        protein100 = o.getDouble("protein100"),
+        source = o.getString("source"),
+        raw = o.getString("raw"),
+    )
+
+    private fun goalJson(g: FoodGoalEntity) = JSONObject()
+        .put("date", g.date).put("kcal", g.kcal).put("carbs", g.carbs).put("fat", g.fat).put("protein", g.protein)
+
+    private fun goal(o: JSONObject) = FoodGoalEntity(
+        date = o.getString("date"),
+        kcal = o.getDouble("kcal"),
+        carbs = o.getDouble("carbs"),
+        fat = o.getDouble("fat"),
+        protein = o.getDouble("protein"),
+    )
+
+    private fun waterJson(w: WaterEntity) = JSONObject().put("date", w.date).put("ml", w.ml)
+
+    private fun waterRow(o: JSONObject) = WaterEntity(date = o.getString("date"), ml = o.getInt("ml"))
 }
