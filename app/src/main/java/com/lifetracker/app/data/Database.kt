@@ -36,8 +36,17 @@ interface EntryDao {
     @Query("SELECT DISTINCT date FROM entries")
     fun datesWithEntries(): Flow<List<String>>
 
+    @Query("SELECT * FROM entries ORDER BY date, startMinute, id")
+    suspend fun all(): List<EntryEntity>
+
     @Insert
     suspend fun insert(entry: EntryEntity): Long
+
+    @Insert
+    suspend fun insertAll(entries: List<EntryEntity>)
+
+    @Query("DELETE FROM entries")
+    suspend fun deleteAll()
 
     @Delete
     suspend fun delete(entry: EntryEntity)

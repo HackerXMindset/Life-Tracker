@@ -18,7 +18,7 @@ android {
         minSdk = 26
         targetSdk = 35
         versionCode = buildNumber
-        versionName = "0.2.$buildNumber"
+        versionName = "0.3.$buildNumber"
     }
 
     signingConfigs {
@@ -67,4 +67,12 @@ dependencies {
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
     ksp("androidx.room:room-compiler:2.6.1")
+
+    // Reads and writes the folders you pick (Streak, OpenNutriTracker, backups).
+    implementation("androidx.documentfile:documentfile:1.0.1")
+
+    // Tests that run in the cloud build. The org.json copy is needed because
+    // the Android one is only a stub outside a real phone.
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20240303")
 }
