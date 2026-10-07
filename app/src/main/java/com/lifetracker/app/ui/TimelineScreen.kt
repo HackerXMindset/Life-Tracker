@@ -49,6 +49,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lifetracker.app.R
+import com.lifetracker.app.data.ActivityStats
+import com.lifetracker.app.data.ActivityTypeEntity
 import com.lifetracker.app.data.EntryEntity
 import com.lifetracker.app.data.MealEntity
 import com.lifetracker.app.data.NoteEntity
@@ -56,14 +58,13 @@ import com.lifetracker.app.data.TodoEntity
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-private const val STUDY_GOAL_MINUTES = 8 * 60
 private const val DAYS_BACK = 60
 private const val DAYS_AHEAD = 30
 
-private fun EntryEntity.minutes(): Int = ((endMinute ?: startMinute) - startMinute).coerceAtLeast(0)
+private fun EntryEntity.minutes(): Int = ActivityStats.minutes(this)
 
 @Composable
-fun TimelineScreen(onOpenData: () -> Unit, vm: TimelineViewModel = viewModel()) {
+fun TimelineScreen(onOpenData: () -> Unit, onOpenActivities: () -> Unit, vm: TimelineViewModel = viewModel()) {
     val date by vm.date.collectAsState()
     val entries by vm.entries.collectAsState()
     val todos by vm.todos.collectAsState()
@@ -72,11 +73,14 @@ fun TimelineScreen(onOpenData: () -> Unit, vm: TimelineViewModel = viewModel()) 
     val projectNames by vm.projectNames.collectAsState()
     val habitNames by vm.habitNames.collectAsState()
     val datesWithEntries by vm.datesWithEntries.collectAsState()
+    val types by vm.activityTypes.collectAsState()
 
     var showLog by remember { mutableStateOf(false) }
     var toDelete by remember { mutableStateOf<EntryEntity?>(null) }
 
-    val studyMinutes = entries.filter { it.category == ActivityCategory.Study.name }.sumOf { it.minutes() }
+    val goals = ActivityStats.goalProgress(types, entries)
+    val reachedGoals = goals.count { !it.isLimit && it.ok }
+    val minimumGoals = goals.count { !it.isLimit }
     val trackedMinutes = entries.sumOf { it.minutes() }
     val title = remember(date) { date.format(DateTimeFormatter.ofPattern("EEEE d MMMM")) }
 
@@ -103,6 +107,9 @@ fun TimelineScreen(onOpenData: () -> Unit, vm: TimelineViewModel = viewModel()) 
                     badge = "Saved on this phone",
                     title = title,
                     trailing = {
+                        IconButton(onClick = onOpenActivities) {
+                            Icon(painterResource(R.drawable.ic_activities), contentDescription = "Activities and goals")
+                        }
                         IconButton(onClick = onOpenData) {
                             Icon(painterResource(R.drawable.ic_settings), contentDescription = "Data sources")
                         }
@@ -114,14 +121,14 @@ fun TimelineScreen(onOpenData: () -> Unit, vm: TimelineViewModel = viewModel()) 
             }
             item {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    SummaryStat("Study", formatDuration(studyMinutes), Modifier.weight(1f))
                     SummaryStat("Tracked", formatDuration(trackedMinutes), Modifier.weight(1f))
                     SummaryStat("Entries", entries.size.toString(), Modifier.weight(1f))
+                    if (minimumGoals > 0) {
+                        SummaryStat("Goals met", "$reachedGoals of $minimumGoals", Modifier.weight(1f))
+                    }
                 }
             }
-            item {
-                GoalBar(studyMinutes)
-            }
+            items(goals, key = { "g" + it.type.id }) { GoalBar(it) }
             if (timed.isEmpty() && anyTimeTodos.isEmpty() && anyTimeNotes.isEmpty()) {
                 item {
                     Surface(
@@ -147,10 +154,10 @@ fun TimelineScreen(onOpenData: () -> Unit, vm: TimelineViewModel = viewModel()) 
             } else {
                 items(timed, key = { it.key }) { item ->
                     when (item) {
-                        is EntryItem -> EntryRow(item.entry, onClick = { toDelete = item.entry })
+                        is EntryItem -> EntryRow(item.entry, types.byId(item.entry.category), onClick = { toDelete = item.entry })
                         is TodoItem -> TodoRow(item.todo, projectNames[item.todo.project], onToggle = { vm.toggleTodo(item.todo) })
                         is NoteItem -> NoteRow(item.note, habitNames[item.note.habitId])
-                        is MealItem -> MealRow(item.meal)
+                        is MealItem -> MealRow(item.meal, types.byId("Food"))
                     }
                 }
                 if (anyTimeTodos.isNotEmpty()) {
@@ -194,6 +201,8 @@ fun TimelineScreen(onOpenData: () -> Unit, vm: TimelineViewModel = viewModel()) 
         LogSheet(
             date = date,
             existing = entries,
+            types = types,
+            onCreateType = vm::createActivity,
             onDismiss = { showLog = false },
             onSave = {
                 vm.add(it)
@@ -279,13 +288,14 @@ private fun DayStrip(selected: LocalDate, datesWithEntries: Set<String>, onSelec
 }
 
 @Composable
-private fun GoalBar(studyMinutes: Int) {
-    val fraction = (studyMinutes.toFloat() / STUDY_GOAL_MINUTES).coerceIn(0f, 1f)
+private fun GoalBar(progress: ActivityStats.GoalProgress) {
+    val type = progress.type
+    val color = if (progress.isLimit && !progress.ok) MaterialTheme.colorScheme.error else type.displayColor()
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            MonoLabel("Study goal")
+            MonoLabel(if (progress.isLimit) "${type.name} limit" else "${type.name} goal")
             Text(
-                text = "${formatDuration(studyMinutes)} of ${formatDuration(STUDY_GOAL_MINUTES)}",
+                text = "${formatDuration(progress.minutes)} of ${formatDuration(progress.goal)}",
                 fontSize = 12.sp,
                 fontFamily = FontFamily.Monospace,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -298,13 +308,13 @@ private fun GoalBar(studyMinutes: Int) {
                 .clip(RoundedCornerShape(4.dp))
                 .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)),
         ) {
-            if (fraction > 0f) {
+            if (progress.fraction > 0f) {
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth(fraction)
+                        .fillMaxWidth(progress.fraction)
                         .height(8.dp)
                         .clip(RoundedCornerShape(4.dp))
-                        .background(MaterialTheme.colorScheme.primary),
+                        .background(color),
                 )
             }
         }
@@ -325,9 +335,8 @@ private fun SummaryStat(label: String, value: String, modifier: Modifier = Modif
 }
 
 @Composable
-private fun EntryRow(entry: EntryEntity, onClick: () -> Unit) {
-    val category = ActivityCategory.fromKey(entry.category)
-    val color = if (isSystemInDarkTheme()) category.dark else category.light
+private fun EntryRow(entry: EntryEntity, type: ActivityTypeEntity, onClick: () -> Unit) {
+    val color = type.displayColor()
     val minutes = entry.minutes()
     val isBlock = entry.endMinute != null
     val barHeight = (minutes * 0.45f).coerceIn(56f, 150f).dp
@@ -389,7 +398,7 @@ private fun EntryRow(entry: EntryEntity, onClick: () -> Unit) {
                             .background(color),
                     )
                     Text(
-                        text = category.label,
+                        text = type.name,
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -543,9 +552,8 @@ private fun NoteRow(note: NoteEntity, habitName: String?) {
 }
 
 @Composable
-private fun MealRow(meal: MealEntity) {
-    val category = ActivityCategory.Food
-    val color = if (isSystemInDarkTheme()) category.dark else category.light
+private fun MealRow(meal: MealEntity, foodType: ActivityTypeEntity) {
+    val color = foodType.displayColor()
     Row(
         modifier = Modifier
             .fillMaxWidth()

@@ -37,6 +37,10 @@ class BackupCodecTest {
         ),
         foodGoals = listOf(FoodGoalEntity("2026-10-04", 2672.88, 399.47, 73.97, 99.86)),
         water = listOf(WaterEntity("2026-10-07", 1250)),
+        activityTypes = listOf(
+            ActivityTypeEntity("Study", "Study", 0xFF17785AL, 480, 0, false, 2),
+            ActivityTypeEntity("c-abc", "Reading \"fiction\"", 0xFFD6457FL, 90, 1, true, 8),
+        ),
     )
 
     @Test
@@ -75,6 +79,14 @@ class BackupCodecTest {
         assertEquals(2, back.version)
         assertTrue(back.meals.isEmpty())
         assertTrue(back.water.isEmpty())
+    }
+
+    @Test
+    fun versionThreeBackupsStillLoad() {
+        val v3 = """{"app":"life-tracker","version":3,"exportedAt":"x","entries":[],"meals":[],"water":[]}"""
+        val back = BackupCodec.decode(v3)
+        assertEquals(3, back.version)
+        assertTrue(back.activityTypes.isEmpty())
     }
 
     @Test

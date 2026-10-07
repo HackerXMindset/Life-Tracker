@@ -3,6 +3,8 @@ package com.lifetracker.app.ui
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.lifetracker.app.data.ActivityStats
+import com.lifetracker.app.data.ActivityTypeEntity
 import com.lifetracker.app.data.AppDatabase
 import com.lifetracker.app.data.EntryEntity
 import com.lifetracker.app.data.MealEntity
@@ -34,6 +36,19 @@ class TimelineViewModel(app: Application) : AndroidViewModel(app) {
     @OptIn(ExperimentalCoroutinesApi::class)
     val entries: StateFlow<List<EntryEntity>> =
         share(emptyList(), selectedDate.flatMapLatest { dao.forDate(it.toString()) })
+
+    /** Every activity (including hidden ones, so old entries still get their colour). */
+    val activityTypes: StateFlow<List<ActivityTypeEntity>> =
+        share(emptyList(), db.activityDao().observeAll())
+
+    /** Saves a new activity made from the Log pop-up and hands it back so it can be selected. */
+    fun createActivity(type: ActivityTypeEntity, onSaved: (ActivityTypeEntity) -> Unit) {
+        viewModelScope.launch {
+            val placed = type.copy(sortOrder = db.activityDao().maxSortOrder() + 1)
+            db.activityDao().upsert(placed)
+            onSaved(placed)
+        }
+    }
 
     /** To-dos planned for the selected day (only to-dos with a date ever appear on the Timeline). */
     @OptIn(ExperimentalCoroutinesApi::class)

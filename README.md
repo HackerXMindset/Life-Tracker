@@ -45,19 +45,22 @@ It also remembers the big moments, such as moving to a new city or starting a ne
 | Timeline with a real on-phone database | Done |
 | Data sources and backups | Done |
 | Habits, with Streak import (also focus sessions, to-dos, notes) | Done |
-| Food, with OpenNutriTracker import, water and meal logging | Built, waiting to be tried on a phone |
+| Food, with OpenNutriTracker import, water and meal logging | Done |
+| Your own activities, colours and daily goals | Built, waiting to be tried on a phone |
 | Money, Stats | Placeholder screens |
 
-**What works right now (Steps 2 to 5).** On the Timeline tab you can:
+**What works right now (Steps 2 to 6).** On the Timeline tab you can:
 
 - scroll through the last 60 days, with a dot under every day that has entries;
-- tap **Log** to record an activity with a category, a name, a start and end time, and an optional note, or log a single moment with no end time;
-- see the day's study time, total tracked time and entry count, plus a study goal bar (8 hours, fixed for now);
+- tap **Log** to record an activity (pick one of your own, or tap **+ New** to make one on the spot), a name, a start and end time, and an optional note, or log a single moment with no end time;
+- see the day's tracked time, entry count and how many goals you met, plus a bar for every activity that has a daily goal (Study starts with 8 hours, and you can change it);
 - tap an entry to delete it.
 
 Everything is saved in a database on the phone and is still there after the app is closed.
 
-The gear icon at the top of the Timeline opens **Data sources**, where you can:
+The list icon at the top of the Timeline opens **Activities**, where you can add your own activities, rename them, pick a colour from a palette, and set a daily goal for each: *at least* (such as 8 hours of study) or *at most* (such as 2 hours of screen time, whose bar turns red if you go over). *Hide from Log* removes an activity from the Log pop-up without touching anything already logged.
+
+The gear icon beside it opens **Data sources**, where you can:
 
 - choose a **backup folder** on the phone, tap **Back up now**, and **Restore** from any backup or safety copy (a safety copy of your current data is always saved first);
 - choose the **Streak** and **OpenNutriTracker** folders, and see the newest file the app found in each;
@@ -96,8 +99,8 @@ Each step is small enough to build, install and try before the next begins. The 
  DONE         Step 3  Data sources and backups
  DONE         Step 4  Habits (Streak import)
  DONE         Step 5  Food (OpenNutriTracker import)
- NEXT  ──►    Step 6  Your own activities and goals
-              Step 7  Money
+ DONE         Step 6  Your own activities and goals
+ NEXT  ──►    Step 7  Money
               Step 8  Life events, month and year views
               Step 9  Stats
               Step 10 Polish
@@ -121,9 +124,9 @@ Android remembers each choice, so you never pick them again. This step also adds
 
 **Step 5: Food.** The same automatic import for OpenNutriTracker: meals, daily calorie and macro goals, and activities. The Food tab shows calories and macros against your goals, water, and lets you log meals directly. Meals also appear on the Timeline. This was the second database change (version 2 to 3), again with a proper migration.
 
-### Next
+**Step 6: Your own activities and goals.** The eight fixed categories became a list you control. Each activity has a name, a colour and an optional daily goal (a minimum to reach or a limit to stay under), and the single fixed study goal became one bar per goal. Your old entries kept their colours because the built-in activities kept their old keys. This was the third database change (version 3 to 4), with a proper migration, and backups moved to format 4.
 
-**Step 6: Your own activities and goals.** Today the categories are fixed. This step lets you create your own (for example one per subject you study), choose their colours, and set your own daily goals instead of the fixed 8-hour study goal.
+### Next
 
 **Step 7: Money.** Income by source, spending by category and the monthly net. There is no import for this, so entries are made by hand.
 
@@ -183,6 +186,7 @@ life-tracker/
     │   ├── .../data/HabitStatsTest.kt    Streak and clean-day arithmetic
     │   ├── .../data/streak/StreakImportTest.kt  Streak backup parsing and focus-session splitting
     │   ├── .../data/FoodStatsTest.kt     Calorie, macro and goal arithmetic
+    │   ├── .../data/ActivityStatsTest.kt Activity time and goal arithmetic
     │   └── .../data/ont/OntImportTest.kt OpenNutriTracker export parsing
     │
     └── src/main/
@@ -195,6 +199,8 @@ life-tracker/
         │   │   ├── Database.kt        Entries table, the database itself and its upgrade steps
         │   │   ├── Tables.kt          Habits, completions, to-dos, notes and import records
         │   │   ├── HabitStats.kt      Streak arithmetic
+        │   │   ├── ActivityTypes.kt   Your activities (names, colours, goals) and the built-in ones
+        │   │   ├── ActivityStats.kt   Time per activity and goal progress
         │   │   ├── FoodTables.kt      Meals, daily food goals and water
         │   │   ├── FoodStats.kt       Calorie and macro arithmetic
         │   │   ├── Backup.kt          The backup file format (JSON) and how it is read back
@@ -219,7 +225,10 @@ life-tracker/
         │       ├── LogSheet.kt        The "Log something" pop-up
         │       ├── DataSourcesScreen.kt     Folders, Back up now and Restore
         │       ├── DataSourcesViewModel.kt  What that screen shows and does
-        │       ├── Model.kt           Activity categories and their colours
+        │       ├── Model.kt           Colour palette and goal wording for activities
+        │       ├── ActivitiesScreen.kt     Activities settings: list, colours, goals
+        │       ├── ActivitiesViewModel.kt  Saving and hiding activities
+        │       ├── ActivityEditor.kt       The pop-up for making or editing an activity
         │       ├── Format.kt          Turns minutes into "2h 05m" and "8:15 AM"
         │       ├── Components.kt      Shared pieces such as the screen header
         │       ├── theme/

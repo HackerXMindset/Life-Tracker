@@ -67,8 +67,9 @@ interface EntryDao {
         MealEntity::class,
         FoodGoalEntity::class,
         WaterEntity::class,
+        ActivityTypeEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -77,6 +78,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun planDao(): PlanDao
     abstract fun importDao(): ImportDao
     abstract fun foodDao(): FoodDao
+    abstract fun activityDao(): ActivityDao
 
     companion object {
         @Volatile
@@ -88,7 +90,14 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "life-tracker.db",
-                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build().also { instance = it }
+                )
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                    .addCallback(object : RoomDatabase.Callback() {
+                        // A brand new database starts with the built-in activities.
+                        override fun onCreate(db: SupportSQLiteDatabase) = DefaultActivities.seed(db)
+                    })
+                    .build()
+                    .also { instance = it }
             }
     }
 }
@@ -167,5 +176,21 @@ val MIGRATION_2_3: Migration = object : Migration(2, 3) {
             "CREATE TABLE IF NOT EXISTS `water_log` (`date` TEXT NOT NULL, `ml` INTEGER NOT NULL, " +
                 "PRIMARY KEY(`date`))",
         )
+    }
+}
+
+/**
+ * Version 3 -> 4: adds the activity types table (names, colours and goals) and fills it
+ * with the eight built-in activities, so entries logged earlier keep their colours.
+ * The `entries` table is not touched. The SQL must match ActivityTypeEntity exactly.
+ */
+val MIGRATION_3_4: Migration = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `activity_types` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, " +
+                "`color` INTEGER NOT NULL, `goalMinutes` INTEGER NOT NULL, `goalKind` INTEGER NOT NULL, " +
+                "`archived` INTEGER NOT NULL, `sortOrder` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        )
+        DefaultActivities.seed(db)
     }
 }
