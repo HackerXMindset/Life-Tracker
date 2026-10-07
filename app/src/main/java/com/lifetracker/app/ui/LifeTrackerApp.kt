@@ -32,6 +32,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifetracker.app.R
 import com.lifetracker.app.data.BackupManager
+import com.lifetracker.app.data.DataSources
+import com.lifetracker.app.data.streak.StreakImporter
 
 enum class Tab(val title: String, @DrawableRes val icon: Int) {
     Timeline("Timeline", R.drawable.ic_tab_timeline),
@@ -48,7 +50,13 @@ fun LifeTrackerApp() {
 
     // One automatic backup per day, the first time the app is opened.
     val context = LocalContext.current
-    LaunchedEffect(Unit) { runCatching { BackupManager.autoBackupIfDue(context) } }
+    // Then pick up anything new from Streak. The backup comes first, so it holds the data from before the import.
+    LaunchedEffect(Unit) {
+        runCatching { BackupManager.autoBackupIfDue(context) }
+        runCatching {
+            if (DataSources(context).folder(DataSources.Slot.Streak) != null) StreakImporter.importIfNew(context)
+        }
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -71,6 +79,7 @@ fun LifeTrackerApp() {
             } else {
                 when (tab) {
                     Tab.Timeline -> TimelineScreen(onOpenData = { showData = true })
+                    Tab.Habits -> HabitsScreen()
                     else -> ComingNextScreen(tab)
                 }
             }

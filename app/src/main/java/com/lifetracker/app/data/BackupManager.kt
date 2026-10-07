@@ -62,7 +62,7 @@ object BackupManager {
         if (sources.folder(DataSources.Slot.Backup) == null) return@withContext null
         val today = LocalDate.now().toString()
         if (sources.lastAutoBackupDate == today) return@withContext null
-        if (AppDatabase.get(context).entryDao().all().isEmpty()) return@withContext null
+        if (snapshot(AppDatabase.get(context)).isEmpty) return@withContext null
         val name = backupNow(context, sources)
         sources.lastAutoBackupDate = today
         name
@@ -93,19 +93,60 @@ object BackupManager {
         val data = BackupCodec.decode(bytes.toString(Charsets.UTF_8))
 
         val db = AppDatabase.get(context)
-        if (db.entryDao().all().isNotEmpty()) {
+        if (!snapshot(db).isEmpty) {
             write(context, folder, SAFETY_PREFIX, KEEP_SAFETY)
         }
+        replaceAll(db, data)
+        // Let the next open import the newest Streak backup again, to catch up on anything newer.
+        DataSources(context).streakSeenExportedAt = null
+    }
+
+    /** All of the app's data as it is right now. */
+    suspend fun snapshot(db: AppDatabase): BackupData = BackupData(
+        version = BackupCodec.FORMAT_VERSION,
+        exportedAt = LocalDateTime.now().toString(),
+        entries = db.entryDao().all(),
+        habits = db.habitDao().allHabits(),
+        completions = db.habitDao().allCompletions(),
+        categories = db.habitDao().allCategories(),
+        todoTags = db.planDao().allTodoTags(),
+        todos = db.planDao().allTodos(),
+        notes = db.planDao().allNotes(),
+        imported = db.importDao().all(),
+    )
+
+    /**
+     * A version 2 backup replaces everything. A version 1 backup only ever held
+     * Timeline entries, so it replaces just those and leaves habits, to-dos and
+     * notes alone; the import record is cleared so the next Streak import can
+     * bring back any focus sessions the old backup did not have.
+     */
+    private suspend fun replaceAll(db: AppDatabase, data: BackupData) {
         db.withTransaction {
             db.entryDao().deleteAll()
             db.entryDao().insertAll(data.entries)
+            db.importDao().deleteAll()
+            if (data.version >= 2) {
+                db.habitDao().deleteAllHabits()
+                db.habitDao().deleteAllCompletions()
+                db.habitDao().deleteAllCategories()
+                db.planDao().deleteAllTodos()
+                db.planDao().deleteAllTodoTags()
+                db.planDao().deleteAllNotes()
+                db.habitDao().upsertHabits(data.habits)
+                db.habitDao().upsertCompletions(data.completions)
+                db.habitDao().upsertCategories(data.categories)
+                db.planDao().upsertTodoTags(data.todoTags)
+                db.planDao().upsertTodos(data.todos)
+                db.planDao().upsertNotes(data.notes)
+                db.importDao().insertAll(data.imported)
+            }
         }
     }
 
     private suspend fun write(context: Context, folder: Uri, prefix: String, keep: Int): String {
         val dir = tree(context, folder)
-        val entries = AppDatabase.get(context).entryDao().all()
-        val text = BackupCodec.encode(entries, LocalDateTime.now().toString())
+        val text = BackupCodec.encode(snapshot(AppDatabase.get(context)))
         val base = prefix + STAMP.format(LocalDateTime.now())
 
         val part = dir.createFile("application/octet-stream", "$base.json.part")

@@ -10,6 +10,7 @@ import com.lifetracker.app.data.DataSources
 import com.lifetracker.app.data.DataSources.Slot
 import com.lifetracker.app.data.FoundFile
 import com.lifetracker.app.data.SourceScanner
+import com.lifetracker.app.data.streak.StreakImporter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,6 +25,7 @@ data class DataSourcesState(
     val backups: List<BackupFile> = emptyList(),
     val streakFolder: String? = null,
     val streakNewest: FoundFile? = null,
+    val lastStreakImport: String? = null,
     val nutriFolder: String? = null,
     val nutriNewest: FoundFile? = null,
     val message: String? = null,
@@ -64,6 +66,13 @@ class DataSourcesViewModel(app: Application) : AndroidViewModel(app) {
         launchAction { "Backed up as ${BackupManager.backupNow(context, sources)}" }
     }
 
+    fun importStreak() {
+        launchAction {
+            StreakImporter.importIfNew(context, force = true)?.describe()
+                ?: "The Streak backup has nothing in it to import."
+        }
+    }
+
     fun restore(file: BackupFile) {
         launchAction {
             val folder = sources.folder(Slot.Backup) ?: error("Choose a backup folder first.")
@@ -97,6 +106,9 @@ class DataSourcesViewModel(app: Application) : AndroidViewModel(app) {
             backups = backup?.let { runCatching { BackupManager.list(context, it) }.getOrNull() } ?: emptyList(),
             streakFolder = streak?.let(sources::folderName),
             streakNewest = streak?.let { SourceScanner.newestStreak(context, it) },
+            lastStreakImport = sources.lastStreakImportText?.let {
+                runCatching { formatDateTime(java.time.LocalDateTime.parse(it).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()) }.getOrNull()
+            },
             nutriFolder = nutri?.let(sources::folderName),
             nutriNewest = nutri?.let { SourceScanner.newestOpenNutriTracker(context, it) },
         )
