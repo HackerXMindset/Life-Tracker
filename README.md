@@ -42,10 +42,11 @@ It also remembers the big moments, such as moving to a new city or starting a ne
 | --- | --- |
 | App skeleton with five tabs | Done |
 | Automatic APK builds in the cloud | Done |
-| Timeline with a real on-phone database | Done, see below |
+| Timeline with a real on-phone database | Done |
+| Data sources and backups | Built, waiting to be tried on a phone |
 | Food, Habits, Money, Stats | Placeholder screens |
 
-**What works right now (Step 2).** On the Timeline tab you can:
+**What works right now (Steps 2 and 3).** On the Timeline tab you can:
 
 - scroll through the last 60 days, with a dot under every day that has entries;
 - tap **Log** to record an activity with a category, a name, a start and end time, and an optional note, or log a single moment with no end time;
@@ -53,6 +54,13 @@ It also remembers the big moments, such as moving to a new city or starting a ne
 - tap an entry to delete it.
 
 Everything is saved in a database on the phone and is still there after the app is closed.
+
+The gear icon at the top of the Timeline opens **Data sources**, where you can:
+
+- choose a **backup folder** on the phone, tap **Back up now**, and **Restore** from any backup or safety copy (a safety copy of your current data is always saved first);
+- choose the **Streak** and **OpenNutriTracker** folders, and see the newest file the app found in each. Importing from them comes in Steps 4 and 5.
+
+The app also makes one backup automatically the first time you open it each day, and keeps the newest 5.
 
 *Honest note:* the builds compile and install, but Step 2 has had only a cloud build so far. It has not yet been tested by hand on a real phone.
 
@@ -65,8 +73,8 @@ Each step is small enough to build, install and try before the next begins. The 
 ```
  DONE         Step 1  Skeleton
  DONE         Step 2  Timeline and database
- NEXT  ──►    Step 3  Data sources and backups
-              Step 4  Habits (Streak import)
+ DONE         Step 3  Data sources and backups
+ NEXT  ──►    Step 4  Habits (Streak import)
               Step 5  Food (OpenNutriTracker import)
               Step 6  Your own activities and goals
               Step 7  Money
@@ -81,17 +89,15 @@ Each step is small enough to build, install and try before the next begins. The 
 
 **Step 2: Timeline and database.** The Room database, the **Log** button, the day strip, daily summary, study goal bar and deleting entries.
 
-### Next
-
 **Step 3: Data sources and backups.** A single *Data sources* screen where you pick three folders, once each:
 
 - the **Streak folder** (`Internal shared storage/Streak`);
 - the **OpenNutriTracker folder** (`Internal shared storage/OpenNutritracker`);
 - a **backup folder** on the phone, such as `Documents/LifeTracker`.
 
-Android remembers each choice, so you never pick them again. This step also adds **Back up now** and **Restore**, plus a daily automatic backup when the app is opened, with the 30 most recent copies kept. Backups stay on the device. Nothing is uploaded anywhere.
+Android remembers each choice, so you never pick them again. This step also adds **Back up now** and **Restore**, plus a daily automatic backup when the app is opened, with the 5 most recent copies kept. Backups stay on the device. Nothing is uploaded anywhere. (Built; the Streak and OpenNutriTracker folders are only checked in this step, and the imports follow in Steps 4 and 5.)
 
-### Then
+### Next
 
 **Step 4: Habits.** On opening, the app finds the newest Streak backup in the Streak folder and imports it. The tab shows a 14-day grid, current and best streaks, and totals. It handles all three of your habit kinds: yes or no, the "Relap" kind, and counted habits. Importing the same backup again never creates duplicates.
 
@@ -152,6 +158,9 @@ life-tracker/
     ├── build.gradle.kts               App settings, version number, libraries
     ├── proguard-rules.pro             Code-shrinking rules for release builds
     │
+    ├── src/test/                      Tests that run in the cloud build
+    │   └── .../data/BackupCodecTest.kt   Checks a backup reads back exactly as written
+    │
     └── src/main/
         ├── AndroidManifest.xml        The app's identity card for Android
         │
@@ -160,8 +169,10 @@ life-tracker/
         │   │
         │   ├── data/                  ── The memory layer ──
         │   │   ├── Database.kt        Entries table, queries and the database itself
-        │   │   ├── Backup.kt                      (planned, Step 3)
-        │   │   ├── DataSources.kt                 (planned, Step 3) remembered folders
+        │   │   ├── Backup.kt          The backup file format (JSON) and how it is read back
+        │   │   ├── BackupManager.kt   Writing, listing and restoring backups, daily auto backup
+        │   │   ├── DataSources.kt     The three chosen folders, remembered between runs
+        │   │   ├── SourceScanner.kt   Finds the newest Streak and OpenNutriTracker file
         │   │   ├── StreakImporter.kt              (planned, Step 4)
         │   │   ├── OpenNutriTrackerImporter.kt    (planned, Step 5)
         │   │   └── ...                            habits, meals, money tables follow
@@ -171,12 +182,13 @@ life-tracker/
         │       ├── TimelineScreen.kt  Timeline: day strip, summary, goal bar, entries
         │       ├── TimelineViewModel.kt  Selected day, adding and deleting entries
         │       ├── LogSheet.kt        The "Log something" pop-up
+        │       ├── DataSourcesScreen.kt     Folders, Back up now and Restore
+        │       ├── DataSourcesViewModel.kt  What that screen shows and does
         │       ├── Model.kt           Activity categories and their colours
         │       ├── Format.kt          Turns minutes into "2h 05m" and "8:15 AM"
         │       ├── Components.kt      Shared pieces such as the screen header
         │       ├── theme/
         │       │   └── Theme.kt       Light and dark colours
-        │       ├── DataSourcesScreen.kt           (planned, Step 3)
         │       ├── HabitsScreen.kt                (planned, Step 4)
         │       ├── FoodScreen.kt                  (planned, Step 5)
         │       ├── MoneyScreen.kt                 (planned, Step 7)
@@ -184,7 +196,7 @@ life-tracker/
         │       └── StatsScreen.kt                 (planned, Step 9)
         │
         └── res/                       ── Look and feel ──
-            ├── drawable/              Icons: five tab icons, the add icon, the launcher icon
+            ├── drawable/              Icons: five tab icons, add, settings, the launcher icon
             ├── mipmap-anydpi-v26/     The adaptive app icon
             ├── values/                Colours, text, light theme
             └── values-night/          Dark theme
@@ -197,7 +209,8 @@ life-tracker/
 - **On the phone only.** The database is a private SQLite file that no other app can read.
 - **Imports read, never change.** The app reads your Streak and OpenNutriTracker backups and never writes to those folders or alters those files.
 - **Imports are repeatable.** Each import overwrites matching records instead of adding copies, so running the same one twice is harmless.
-- **Backups are plain files.** A backup is an ordinary JSON file you can open, copy or keep, and it still exists if the app is uninstalled.
+- **Backups are plain files.** A backup is an ordinary JSON file you can open, copy or keep, and it still exists if the app is uninstalled. Each file is written under a temporary name and renamed only when complete, so a crash never leaves a broken backup.
+- **Restore is cautious.** The file is checked before anything is touched, and your current data is saved as a safety copy first.
 - **What backups do not cover.** A backup on the phone cannot help if the phone itself is lost. Copy the backup folder somewhere else now and then if that matters to you.
 
 ---
@@ -218,7 +231,7 @@ A new version installs over the old one and keeps your data.
 No computer is needed. GitHub builds the app in the cloud.
 
 1. A change is pushed to this repository.
-2. GitHub Actions runs `build.yml`, which builds a signed release APK (a few minutes).
+2. GitHub Actions runs `build.yml`, which runs the tests and then builds a signed release APK (a few minutes). If a test fails, no APK is published.
 3. The APK is published as a new release named `build-N`, where `N` is the run number.
 4. You download it from the Releases page and install it.
 

@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -56,7 +57,7 @@ private const val DAYS_SHOWN = 60
 private fun EntryEntity.minutes(): Int = ((endMinute ?: startMinute) - startMinute).coerceAtLeast(0)
 
 @Composable
-fun TimelineScreen(vm: TimelineViewModel = viewModel()) {
+fun TimelineScreen(onOpenData: () -> Unit, vm: TimelineViewModel = viewModel()) {
     val date by vm.date.collectAsState()
     val entries by vm.entries.collectAsState()
     val datesWithEntries by vm.datesWithEntries.collectAsState()
@@ -75,7 +76,16 @@ fun TimelineScreen(vm: TimelineViewModel = viewModel()) {
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
             item {
-                ScreenHeader(label = "Timeline", badge = "Saved on this phone", title = title)
+                ScreenHeader(
+                    label = "Timeline",
+                    badge = "Saved on this phone",
+                    title = title,
+                    trailing = {
+                        IconButton(onClick = onOpenData) {
+                            Icon(painterResource(R.drawable.ic_settings), contentDescription = "Data sources")
+                        }
+                    },
+                )
             }
             item {
                 DayStrip(selected = date, datesWithEntries = datesWithEntries, onSelect = vm::selectDate)

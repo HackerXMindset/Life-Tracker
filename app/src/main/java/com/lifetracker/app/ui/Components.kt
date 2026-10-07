@@ -32,7 +32,12 @@ fun MonoLabel(text: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun ScreenHeader(label: String, badge: String, title: String) {
+fun ScreenHeader(
+    label: String,
+    badge: String,
+    title: String,
+    trailing: (@Composable () -> Unit)? = null,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -40,18 +45,21 @@ fun ScreenHeader(label: String, badge: String, title: String) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             MonoLabel(label)
-            Surface(
-                shape = RoundedCornerShape(50),
-                color = Color.Transparent,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-            ) {
-                Text(
-                    text = badge,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
-                    fontSize = 11.sp,
-                    fontFamily = FontFamily.Monospace,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = Color.Transparent,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                ) {
+                    Text(
+                        text = badge,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
+                        fontSize = 11.sp,
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                trailing?.invoke()
             }
         }
         Text(

@@ -22,8 +22,8 @@ jobs:
         with:
           gradle-version: 8.10.2
 
-      - name: Build signed release APK
-        run: gradle assembleRelease -PversionCodeOverride=${{ github.run_number }} --no-daemon
+      - name: Build signed release APK (tests run first)
+        run: gradle testReleaseUnitTest assembleRelease -PversionCodeOverride=${{ github.run_number }} --no-daemon
 
       - name: Name the APK
         run: cp app/build/outputs/apk/release/app-release.apk life-tracker.apk

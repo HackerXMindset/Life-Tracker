@@ -1,6 +1,8 @@
 package com.lifetracker.app.ui
 
+import java.time.Instant
 import java.time.LocalTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 private val TIME_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("h:mm a")
@@ -19,3 +21,10 @@ fun formatDuration(totalMinutes: Int): String {
         else -> "${h}h ${m.toString().padStart(2, '0')}m"
     }
 }
+
+private val DATE_TIME_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("d MMM yyyy, h:mm a")
+
+/** A file's modified time such as "4 Oct 2026, 11:04 AM", or a dash if the phone does not know it. */
+fun formatDateTime(millis: Long): String =
+    if (millis <= 0L) "date unknown"
+    else Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).format(DATE_TIME_FORMAT)

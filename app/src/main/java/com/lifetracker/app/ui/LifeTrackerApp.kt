@@ -19,16 +19,19 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifetracker.app.R
+import com.lifetracker.app.data.BackupManager
 
 enum class Tab(val title: String, @DrawableRes val icon: Int) {
     Timeline("Timeline", R.drawable.ic_tab_timeline),
@@ -41,6 +44,11 @@ enum class Tab(val title: String, @DrawableRes val icon: Int) {
 @Composable
 fun LifeTrackerApp() {
     var tab by rememberSaveable { mutableStateOf(Tab.Timeline) }
+    var showData by rememberSaveable { mutableStateOf(false) }
+
+    // One automatic backup per day, the first time the app is opened.
+    val context = LocalContext.current
+    LaunchedEffect(Unit) { runCatching { BackupManager.autoBackupIfDue(context) } }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -58,9 +66,13 @@ fun LifeTrackerApp() {
         },
     ) { padding ->
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
-            when (tab) {
-                Tab.Timeline -> TimelineScreen()
-                else -> ComingNextScreen(tab)
+            if (showData) {
+                DataSourcesScreen(onBack = { showData = false })
+            } else {
+                when (tab) {
+                    Tab.Timeline -> TimelineScreen(onOpenData = { showData = true })
+                    else -> ComingNextScreen(tab)
+                }
             }
         }
     }
