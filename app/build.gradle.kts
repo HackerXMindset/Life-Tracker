@@ -18,7 +18,7 @@ android {
         minSdk = 26
         targetSdk = 35
         versionCode = buildNumber
-        versionName = "0.7.$buildNumber"
+        versionName = "0.8.$buildNumber"
     }
 
     signingConfigs {
@@ -70,6 +70,9 @@ dependencies {
 
     // Reads and writes the folders you pick (Streak, OpenNutriTracker, backups).
     implementation("androidx.documentfile:documentfile:1.0.1")
+
+    // Runs the small background job that copies app usage history every few hours.
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
 
     // Tests that run in the cloud build. The org.json copy is needed because
     // the Android one is only a stub outside a real phone.

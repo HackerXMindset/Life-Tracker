@@ -23,11 +23,13 @@ data class BackupData(
     val moneyCategories: List<MoneyCategoryEntity> = emptyList(),
     val moneyItems: List<MoneyItemEntity> = emptyList(),
     val moneyEntries: List<MoneyEntryEntity> = emptyList(),
+    val usageSessions: List<UsageSessionEntity> = emptyList(),
+    val usageApps: List<UsageAppEntity> = emptyList(),
 ) {
     val isEmpty: Boolean
         get() = entries.isEmpty() && habits.isEmpty() && completions.isEmpty() && categories.isEmpty() &&
             todoTags.isEmpty() && todos.isEmpty() && notes.isEmpty() && meals.isEmpty() && water.isEmpty() &&
-            moneyItems.isEmpty() && moneyEntries.isEmpty()
+            moneyItems.isEmpty() && moneyEntries.isEmpty() && usageSessions.isEmpty()
 }
 
 /**
@@ -35,12 +37,12 @@ data class BackupData(
  *
  * `version` lets later steps add more data without breaking old backups.
  * Version 1 held only Timeline entries; version 2 adds habits, to-dos, notes
- * and the record of what was imported; version 3 adds meals, food goals and water; version 4 adds your own activities and their goals; version 5 adds money (categories, saved items and entries). A file from a newer version of the app
+ * and the record of what was imported; version 3 adds meals, food goals and water; version 4 adds your own activities and their goals; version 5 adds money (categories, saved items and entries); version 6 adds phone usage (sessions are stored compactly as [app, start, end]). A file from a newer version of the app
  * is refused rather than half-read.
  */
 object BackupCodec {
     const val APP_NAME = "life-tracker"
-    const val FORMAT_VERSION = 5
+    const val FORMAT_VERSION = 6
 
     fun encode(data: BackupData): String =
         JSONObject()
@@ -62,6 +64,8 @@ object BackupCodec {
             .put("moneyCategories", array(data.moneyCategories, ::moneyCategoryJson))
             .put("moneyItems", array(data.moneyItems, ::moneyItemJson))
             .put("moneyEntries", array(data.moneyEntries, ::moneyEntryJson))
+            .put("usageSessions", sessionsJson(data.usageSessions))
+            .put("usageApps", array(data.usageApps, ::usageAppJson))
             .toString(2)
 
     /** Reads a backup. Throws [IllegalArgumentException] with a readable reason if it is not usable. */
@@ -91,6 +95,8 @@ object BackupCodec {
                 moneyCategories = list(root, "moneyCategories", required = false, ::moneyCategory),
                 moneyItems = list(root, "moneyItems", required = false, ::moneyItem),
                 moneyEntries = list(root, "moneyEntries", required = false, ::moneyEntry),
+                usageSessions = sessions(root),
+                usageApps = list(root, "usageApps", required = false, ::usageApp),
             )
         } catch (e: JSONException) {
             throw IllegalArgumentException("This file is damaged or is not a backup.")
@@ -327,5 +333,32 @@ object BackupCodec {
         amount = o.getDouble("amount"),
         note = o.getString("note"),
         itemId = o.getString("itemId"),
+    )
+
+    // Sessions are the biggest part of a backup, so each is one short list: [app, start, end].
+    private fun sessionsJson(list: List<UsageSessionEntity>): JSONArray {
+        val out = JSONArray()
+        for (s in list) out.put(JSONArray().put(s.pkg).put(s.startMs).put(s.endMs))
+        return out
+    }
+
+    private fun sessions(root: JSONObject): List<UsageSessionEntity> {
+        val array = root.optJSONArray("usageSessions") ?: return emptyList()
+        return (0 until array.length()).map {
+            val row = array.getJSONArray(it)
+            val pkg = row.getString(0)
+            val start = row.getLong(1)
+            UsageSessionEntity(UsageSessionEntity.idFor(pkg, start), pkg, start, row.getLong(2))
+        }
+    }
+
+    private fun usageAppJson(a: UsageAppEntity) = JSONObject()
+        .put("pkg", a.pkg).put("label", a.label).put("activityId", a.activityId).put("ignored", a.ignored)
+
+    private fun usageApp(o: JSONObject) = UsageAppEntity(
+        pkg = o.getString("pkg"),
+        label = o.getString("label"),
+        activityId = o.getString("activityId"),
+        ignored = o.getBoolean("ignored"),
     )
 }

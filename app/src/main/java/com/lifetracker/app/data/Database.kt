@@ -71,8 +71,10 @@ interface EntryDao {
         MoneyCategoryEntity::class,
         MoneyItemEntity::class,
         MoneyEntryEntity::class,
+        UsageSessionEntity::class,
+        UsageAppEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -83,6 +85,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun foodDao(): FoodDao
     abstract fun activityDao(): ActivityDao
     abstract fun moneyDao(): MoneyDao
+    abstract fun usageDao(): UsageDao
 
     companion object {
         @Volatile
@@ -95,7 +98,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "life-tracker.db",
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                     .addCallback(object : RoomDatabase.Callback() {
                         // A brand new database starts with the built-in activities and money categories.
                         override fun onCreate(db: SupportSQLiteDatabase) {
@@ -227,5 +230,23 @@ val MIGRATION_4_5: Migration = object : Migration(4, 5) {
         )
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_money_entries_date` ON `money_entries` (`date`)")
         DefaultMoneyCategories.seed(db)
+    }
+}
+
+/**
+ * Version 5 -> 6: adds the phone usage tables (app sessions and what you told the app about
+ * each app). Nothing existing is touched. The SQL must match UsageTables.kt exactly.
+ */
+val MIGRATION_5_6: Migration = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `usage_sessions` (`id` TEXT NOT NULL, `pkg` TEXT NOT NULL, " +
+                "`startMs` INTEGER NOT NULL, `endMs` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_usage_sessions_startMs` ON `usage_sessions` (`startMs`)")
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `usage_apps` (`pkg` TEXT NOT NULL, `label` TEXT NOT NULL, " +
+                "`activityId` TEXT NOT NULL, `ignored` INTEGER NOT NULL, PRIMARY KEY(`pkg`))",
+        )
     }
 }

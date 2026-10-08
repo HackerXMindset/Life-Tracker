@@ -56,6 +56,13 @@ class ActivityStatsTest {
     }
 
     @Test
+    fun timeOnLinkedAppsCountsTowardsTheGoal() {
+        val entries = listOf(entry("Study", 0, 60))
+        val goals = ActivityStats.goalProgress(listOf(study), entries, mapOf("Study" to 45, "Other" to 10))
+        assertEquals(105, goals.single().minutes)
+    }
+
+    @Test
     fun missingActivityFallsBackToGrey() {
         val found = ActivityStats.find(listOf(study), "gone")
         assertEquals("gone", found.name)
