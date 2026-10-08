@@ -55,6 +55,10 @@ import com.lifetracker.app.data.EntryEntity
 import com.lifetracker.app.data.MealEntity
 import com.lifetracker.app.data.NoteEntity
 import com.lifetracker.app.data.TodoEntity
+import com.lifetracker.app.data.CallEntity
+import com.lifetracker.app.data.CallStats
+import com.lifetracker.app.data.CallsCollector
+import com.lifetracker.app.data.CallsSettings
 import com.lifetracker.app.data.UsageCollector
 import com.lifetracker.app.data.UsageDays
 import com.lifetracker.app.data.UsageSettings
@@ -70,7 +74,7 @@ private const val DAYS_AHEAD = 30
 private fun EntryEntity.minutes(): Int = ActivityStats.minutes(this)
 
 @Composable
-fun TimelineScreen(onOpenData: () -> Unit, onOpenActivities: () -> Unit, onOpenPhone: () -> Unit, vm: TimelineViewModel = viewModel()) {
+fun TimelineScreen(onOpenData: () -> Unit, onOpenActivities: () -> Unit, onOpenPhone: () -> Unit, onOpenCalls: () -> Unit, vm: TimelineViewModel = viewModel()) {
     val date by vm.date.collectAsState()
     val entries by vm.entries.collectAsState()
     val todos by vm.todos.collectAsState()
@@ -81,14 +85,19 @@ fun TimelineScreen(onOpenData: () -> Unit, onOpenActivities: () -> Unit, onOpenP
     val datesWithEntries by vm.datesWithEntries.collectAsState()
     val types by vm.activityTypes.collectAsState()
     val usageDay by vm.usageDay.collectAsState()
+    val calls by vm.calls.collectAsState()
 
     // Read fresh each time the Timeline comes into view, so changes made on the Phone usage screen show up.
     val context = LocalContext.current
     val usageSettings = remember { UsageSettings(context) }
+    val callsSettings = remember { CallsSettings(context) }
     val usageAccess = UsageCollector.hasAccess(context)
     val showPhone = usageAccess && usageSettings.showOnTimeline
     val minBlockMs = usageSettings.minBlockMinutes * 60_000L
     var promptDismissed by remember { mutableStateOf(usageSettings.promptDismissed) }
+    val callsAccess = CallsCollector.hasAccess(context)
+    val showCalls = callsAccess && callsSettings.showOnTimeline
+    var callsPromptDismissed by remember { mutableStateOf(callsSettings.promptDismissed) }
 
     var showLog by remember { mutableStateOf(false) }
     var toDelete by remember { mutableStateOf<EntryEntity?>(null) }
@@ -105,6 +114,7 @@ fun TimelineScreen(onOpenData: () -> Unit, onOpenActivities: () -> Unit, onOpenP
         todos.filter { it.minutes != null }.forEach { add(TodoItem(it)) }
         notes.filter { it.minutes != null }.forEach { add(NoteItem(it)) }
         meals.forEach { add(MealItem(it)) }
+        if (showCalls) calls.forEach { add(CallItem(it)) }
         if (showPhone) usageDay.blocks.filter { it.activeMs >= minBlockMs }.forEach { add(PhoneItem(it)) }
     }.sortedBy { it.minute ?: 0 }
     val anyTimeTodos = todos.filter { it.minutes == null }
@@ -157,6 +167,18 @@ fun TimelineScreen(onOpenData: () -> Unit, onOpenActivities: () -> Unit, onOpenP
                     )
                 }
             }
+            if (callsAccess) {
+                if (calls.isNotEmpty()) {
+                    item(key = "calls-summary") { CallsSummary(calls, onClick = onOpenCalls) }
+                }
+            } else if (!callsPromptDismissed) {
+                item(key = "calls-prompt") {
+                    CallsPrompt(
+                        onOpen = onOpenCalls,
+                        onDismiss = { callsSettings.promptDismissed = true; callsPromptDismissed = true },
+                    )
+                }
+            }
             if (timed.isEmpty() && anyTimeTodos.isEmpty() && anyTimeNotes.isEmpty()) {
                 item {
                     Surface(
@@ -186,6 +208,7 @@ fun TimelineScreen(onOpenData: () -> Unit, onOpenActivities: () -> Unit, onOpenP
                         is TodoItem -> TodoRow(item.todo, projectNames[item.todo.project], onToggle = { vm.toggleTodo(item.todo) })
                         is NoteItem -> NoteRow(item.note, habitNames[item.note.habitId])
                         is MealItem -> MealRow(item.meal, types.byId("Food"))
+                        is CallItem -> CallRow(item.call)
                         is PhoneItem -> PhoneRow(item.block, item.block.activityId.takeIf { it.isNotEmpty() }?.let { types.byId(it) })
                     }
                 }
@@ -472,6 +495,12 @@ private class MealItem(val meal: MealEntity) : TimelineItem {
     override val key: String = "m" + meal.id
 }
 
+private class CallItem(val call: CallEntity) : TimelineItem {
+    override val minute: Int? = Instant.ofEpochMilli(call.startMs).atZone(ZoneId.systemDefault())
+        .let { it.hour * 60 + it.minute }
+    override val key: String = "call" + call.id
+}
+
 private class PhoneItem(val block: UsageDays.Block) : TimelineItem {
     override val minute: Int? = Instant.ofEpochMilli(block.startMs).atZone(ZoneId.systemDefault())
         .let { it.hour * 60 + it.minute }
@@ -734,6 +763,113 @@ private fun PhoneRow(block: UsageDays.Block, activity: ActivityTypeEntity?) {
             )
             Text(
                 text = "Phone · " + formatDuration(minutes.coerceAtLeast(1)) + (activity?.let { " · " + it.name } ?: ""),
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun CallsSummary(calls: List<CallEntity>, onClick: () -> Unit) {
+    val totals = CallStats.totals(calls)
+    Surface(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+    ) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                MonoLabel("Calls")
+                Text(
+                    text = "${totals.calls} · " + CallStats.durationText(totals.talkSec),
+                    fontSize = 14.sp,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+            if (totals.missed > 0) {
+                Text(
+                    text = "${totals.missed} missed",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+            Text(
+                text = "Tap for people and settings",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun CallsPrompt(onOpen: () -> Unit, onDismiss: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+    ) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                text = "See your calls here",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = "Allow call log access and every call appears on the Timeline with who it was and how long it lasted.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(onClick = onOpen) { Text("Set up") }
+                TextButton(onClick = onDismiss) { Text("Not now") }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CallRow(call: CallEntity) {
+    val missed = call.type == CallStats.MISSED
+    val color = if (missed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+    val startMinute = Instant.ofEpochMilli(call.startMs).atZone(ZoneId.systemDefault()).let { it.hour * 60 + it.minute }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = 44.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(
+            text = formatMinute(startMinute),
+            modifier = Modifier
+                .width(68.dp)
+                .padding(top = 3.dp),
+            fontSize = 12.sp,
+            fontFamily = FontFamily.Monospace,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Box(modifier = Modifier.width(10.dp), contentAlignment = Alignment.TopCenter) {
+            Box(
+                modifier = Modifier
+                    .padding(top = 5.dp)
+                    .size(10.dp)
+                    .clip(CircleShape)
+                    .background(color),
+            )
+        }
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = CallStats.title(call),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+            Text(
+                text = "Call · " + CallStats.detail(call),
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

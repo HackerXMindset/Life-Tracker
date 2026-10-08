@@ -54,7 +54,7 @@ import com.lifetracker.app.data.ActivityStats
 import com.lifetracker.app.data.UsageAppEntity
 import com.lifetracker.app.data.UsageCollector
 
-private fun Context.findLifecycleOwner(): LifecycleOwner? {
+internal fun Context.findLifecycleOwner(): LifecycleOwner? {
     var c: Context? = this
     while (c is ContextWrapper) {
         if (c is LifecycleOwner) return c

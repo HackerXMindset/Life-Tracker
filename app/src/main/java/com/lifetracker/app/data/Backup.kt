@@ -25,11 +25,12 @@ data class BackupData(
     val moneyEntries: List<MoneyEntryEntity> = emptyList(),
     val usageSessions: List<UsageSessionEntity> = emptyList(),
     val usageApps: List<UsageAppEntity> = emptyList(),
+    val calls: List<CallEntity> = emptyList(),
 ) {
     val isEmpty: Boolean
         get() = entries.isEmpty() && habits.isEmpty() && completions.isEmpty() && categories.isEmpty() &&
             todoTags.isEmpty() && todos.isEmpty() && notes.isEmpty() && meals.isEmpty() && water.isEmpty() &&
-            moneyItems.isEmpty() && moneyEntries.isEmpty() && usageSessions.isEmpty()
+            moneyItems.isEmpty() && moneyEntries.isEmpty() && usageSessions.isEmpty() && calls.isEmpty()
 }
 
 /**
@@ -37,12 +38,12 @@ data class BackupData(
  *
  * `version` lets later steps add more data without breaking old backups.
  * Version 1 held only Timeline entries; version 2 adds habits, to-dos, notes
- * and the record of what was imported; version 3 adds meals, food goals and water; version 4 adds your own activities and their goals; version 5 adds money (categories, saved items and entries); version 6 adds phone usage (sessions are stored compactly as [app, start, end]). A file from a newer version of the app
+ * and the record of what was imported; version 3 adds meals, food goals and water; version 4 adds your own activities and their goals; version 5 adds money (categories, saved items and entries); version 6 adds phone usage (sessions are stored compactly as [app, start, end]); version 7 adds phone calls (each stored as [number, name, type, start, seconds]). A file from a newer version of the app
  * is refused rather than half-read.
  */
 object BackupCodec {
     const val APP_NAME = "life-tracker"
-    const val FORMAT_VERSION = 6
+    const val FORMAT_VERSION = 7
 
     fun encode(data: BackupData): String =
         JSONObject()
@@ -66,6 +67,7 @@ object BackupCodec {
             .put("moneyEntries", array(data.moneyEntries, ::moneyEntryJson))
             .put("usageSessions", sessionsJson(data.usageSessions))
             .put("usageApps", array(data.usageApps, ::usageAppJson))
+            .put("calls", callsJson(data.calls))
             .toString(2)
 
     /** Reads a backup. Throws [IllegalArgumentException] with a readable reason if it is not usable. */
@@ -97,6 +99,7 @@ object BackupCodec {
                 moneyEntries = list(root, "moneyEntries", required = false, ::moneyEntry),
                 usageSessions = sessions(root),
                 usageApps = list(root, "usageApps", required = false, ::usageApp),
+                calls = calls(root),
             )
         } catch (e: JSONException) {
             throw IllegalArgumentException("This file is damaged or is not a backup.")
@@ -361,4 +364,21 @@ object BackupCodec {
         activityId = o.getString("activityId"),
         ignored = o.getBoolean("ignored"),
     )
+
+    // Calls are one short list each: [number, name, type, start, seconds].
+    private fun callsJson(list: List<CallEntity>): JSONArray {
+        val out = JSONArray()
+        for (c in list) out.put(JSONArray().put(c.number).put(c.name).put(c.type).put(c.startMs).put(c.durationSec))
+        return out
+    }
+
+    private fun calls(root: JSONObject): List<CallEntity> {
+        val array = root.optJSONArray("calls") ?: return emptyList()
+        return (0 until array.length()).map {
+            val row = array.getJSONArray(it)
+            val number = row.getString(0)
+            val start = row.getLong(3)
+            CallEntity(CallStats.idFor(start, number), number, row.getString(1), row.getInt(2), start, row.getInt(4))
+        }
+    }
 }

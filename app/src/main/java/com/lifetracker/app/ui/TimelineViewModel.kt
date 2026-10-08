@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.lifetracker.app.data.ActivityStats
 import com.lifetracker.app.data.ActivityTypeEntity
 import com.lifetracker.app.data.AppDatabase
+import com.lifetracker.app.data.CallEntity
 import com.lifetracker.app.data.EntryEntity
 import com.lifetracker.app.data.MealEntity
 import com.lifetracker.app.data.NoteEntity
@@ -63,6 +64,18 @@ class TimelineViewModel(app: Application) : AndroidViewModel(app) {
             combine(db.usageDao().sessionsBetween(start, end), db.usageDao().observeApps()) { sessions, apps ->
                 UsageDays.build(sessions, apps.associateBy { it.pkg }, start, end)
             }
+        },
+    )
+
+    /** Phone calls that started on the selected day. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val calls: StateFlow<List<CallEntity>> = share(
+        emptyList(),
+        selectedDate.flatMapLatest { d ->
+            val zone = ZoneId.systemDefault()
+            val start = d.atStartOfDay(zone).toInstant().toEpochMilli()
+            val end = d.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+            db.callDao().callsBetween(start, end)
         },
     )
 

@@ -48,7 +48,8 @@ It also remembers the big moments, such as moving to a new city or starting a ne
 | Food, with OpenNutriTracker import, water and meal logging | Done |
 | Your own activities, colours and daily goals | Done |
 | Money: income and spending, monthly items, quick-log items, categories | Done |
-| Phone usage: app sessions on the Timeline, per-app totals, app-to-activity links | Built, waiting to be tried on a phone |
+| Phone usage: app sessions on the Timeline, per-app totals, app-to-activity links | Done |
+| Calls from the call log, on the Timeline | Built, waiting to be tried on a phone |
 | Stats | Placeholder screen |
 
 **What works right now (Steps 2 to 6).** On the Timeline tab you can:
@@ -104,8 +105,8 @@ Each step is small enough to build, install and try before the next begins. The 
  DONE         Step 6  Your own activities and goals
  DONE         Step 7  Money
  DONE         Step 8  Phone usage (app sessions on the Timeline)
- NEXT  ──►    Step 9  Calls
-              Step 10 Charging (plug-in pop-up, charger type, phone in use)
+ DONE         Step 9  Calls
+ NEXT  ──►    Step 10 Charging (plug-in pop-up, charger type, phone in use)
               Step 11 Steps and sleep (Health Connect, phone step counter)
               Step 12 Places (geofencing: Home, Library, Gym)
               Step 13 Trips (how you got there: walk, cycle, vehicle)
@@ -144,11 +145,11 @@ You make your own spending and income categories (a starter set is there), see e
 
 **Step 8: Phone usage.** The app reads Android's own record of which app was on screen and for how long (the source Digital Wellbeing uses), once you switch on *Usage access*. It copies that record into its own database on the phone, because Android only keeps about a week, and keeps copying it every few hours in the background. On the Timeline, each stretch of app use shows as a block with the app's name and exact time, with a short summary of the day's top apps. A *Phone usage* screen shows totals per app (today or the last 7 days) and lets you link an app to one of your activities (for example Anki to Study, YouTube to Screen and leisure), so its time counts towards that activity's daily goal, including screen-time limits. You can hide apps, leave short stretches off the Timeline, or turn app use off the Timeline entirely. This was the fifth database change (version 5 to 6), and backups moved to format 6. Backups now grow with your phone use, because every session is kept.
 
+**Step 9: Calls.** The app copies the phone's call log (who, when, how long, and whether it was incoming, outgoing, missed or declined) into its own database, once you allow *Call logs*. Contacts access is optional and only turns numbers into names. Calls show on the Timeline with their time, and a card shows the day's count and talk time. A *Calls* screen totals the last day, 7 or 30 days, lists the people you talked to most, and shows your latest calls. Only normal phone calls are in the call log, so WhatsApp and Telegram calls do not appear. Backups include calls, with numbers and names as plain text, so keep the backup folder private. This was the sixth database change (version 6 to 7), and backups moved to format 7.
+
 ### Next
 
 The next steps were planned together after asking for more automatic tracking. They are ordered so that nothing needs an always-on notification or drains the battery: each one uses Android's own low-power services.
-
-**Step 9: Calls.** Who you talked to, when, and for how long (incoming, outgoing, missed), shown on the Timeline. Reads the phone's call log with the "Call logs" permission, and your contacts so names show instead of numbers. Normal phone calls only; WhatsApp and Telegram calls are not in the call log.
 
 **Step 10: Charging.** Plug-in and unplug times, the plug type (wall, USB, wireless), charging speed, and whether the phone was in use while charging. When charging starts, a banner notification asks "What's charging this?" with one-tap buttons (Wall, Power bank, Laptop). After a few tags the app learns each charger's speed and suggests the answer itself, also using whether you were moving and where you were. Android starts a small job when charging begins, so nothing runs all day.
 
@@ -216,6 +217,7 @@ life-tracker/
     │   ├── .../data/FoodStatsTest.kt     Calorie, macro and goal arithmetic
     │   ├── .../data/ActivityStatsTest.kt Activity time and goal arithmetic
     │   ├── .../data/MoneyStatsTest.kt    Money totals, formatting and monthly-item rules
+    │   ├── .../data/CallStatsTest.kt     Call wording, totals and people
     │   ├── .../data/UsageSessionsTest.kt App events into sessions, and a day's blocks and totals
     │   └── .../data/ont/OntImportTest.kt OpenNutriTracker export parsing
     │
@@ -236,6 +238,10 @@ life-tracker/
         │   │   ├── UsageCollector.kt  Reads Android's usage history (needs Usage access)
         │   │   ├── UsageSyncWorker.kt Copies that history every few hours in the background
         │   │   ├── UsageSettings.kt   Timeline and sync settings for phone usage
+        │   │   ├── CallTables.kt      Your phone calls
+        │   │   ├── CallStats.kt       Call wording, totals and people
+        │   │   ├── CallsCollector.kt  Copies the call log (needs Call logs permission)
+        │   │   ├── CallsSettings.kt   Timeline setting for calls
         │   │   ├── FoodTables.kt      Meals, daily food goals and water
         │   │   ├── FoodStats.kt       Calorie and macro arithmetic
         │   │   ├── Backup.kt          The backup file format (JSON) and how it is read back
@@ -264,6 +270,8 @@ life-tracker/
         │       ├── DataSourcesScreen.kt     Folders, Back up now and Restore
         │       ├── DataSourcesViewModel.kt  What that screen shows and does
         │       ├── Model.kt           Colour palette and goal wording for activities
+        │       ├── CallsScreen.kt          Calls: allow access, totals, people, Timeline option
+        │       ├── CallsViewModel.kt       What that screen shows and does
         │       ├── PhoneUsageScreen.kt     Phone usage: allow access, totals per app, links, Timeline options
         │       ├── PhoneUsageViewModel.kt  What that screen shows and does
         │       ├── ActivitiesScreen.kt     Activities settings: list, colours, goals

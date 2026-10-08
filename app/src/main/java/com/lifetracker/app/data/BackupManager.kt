@@ -125,10 +125,11 @@ object BackupManager {
         moneyEntries = db.moneyDao().allEntries(),
         usageSessions = db.usageDao().allSessions(),
         usageApps = db.usageDao().allApps(),
+        calls = db.callDao().allCalls(),
     )
 
     /**
-     * A version 6 backup replaces everything. Older backups never held some of
+     * A version 7 backup replaces everything. Older backups never held some of
      * the data (version 1: only Timeline entries; version 2: no food or water),
      * so they replace only what they hold and leave the rest alone; the import record is cleared so the next Streak import can
      * bring back any focus sessions the old backup did not have.
@@ -178,6 +179,10 @@ object BackupManager {
                 db.usageDao().deleteAllApps()
                 db.usageDao().upsertApps(data.usageApps)
                 db.usageDao().upsertSessions(data.usageSessions)
+            }
+            if (data.version >= 7) {
+                db.callDao().deleteAllCalls()
+                db.callDao().upsertCalls(data.calls)
             }
         }
     }
