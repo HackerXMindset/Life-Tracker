@@ -9,8 +9,12 @@ import com.lifetracker.app.data.ActivityStats
 
 /** The colour an activity is drawn in. One stored colour; in dark mode it is lightened so it stays readable. */
 @Composable
-fun ActivityTypeEntity.displayColor(): Color {
-    val base = Color(color.toInt())
+fun ActivityTypeEntity.displayColor(): Color = argbColor(color)
+
+/** Any stored ARGB colour, lightened in dark mode. */
+@Composable
+fun argbColor(argb: Long): Color {
+    val base = Color(argb.toInt())
     return if (isSystemInDarkTheme()) lerp(base, Color.White, 0.3f) else base
 }
 

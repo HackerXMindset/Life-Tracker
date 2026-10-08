@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import com.lifetracker.app.R
 import com.lifetracker.app.data.BackupManager
 import com.lifetracker.app.data.DataSources
+import com.lifetracker.app.data.MoneyPoster
 import com.lifetracker.app.data.ont.OntImporter
 import com.lifetracker.app.data.streak.StreakImporter
 
@@ -61,6 +62,8 @@ fun LifeTrackerApp() {
         runCatching {
             if (DataSources(context).folder(DataSources.Slot.OpenNutriTracker) != null) OntImporter.importIfNew(context)
         }
+        // Add the monthly items (rent, subscriptions, salary) whose day has come.
+        runCatching { MoneyPoster.postDue(context) }
     }
 
     Scaffold(
@@ -88,6 +91,7 @@ fun LifeTrackerApp() {
                     Tab.Timeline -> TimelineScreen(onOpenData = { showData = true }, onOpenActivities = { showActivities = true })
                     Tab.Habits -> HabitsScreen()
                     Tab.Food -> FoodScreen()
+                    Tab.Money -> MoneyScreen()
                     else -> ComingNextScreen(tab)
                 }
             }

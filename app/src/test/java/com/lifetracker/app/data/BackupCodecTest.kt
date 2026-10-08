@@ -41,6 +41,18 @@ class BackupCodecTest {
             ActivityTypeEntity("Study", "Study", 0xFF17785AL, 480, 0, false, 2),
             ActivityTypeEntity("c-abc", "Reading \"fiction\"", 0xFFD6457FL, 90, 1, true, 8),
         ),
+        moneyCategories = listOf(
+            MoneyCategoryEntity("x-food", "Food", 0xFFC28410L, KIND_EXPENSE, 0, false),
+            MoneyCategoryEntity("c-1", "Chai \"time\"", 0xFF2E9E6BL, KIND_INCOME, 3, true),
+        ),
+        moneyItems = listOf(
+            MoneyItemEntity("i1", "Rent", KIND_EXPENSE, "x-bills", 8000.0, MoneyItemEntity.MONTHLY, 5, "2026-09-01", "", "2026-10", false, 0),
+            MoneyItemEntity("i2", "Lassi", KIND_EXPENSE, "x-food", 40.5, MoneyItemEntity.OFTEN, 0, "", "", "", false, 1),
+        ),
+        moneyEntries = listOf(
+            MoneyEntryEntity("auto|i1|2026-10", "2026-10-05", KIND_EXPENSE, "x-bills", "Rent", 8000.0, "", "i1"),
+            MoneyEntryEntity("e1", "2026-10-07", KIND_INCOME, "i-pocket", "Pocket \"money\"", 5000.0, "line\ntwo", ""),
+        ),
     )
 
     @Test
@@ -87,6 +99,15 @@ class BackupCodecTest {
         val back = BackupCodec.decode(v3)
         assertEquals(3, back.version)
         assertTrue(back.activityTypes.isEmpty())
+    }
+
+    @Test
+    fun versionFourBackupsStillLoad() {
+        val v4 = """{"app":"life-tracker","version":4,"exportedAt":"x","entries":[],"activityTypes":[]}"""
+        val back = BackupCodec.decode(v4)
+        assertEquals(4, back.version)
+        assertTrue(back.moneyEntries.isEmpty())
+        assertTrue(back.moneyItems.isEmpty())
     }
 
     @Test
