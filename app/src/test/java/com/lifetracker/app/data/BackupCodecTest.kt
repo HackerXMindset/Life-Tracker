@@ -53,6 +53,14 @@ class BackupCodecTest {
             MoneyEntryEntity("auto|i1|2026-10", "2026-10-05", KIND_EXPENSE, "x-bills", "Rent", 8000.0, "", "i1"),
             MoneyEntryEntity("e1", "2026-10-07", KIND_INCOME, "i-pocket", "Pocket \"money\"", 5000.0, "line\ntwo", ""),
         ),
+        usageSessions = listOf(
+            UsageSessionEntity(UsageSessionEntity.idFor("com.a", 1_760_000_000_000L), "com.a", 1_760_000_000_000L, 1_760_000_060_000L),
+            UsageSessionEntity(UsageSessionEntity.idFor("com.b.c", 1_760_000_100_000L), "com.b.c", 1_760_000_100_000L, 1_760_000_400_000L),
+        ),
+        usageApps = listOf(
+            UsageAppEntity("com.a", "Anki \"cards\"", "Study", false),
+            UsageAppEntity("com.b.c", "Launcher", "", true),
+        ),
     )
 
     @Test
@@ -108,6 +116,15 @@ class BackupCodecTest {
         assertEquals(4, back.version)
         assertTrue(back.moneyEntries.isEmpty())
         assertTrue(back.moneyItems.isEmpty())
+    }
+
+    @Test
+    fun versionFiveBackupsStillLoad() {
+        val v5 = """{"app":"life-tracker","version":5,"exportedAt":"x","entries":[],"moneyItems":[]}"""
+        val back = BackupCodec.decode(v5)
+        assertEquals(5, back.version)
+        assertTrue(back.usageSessions.isEmpty())
+        assertTrue(back.usageApps.isEmpty())
     }
 
     @Test

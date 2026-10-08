@@ -10,6 +10,8 @@ import com.lifetracker.app.data.EntryEntity
 import com.lifetracker.app.data.MealEntity
 import com.lifetracker.app.data.NoteEntity
 import com.lifetracker.app.data.TodoEntity
+import com.lifetracker.app.data.UsageDays
+import java.time.ZoneId
 import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -49,6 +51,20 @@ class TimelineViewModel(app: Application) : AndroidViewModel(app) {
             onSaved(placed)
         }
     }
+
+    /** App use on the selected day: blocks for the Timeline, the total, and time per linked activity. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val usageDay: StateFlow<UsageDays.Day> = share(
+        UsageDays.Day(emptyList(), 0L, emptyList(), emptyMap()),
+        selectedDate.flatMapLatest { d ->
+            val zone = ZoneId.systemDefault()
+            val start = d.atStartOfDay(zone).toInstant().toEpochMilli()
+            val end = d.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+            combine(db.usageDao().sessionsBetween(start, end), db.usageDao().observeApps()) { sessions, apps ->
+                UsageDays.build(sessions, apps.associateBy { it.pkg }, start, end)
+            }
+        },
+    )
 
     /** To-dos planned for the selected day (only to-dos with a date ever appear on the Timeline). */
     @OptIn(ExperimentalCoroutinesApi::class)

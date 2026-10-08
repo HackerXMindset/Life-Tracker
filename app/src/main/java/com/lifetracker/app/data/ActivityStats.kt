@@ -16,12 +16,19 @@ object ActivityStats {
         val fraction: Float get() = if (goal <= 0) 0f else (minutes.toFloat() / goal).coerceIn(0f, 1f)
     }
 
-    /** Progress for every active activity that has a goal, in the order the activities are listed. */
-    fun goalProgress(types: List<ActivityTypeEntity>, entries: List<EntryEntity>): List<GoalProgress> {
+    /**
+     * Progress for every active activity that has a goal, in the order the activities are listed.
+     * [phoneMinutes] is time on apps you linked to an activity; it counts on top of what you logged.
+     */
+    fun goalProgress(
+        types: List<ActivityTypeEntity>,
+        entries: List<EntryEntity>,
+        phoneMinutes: Map<String, Int> = emptyMap(),
+    ): List<GoalProgress> {
         val byActivity = minutesByActivity(entries)
         return types
             .filter { !it.archived && it.goalMinutes > 0 }
-            .map { GoalProgress(it, byActivity[it.id] ?: 0) }
+            .map { GoalProgress(it, (byActivity[it.id] ?: 0) + (phoneMinutes[it.id] ?: 0)) }
     }
 
     /** What to show for an entry whose activity is no longer in the table (for example after restoring an old backup). */

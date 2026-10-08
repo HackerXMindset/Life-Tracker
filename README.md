@@ -46,8 +46,9 @@ It also remembers the big moments, such as moving to a new city or starting a ne
 | Data sources and backups | Done |
 | Habits, with Streak import (also focus sessions, to-dos, notes) | Done |
 | Food, with OpenNutriTracker import, water and meal logging | Done |
-| Your own activities, colours and daily goals | Built, waiting to be tried on a phone |
-| Money: income and spending, monthly items, quick-log items, categories | Built, waiting to be tried on a phone |
+| Your own activities, colours and daily goals | Done |
+| Money: income and spending, monthly items, quick-log items, categories | Done |
+| Phone usage: app sessions on the Timeline, per-app totals, app-to-activity links | Built, waiting to be tried on a phone |
 | Stats | Placeholder screen |
 
 **What works right now (Steps 2 to 6).** On the Timeline tab you can:
@@ -102,9 +103,15 @@ Each step is small enough to build, install and try before the next begins. The 
  DONE         Step 5  Food (OpenNutriTracker import)
  DONE         Step 6  Your own activities and goals
  DONE         Step 7  Money
- NEXT  ──►    Step 8  Life events, month and year views
-              Step 9  Stats
-              Step 10 Polish
+ DONE         Step 8  Phone usage (app sessions on the Timeline)
+ NEXT  ──►    Step 9  Calls
+              Step 10 Charging (plug-in pop-up, charger type, phone in use)
+              Step 11 Steps and sleep (Health Connect, phone step counter)
+              Step 12 Places (geofencing: Home, Library, Gym)
+              Step 13 Trips (how you got there: walk, cycle, vehicle)
+              Step 14 Life events, month and year views
+              Step 15 Stats
+              Step 16 Polish
 ```
 
 ### Done
@@ -135,13 +142,27 @@ Android remembers each choice, so you never pick them again. This step also adds
 
 You make your own spending and income categories (a starter set is there), see each month's in, out and left, a bar per category, and every entry by day. The currency is rupees by default and can be changed. This was the fourth database change (version 4 to 5), with a proper migration, and backups moved to format 5.
 
+**Step 8: Phone usage.** The app reads Android's own record of which app was on screen and for how long (the source Digital Wellbeing uses), once you switch on *Usage access*. It copies that record into its own database on the phone, because Android only keeps about a week, and keeps copying it every few hours in the background. On the Timeline, each stretch of app use shows as a block with the app's name and exact time, with a short summary of the day's top apps. A *Phone usage* screen shows totals per app (today or the last 7 days) and lets you link an app to one of your activities (for example Anki to Study, YouTube to Screen and leisure), so its time counts towards that activity's daily goal, including screen-time limits. You can hide apps, leave short stretches off the Timeline, or turn app use off the Timeline entirely. This was the fifth database change (version 5 to 6), and backups moved to format 6. Backups now grow with your phone use, because every session is kept.
+
 ### Next
 
-**Step 8: Life events, month and year views.** Mark moments that changed your life, then look back by month or year to see what you did and how much you studied around each one.
+The next steps were planned together after asking for more automatic tracking. They are ordered so that nothing needs an always-on notification or drains the battery: each one uses Android's own low-power services.
 
-**Step 9: Stats.** Choose any metric and view it by day, week, month or year, with a heatmap and short written insights. This comes late on purpose: it needs the other steps' data to exist first.
+**Step 9: Calls.** Who you talked to, when, and for how long (incoming, outgoing, missed), shown on the Timeline. Reads the phone's call log with the "Call logs" permission, and your contacts so names show instead of numbers. Normal phone calls only; WhatsApp and Telegram calls are not in the call log.
 
-**Step 10: Polish.** Reminders, search, smoother screens, and anything learned from using the app every day.
+**Step 10: Charging.** Plug-in and unplug times, the plug type (wall, USB, wireless), charging speed, and whether the phone was in use while charging. When charging starts, a banner notification asks "What's charging this?" with one-tap buttons (Wall, Power bank, Laptop). After a few tags the app learns each charger's speed and suggests the answer itself, also using whether you were moving and where you were. Android starts a small job when charging begins, so nothing runs all day.
+
+**Step 11: Steps and sleep.** Daily steps from Health Connect, which on Android 14 and up records the phone's own steps, with the phone's step counter as a fallback. Sleep is read from Health Connect if an app writes it, or estimated from the long night gap when the phone is not used, and you can correct it.
+
+**Step 12: Places.** Name places such as Home, Library or Gym, each with a radius. Android's geofencing tells the app when you enter, leave or stay, using Google Play Services instead of running GPS. Events can arrive a few minutes late, so places are used as context, not as a stopwatch. Includes a checklist for the phone's own battery and auto-start settings, which on Xiaomi phones can otherwise stop background work.
+
+**Step 13: Trips.** Android's activity recognition says when you start or stop walking, running, cycling or riding in a vehicle. Together with places, that gives trips such as "Home to Library, vehicle, 25 minutes". Somewhere you have not named gets one location reading when you stop, and the app asks you to name it. You tag car, bus or train yourself.
+
+**Step 14: Life events, month and year views.** Mark moments that changed your life, then look back by month or year to see what you did and how much you studied around each one.
+
+**Step 15: Stats.** Choose any metric and view it by day, week, month or year, with a heatmap and short written insights. This comes late on purpose: it needs the other steps' data to exist first.
+
+**Step 16: Polish.** Reminders, search, smoother screens, and anything learned from using the app every day.
 
 ---
 
@@ -195,6 +216,7 @@ life-tracker/
     │   ├── .../data/FoodStatsTest.kt     Calorie, macro and goal arithmetic
     │   ├── .../data/ActivityStatsTest.kt Activity time and goal arithmetic
     │   ├── .../data/MoneyStatsTest.kt    Money totals, formatting and monthly-item rules
+    │   ├── .../data/UsageSessionsTest.kt App events into sessions, and a day's blocks and totals
     │   └── .../data/ont/OntImportTest.kt OpenNutriTracker export parsing
     │
     └── src/main/
@@ -209,6 +231,11 @@ life-tracker/
         │   │   ├── HabitStats.kt      Streak arithmetic
         │   │   ├── ActivityTypes.kt   Your activities (names, colours, goals) and the built-in ones
         │   │   ├── ActivityStats.kt   Time per activity and goal progress
+        │   │   ├── UsageTables.kt     App sessions and what you told the app about each app
+        │   │   ├── UsageSessions.kt   Turns Android's app events into sessions, and sessions into a day
+        │   │   ├── UsageCollector.kt  Reads Android's usage history (needs Usage access)
+        │   │   ├── UsageSyncWorker.kt Copies that history every few hours in the background
+        │   │   ├── UsageSettings.kt   Timeline and sync settings for phone usage
         │   │   ├── FoodTables.kt      Meals, daily food goals and water
         │   │   ├── FoodStats.kt       Calorie and macro arithmetic
         │   │   ├── Backup.kt          The backup file format (JSON) and how it is read back
@@ -237,6 +264,8 @@ life-tracker/
         │       ├── DataSourcesScreen.kt     Folders, Back up now and Restore
         │       ├── DataSourcesViewModel.kt  What that screen shows and does
         │       ├── Model.kt           Colour palette and goal wording for activities
+        │       ├── PhoneUsageScreen.kt     Phone usage: allow access, totals per app, links, Timeline options
+        │       ├── PhoneUsageViewModel.kt  What that screen shows and does
         │       ├── ActivitiesScreen.kt     Activities settings: list, colours, goals
         │       ├── ActivitiesViewModel.kt  Saving and hiding activities
         │       ├── ActivityEditor.kt       The pop-up for making or editing an activity
@@ -252,8 +281,8 @@ life-tracker/
         │       ├── MoneyScreen.kt     Money tab: totals, quick log, categories, entries by day
         │       ├── MoneyViewModel.kt  Selected month, adding, logging and saving money items
         │       ├── MoneyDialogs.kt    The add flow (Expense or Income, then the kind) and its forms
-        │       ├── EventsScreen.kt                (planned, Step 8)
-        │       └── StatsScreen.kt                 (planned, Step 9)
+        │       ├── EventsScreen.kt                (planned, Step 14)
+        │       └── StatsScreen.kt                 (planned, Step 15)
         │
         └── res/                       ── Look and feel ──
             ├── drawable/              Icons: five tab icons, add, settings, the launcher icon

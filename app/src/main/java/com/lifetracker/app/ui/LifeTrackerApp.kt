@@ -34,6 +34,8 @@ import com.lifetracker.app.R
 import com.lifetracker.app.data.BackupManager
 import com.lifetracker.app.data.DataSources
 import com.lifetracker.app.data.MoneyPoster
+import com.lifetracker.app.data.UsageCollector
+import com.lifetracker.app.data.UsageSyncWorker
 import com.lifetracker.app.data.ont.OntImporter
 import com.lifetracker.app.data.streak.StreakImporter
 
@@ -50,6 +52,7 @@ fun LifeTrackerApp() {
     var tab by rememberSaveable { mutableStateOf(Tab.Timeline) }
     var showData by rememberSaveable { mutableStateOf(false) }
     var showActivities by rememberSaveable { mutableStateOf(false) }
+    var showPhone by rememberSaveable { mutableStateOf(false) }
 
     // One automatic backup per day, the first time the app is opened.
     val context = LocalContext.current
@@ -64,6 +67,9 @@ fun LifeTrackerApp() {
         }
         // Add the monthly items (rent, subscriptions, salary) whose day has come.
         runCatching { MoneyPoster.postDue(context) }
+        // Copy the latest app usage history, and keep copying it every few hours in the background.
+        runCatching { UsageCollector.sync(context) }
+        runCatching { UsageSyncWorker.schedule(context) }
     }
 
     Scaffold(
@@ -86,9 +92,11 @@ fun LifeTrackerApp() {
                 DataSourcesScreen(onBack = { showData = false })
             } else if (showActivities) {
                 ActivitiesScreen(onBack = { showActivities = false })
+            } else if (showPhone) {
+                PhoneUsageScreen(onBack = { showPhone = false })
             } else {
                 when (tab) {
-                    Tab.Timeline -> TimelineScreen(onOpenData = { showData = true }, onOpenActivities = { showActivities = true })
+                    Tab.Timeline -> TimelineScreen(onOpenData = { showData = true }, onOpenActivities = { showActivities = true }, onOpenPhone = { showPhone = true })
                     Tab.Habits -> HabitsScreen()
                     Tab.Food -> FoodScreen()
                     Tab.Money -> MoneyScreen()

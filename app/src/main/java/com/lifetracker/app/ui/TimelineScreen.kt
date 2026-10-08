@@ -55,6 +55,12 @@ import com.lifetracker.app.data.EntryEntity
 import com.lifetracker.app.data.MealEntity
 import com.lifetracker.app.data.NoteEntity
 import com.lifetracker.app.data.TodoEntity
+import com.lifetracker.app.data.UsageCollector
+import com.lifetracker.app.data.UsageDays
+import com.lifetracker.app.data.UsageSettings
+import androidx.compose.ui.platform.LocalContext
+import java.time.Instant
+import java.time.ZoneId
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -64,7 +70,7 @@ private const val DAYS_AHEAD = 30
 private fun EntryEntity.minutes(): Int = ActivityStats.minutes(this)
 
 @Composable
-fun TimelineScreen(onOpenData: () -> Unit, onOpenActivities: () -> Unit, vm: TimelineViewModel = viewModel()) {
+fun TimelineScreen(onOpenData: () -> Unit, onOpenActivities: () -> Unit, onOpenPhone: () -> Unit, vm: TimelineViewModel = viewModel()) {
     val date by vm.date.collectAsState()
     val entries by vm.entries.collectAsState()
     val todos by vm.todos.collectAsState()
@@ -74,11 +80,20 @@ fun TimelineScreen(onOpenData: () -> Unit, onOpenActivities: () -> Unit, vm: Tim
     val habitNames by vm.habitNames.collectAsState()
     val datesWithEntries by vm.datesWithEntries.collectAsState()
     val types by vm.activityTypes.collectAsState()
+    val usageDay by vm.usageDay.collectAsState()
+
+    // Read fresh each time the Timeline comes into view, so changes made on the Phone usage screen show up.
+    val context = LocalContext.current
+    val usageSettings = remember { UsageSettings(context) }
+    val usageAccess = UsageCollector.hasAccess(context)
+    val showPhone = usageAccess && usageSettings.showOnTimeline
+    val minBlockMs = usageSettings.minBlockMinutes * 60_000L
+    var promptDismissed by remember { mutableStateOf(usageSettings.promptDismissed) }
 
     var showLog by remember { mutableStateOf(false) }
     var toDelete by remember { mutableStateOf<EntryEntity?>(null) }
 
-    val goals = ActivityStats.goalProgress(types, entries)
+    val goals = ActivityStats.goalProgress(types, entries, usageDay.minutesByActivity)
     val reachedGoals = goals.count { !it.isLimit && it.ok }
     val minimumGoals = goals.count { !it.isLimit }
     val trackedMinutes = entries.sumOf { it.minutes() }
@@ -90,6 +105,7 @@ fun TimelineScreen(onOpenData: () -> Unit, onOpenActivities: () -> Unit, vm: Tim
         todos.filter { it.minutes != null }.forEach { add(TodoItem(it)) }
         notes.filter { it.minutes != null }.forEach { add(NoteItem(it)) }
         meals.forEach { add(MealItem(it)) }
+        if (showPhone) usageDay.blocks.filter { it.activeMs >= minBlockMs }.forEach { add(PhoneItem(it)) }
     }.sortedBy { it.minute ?: 0 }
     val anyTimeTodos = todos.filter { it.minutes == null }
     val anyTimeNotes = notes.filter { it.minutes == null }
@@ -129,6 +145,18 @@ fun TimelineScreen(onOpenData: () -> Unit, onOpenActivities: () -> Unit, vm: Tim
                 }
             }
             items(goals, key = { "g" + it.type.id }) { GoalBar(it) }
+            if (usageAccess) {
+                if (usageDay.totalMs >= 60_000L) {
+                    item(key = "phone-summary") { PhoneSummary(usageDay, onClick = onOpenPhone) }
+                }
+            } else if (!promptDismissed) {
+                item(key = "phone-prompt") {
+                    PhonePrompt(
+                        onOpen = onOpenPhone,
+                        onDismiss = { usageSettings.promptDismissed = true; promptDismissed = true },
+                    )
+                }
+            }
             if (timed.isEmpty() && anyTimeTodos.isEmpty() && anyTimeNotes.isEmpty()) {
                 item {
                     Surface(
@@ -158,6 +186,7 @@ fun TimelineScreen(onOpenData: () -> Unit, onOpenActivities: () -> Unit, vm: Tim
                         is TodoItem -> TodoRow(item.todo, projectNames[item.todo.project], onToggle = { vm.toggleTodo(item.todo) })
                         is NoteItem -> NoteRow(item.note, habitNames[item.note.habitId])
                         is MealItem -> MealRow(item.meal, types.byId("Food"))
+                        is PhoneItem -> PhoneRow(item.block, item.block.activityId.takeIf { it.isNotEmpty() }?.let { types.byId(it) })
                     }
                 }
                 if (anyTimeTodos.isNotEmpty()) {
@@ -443,6 +472,12 @@ private class MealItem(val meal: MealEntity) : TimelineItem {
     override val key: String = "m" + meal.id
 }
 
+private class PhoneItem(val block: UsageDays.Block) : TimelineItem {
+    override val minute: Int? = Instant.ofEpochMilli(block.startMs).atZone(ZoneId.systemDefault())
+        .let { it.hour * 60 + it.minute }
+    override val key: String = "p" + block.pkg + block.startMs
+}
+
 private class NoteItem(val note: NoteEntity) : TimelineItem {
     override val minute: Int? = note.minutes
     override val key: String = "n" + note.id
@@ -587,6 +622,118 @@ private fun MealRow(meal: MealEntity, foodType: ActivityTypeEntity) {
             )
             Text(
                 text = "${mealTypeLabel(meal.mealType)} · ${Math.round(meal.kcal)} kcal · ${Math.round(meal.grams)} g",
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun PhoneSummary(day: UsageDays.Day, onClick: () -> Unit) {
+    val top = day.perApp.take(3)
+    Surface(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+    ) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                MonoLabel("On your phone")
+                Text(
+                    text = formatDuration((day.totalMs / 60_000L).toInt()),
+                    fontSize = 14.sp,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+            top.forEach { (pkg, ms) ->
+                val label = day.blocks.firstOrNull { it.pkg == pkg }?.label ?: pkg
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(label, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        text = formatDuration((ms / 60_000L).toInt()),
+                        fontSize = 12.sp,
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            Text(
+                text = "Tap for every app and settings",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun PhonePrompt(onOpen: () -> Unit, onDismiss: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+    ) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                text = "See your phone use here",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = "Allow usage access and every app you open appears on the Timeline with its exact time.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(onClick = onOpen) { Text("Set up") }
+                TextButton(onClick = onDismiss) { Text("Not now") }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PhoneRow(block: UsageDays.Block, activity: ActivityTypeEntity?) {
+    val color = activity?.displayColor() ?: MaterialTheme.colorScheme.onSurfaceVariant
+    val minutes = (block.activeMs / 60_000L).toInt()
+    val startMinute = Instant.ofEpochMilli(block.startMs).atZone(ZoneId.systemDefault()).let { it.hour * 60 + it.minute }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = 44.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(
+            text = formatMinute(startMinute),
+            modifier = Modifier
+                .width(68.dp)
+                .padding(top = 3.dp),
+            fontSize = 12.sp,
+            fontFamily = FontFamily.Monospace,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Box(modifier = Modifier.width(10.dp), contentAlignment = Alignment.TopCenter) {
+            Box(
+                modifier = Modifier
+                    .padding(top = 6.dp)
+                    .size(8.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .border(2.dp, color, RoundedCornerShape(2.dp)),
+            )
+        }
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = block.label,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+            Text(
+                text = "Phone · " + formatDuration(minutes.coerceAtLeast(1)) + (activity?.let { " · " + it.name } ?: ""),
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
