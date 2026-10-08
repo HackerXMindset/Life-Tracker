@@ -68,8 +68,11 @@ interface EntryDao {
         FoodGoalEntity::class,
         WaterEntity::class,
         ActivityTypeEntity::class,
+        MoneyCategoryEntity::class,
+        MoneyItemEntity::class,
+        MoneyEntryEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -79,6 +82,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun importDao(): ImportDao
     abstract fun foodDao(): FoodDao
     abstract fun activityDao(): ActivityDao
+    abstract fun moneyDao(): MoneyDao
 
     companion object {
         @Volatile
@@ -91,10 +95,13 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "life-tracker.db",
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                     .addCallback(object : RoomDatabase.Callback() {
-                        // A brand new database starts with the built-in activities.
-                        override fun onCreate(db: SupportSQLiteDatabase) = DefaultActivities.seed(db)
+                        // A brand new database starts with the built-in activities and money categories.
+                        override fun onCreate(db: SupportSQLiteDatabase) {
+                            DefaultActivities.seed(db)
+                            DefaultMoneyCategories.seed(db)
+                        }
                     })
                     .build()
                     .also { instance = it }
@@ -192,5 +199,33 @@ val MIGRATION_3_4: Migration = object : Migration(3, 4) {
                 "`archived` INTEGER NOT NULL, `sortOrder` INTEGER NOT NULL, PRIMARY KEY(`id`))",
         )
         DefaultActivities.seed(db)
+    }
+}
+
+/**
+ * Version 4 -> 5: adds the money tables (categories, saved items, entries) and the starter
+ * categories. Nothing existing is touched. The SQL must match MoneyTables.kt exactly.
+ */
+val MIGRATION_4_5: Migration = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `money_categories` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, " +
+                "`color` INTEGER NOT NULL, `kind` INTEGER NOT NULL, `sortOrder` INTEGER NOT NULL, " +
+                "`archived` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        )
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `money_items` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, " +
+                "`kind` INTEGER NOT NULL, `categoryId` TEXT NOT NULL, `amount` REAL NOT NULL, " +
+                "`type` INTEGER NOT NULL, `chargeDay` INTEGER NOT NULL, `startDate` TEXT NOT NULL, " +
+                "`endDate` TEXT NOT NULL, `lastPosted` TEXT NOT NULL, `archived` INTEGER NOT NULL, " +
+                "`sortOrder` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        )
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `money_entries` (`id` TEXT NOT NULL, `date` TEXT NOT NULL, " +
+                "`kind` INTEGER NOT NULL, `categoryId` TEXT NOT NULL, `name` TEXT NOT NULL, " +
+                "`amount` REAL NOT NULL, `note` TEXT NOT NULL, `itemId` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_money_entries_date` ON `money_entries` (`date`)")
+        DefaultMoneyCategories.seed(db)
     }
 }

@@ -120,10 +120,13 @@ object BackupManager {
         foodGoals = db.foodDao().allGoals(),
         water = db.foodDao().allWater(),
         activityTypes = db.activityDao().all(),
+        moneyCategories = db.moneyDao().allCategories(),
+        moneyItems = db.moneyDao().allItems(),
+        moneyEntries = db.moneyDao().allEntries(),
     )
 
     /**
-     * A version 4 backup replaces everything. Older backups never held some of
+     * A version 5 backup replaces everything. Older backups never held some of
      * the data (version 1: only Timeline entries; version 2: no food or water),
      * so they replace only what they hold and leave the rest alone; the import record is cleared so the next Streak import can
      * bring back any focus sessions the old backup did not have.
@@ -159,6 +162,14 @@ object BackupManager {
             if (data.version >= 4) {
                 db.activityDao().deleteAll()
                 db.activityDao().upsertAll(data.activityTypes)
+            }
+            if (data.version >= 5) {
+                db.moneyDao().deleteAllEntries()
+                db.moneyDao().deleteAllItems()
+                db.moneyDao().deleteAllCategories()
+                db.moneyDao().upsertCategories(data.moneyCategories)
+                db.moneyDao().upsertItems(data.moneyItems)
+                db.moneyDao().upsertEntries(data.moneyEntries)
             }
         }
     }

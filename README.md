@@ -47,7 +47,8 @@ It also remembers the big moments, such as moving to a new city or starting a ne
 | Habits, with Streak import (also focus sessions, to-dos, notes) | Done |
 | Food, with OpenNutriTracker import, water and meal logging | Done |
 | Your own activities, colours and daily goals | Built, waiting to be tried on a phone |
-| Money, Stats | Placeholder screens |
+| Money: income and spending, monthly items, quick-log items, categories | Built, waiting to be tried on a phone |
+| Stats | Placeholder screen |
 
 **What works right now (Steps 2 to 6).** On the Timeline tab you can:
 
@@ -100,8 +101,8 @@ Each step is small enough to build, install and try before the next begins. The 
  DONE         Step 4  Habits (Streak import)
  DONE         Step 5  Food (OpenNutriTracker import)
  DONE         Step 6  Your own activities and goals
- NEXT  ──►    Step 7  Money
-              Step 8  Life events, month and year views
+ DONE         Step 7  Money
+ NEXT  ──►    Step 8  Life events, month and year views
               Step 9  Stats
               Step 10 Polish
 ```
@@ -126,9 +127,15 @@ Android remembers each choice, so you never pick them again. This step also adds
 
 **Step 6: Your own activities and goals.** The eight fixed categories became a list you control. Each activity has a name, a colour and an optional daily goal (a minimum to reach or a limit to stay under), and the single fixed study goal became one bar per goal. Your old entries kept their colours because the built-in activities kept their old keys. This was the third database change (version 3 to 4), with a proper migration, and backups moved to format 4.
 
-### Next
+**Step 7: Money.** A Money tab for what comes in and goes out, entered by hand. Adding starts with two questions: *Expense or Income?* and then *what kind?*
 
-**Step 7: Money.** Income by source, spending by category and the monthly net. There is no import for this, so entries are made by hand.
+- **Every month**: rent, a subscription, an EMI, a salary. You give it a name, amount, category, the day of the month it is charged, a start date and an optional end date. The app adds it for you on that day each month (on the last day if the month is shorter), and never twice.
+- **Again and again**: a lassi, chai, a bus ticket. Save it once and it becomes a button; tap it to log it for today, or press and hold to change the amount for that one entry.
+- **Just once**: a book, a repair, a gift.
+
+You make your own spending and income categories (a starter set is there), see each month's in, out and left, a bar per category, and every entry by day. The currency is rupees by default and can be changed. This was the fourth database change (version 4 to 5), with a proper migration, and backups moved to format 5.
+
+### Next
 
 **Step 8: Life events, month and year views.** Mark moments that changed your life, then look back by month or year to see what you did and how much you studied around each one.
 
@@ -187,6 +194,7 @@ life-tracker/
     │   ├── .../data/streak/StreakImportTest.kt  Streak backup parsing and focus-session splitting
     │   ├── .../data/FoodStatsTest.kt     Calorie, macro and goal arithmetic
     │   ├── .../data/ActivityStatsTest.kt Activity time and goal arithmetic
+    │   ├── .../data/MoneyStatsTest.kt    Money totals, formatting and monthly-item rules
     │   └── .../data/ont/OntImportTest.kt OpenNutriTracker export parsing
     │
     └── src/main/
@@ -216,7 +224,10 @@ life-tracker/
         │   │   │   ├── OntParser.kt      Reads an OpenNutriTracker export
         │   │   │   ├── OntConverter.kt   Meals and activities into this app's form
         │   │   │   └── OntImporter.kt    Finds, reads and merges the newest export
-        │   │   └── (money tables arrive in Step 7)
+        │   │   ├── MoneyTables.kt     Money categories, saved items (monthly, often) and entries
+        │   │   ├── MoneyStats.kt      Money totals, amount formatting, and the monthly-item planner
+        │   │   ├── MoneyPoster.kt     Adds the monthly items that have come due
+        │   │   └── MoneySettings.kt   The currency symbol
         │   │
         │   └── ui/                    ── The screen layer ──
         │       ├── LifeTrackerApp.kt  The frame: bottom tab bar and tab switching
@@ -238,7 +249,9 @@ life-tracker/
         │       ├── FoodScreen.kt      Food tab: calories, macros, water, meals
         │       ├── FoodViewModel.kt   Selected day, adding meals and water
         │       ├── AddMealSheet.kt    The "Add meal" pop-up with Eat again chips
-        │       ├── MoneyScreen.kt                 (planned, Step 7)
+        │       ├── MoneyScreen.kt     Money tab: totals, quick log, categories, entries by day
+        │       ├── MoneyViewModel.kt  Selected month, adding, logging and saving money items
+        │       ├── MoneyDialogs.kt    The add flow (Expense or Income, then the kind) and its forms
         │       ├── EventsScreen.kt                (planned, Step 8)
         │       └── StatsScreen.kt                 (planned, Step 9)
         │

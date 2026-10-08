@@ -20,10 +20,14 @@ data class BackupData(
     val foodGoals: List<FoodGoalEntity> = emptyList(),
     val water: List<WaterEntity> = emptyList(),
     val activityTypes: List<ActivityTypeEntity> = emptyList(),
+    val moneyCategories: List<MoneyCategoryEntity> = emptyList(),
+    val moneyItems: List<MoneyItemEntity> = emptyList(),
+    val moneyEntries: List<MoneyEntryEntity> = emptyList(),
 ) {
     val isEmpty: Boolean
         get() = entries.isEmpty() && habits.isEmpty() && completions.isEmpty() && categories.isEmpty() &&
-            todoTags.isEmpty() && todos.isEmpty() && notes.isEmpty() && meals.isEmpty() && water.isEmpty()
+            todoTags.isEmpty() && todos.isEmpty() && notes.isEmpty() && meals.isEmpty() && water.isEmpty() &&
+            moneyItems.isEmpty() && moneyEntries.isEmpty()
 }
 
 /**
@@ -31,12 +35,12 @@ data class BackupData(
  *
  * `version` lets later steps add more data without breaking old backups.
  * Version 1 held only Timeline entries; version 2 adds habits, to-dos, notes
- * and the record of what was imported; version 3 adds meals, food goals and water; version 4 adds your own activities and their goals. A file from a newer version of the app
+ * and the record of what was imported; version 3 adds meals, food goals and water; version 4 adds your own activities and their goals; version 5 adds money (categories, saved items and entries). A file from a newer version of the app
  * is refused rather than half-read.
  */
 object BackupCodec {
     const val APP_NAME = "life-tracker"
-    const val FORMAT_VERSION = 4
+    const val FORMAT_VERSION = 5
 
     fun encode(data: BackupData): String =
         JSONObject()
@@ -55,6 +59,9 @@ object BackupCodec {
             .put("foodGoals", array(data.foodGoals, ::goalJson))
             .put("water", array(data.water, ::waterJson))
             .put("activityTypes", array(data.activityTypes, ::activityJson))
+            .put("moneyCategories", array(data.moneyCategories, ::moneyCategoryJson))
+            .put("moneyItems", array(data.moneyItems, ::moneyItemJson))
+            .put("moneyEntries", array(data.moneyEntries, ::moneyEntryJson))
             .toString(2)
 
     /** Reads a backup. Throws [IllegalArgumentException] with a readable reason if it is not usable. */
@@ -81,6 +88,9 @@ object BackupCodec {
                 foodGoals = list(root, "foodGoals", required = false, ::goal),
                 water = list(root, "water", required = false, ::waterRow),
                 activityTypes = list(root, "activityTypes", required = false, ::activity),
+                moneyCategories = list(root, "moneyCategories", required = false, ::moneyCategory),
+                moneyItems = list(root, "moneyItems", required = false, ::moneyItem),
+                moneyEntries = list(root, "moneyEntries", required = false, ::moneyEntry),
             )
         } catch (e: JSONException) {
             throw IllegalArgumentException("This file is damaged or is not a backup.")
@@ -268,5 +278,54 @@ object BackupCodec {
         goalKind = o.getInt("goalKind"),
         archived = o.getBoolean("archived"),
         sortOrder = o.getInt("sortOrder"),
+    )
+
+    private fun moneyCategoryJson(c: MoneyCategoryEntity) = JSONObject()
+        .put("id", c.id).put("name", c.name).put("color", c.color).put("kind", c.kind)
+        .put("sortOrder", c.sortOrder).put("archived", c.archived)
+
+    private fun moneyCategory(o: JSONObject) = MoneyCategoryEntity(
+        id = o.getString("id"),
+        name = o.getString("name"),
+        color = o.getLong("color"),
+        kind = o.getInt("kind"),
+        sortOrder = o.getInt("sortOrder"),
+        archived = o.getBoolean("archived"),
+    )
+
+    private fun moneyItemJson(i: MoneyItemEntity) = JSONObject()
+        .put("id", i.id).put("name", i.name).put("kind", i.kind).put("categoryId", i.categoryId)
+        .put("amount", i.amount).put("type", i.type).put("chargeDay", i.chargeDay)
+        .put("startDate", i.startDate).put("endDate", i.endDate).put("lastPosted", i.lastPosted)
+        .put("archived", i.archived).put("sortOrder", i.sortOrder)
+
+    private fun moneyItem(o: JSONObject) = MoneyItemEntity(
+        id = o.getString("id"),
+        name = o.getString("name"),
+        kind = o.getInt("kind"),
+        categoryId = o.getString("categoryId"),
+        amount = o.getDouble("amount"),
+        type = o.getInt("type"),
+        chargeDay = o.getInt("chargeDay"),
+        startDate = o.getString("startDate"),
+        endDate = o.getString("endDate"),
+        lastPosted = o.getString("lastPosted"),
+        archived = o.getBoolean("archived"),
+        sortOrder = o.getInt("sortOrder"),
+    )
+
+    private fun moneyEntryJson(e: MoneyEntryEntity) = JSONObject()
+        .put("id", e.id).put("date", e.date).put("kind", e.kind).put("categoryId", e.categoryId)
+        .put("name", e.name).put("amount", e.amount).put("note", e.note).put("itemId", e.itemId)
+
+    private fun moneyEntry(o: JSONObject) = MoneyEntryEntity(
+        id = o.getString("id"),
+        date = o.getString("date"),
+        kind = o.getInt("kind"),
+        categoryId = o.getString("categoryId"),
+        name = o.getString("name"),
+        amount = o.getDouble("amount"),
+        note = o.getString("note"),
+        itemId = o.getString("itemId"),
     )
 }
