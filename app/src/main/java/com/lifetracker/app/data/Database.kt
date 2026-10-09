@@ -74,8 +74,9 @@ interface EntryDao {
         UsageSessionEntity::class,
         UsageAppEntity::class,
         CallEntity::class,
+        ChargeSessionEntity::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -88,6 +89,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun moneyDao(): MoneyDao
     abstract fun usageDao(): UsageDao
     abstract fun callDao(): CallDao
+    abstract fun chargeDao(): ChargeDao
 
     companion object {
         @Volatile
@@ -100,7 +102,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "life-tracker.db",
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
                     .addCallback(object : RoomDatabase.Callback() {
                         // A brand new database starts with the built-in activities and money categories.
                         override fun onCreate(db: SupportSQLiteDatabase) {
@@ -265,5 +267,22 @@ val MIGRATION_6_7: Migration = object : Migration(6, 7) {
                 "`durationSec` INTEGER NOT NULL, PRIMARY KEY(`id`))",
         )
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_calls_startMs` ON `calls` (`startMs`)")
+    }
+}
+
+/**
+ * Version 7 -> 8: adds the charge_sessions table. Nothing existing is touched. The SQL must match
+ * ChargeTables.kt exactly.
+ */
+val MIGRATION_7_8: Migration = object : Migration(7, 8) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `charge_sessions` (`id` TEXT NOT NULL, `startMs` INTEGER NOT NULL, " +
+                "`endMs` INTEGER NOT NULL, `startLevel` INTEGER NOT NULL, `endLevel` INTEGER NOT NULL, " +
+                "`plugType` INTEGER NOT NULL, `source` TEXT NOT NULL, `samples` INTEGER NOT NULL, " +
+                "`currentSamples` INTEGER NOT NULL, `sumMa` INTEGER NOT NULL, `sumMv` INTEGER NOT NULL, " +
+                "`ongoing` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_charge_sessions_startMs` ON `charge_sessions` (`startMs`)")
     }
 }

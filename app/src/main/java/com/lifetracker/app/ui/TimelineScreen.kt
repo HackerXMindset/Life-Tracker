@@ -59,6 +59,9 @@ import com.lifetracker.app.data.CallEntity
 import com.lifetracker.app.data.CallStats
 import com.lifetracker.app.data.CallsCollector
 import com.lifetracker.app.data.CallsSettings
+import com.lifetracker.app.data.ChargeSessionEntity
+import com.lifetracker.app.data.ChargeSettings
+import com.lifetracker.app.data.ChargeStats
 import com.lifetracker.app.data.UsageCollector
 import com.lifetracker.app.data.UsageDays
 import com.lifetracker.app.data.UsageSettings
@@ -74,7 +77,7 @@ private const val DAYS_AHEAD = 30
 private fun EntryEntity.minutes(): Int = ActivityStats.minutes(this)
 
 @Composable
-fun TimelineScreen(onOpenData: () -> Unit, onOpenActivities: () -> Unit, onOpenPhone: () -> Unit, onOpenCalls: () -> Unit, vm: TimelineViewModel = viewModel()) {
+fun TimelineScreen(onOpenData: () -> Unit, onOpenActivities: () -> Unit, onOpenPhone: () -> Unit, onOpenCalls: () -> Unit, onOpenCharging: () -> Unit, vm: TimelineViewModel = viewModel()) {
     val date by vm.date.collectAsState()
     val entries by vm.entries.collectAsState()
     val todos by vm.todos.collectAsState()
@@ -86,11 +89,13 @@ fun TimelineScreen(onOpenData: () -> Unit, onOpenActivities: () -> Unit, onOpenP
     val types by vm.activityTypes.collectAsState()
     val usageDay by vm.usageDay.collectAsState()
     val calls by vm.calls.collectAsState()
+    val charges by vm.charges.collectAsState()
 
     // Read fresh each time the Timeline comes into view, so changes made on the Phone usage screen show up.
     val context = LocalContext.current
     val usageSettings = remember { UsageSettings(context) }
     val callsSettings = remember { CallsSettings(context) }
+    val showCharging = remember { ChargeSettings(context) }.showOnTimeline
     val usageAccess = UsageCollector.hasAccess(context)
     val showPhone = usageAccess && usageSettings.showOnTimeline
     val minBlockMs = usageSettings.minBlockMinutes * 60_000L
@@ -115,6 +120,7 @@ fun TimelineScreen(onOpenData: () -> Unit, onOpenActivities: () -> Unit, onOpenP
         notes.filter { it.minutes != null }.forEach { add(NoteItem(it)) }
         meals.forEach { add(MealItem(it)) }
         if (showCalls) calls.forEach { add(CallItem(it)) }
+        if (showCharging) charges.forEach { add(ChargeItem(it)) }
         if (showPhone) usageDay.blocks.filter { it.activeMs >= minBlockMs }.forEach { add(PhoneItem(it)) }
     }.sortedBy { it.minute ?: 0 }
     val anyTimeTodos = todos.filter { it.minutes == null }
@@ -209,6 +215,7 @@ fun TimelineScreen(onOpenData: () -> Unit, onOpenActivities: () -> Unit, onOpenP
                         is NoteItem -> NoteRow(item.note, habitNames[item.note.habitId])
                         is MealItem -> MealRow(item.meal, types.byId("Food"))
                         is CallItem -> CallRow(item.call)
+                        is ChargeItem -> ChargeTimelineRow(item.session, onClick = onOpenCharging)
                         is PhoneItem -> PhoneRow(item.block, item.block.activityId.takeIf { it.isNotEmpty() }?.let { types.byId(it) })
                     }
                 }
@@ -499,6 +506,12 @@ private class CallItem(val call: CallEntity) : TimelineItem {
     override val minute: Int? = Instant.ofEpochMilli(call.startMs).atZone(ZoneId.systemDefault())
         .let { it.hour * 60 + it.minute }
     override val key: String = "call" + call.id
+}
+
+private class ChargeItem(val session: ChargeSessionEntity) : TimelineItem {
+    override val minute: Int? = Instant.ofEpochMilli(session.startMs).atZone(ZoneId.systemDefault())
+        .let { it.hour * 60 + it.minute }
+    override val key: String = "charge" + session.id
 }
 
 private class PhoneItem(val block: UsageDays.Block) : TimelineItem {
@@ -870,6 +883,51 @@ private fun CallRow(call: CallEntity) {
             )
             Text(
                 text = "Call · " + CallStats.detail(call),
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ChargeTimelineRow(session: ChargeSessionEntity, onClick: () -> Unit) {
+    val color = MaterialTheme.colorScheme.tertiary
+    val startMinute = Instant.ofEpochMilli(session.startMs).atZone(ZoneId.systemDefault()).let { it.hour * 60 + it.minute }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = 44.dp)
+            .clickable(onClick = onClick),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(
+            text = formatMinute(startMinute),
+            modifier = Modifier
+                .width(68.dp)
+                .padding(top = 3.dp),
+            fontSize = 12.sp,
+            fontFamily = FontFamily.Monospace,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Box(modifier = Modifier.width(10.dp), contentAlignment = Alignment.TopCenter) {
+            Box(
+                modifier = Modifier
+                    .padding(top = 5.dp)
+                    .size(10.dp)
+                    .clip(CircleShape)
+                    .background(color),
+            )
+        }
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = "Charging · " + ChargeStats.title(session),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+            Text(
+                text = ChargeStats.detail(session),
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
