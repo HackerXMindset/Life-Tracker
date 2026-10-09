@@ -62,6 +62,11 @@ import com.lifetracker.app.data.CallsSettings
 import com.lifetracker.app.data.ChargeSessionEntity
 import com.lifetracker.app.data.ChargeSettings
 import com.lifetracker.app.data.ChargeStats
+import com.lifetracker.app.data.HealthSettings
+import com.lifetracker.app.data.SleepNightEntity
+import com.lifetracker.app.data.SleepStats
+import com.lifetracker.app.data.StepDayEntity
+import com.lifetracker.app.data.StepStats
 import com.lifetracker.app.data.UsageCollector
 import com.lifetracker.app.data.UsageDays
 import com.lifetracker.app.data.UsageSettings
@@ -77,7 +82,7 @@ private const val DAYS_AHEAD = 30
 private fun EntryEntity.minutes(): Int = ActivityStats.minutes(this)
 
 @Composable
-fun TimelineScreen(onOpenData: () -> Unit, onOpenActivities: () -> Unit, onOpenPhone: () -> Unit, onOpenCalls: () -> Unit, onOpenCharging: () -> Unit, vm: TimelineViewModel = viewModel()) {
+fun TimelineScreen(onOpenData: () -> Unit, onOpenActivities: () -> Unit, onOpenPhone: () -> Unit, onOpenCalls: () -> Unit, onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, vm: TimelineViewModel = viewModel()) {
     val date by vm.date.collectAsState()
     val entries by vm.entries.collectAsState()
     val todos by vm.todos.collectAsState()
@@ -90,12 +95,16 @@ fun TimelineScreen(onOpenData: () -> Unit, onOpenActivities: () -> Unit, onOpenP
     val usageDay by vm.usageDay.collectAsState()
     val calls by vm.calls.collectAsState()
     val charges by vm.charges.collectAsState()
+    val steps by vm.steps.collectAsState()
+    val sleepNight by vm.sleep.collectAsState()
 
     // Read fresh each time the Timeline comes into view, so changes made on the Phone usage screen show up.
     val context = LocalContext.current
     val usageSettings = remember { UsageSettings(context) }
     val callsSettings = remember { CallsSettings(context) }
     val showCharging = remember { ChargeSettings(context) }.showOnTimeline
+    val showHealth = remember { HealthSettings(context) }.showOnTimeline
+    val sleepShown = if (showHealth) sleepNight?.takeIf { it.source != SleepStats.SKIPPED } else null
     val usageAccess = UsageCollector.hasAccess(context)
     val showPhone = usageAccess && usageSettings.showOnTimeline
     val minBlockMs = usageSettings.minBlockMinutes * 60_000L
@@ -107,7 +116,13 @@ fun TimelineScreen(onOpenData: () -> Unit, onOpenActivities: () -> Unit, onOpenP
     var showLog by remember { mutableStateOf(false) }
     var toDelete by remember { mutableStateOf<EntryEntity?>(null) }
 
-    val goals = ActivityStats.goalProgress(types, entries, usageDay.minutesByActivity)
+    // Sleep from the Steps and sleep screen counts towards the Sleep goal, unless you logged Sleep yourself that day.
+    val extraMinutes = usageDay.minutesByActivity.toMutableMap().also { map ->
+        if (sleepShown != null && entries.none { it.category == "Sleep" }) {
+            map["Sleep"] = (map["Sleep"] ?: 0) + SleepStats.minutes(sleepShown)
+        }
+    }
+    val goals = ActivityStats.goalProgress(types, entries, extraMinutes)
     val reachedGoals = goals.count { !it.isLimit && it.ok }
     val minimumGoals = goals.count { !it.isLimit }
     val trackedMinutes = entries.sumOf { it.minutes() }
@@ -121,6 +136,7 @@ fun TimelineScreen(onOpenData: () -> Unit, onOpenActivities: () -> Unit, onOpenP
         meals.forEach { add(MealItem(it)) }
         if (showCalls) calls.forEach { add(CallItem(it)) }
         if (showCharging) charges.forEach { add(ChargeItem(it)) }
+        sleepShown?.let { add(SleepItem(it)) }
         if (showPhone) usageDay.blocks.filter { it.activeMs >= minBlockMs }.forEach { add(PhoneItem(it)) }
     }.sortedBy { it.minute ?: 0 }
     val anyTimeTodos = todos.filter { it.minutes == null }
@@ -173,6 +189,7 @@ fun TimelineScreen(onOpenData: () -> Unit, onOpenActivities: () -> Unit, onOpenP
                     )
                 }
             }
+            item(key = "health-summary") { HealthSummary(steps, sleepNight, onClick = onOpenSteps) }
             if (callsAccess) {
                 if (calls.isNotEmpty()) {
                     item(key = "calls-summary") { CallsSummary(calls, onClick = onOpenCalls) }
@@ -216,6 +233,7 @@ fun TimelineScreen(onOpenData: () -> Unit, onOpenActivities: () -> Unit, onOpenP
                         is MealItem -> MealRow(item.meal, types.byId("Food"))
                         is CallItem -> CallRow(item.call)
                         is ChargeItem -> ChargeTimelineRow(item.session, onClick = onOpenCharging)
+                        is SleepItem -> SleepTimelineRow(item.night, onClick = onOpenSteps)
                         is PhoneItem -> PhoneRow(item.block, item.block.activityId.takeIf { it.isNotEmpty() }?.let { types.byId(it) })
                     }
                 }
@@ -512,6 +530,13 @@ private class ChargeItem(val session: ChargeSessionEntity) : TimelineItem {
     override val minute: Int? = Instant.ofEpochMilli(session.startMs).atZone(ZoneId.systemDefault())
         .let { it.hour * 60 + it.minute }
     override val key: String = "charge" + session.id
+}
+
+private class SleepItem(val night: SleepNightEntity) : TimelineItem {
+    // Sleep is listed at the moment you woke up.
+    override val minute: Int? = Instant.ofEpochMilli(night.endMs).atZone(ZoneId.systemDefault())
+        .let { it.hour * 60 + it.minute }
+    override val key: String = "sleep" + night.date
 }
 
 private class PhoneItem(val block: UsageDays.Block) : TimelineItem {
@@ -928,6 +953,85 @@ private fun ChargeTimelineRow(session: ChargeSessionEntity, onClick: () -> Unit)
             )
             Text(
                 text = ChargeStats.detail(session),
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun HealthSummary(steps: StepDayEntity?, sleep: SleepNightEntity?, onClick: () -> Unit) {
+    val stepsText = steps?.takeIf { it.steps > 0 }?.let { StepStats.text(it.steps) }
+    val sleepMinutes = sleep?.takeIf { it.source != SleepStats.SKIPPED }?.let { SleepStats.minutes(it) } ?: 0
+    Surface(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+    ) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                MonoLabel("Steps and sleep")
+                Text(
+                    text = listOfNotNull(
+                        stepsText?.let { "$it steps" },
+                        if (sleepMinutes > 0) "slept " + formatDuration(sleepMinutes) else null,
+                    ).joinToString(" · ").ifEmpty { "–" },
+                    fontSize = 14.sp,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+            Text(
+                text = if (stepsText == null && sleepMinutes == 0) "Tap to set up steps and sleep" else "Tap for days, nights and settings",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SleepTimelineRow(night: SleepNightEntity, onClick: () -> Unit) {
+    val zone = ZoneId.systemDefault()
+    val wake = Instant.ofEpochMilli(night.endMs).atZone(zone).let { it.hour * 60 + it.minute }
+    val bed = Instant.ofEpochMilli(night.startMs).atZone(zone).let { it.hour * 60 + it.minute }
+    val color = MaterialTheme.colorScheme.secondary
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = 44.dp)
+            .clickable(onClick = onClick),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(
+            text = formatMinute(wake),
+            modifier = Modifier
+                .width(68.dp)
+                .padding(top = 3.dp),
+            fontSize = 12.sp,
+            fontFamily = FontFamily.Monospace,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Box(modifier = Modifier.width(10.dp), contentAlignment = Alignment.TopCenter) {
+            Box(
+                modifier = Modifier
+                    .padding(top = 5.dp)
+                    .size(10.dp)
+                    .clip(CircleShape)
+                    .background(color),
+            )
+        }
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = "Slept " + formatDuration(SleepStats.minutes(night)),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+            Text(
+                text = formatMinute(bed) + " → " + formatMinute(wake) + " · " + SleepStats.label(night.source),
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

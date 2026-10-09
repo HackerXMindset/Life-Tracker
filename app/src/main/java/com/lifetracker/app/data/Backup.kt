@@ -27,12 +27,14 @@ data class BackupData(
     val usageApps: List<UsageAppEntity> = emptyList(),
     val calls: List<CallEntity> = emptyList(),
     val chargeSessions: List<ChargeSessionEntity> = emptyList(),
+    val stepDays: List<StepDayEntity> = emptyList(),
+    val sleepNights: List<SleepNightEntity> = emptyList(),
 ) {
     val isEmpty: Boolean
         get() = entries.isEmpty() && habits.isEmpty() && completions.isEmpty() && categories.isEmpty() &&
             todoTags.isEmpty() && todos.isEmpty() && notes.isEmpty() && meals.isEmpty() && water.isEmpty() &&
             moneyItems.isEmpty() && moneyEntries.isEmpty() && usageSessions.isEmpty() && calls.isEmpty() &&
-            chargeSessions.isEmpty()
+            chargeSessions.isEmpty() && stepDays.isEmpty() && sleepNights.isEmpty()
 }
 
 /**
@@ -40,12 +42,12 @@ data class BackupData(
  *
  * `version` lets later steps add more data without breaking old backups.
  * Version 1 held only Timeline entries; version 2 adds habits, to-dos, notes
- * and the record of what was imported; version 3 adds meals, food goals and water; version 4 adds your own activities and their goals; version 5 adds money (categories, saved items and entries); version 6 adds phone usage (sessions are stored compactly as [app, start, end]); version 7 adds phone calls (each stored as [number, name, type, start, seconds]); version 8 adds charging sessions (each stored as [start, end, startLevel, endLevel, plug, source, samples, currentSamples, sumMa, sumMv, ongoing]). A file from a newer version of the app
+ * and the record of what was imported; version 3 adds meals, food goals and water; version 4 adds your own activities and their goals; version 5 adds money (categories, saved items and entries); version 6 adds phone usage (sessions are stored compactly as [app, start, end]); version 7 adds phone calls (each stored as [number, name, type, start, seconds]); version 8 adds charging sessions (each stored as [start, end, startLevel, endLevel, plug, source, samples, currentSamples, sumMa, sumMv, ongoing]); version 9 adds steps (each day stored as [date, steps, source]) and sleep (each night stored as [date, start, end, source]). A file from a newer version of the app
  * is refused rather than half-read.
  */
 object BackupCodec {
     const val APP_NAME = "life-tracker"
-    const val FORMAT_VERSION = 8
+    const val FORMAT_VERSION = 9
 
     fun encode(data: BackupData): String =
         JSONObject()
@@ -71,6 +73,8 @@ object BackupCodec {
             .put("usageApps", array(data.usageApps, ::usageAppJson))
             .put("calls", callsJson(data.calls))
             .put("chargeSessions", chargeJson(data.chargeSessions))
+            .put("stepDays", stepsJson(data.stepDays))
+            .put("sleepNights", sleepJson(data.sleepNights))
             .toString(2)
 
     /** Reads a backup. Throws [IllegalArgumentException] with a readable reason if it is not usable. */
@@ -104,6 +108,8 @@ object BackupCodec {
                 usageApps = list(root, "usageApps", required = false, ::usageApp),
                 calls = calls(root),
                 chargeSessions = charges(root),
+                stepDays = stepDays(root),
+                sleepNights = sleepNights(root),
             )
         } catch (e: JSONException) {
             throw IllegalArgumentException("This file is damaged or is not a backup.")
@@ -416,6 +422,36 @@ object BackupCodec {
                 sumMv = r.getLong(9),
                 ongoing = r.getInt(10) == 1,
             )
+        }
+    }
+
+    // Steps are one short list per day: [date, steps, source].
+    private fun stepsJson(list: List<StepDayEntity>): JSONArray {
+        val out = JSONArray()
+        for (d in list) out.put(JSONArray().put(d.date).put(d.steps).put(d.source))
+        return out
+    }
+
+    private fun stepDays(root: JSONObject): List<StepDayEntity> {
+        val array = root.optJSONArray("stepDays") ?: return emptyList()
+        return (0 until array.length()).map {
+            val r = array.getJSONArray(it)
+            StepDayEntity(r.getString(0), r.getInt(1), r.getString(2))
+        }
+    }
+
+    // Sleep is one short list per night: [date, start, end, source].
+    private fun sleepJson(list: List<SleepNightEntity>): JSONArray {
+        val out = JSONArray()
+        for (n in list) out.put(JSONArray().put(n.date).put(n.startMs).put(n.endMs).put(n.source))
+        return out
+    }
+
+    private fun sleepNights(root: JSONObject): List<SleepNightEntity> {
+        val array = root.optJSONArray("sleepNights") ?: return emptyList()
+        return (0 until array.length()).map {
+            val r = array.getJSONArray(it)
+            SleepNightEntity(r.getString(0), r.getLong(1), r.getLong(2), r.getString(3))
         }
     }
 }

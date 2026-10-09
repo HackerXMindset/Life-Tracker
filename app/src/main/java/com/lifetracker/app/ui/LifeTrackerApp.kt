@@ -37,6 +37,7 @@ import com.lifetracker.app.data.CallsCollector
 import com.lifetracker.app.data.ChargeSettings
 import com.lifetracker.app.data.ChargeTracker
 import com.lifetracker.app.data.ChargeWorker
+import com.lifetracker.app.data.HealthSync
 import com.lifetracker.app.data.MoneyPoster
 import com.lifetracker.app.data.UsageCollector
 import com.lifetracker.app.data.UsageSyncWorker
@@ -59,6 +60,7 @@ fun LifeTrackerApp() {
     var showPhone by rememberSaveable { mutableStateOf(false) }
     var showCalls by rememberSaveable { mutableStateOf(false) }
     var showCharging by rememberSaveable { mutableStateOf(false) }
+    var showSteps by rememberSaveable { mutableStateOf(false) }
 
     // One automatic backup per day, the first time the app is opened.
     val context = LocalContext.current
@@ -76,6 +78,8 @@ fun LifeTrackerApp() {
         // Copy the latest app usage history, and keep copying it every few hours in the background.
         runCatching { UsageCollector.sync(context) }
         runCatching { UsageSyncWorker.schedule(context) }
+        // Update steps (Health Connect or the phone's step counter) and work out last night's sleep.
+        runCatching { HealthSync.run(context) }
         // Copy new calls from the call log, if you allowed it.
         runCatching { CallsCollector.sync(context) }
         // Note a charging session that ended while the app was closed, and keep the check running while the phone charges.
@@ -109,9 +113,11 @@ fun LifeTrackerApp() {
                 CallsScreen(onBack = { showCalls = false })
             } else if (showCharging) {
                 ChargingScreen(onBack = { showCharging = false })
+            } else if (showSteps) {
+                StepsSleepScreen(onBack = { showSteps = false })
             } else {
                 when (tab) {
-                    Tab.Timeline -> TimelineScreen(onOpenData = { showData = true }, onOpenActivities = { showActivities = true }, onOpenPhone = { showPhone = true }, onOpenCalls = { showCalls = true }, onOpenCharging = { showCharging = true })
+                    Tab.Timeline -> TimelineScreen(onOpenData = { showData = true }, onOpenActivities = { showActivities = true }, onOpenPhone = { showPhone = true }, onOpenCalls = { showCalls = true }, onOpenCharging = { showCharging = true }, onOpenSteps = { showSteps = true })
                     Tab.Habits -> HabitsScreen()
                     Tab.Food -> FoodScreen()
                     Tab.Money -> MoneyScreen()

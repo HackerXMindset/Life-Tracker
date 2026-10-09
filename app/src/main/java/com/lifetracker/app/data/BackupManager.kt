@@ -127,10 +127,12 @@ object BackupManager {
         usageApps = db.usageDao().allApps(),
         calls = db.callDao().allCalls(),
         chargeSessions = db.chargeDao().allSessions(),
+        stepDays = db.stepDao().allDays(),
+        sleepNights = db.sleepDao().allNights(),
     )
 
     /**
-     * A version 8 backup replaces everything except the phone usage, call and charging history, which are only ever added to. Older backups never held some of
+     * A version 9 backup replaces everything except the phone usage, call, charging, step and sleep history, which are only ever added to. Older backups never held some of
      * the data (version 1: only Timeline entries; version 2: no food or water),
      * so they replace only what they hold and leave the rest alone; the import record is cleared so the next Streak import can
      * bring back any focus sessions the old backup did not have.
@@ -188,6 +190,12 @@ object BackupManager {
             if (data.version >= 8) {
                 // Charging history also only grows: restoring adds to it.
                 db.chargeDao().upsertAll(data.chargeSessions)
+            }
+            if (data.version >= 9) {
+                // Steps and sleep only grow too: a day keeps its larger step count, and nights you edited are kept.
+                val steps = db.stepDao()
+                steps.upsertAll(data.stepDays.map { StepStats.merge(steps.day(it.date), it.date, it.steps, it.source) })
+                db.sleepDao().insertMissing(data.sleepNights)
             }
         }
     }

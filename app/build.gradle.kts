@@ -74,6 +74,9 @@ dependencies {
     // Runs the small background job that copies app usage history every few hours.
     implementation("androidx.work:work-runtime-ktx:2.9.1")
 
+    // Reads steps and sleep from Android's Health Connect.
+    implementation("androidx.health.connect:connect-client:1.1.0")
+
     // Tests that run in the cloud build. The org.json copy is needed because
     // the Android one is only a stub outside a real phone.
     testImplementation("junit:junit:4.13.2")

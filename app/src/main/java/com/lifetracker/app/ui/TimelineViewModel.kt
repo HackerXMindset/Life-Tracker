@@ -11,6 +11,8 @@ import com.lifetracker.app.data.ChargeSessionEntity
 import com.lifetracker.app.data.EntryEntity
 import com.lifetracker.app.data.MealEntity
 import com.lifetracker.app.data.NoteEntity
+import com.lifetracker.app.data.SleepNightEntity
+import com.lifetracker.app.data.StepDayEntity
 import com.lifetracker.app.data.TodoEntity
 import com.lifetracker.app.data.UsageDays
 import java.time.ZoneId
@@ -91,6 +93,16 @@ class TimelineViewModel(app: Application) : AndroidViewModel(app) {
             db.chargeDao().sessionsBetween(start, end).map { list -> list.filter { it.startMs in start until end } }
         },
     )
+
+    /** Steps on the selected day, if any were recorded. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val steps: StateFlow<StepDayEntity?> =
+        share(null, selectedDate.flatMapLatest { db.stepDao().observeDay(it.toString()) })
+
+    /** The night's sleep that ended on the selected day, if known. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val sleep: StateFlow<SleepNightEntity?> =
+        share(null, selectedDate.flatMapLatest { db.sleepDao().observeNight(it.toString()) })
 
     /** To-dos planned for the selected day (only to-dos with a date ever appear on the Timeline). */
     @OptIn(ExperimentalCoroutinesApi::class)

@@ -75,8 +75,10 @@ interface EntryDao {
         UsageAppEntity::class,
         CallEntity::class,
         ChargeSessionEntity::class,
+        StepDayEntity::class,
+        SleepNightEntity::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -90,6 +92,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun usageDao(): UsageDao
     abstract fun callDao(): CallDao
     abstract fun chargeDao(): ChargeDao
+    abstract fun stepDao(): StepDao
+    abstract fun sleepDao(): SleepDao
 
     companion object {
         @Volatile
@@ -102,7 +106,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "life-tracker.db",
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
                     .addCallback(object : RoomDatabase.Callback() {
                         // A brand new database starts with the built-in activities and money categories.
                         override fun onCreate(db: SupportSQLiteDatabase) {
@@ -284,5 +288,22 @@ val MIGRATION_7_8: Migration = object : Migration(7, 8) {
                 "`ongoing` INTEGER NOT NULL, PRIMARY KEY(`id`))",
         )
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_charge_sessions_startMs` ON `charge_sessions` (`startMs`)")
+    }
+}
+
+/**
+ * Version 8 -> 9: adds the step_days and sleep_nights tables. Nothing existing is touched. The SQL
+ * must match StepSleepTables.kt exactly.
+ */
+val MIGRATION_8_9: Migration = object : Migration(8, 9) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `step_days` (`date` TEXT NOT NULL, `steps` INTEGER NOT NULL, " +
+                "`source` TEXT NOT NULL, PRIMARY KEY(`date`))",
+        )
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `sleep_nights` (`date` TEXT NOT NULL, `startMs` INTEGER NOT NULL, " +
+                "`endMs` INTEGER NOT NULL, `source` TEXT NOT NULL, PRIMARY KEY(`date`))",
+        )
     }
 }
