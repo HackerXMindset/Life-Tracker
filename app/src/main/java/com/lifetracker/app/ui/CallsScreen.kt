@@ -4,7 +4,6 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -14,10 +13,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -60,6 +57,8 @@ fun CallsScreen(onBack: () -> Unit, vm: CallsViewModel = viewModel()) {
     val syncing by vm.syncing.collectAsState()
     val lastSync by vm.lastSync.collectAsState()
     val showOnTimeline by vm.showOnTimeline.collectAsState()
+    val copyingOlder by vm.copyingOlder.collectAsState()
+    val olderResult by vm.olderResult.collectAsState()
     BackHandler(onBack = onBack)
 
     val askPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
@@ -140,16 +139,7 @@ fun CallsScreen(onBack: () -> Unit, vm: CallsViewModel = viewModel()) {
                 OutlinedButton(onClick = vm::sync, enabled = !syncing) { Text(if (syncing) "Copying..." else "Sync now") }
             }
         }
-        item {
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                CallRange.entries.forEach { r ->
-                    FilterChip(selected = range == r, onClick = { vm.setRange(r) }, label = { Text(r.label) })
-                }
-            }
-        }
+        item { RangePicker(choice = range, onChange = vm::setRange) }
         item {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 CallStat("Calls", totals.calls.toString(), Modifier.weight(1f))
@@ -161,7 +151,7 @@ fun CallsScreen(onBack: () -> Unit, vm: CallsViewModel = viewModel()) {
         if (calls.isEmpty()) {
             item {
                 Text(
-                    "No calls in this period. If you just allowed access, tap Sync now.",
+                    "No calls on these days. If you just allowed access, tap Sync now. For older days, use Copy older calls below.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -208,6 +198,23 @@ fun CallsScreen(onBack: () -> Unit, vm: CallsViewModel = viewModel()) {
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                }
+            }
+        }
+
+        item { MonoLabel("Older calls") }
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    "Normal syncs only look at new calls. If days before your first copy look empty, copy the whole call log once. Safe to repeat.",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedButton(onClick = vm::copyOlder, enabled = !copyingOlder) {
+                    Text(if (copyingOlder) "Copying..." else "Copy older calls")
+                }
+                if (olderResult.isNotEmpty()) {
+                    Text(olderResult, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }

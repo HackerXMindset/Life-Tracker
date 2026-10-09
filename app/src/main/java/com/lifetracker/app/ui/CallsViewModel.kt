@@ -7,7 +7,6 @@ import com.lifetracker.app.data.AppDatabase
 import com.lifetracker.app.data.CallEntity
 import com.lifetracker.app.data.CallsCollector
 import com.lifetracker.app.data.CallsSettings
-import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -19,19 +18,12 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-/** Which stretch of time the Calls screen totals up. */
-enum class CallRange(val label: String, val days: Long) {
-    Today("Today", 1),
-    Week("Last 7 days", 7),
-    Month("Last 30 days", 30),
-}
-
 class CallsViewModel(private val app: Application) : AndroidViewModel(app) {
     private val dao = AppDatabase.get(app).callDao()
     private val settings = CallsSettings(app)
 
-    private val rangeFlow = MutableStateFlow(CallRange.Today)
-    val range: StateFlow<CallRange> = rangeFlow
+    private val rangeFlow = MutableStateFlow(RangeChoice.preset("30"))
+    val range: StateFlow<RangeChoice> = rangeFlow
 
     private val accessFlow = MutableStateFlow(CallsCollector.hasAccess(app))
     val hasAccess: StateFlow<Boolean> = accessFlow
@@ -48,13 +40,10 @@ class CallsViewModel(private val app: Application) : AndroidViewModel(app) {
     @OptIn(ExperimentalCoroutinesApi::class)
     val calls: StateFlow<List<CallEntity>> = rangeFlow.flatMapLatest { r ->
         val zone = ZoneId.systemDefault()
-        val today = LocalDate.now()
-        val start = today.minusDays(r.days - 1).atStartOfDay(zone).toInstant().toEpochMilli()
-        val end = today.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
-        dao.callsBetween(start, end)
+        dao.callsBetween(r.span.startMs(zone), r.span.endMs(zone))
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    fun setRange(r: CallRange) {
+    fun setRange(r: RangeChoice) {
         rangeFlow.value = r
     }
 
@@ -77,6 +66,24 @@ class CallsViewModel(private val app: Application) : AndroidViewModel(app) {
                 lastSyncFlow.value = stamp
             }
             syncingFlow.value = false
+        }
+    }
+
+    private val copyingOlderFlow = MutableStateFlow(false)
+    val copyingOlder: StateFlow<Boolean> = copyingOlderFlow
+
+    /** Result of the last "Copy older calls", as text for the screen. Empty before the first. */
+    private val olderResultFlow = MutableStateFlow("")
+    val olderResult: StateFlow<String> = olderResultFlow
+
+    /** Reads the whole call log from the beginning, for days before the first copy. */
+    fun copyOlder() {
+        if (copyingOlderFlow.value) return
+        viewModelScope.launch {
+            copyingOlderFlow.value = true
+            val count = runCatching { CallsCollector.copyAll(app) }.getOrNull()
+            olderResultFlow.value = if (count == null) "Could not read the call log." else "Read $count calls from your phone's call log."
+            copyingOlderFlow.value = false
         }
     }
 

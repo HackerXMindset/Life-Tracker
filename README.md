@@ -145,7 +145,7 @@ You make your own spending and income categories (a starter set is there), see e
 
 **Step 8: Phone usage.** The app reads Android's own record of which app was on screen and for how long (the source Digital Wellbeing uses), once you switch on *Usage access*. It copies that record into its own database on the phone, because Android only keeps about a week, and keeps copying it every few hours in the background. On the Timeline, each stretch of app use shows as a block with the app's name and exact time, with a short summary of the day's top apps. A *Phone usage* screen shows totals per app (today or the last 7 days) and lets you link an app to one of your activities (for example Anki to Study, YouTube to Screen and leisure), so its time counts towards that activity's daily goal, including screen-time limits. You can hide apps, leave short stretches off the Timeline, or turn app use off the Timeline entirely. This was the fifth database change (version 5 to 6), and backups moved to format 6. Backups now grow with your phone use, because every session is kept.
 
-**Step 9: Calls.** The app copies the phone's call log (who, when, how long, and whether it was incoming, outgoing, missed or declined) into its own database, once you allow *Call logs*. Contacts access is optional and only turns numbers into names. Calls show on the Timeline with their time, and a card shows the day's count and talk time. A *Calls* screen totals the last day, 7 or 30 days, lists the people you talked to most, and shows your latest calls. Only normal phone calls are in the call log, so WhatsApp and Telegram calls do not appear. Backups include calls, with numbers and names as plain text, so keep the backup folder private. This was the sixth database change (version 6 to 7), and backups moved to format 7.
+**Step 9: Calls.** The app copies the phone's call log (who, when, how long, and whether it was incoming, outgoing, missed or declined) into its own database, once you allow *Call logs*. Contacts access is optional and only turns numbers into names. Calls show on the Timeline with their time, and a card shows the day's count and talk time. A *Calls* screen totals any days you choose (quick choices from Today to All time, or any From and To dates, or a single day), lists the people you talked to most, and shows your latest calls. Only normal phone calls are in the call log, so WhatsApp and Telegram calls do not appear. The first copy reads the whole call log, and *Copy older calls* repeats that on demand. The *Phone usage* screen has the same day picker; it can only show days the app has already copied, because Android keeps about a week of detail. Backups include calls, with numbers and names as plain text, so keep the backup folder private. This was the sixth database change (version 6 to 7), and backups moved to format 7.
 
 ### Next
 
@@ -242,6 +242,7 @@ life-tracker/
         │   │   ├── CallStats.kt       Call wording, totals and people
         │   │   ├── CallsCollector.kt  Copies the call log (needs Call logs permission)
         │   │   ├── CallsSettings.kt   Timeline setting for calls
+│   │   ├── DateSpan.kt        Whole-day ranges and the quick choices for them
         │   │   ├── FoodTables.kt      Meals, daily food goals and water
         │   │   ├── FoodStats.kt       Calorie and macro arithmetic
         │   │   ├── Backup.kt          The backup file format (JSON) and how it is read back
@@ -272,6 +273,7 @@ life-tracker/
         │       ├── Model.kt           Colour palette and goal wording for activities
         │       ├── CallsScreen.kt          Calls: allow access, totals, people, Timeline option
         │       ├── CallsViewModel.kt       What that screen shows and does
+        │       ├── RangePicker.kt          Quick choices plus From and To dates, shared by Calls and Phone usage
         │       ├── PhoneUsageScreen.kt     Phone usage: allow access, totals per app, links, Timeline options
         │       ├── PhoneUsageViewModel.kt  What that screen shows and does
         │       ├── ActivitiesScreen.kt     Activities settings: list, colours, goals

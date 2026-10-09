@@ -18,7 +18,6 @@ import kotlinx.coroutines.withContext
  * Only normal phone calls are in the call log (not WhatsApp or Telegram calls).
  */
 object CallsCollector {
-    private const val FIRST_LOOKBACK_MS = 180L * 24 * 60 * 60 * 1000
     private const val OVERLAP_MS = 60L * 60 * 1000
 
     val PERMISSIONS = arrayOf(Manifest.permission.READ_CALL_LOG, Manifest.permission.READ_CONTACTS)
@@ -42,7 +41,7 @@ object CallsCollector {
         if (!hasAccess(context)) return@withContext null
         val dao = AppDatabase.get(context).callDao()
         val latest = dao.latestStart()
-        val since = if (latest != null) latest - OVERLAP_MS else now - FIRST_LOOKBACK_MS
+        val since = if (latest != null) latest - OVERLAP_MS else 0L
 
         val calls = try {
             read(context, since)
@@ -50,6 +49,18 @@ object CallsCollector {
             return@withContext null
         }
         dao.upsertCalls(calls)
+        calls.size
+    }
+
+    /** Reads the whole call log from the beginning. Safe to repeat: a call already copied is replaced, never doubled. Returns how many were read, or null without permission. */
+    suspend fun copyAll(context: Context): Int? = withContext(Dispatchers.IO) {
+        if (!hasAccess(context)) return@withContext null
+        val calls = try {
+            read(context, 0L)
+        } catch (e: SecurityException) {
+            return@withContext null
+        }
+        AppDatabase.get(context).callDao().upsertCalls(calls)
         calls.size
     }
 
