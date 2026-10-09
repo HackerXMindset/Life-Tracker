@@ -54,7 +54,7 @@ import com.lifetracker.app.data.ActivityStats
 import com.lifetracker.app.data.UsageAppEntity
 import com.lifetracker.app.data.UsageCollector
 
-private fun Context.findLifecycleOwner(): LifecycleOwner? {
+internal fun Context.findLifecycleOwner(): LifecycleOwner? {
     var c: Context? = this
     while (c is ContextWrapper) {
         if (c is LifecycleOwner) return c
@@ -154,16 +154,7 @@ fun PhoneUsageScreen(onBack: () -> Unit, vm: PhoneUsageViewModel = viewModel()) 
                 OutlinedButton(onClick = vm::sync, enabled = !syncing) { Text(if (syncing) "Copying..." else "Sync now") }
             }
         }
-        item {
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                UsageRange.entries.forEach { r ->
-                    FilterChip(selected = range == r, onClick = { vm.setRange(r) }, label = { Text(r.label) })
-                }
-            }
-        }
+        item { RangePicker(choice = range, onChange = vm::setRange) }
         item {
             Column {
                 MonoLabel("Total on your phone")
@@ -179,7 +170,7 @@ fun PhoneUsageScreen(onBack: () -> Unit, vm: PhoneUsageViewModel = viewModel()) 
         if (summary.perApp.isEmpty()) {
             item {
                 Text(
-                    "Nothing copied yet for this period. If you just allowed access, tap Sync now.",
+                    "Nothing copied for these days. If you just allowed access, tap Sync now. Android keeps only about a week of detail, so days from before the app first copied cannot be recovered.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }

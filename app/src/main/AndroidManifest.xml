@@ -6,6 +6,10 @@
     <uses-permission
         android:name="android.permission.PACKAGE_USAGE_STATS"
         tools:ignore="ProtectedPermissions" />
+    <!-- Reads your phone's call log (who, when, how long), once you allow it inside the app. -->
+    <uses-permission android:name="android.permission.READ_CALL_LOG" />
+    <!-- Turns phone numbers in the call log into contact names. Optional. -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
     <!-- Lets the app look up the names of the apps it sees in that history. -->
     <uses-permission
         android:name="android.permission.QUERY_ALL_PACKAGES"

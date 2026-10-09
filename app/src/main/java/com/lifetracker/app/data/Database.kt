@@ -73,8 +73,9 @@ interface EntryDao {
         MoneyEntryEntity::class,
         UsageSessionEntity::class,
         UsageAppEntity::class,
+        CallEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -86,6 +87,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun activityDao(): ActivityDao
     abstract fun moneyDao(): MoneyDao
     abstract fun usageDao(): UsageDao
+    abstract fun callDao(): CallDao
 
     companion object {
         @Volatile
@@ -98,7 +100,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "life-tracker.db",
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
                     .addCallback(object : RoomDatabase.Callback() {
                         // A brand new database starts with the built-in activities and money categories.
                         override fun onCreate(db: SupportSQLiteDatabase) {
@@ -248,5 +250,20 @@ val MIGRATION_5_6: Migration = object : Migration(5, 6) {
             "CREATE TABLE IF NOT EXISTS `usage_apps` (`pkg` TEXT NOT NULL, `label` TEXT NOT NULL, " +
                 "`activityId` TEXT NOT NULL, `ignored` INTEGER NOT NULL, PRIMARY KEY(`pkg`))",
         )
+    }
+}
+
+/**
+ * Version 6 -> 7: adds the calls table. Nothing existing is touched. The SQL must match
+ * CallTables.kt exactly.
+ */
+val MIGRATION_6_7: Migration = object : Migration(6, 7) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `calls` (`id` TEXT NOT NULL, `number` TEXT NOT NULL, " +
+                "`name` TEXT NOT NULL, `type` INTEGER NOT NULL, `startMs` INTEGER NOT NULL, " +
+                "`durationSec` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_calls_startMs` ON `calls` (`startMs`)")
     }
 }

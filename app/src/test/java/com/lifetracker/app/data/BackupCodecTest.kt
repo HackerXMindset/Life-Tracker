@@ -61,6 +61,10 @@ class BackupCodecTest {
             UsageAppEntity("com.a", "Anki \"cards\"", "Study", false),
             UsageAppEntity("com.b.c", "Launcher", "", true),
         ),
+        calls = listOf(
+            CallEntity(CallStats.idFor(1_760_000_000_000L, "+91 98765 43210"), "+91 98765 43210", "Mom \"home\"", CallStats.INCOMING, 1_760_000_000_000L, 725),
+            CallEntity(CallStats.idFor(1_760_000_500_000L, ""), "", "", CallStats.MISSED, 1_760_000_500_000L, 0),
+        ),
     )
 
     @Test
@@ -125,6 +129,14 @@ class BackupCodecTest {
         assertEquals(5, back.version)
         assertTrue(back.usageSessions.isEmpty())
         assertTrue(back.usageApps.isEmpty())
+    }
+
+    @Test
+    fun versionSixBackupsStillLoad() {
+        val v6 = """{"app":"life-tracker","version":6,"exportedAt":"x","entries":[],"usageSessions":[]}"""
+        val back = BackupCodec.decode(v6)
+        assertEquals(6, back.version)
+        assertTrue(back.calls.isEmpty())
     }
 
     @Test

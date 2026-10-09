@@ -9,7 +9,6 @@ import com.lifetracker.app.data.UsageAppEntity
 import com.lifetracker.app.data.UsageCollector
 import com.lifetracker.app.data.UsageDays
 import com.lifetracker.app.data.UsageSettings
-import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.LocalDateTime
@@ -23,19 +22,13 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-/** Which stretch of time the Phone usage screen totals up. */
-enum class UsageRange(val label: String, val days: Long) {
-    Today("Today", 1),
-    Week("Last 7 days", 7),
-}
-
 class PhoneUsageViewModel(private val app: Application) : AndroidViewModel(app) {
     private val db = AppDatabase.get(app)
     private val dao = db.usageDao()
     private val settings = UsageSettings(app)
 
-    private val rangeFlow = MutableStateFlow(UsageRange.Today)
-    val range: StateFlow<UsageRange> = rangeFlow
+    private val rangeFlow = MutableStateFlow(RangeChoice.preset("today"))
+    val range: StateFlow<RangeChoice> = rangeFlow
 
     private val accessFlow = MutableStateFlow(UsageCollector.hasAccess(app))
     val hasAccess: StateFlow<Boolean> = accessFlow
@@ -64,16 +57,15 @@ class PhoneUsageViewModel(private val app: Application) : AndroidViewModel(app) 
         UsageDays.Day(emptyList(), 0L, emptyList(), emptyMap()),
         rangeFlow.flatMapLatest { r ->
             val zone = ZoneId.systemDefault()
-            val today = LocalDate.now()
-            val start = today.minusDays(r.days - 1).atStartOfDay(zone).toInstant().toEpochMilli()
-            val end = today.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+            val start = r.span.startMs(zone)
+            val end = r.span.endMs(zone)
             combine(dao.sessionsBetween(start, end), dao.observeApps()) { sessions, list ->
                 UsageDays.build(sessions, list.associateBy { it.pkg }, start, end)
             }
         },
     )
 
-    fun setRange(r: UsageRange) {
+    fun setRange(r: RangeChoice) {
         rangeFlow.value = r
     }
 
