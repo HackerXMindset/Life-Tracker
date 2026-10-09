@@ -201,7 +201,7 @@ fun DataSourcesScreen(onBack: () -> Unit, vm: DataSourcesViewModel = viewModel()
             text = {
                 Text(
                     "Your timeline will become exactly what it was in this ${if (file.isSafety) "safety copy" else "backup"} " +
-                        "(${formatDateTime(file.modified)}). Anything logged since then will be gone. " +
+                        "(${formatDateTime(file.modified)}). Anything you logged since then will be gone, but phone usage and calls are kept and only added to. " +
                         "Your current data is saved as a safety copy first, so you can undo this.",
                 )
             },
