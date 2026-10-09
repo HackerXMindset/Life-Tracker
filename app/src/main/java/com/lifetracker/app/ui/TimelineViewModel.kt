@@ -7,6 +7,7 @@ import com.lifetracker.app.data.ActivityStats
 import com.lifetracker.app.data.ActivityTypeEntity
 import com.lifetracker.app.data.AppDatabase
 import com.lifetracker.app.data.CallEntity
+import com.lifetracker.app.data.ChargeSessionEntity
 import com.lifetracker.app.data.EntryEntity
 import com.lifetracker.app.data.MealEntity
 import com.lifetracker.app.data.NoteEntity
@@ -76,6 +77,18 @@ class TimelineViewModel(app: Application) : AndroidViewModel(app) {
             val start = d.atStartOfDay(zone).toInstant().toEpochMilli()
             val end = d.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
             db.callDao().callsBetween(start, end)
+        },
+    )
+
+    /** Charging sessions that began on the selected day. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val charges: StateFlow<List<ChargeSessionEntity>> = share(
+        emptyList(),
+        selectedDate.flatMapLatest { d ->
+            val zone = ZoneId.systemDefault()
+            val start = d.atStartOfDay(zone).toInstant().toEpochMilli()
+            val end = d.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+            db.chargeDao().sessionsBetween(start, end).map { list -> list.filter { it.startMs in start until end } }
         },
     )
 

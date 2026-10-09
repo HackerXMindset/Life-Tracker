@@ -50,6 +50,7 @@ It also remembers the big moments, such as moving to a new city or starting a ne
 | Money: income and spending, monthly items, quick-log items, categories | Done |
 | Phone usage: app sessions on the Timeline, per-app totals, app-to-activity links | Done |
 | Calls from the call log, on the Timeline | Built, waiting to be tried on a phone |
+| Charging sessions, a banner to say what you plugged into, phone use while charging | Built, waiting to be tried on a phone |
 | Stats | Placeholder screen |
 
 **What works right now (Steps 2 to 6).** On the Timeline tab you can:
@@ -106,8 +107,9 @@ Each step is small enough to build, install and try before the next begins. The 
  DONE         Step 7  Money
  DONE         Step 8  Phone usage (app sessions on the Timeline)
  DONE         Step 9  Calls
- NEXT  ──►    Step 10 Charging (plug-in pop-up, charger type, phone in use)
-              Step 11 Steps and sleep (Health Connect, phone step counter)
+ DONE         Step 9b Any dates on Calls and Phone usage
+ DONE         Step 10 Charging
+ NEXT  ──►    Step 11 Steps and sleep (Health Connect, phone step counter)
               Step 12 Places (geofencing: Home, Library, Gym)
               Step 13 Trips (how you got there: walk, cycle, vehicle)
               Step 14 Life events, month and year views
@@ -151,7 +153,7 @@ You make your own spending and income categories (a starter set is there), see e
 
 The next steps were planned together after asking for more automatic tracking. They are ordered so that nothing needs an always-on notification or drains the battery: each one uses Android's own low-power services.
 
-**Step 10: Charging.** Plug-in and unplug times, the plug type (wall, USB, wireless), charging speed, and whether the phone was in use while charging. When charging starts, a banner notification asks "What's charging this?" with one-tap buttons (Wall, Power bank, Laptop). After a few tags the app learns each charger's speed and suggests the answer itself, also using whether you were moving and where you were. Android starts a small job when charging begins, so nothing runs all day.
+**Step 10: Charging.** The app records every time the phone is on a charger: start and end, battery level at both ends, the plug type (charger, USB, wireless), and the average speed (watts into the battery, from Android's battery readings). When a session starts, a banner asks "What are you charging with?" with Wall / Power bank / Laptop buttons; you can also set it later on the *Charging* screen. After at least 3 similar tagged sessions (same plug type, about the same speed, 70% the same answer) the app suggests the answer itself and shows it as "(guess)". The screen also shows how long you used the phone while it charged, taken from the Phone usage sessions. Android only tells apps about plug-in and unplug while they are running, and cannot tell a power bank from a wall charger, so the app does not guess that alone. Nothing runs while the phone is not charging: Android runs a small job about every 15 minutes only while charging, which opens a session and notes level and speed, and the plug and unplug events give exact times whenever the app happens to be running. A session's end can therefore be up to 15 minutes early. On Xiaomi/HyperOS, Autostart, battery saver *No restrictions* and pop-up notifications must be allowed or the banner may not appear. Charging history is like phone usage and calls: it only grows, and restoring a backup adds to it. This was the seventh database change (version 7 to 8), and backups moved to format 8.
 
 **Step 11: Steps and sleep.** Daily steps from Health Connect, which on Android 14 and up records the phone's own steps, with the phone's step counter as a fallback. Sleep is read from Health Connect if an app writes it, or estimated from the long night gap when the phone is not used, and you can correct it.
 
@@ -226,6 +228,7 @@ life-tracker/
         │
         ├── java/com/lifetracker/app/
         │   ├── MainActivity.kt        Entry point: starts the theme and the app
+        │   ├── LifeTrackerApplication.kt  Listens for plug and unplug while the app is running
         │   │
         │   ├── data/                  ── The memory layer ──
         │   │   ├── Database.kt        Entries table, the database itself and its upgrade steps
@@ -242,6 +245,12 @@ life-tracker/
         │   │   ├── CallStats.kt       Call wording, totals and people
         │   │   ├── CallsCollector.kt  Copies the call log (needs Call logs permission)
         │   │   ├── CallsSettings.kt   Timeline setting for calls
+        │   │   ├── ChargeTables.kt    Charging sessions
+        │   │   ├── ChargeStats.kt     Charging arithmetic, session rules and the learned guess
+        │   │   ├── ChargeTracker.kt   Reads the battery and updates sessions
+        │   │   ├── ChargeNotifier.kt  The plug-in banner and its buttons, plug/unplug receiver
+        │   │   ├── ChargeWorker.kt    15 minute check that runs only while charging
+        │   │   ├── ChargeSettings.kt  Charging settings
 │   │   ├── DateSpan.kt        Whole-day ranges and the quick choices for them
         │   │   ├── FoodTables.kt      Meals, daily food goals and water
         │   │   ├── FoodStats.kt       Calorie and macro arithmetic
@@ -273,6 +282,8 @@ life-tracker/
         │       ├── Model.kt           Colour palette and goal wording for activities
         │       ├── CallsScreen.kt          Calls: allow access, totals, people, Timeline option
         │       ├── CallsViewModel.kt       What that screen shows and does
+        │       ├── ChargingScreen.kt       Charging: sessions, banner, settings
+        │       ├── ChargingViewModel.kt    What that screen shows and does
         │       ├── RangePicker.kt          Quick choices plus From and To dates, shared by Calls and Phone usage
         │       ├── PhoneUsageScreen.kt     Phone usage: allow access, totals per app, links, Timeline options
         │       ├── PhoneUsageViewModel.kt  What that screen shows and does

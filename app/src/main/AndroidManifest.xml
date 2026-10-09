@@ -15,7 +15,11 @@
         android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
 
+    <!-- Shows the banner that asks what you plugged your phone into. You can say no when Android asks. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <application
+        android:name=".LifeTrackerApplication"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
@@ -28,6 +32,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <!-- Receives a tap on the Wall / Power bank / Laptop buttons of the charging banner. -->
+        <receiver
+            android:name=".data.ChargeTagReceiver"
+            android:exported="false" />
     </application>
 
 </manifest>

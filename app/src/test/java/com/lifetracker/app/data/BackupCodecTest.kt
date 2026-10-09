@@ -65,6 +65,10 @@ class BackupCodecTest {
             CallEntity(CallStats.idFor(1_760_000_000_000L, "+91 98765 43210"), "+91 98765 43210", "Mom \"home\"", CallStats.INCOMING, 1_760_000_000_000L, 725),
             CallEntity(CallStats.idFor(1_760_000_500_000L, ""), "", "", CallStats.MISSED, 1_760_000_500_000L, 0),
         ),
+        chargeSessions = listOf(
+            ChargeSessionEntity("1760001000000", 1_760_001_000_000L, 1_760_004_600_000L, 34, 88, ChargeStats.PLUG_AC, ChargeStats.WALL, 5, 5, 9_000L, 20_000L, false),
+            ChargeSessionEntity("1760010000000", 1_760_010_000_000L, 1_760_010_000_000L, 12, 12, ChargeStats.PLUG_USB, "", 1, 0, 0L, 4_000L, true),
+        ),
     )
 
     @Test
@@ -137,6 +141,14 @@ class BackupCodecTest {
         val back = BackupCodec.decode(v6)
         assertEquals(6, back.version)
         assertTrue(back.calls.isEmpty())
+    }
+
+    @Test
+    fun versionSevenBackupsStillLoad() {
+        val v7 = """{"app":"life-tracker","version":7,"exportedAt":"x","entries":[],"calls":[]}"""
+        val back = BackupCodec.decode(v7)
+        assertEquals(7, back.version)
+        assertTrue(back.chargeSessions.isEmpty())
     }
 
     @Test
