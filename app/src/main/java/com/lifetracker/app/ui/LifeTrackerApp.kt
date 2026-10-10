@@ -37,7 +37,11 @@ import com.lifetracker.app.data.CallsCollector
 import com.lifetracker.app.data.ChargeSettings
 import com.lifetracker.app.data.ChargeTracker
 import com.lifetracker.app.data.ChargeWorker
+import com.lifetracker.app.data.HealthSync
 import com.lifetracker.app.data.MoneyPoster
+import com.lifetracker.app.data.PlacesSettings
+import com.lifetracker.app.data.PlacesTracker
+import com.lifetracker.app.data.PlacesWorker
 import com.lifetracker.app.data.UsageCollector
 import com.lifetracker.app.data.UsageSyncWorker
 import com.lifetracker.app.data.ont.OntImporter
@@ -59,6 +63,8 @@ fun LifeTrackerApp() {
     var showPhone by rememberSaveable { mutableStateOf(false) }
     var showCalls by rememberSaveable { mutableStateOf(false) }
     var showCharging by rememberSaveable { mutableStateOf(false) }
+    var showSteps by rememberSaveable { mutableStateOf(false) }
+    var showPlaces by rememberSaveable { mutableStateOf(false) }
 
     // One automatic backup per day, the first time the app is opened.
     val context = LocalContext.current
@@ -76,11 +82,20 @@ fun LifeTrackerApp() {
         // Copy the latest app usage history, and keep copying it every few hours in the background.
         runCatching { UsageCollector.sync(context) }
         runCatching { UsageSyncWorker.schedule(context) }
+        // Update steps (Health Connect or the phone's step counter) and work out last night's sleep.
+        runCatching { HealthSync.run(context) }
         // Copy new calls from the call log, if you allowed it.
         runCatching { CallsCollector.sync(context) }
         // Note a charging session that ended while the app was closed, and keep the check running while the phone charges.
         runCatching { ChargeTracker.sample(context, banner = false) }
         runCatching { if (ChargeSettings(context).track) ChargeWorker.schedule(context) }
+        // Hand the named places to Android again (cheap), and keep the 6-hourly refresh going.
+        runCatching {
+            if (PlacesSettings(context).enabled) {
+                PlacesWorker.schedule(context)
+                PlacesTracker.syncAll(context)
+            }
+        }
     }
 
     Scaffold(
@@ -109,9 +124,13 @@ fun LifeTrackerApp() {
                 CallsScreen(onBack = { showCalls = false })
             } else if (showCharging) {
                 ChargingScreen(onBack = { showCharging = false })
+            } else if (showSteps) {
+                StepsSleepScreen(onBack = { showSteps = false })
+            } else if (showPlaces) {
+                PlacesScreen(onBack = { showPlaces = false })
             } else {
                 when (tab) {
-                    Tab.Timeline -> TimelineScreen(onOpenData = { showData = true }, onOpenActivities = { showActivities = true }, onOpenPhone = { showPhone = true }, onOpenCalls = { showCalls = true }, onOpenCharging = { showCharging = true })
+                    Tab.Timeline -> TimelineScreen(onOpenData = { showData = true }, onOpenActivities = { showActivities = true }, onOpenPhone = { showPhone = true }, onOpenCalls = { showCalls = true }, onOpenCharging = { showCharging = true }, onOpenSteps = { showSteps = true }, onOpenPlaces = { showPlaces = true })
                     Tab.Habits -> HabitsScreen()
                     Tab.Food -> FoodScreen()
                     Tab.Money -> MoneyScreen()

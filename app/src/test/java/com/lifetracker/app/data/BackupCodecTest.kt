@@ -69,6 +69,22 @@ class BackupCodecTest {
             ChargeSessionEntity("1760001000000", 1_760_001_000_000L, 1_760_004_600_000L, 34, 88, ChargeStats.PLUG_AC, ChargeStats.WALL, 5, 5, 9_000L, 20_000L, false),
             ChargeSessionEntity("1760010000000", 1_760_010_000_000L, 1_760_010_000_000L, 12, 12, ChargeStats.PLUG_USB, "", 1, 0, 0L, 4_000L, true),
         ),
+        stepDays = listOf(
+            StepDayEntity("2026-10-08", 8123, StepStats.HEALTH_CONNECT),
+            StepDayEntity("2026-10-09", 412, StepStats.SENSOR),
+        ),
+        sleepNights = listOf(
+            SleepNightEntity("2026-10-09", 1_760_000_000_000L, 1_760_026_000_000L, SleepStats.ESTIMATE),
+            SleepNightEntity("2026-10-08", 1_759_900_000_000L, 1_759_925_000_000L, SleepStats.MANUAL),
+        ),
+        places = listOf(
+            PlaceEntity("p1", "Central \"Library\"", "study", 28.6139, 77.2090, 150, false, 1_760_000_000_000L),
+            PlaceEntity("p2", "Old gym", "gym", -33.8688, 151.2093, 100, true, 1_760_000_500_000L),
+        ),
+        placeVisits = listOf(
+            PlaceVisitEntity("v1760000000000", "p1", 1_760_000_000_000L, 1_760_003_600_000L, 28.6139, 77.2090, "geofence", false, false),
+            PlaceVisitEntity("v1760010000000", "", 1_760_010_000_000L, 1_760_010_000_000L, 28.7, 77.3, "stop", true, true),
+        ),
     )
 
     @Test
@@ -149,6 +165,24 @@ class BackupCodecTest {
         val back = BackupCodec.decode(v7)
         assertEquals(7, back.version)
         assertTrue(back.chargeSessions.isEmpty())
+    }
+
+    @Test
+    fun versionEightBackupsStillLoad() {
+        val v8 = """{"app":"life-tracker","version":8,"exportedAt":"x","entries":[],"chargeSessions":[]}"""
+        val back = BackupCodec.decode(v8)
+        assertEquals(8, back.version)
+        assertTrue(back.stepDays.isEmpty())
+        assertTrue(back.sleepNights.isEmpty())
+    }
+
+    @Test
+    fun versionNineBackupsStillLoad() {
+        val v9 = """{"app":"life-tracker","version":9,"exportedAt":"x","entries":[],"stepDays":[],"sleepNights":[]}"""
+        val back = BackupCodec.decode(v9)
+        assertEquals(9, back.version)
+        assertTrue(back.places.isEmpty())
+        assertTrue(back.placeVisits.isEmpty())
     }
 
     @Test

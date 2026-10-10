@@ -51,6 +51,10 @@ interface UsageDao {
     @Query("SELECT * FROM usage_sessions WHERE endMs > :from AND startMs < :to ORDER BY startMs")
     fun sessionsBetween(from: Long, to: Long): Flow<List<UsageSessionEntity>>
 
+    /** The same as [sessionsBetween], read once. */
+    @Query("SELECT * FROM usage_sessions WHERE endMs > :from AND startMs < :to ORDER BY startMs")
+    suspend fun sessionsOnce(from: Long, to: Long): List<UsageSessionEntity>
+
     @Query("SELECT * FROM usage_sessions ORDER BY startMs")
     suspend fun allSessions(): List<UsageSessionEntity>
 

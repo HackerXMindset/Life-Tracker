@@ -18,6 +18,28 @@
     <!-- Shows the banner that asks what you plugged your phone into. You can say no when Android asks. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Reads your steps and sleep from Health Connect, once you allow it inside the app. -->
+    <uses-permission android:name="android.permission.health.READ_STEPS" />
+    <uses-permission android:name="android.permission.health.READ_SLEEP" />
+    <!-- Lets the first read go back further than 30 days, if another app has that history. Optional. -->
+    <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_HISTORY" />
+    <!-- Only for the fallback: counts steps with the phone's own step counter. Optional. -->
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+
+    <!-- Places: knows when you arrive at and leave the places you name. Needs "Allow all the time" to work with the app closed. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <!-- Android 9 and older use Google's own version of the Physical activity permission. -->
+    <uses-permission android:name="com.google.android.gms.permission.ACTIVITY_RECOGNITION" />
+    <!-- Sets the places up again after the phone restarts. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- Lets the app see whether Health Connect is installed (Android 13 and older). -->
+    <queries>
+        <package android:name="com.google.android.apps.healthdata" />
+    </queries>
+
     <application
         android:name=".LifeTrackerApplication"
         android:icon="@mipmap/ic_launcher"
@@ -32,10 +54,43 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <!-- Health Connect asks the app to explain what it does with your data. -->
+        <activity
+            android:name=".PermissionsRationaleActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+            </intent-filter>
+        </activity>
+        <activity-alias
+            android:name="ViewPermissionUsageActivity"
+            android:exported="true"
+            android:permission="android.permission.START_VIEW_PERMISSION_USAGE"
+            android:targetActivity=".PermissionsRationaleActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+            </intent-filter>
+        </activity-alias>
         <!-- Receives a tap on the Wall / Power bank / Laptop buttons of the charging banner. -->
         <receiver
             android:name=".data.ChargeTagReceiver"
             android:exported="false" />
+        <!-- Google Play services tells these about places and about the phone being still. -->
+        <receiver
+            android:name=".data.GeofenceReceiver"
+            android:exported="false" />
+        <receiver
+            android:name=".data.ActivityTransitionReceiver"
+            android:exported="false" />
+        <receiver
+            android:name=".data.PlacesBootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>
