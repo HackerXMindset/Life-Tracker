@@ -29,12 +29,14 @@ data class BackupData(
     val chargeSessions: List<ChargeSessionEntity> = emptyList(),
     val stepDays: List<StepDayEntity> = emptyList(),
     val sleepNights: List<SleepNightEntity> = emptyList(),
+    val places: List<PlaceEntity> = emptyList(),
+    val placeVisits: List<PlaceVisitEntity> = emptyList(),
 ) {
     val isEmpty: Boolean
         get() = entries.isEmpty() && habits.isEmpty() && completions.isEmpty() && categories.isEmpty() &&
             todoTags.isEmpty() && todos.isEmpty() && notes.isEmpty() && meals.isEmpty() && water.isEmpty() &&
             moneyItems.isEmpty() && moneyEntries.isEmpty() && usageSessions.isEmpty() && calls.isEmpty() &&
-            chargeSessions.isEmpty() && stepDays.isEmpty() && sleepNights.isEmpty()
+            chargeSessions.isEmpty() && stepDays.isEmpty() && sleepNights.isEmpty() && places.isEmpty() && placeVisits.isEmpty()
 }
 
 /**
@@ -42,12 +44,12 @@ data class BackupData(
  *
  * `version` lets later steps add more data without breaking old backups.
  * Version 1 held only Timeline entries; version 2 adds habits, to-dos, notes
- * and the record of what was imported; version 3 adds meals, food goals and water; version 4 adds your own activities and their goals; version 5 adds money (categories, saved items and entries); version 6 adds phone usage (sessions are stored compactly as [app, start, end]); version 7 adds phone calls (each stored as [number, name, type, start, seconds]); version 8 adds charging sessions (each stored as [start, end, startLevel, endLevel, plug, source, samples, currentSamples, sumMa, sumMv, ongoing]); version 9 adds steps (each day stored as [date, steps, source]) and sleep (each night stored as [date, start, end, source]). A file from a newer version of the app
+ * and the record of what was imported; version 3 adds meals, food goals and water; version 4 adds your own activities and their goals; version 5 adds money (categories, saved items and entries); version 6 adds phone usage (sessions are stored compactly as [app, start, end]); version 7 adds phone calls (each stored as [number, name, type, start, seconds]); version 8 adds charging sessions (each stored as [start, end, startLevel, endLevel, plug, source, samples, currentSamples, sumMa, sumMv, ongoing]); version 9 adds steps (each day stored as [date, steps, source]) and sleep (each night stored as [date, start, end, source]); version 10 adds places (the ones you named) and place visits (each stored as [id, place, start, end, lat, lng, source, ongoing, ignored]). A file from a newer version of the app
  * is refused rather than half-read.
  */
 object BackupCodec {
     const val APP_NAME = "life-tracker"
-    const val FORMAT_VERSION = 9
+    const val FORMAT_VERSION = 10
 
     fun encode(data: BackupData): String =
         JSONObject()
@@ -75,6 +77,8 @@ object BackupCodec {
             .put("chargeSessions", chargeJson(data.chargeSessions))
             .put("stepDays", stepsJson(data.stepDays))
             .put("sleepNights", sleepJson(data.sleepNights))
+            .put("places", array(data.places, ::placeJson))
+            .put("placeVisits", visitsJson(data.placeVisits))
             .toString(2)
 
     /** Reads a backup. Throws [IllegalArgumentException] with a readable reason if it is not usable. */
@@ -110,6 +114,8 @@ object BackupCodec {
                 chargeSessions = charges(root),
                 stepDays = stepDays(root),
                 sleepNights = sleepNights(root),
+                places = list(root, "places", required = false, ::place),
+                placeVisits = placeVisits(root),
             )
         } catch (e: JSONException) {
             throw IllegalArgumentException("This file is damaged or is not a backup.")
@@ -452,6 +458,51 @@ object BackupCodec {
         return (0 until array.length()).map {
             val r = array.getJSONArray(it)
             SleepNightEntity(r.getString(0), r.getLong(1), r.getLong(2), r.getString(3))
+        }
+    }
+
+    private fun placeJson(p: PlaceEntity) = JSONObject()
+        .put("id", p.id).put("name", p.name).put("kind", p.kind).put("lat", p.lat).put("lng", p.lng)
+        .put("radiusM", p.radiusM).put("archived", p.archived).put("createdMs", p.createdMs)
+
+    private fun place(o: JSONObject) = PlaceEntity(
+        id = o.getString("id"),
+        name = o.getString("name"),
+        kind = o.getString("kind"),
+        lat = o.getDouble("lat"),
+        lng = o.getDouble("lng"),
+        radiusM = o.getInt("radiusM"),
+        archived = o.getBoolean("archived"),
+        createdMs = o.getLong("createdMs"),
+    )
+
+    // Place visits are one short list each: [id, place, start, end, lat, lng, source, ongoing, ignored].
+    private fun visitsJson(list: List<PlaceVisitEntity>): JSONArray {
+        val out = JSONArray()
+        for (v in list) {
+            out.put(
+                JSONArray().put(v.id).put(v.placeId).put(v.startMs).put(v.endMs).put(v.lat).put(v.lng)
+                    .put(v.source).put(if (v.ongoing) 1 else 0).put(if (v.ignored) 1 else 0),
+            )
+        }
+        return out
+    }
+
+    private fun placeVisits(root: JSONObject): List<PlaceVisitEntity> {
+        val array = root.optJSONArray("placeVisits") ?: return emptyList()
+        return (0 until array.length()).map {
+            val r = array.getJSONArray(it)
+            PlaceVisitEntity(
+                id = r.getString(0),
+                placeId = r.getString(1),
+                startMs = r.getLong(2),
+                endMs = r.getLong(3),
+                lat = r.getDouble(4),
+                lng = r.getDouble(5),
+                source = r.getString(6),
+                ongoing = r.getInt(7) == 1,
+                ignored = r.getInt(8) == 1,
+            )
         }
     }
 }

@@ -26,6 +26,15 @@
     <!-- Only for the fallback: counts steps with the phone's own step counter. Optional. -->
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
 
+    <!-- Places: knows when you arrive at and leave the places you name. Needs "Allow all the time" to work with the app closed. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <!-- Android 9 and older use Google's own version of the Physical activity permission. -->
+    <uses-permission android:name="com.google.android.gms.permission.ACTIVITY_RECOGNITION" />
+    <!-- Sets the places up again after the phone restarts. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
     <!-- Lets the app see whether Health Connect is installed (Android 13 and older). -->
     <queries>
         <package android:name="com.google.android.apps.healthdata" />
@@ -67,6 +76,21 @@
         <receiver
             android:name=".data.ChargeTagReceiver"
             android:exported="false" />
+        <!-- Google Play services tells these about places and about the phone being still. -->
+        <receiver
+            android:name=".data.GeofenceReceiver"
+            android:exported="false" />
+        <receiver
+            android:name=".data.ActivityTransitionReceiver"
+            android:exported="false" />
+        <receiver
+            android:name=".data.PlacesBootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

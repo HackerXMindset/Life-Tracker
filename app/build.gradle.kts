@@ -77,6 +77,9 @@ dependencies {
     // Reads steps and sleep from Android's Health Connect.
     implementation("androidx.health.connect:connect-client:1.1.0")
 
+    // Android's geofences (arrive at and leave a named place), still/moving detection and one-off position reads.
+    implementation("com.google.android.gms:play-services-location:21.3.0")
+
     // Tests that run in the cloud build. The org.json copy is needed because
     // the Android one is only a stub outside a real phone.
     testImplementation("junit:junit:4.13.2")

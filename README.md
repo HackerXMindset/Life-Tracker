@@ -111,8 +111,8 @@ Each step is small enough to build, install and try before the next begins. The 
  DONE         Step 9b Any dates on Calls and Phone usage
  DONE         Step 10 Charging
  DONE         Step 11 Steps and sleep (Health Connect, phone step counter)
- NEXT  ──►    Step 12 Places (geofencing: Home, Library, Gym)
-              Step 13 Trips (how you got there: walk, cycle, vehicle)
+ DONE         Step 12 Places (named places, unknown stops to review)
+ NEXT  ──►    Step 13 Trips (how you got there: walk, cycle, vehicle)
               Step 14 Life events, month and year views
               Step 15 Stats
               Step 16 Polish
@@ -158,7 +158,7 @@ The next steps were planned together after asking for more automatic tracking. T
 
 **Step 11: Steps and sleep.** Daily steps are copied from Health Connect, which on Android 14 and newer counts the phone's own steps once any app is allowed to read them (so earlier days stay empty unless another app saved them there). If Health Connect is missing or has nothing for today, the phone's own step counter can be switched on instead; it adds the steps since the last reading whenever the app syncs. A day's steps never go down. Sleep is read from Health Connect if an app writes it, or worked out from when you stop using the phone at night: the longest stretch of 3 to 14 hours with no phone use that began between 6 pm and 10 am, ignoring quick checks under 5 minutes between 12:30 and 6 am. It is a guess (reading in bed looks like sleep), so you can edit any night, add a missing one, or mark it "not sleep"; a night you edited is never overwritten. Sleep shows on the Timeline at the time you woke up and counts towards your Sleep goal on days you did not log Sleep yourself. The charging record is not used for the estimate: plugging in at bedtime was not reliable enough. Steps and sleep only ever grow, restoring a backup adds to them, and they are in backups. This was the eighth database change (version 8 to 9), and backups moved to format 9.
 
-**Step 12: Places.** Name places such as Home, Library or Gym, each with a radius. Android's geofencing tells the app when you enter, leave or stay, using Google Play Services instead of running GPS. Events can arrive a few minutes late, so places are used as context, not as a stopwatch. Includes a checklist for the phone's own battery and auto-start settings, which on Xiaomi phones can otherwise stop background work.
+**Step 12: Places.** Name places such as Home, Library or Gym, each a circle with a radius (100 to 300 m). Android itself watches them through Google Play services (geofences) and wakes the app when you arrive or leave, usually within a couple of minutes and sometimes later, so nothing of ours runs in between. The app also asks Android to say when the phone stays still; after 10 minutes it takes one quick low-power position read. A stop at a named place fills in a visit Android reported late or not at all; a stop at a spot you have not named waits in a review list (grouped by spot, with a Map button) where you can name it, which also turns every other stop there into a visit, or say "Not a place", which only hides it. If Android never reports that you left, the visit is ended when the phone next stops somewhere else. Visits under 5 minutes (driving past) are kept but not listed or counted. Places are never deleted, only "not watched". You can add a place from where you are, or paste the numbers Google Maps copies. Nothing is looked up on the internet. Geofences are set up again after a restart, every 6 hours and whenever you open the app, and the Places screen shows when Android last reported something so you can tell if the phone's battery settings are blocking it (on Xiaomi, turn on Autostart and set battery to No restrictions). Visits show on the Timeline and are in backups, and restoring only adds to them. This was the ninth database change (version 9 to 10), and backups moved to format 10.
 
 **Step 13: Trips.** Android's activity recognition says when you start or stop walking, running, cycling or riding in a vehicle. Together with places, that gives trips such as "Home to Library, vehicle, 25 minutes". Somewhere you have not named gets one location reading when you stop, and the app asks you to name it. You tag car, bus or train yourself.
 
@@ -259,6 +259,12 @@ life-tracker/
         │   │   ├── StepCounterSync.kt Fallback: the phone's own step counter
         │   │   ├── HealthSync.kt      Runs all of the above and the sleep estimate
         │   │   ├── HealthSettings.kt  Steps and sleep settings
+        │   │   ├── PlaceTables.kt     Places and visits
+        │   │   ├── PlaceStats.kt      Place rules: distance, visits, stops, review groups, totals
+        │   │   ├── PlacesTracker.kt   Hands places to Android, saves arrivals, leavings and stops
+        │   │   ├── PlacesReceivers.kt What Android calls: geofence, still/moving, restart
+        │   │   ├── PlacesWorker.kt    6 hourly refresh of the geofences
+        │   │   ├── PlacesSettings.kt  Places settings and the stop in progress
 │   │   ├── DateSpan.kt        Whole-day ranges and the quick choices for them
         │   │   ├── FoodTables.kt      Meals, daily food goals and water
         │   │   ├── FoodStats.kt       Calorie and macro arithmetic
@@ -294,6 +300,8 @@ life-tracker/
         │       ├── ChargingViewModel.kt    What that screen shows and does
         │       ├── StepsSleepScreen.kt     Steps and sleep: Health Connect, days, nights, fixes
         │       ├── StepsSleepViewModel.kt  What that screen shows and does
+        │       ├── PlacesScreen.kt         Places: permissions, review list, your places, visits
+        │       ├── PlacesViewModel.kt      What that screen shows and does
         │       ├── RangePicker.kt          Quick choices plus From and To dates, shared by Calls and Phone usage
         │       ├── PhoneUsageScreen.kt     Phone usage: allow access, totals per app, links, Timeline options
         │       ├── PhoneUsageViewModel.kt  What that screen shows and does
