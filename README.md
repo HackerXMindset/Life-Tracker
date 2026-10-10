@@ -112,8 +112,8 @@ Each step is small enough to build, install and try before the next begins. The 
  DONE         Step 10 Charging
  DONE         Step 11 Steps and sleep (Health Connect, phone step counter)
  DONE         Step 12 Places (named places, unknown stops to review)
- NEXT  ──►    Step 13 Trips (how you got there: walk, cycle, vehicle)
-              Step 14 Life events, month and year views
+ DONE         Step 13 Trips (distance, speed, how you travelled)
+ NEXT  ──►    Step 14 Life events, month and year views
               Step 15 Stats
               Step 16 Polish
 ```
@@ -160,7 +160,7 @@ The next steps were planned together after asking for more automatic tracking. T
 
 **Step 12: Places.** Name places such as Home, Library or Gym, each a circle you size from 30 to 150 m; that circle is the real size used to decide you are there. Android's geofencing (a ring of at least 150 m around each place) and its still/moving messages only wake the app. Then the app reads your position: every minute (or 2 or 5, your choice, with or without GPS) while you are somewhere it does not know, until you leave; at a named place two readings are enough and it rests until you move. Android only allows readings that often from a foreground service, so a small notification shows while it runs, and it stops by itself. Staying in one spot (within about 60 m) for 5 minutes is a stay: if its centre is inside a place's circle it is a visit to that place, otherwise it waits in a review list (grouped by spot, with a Map button and a name suggested from OpenStreetMap) where you can name it, which also turns every other stop there into a visit, or say "Not a place", which only hides it. A stay starts when the phone went still and ends when it started moving, a stay that resumes within 20 minutes joins the earlier visit, and if Android never says you left, the visit ends when you are next seen elsewhere. Names are suggested over the internet from OpenStreetMap (the named place within 60 m, else the street), only for stops you have not named, once per spot, when the review list is open; that is the only use of the internet. Places are never deleted, only "not watched". You can add a place from where you are, or paste the numbers Google Maps copies. Geofences are set up again after a restart, every 6 hours and whenever you open the app, and the Places screen shows when Android last reported something and when the last reading arrived, so you can tell if the phone's battery settings are blocking it (on Xiaomi, turn on Autostart and set battery to No restrictions). Visits show on the Timeline and are in backups, and restoring only adds to them. This was the ninth database change (version 9 to 10), and backups moved to format 10.
 
-**Step 13: Trips.** Android's activity recognition says when you start or stop walking, running, cycling or riding in a vehicle. Together with places, that gives trips such as "Home to Library, vehicle, 25 minutes". Somewhere you have not named gets one location reading when you stop, and the app asks you to name it. You tag car, bus or train yourself.
+**Step 13: Trips.** A trip is the way between two stays. It starts when you leave a place or stop you had been at for at least two position readings, and ends when you stay somewhere for 5 minutes (the end is when you got there, not 5 minutes later). While it runs, the app reads your position every 30 seconds (15 s or 1 min if you choose; Places must be on) and keeps every reading, so the route is never lost. Distance adds up the readings, skipping ones that moved less than their own error and any jump faster than 250 km/h; you also get the usual and top speed. Something that never got 200 m away or lasted under a minute was GPS drift and is dropped. The app guesses how you travelled: first from what you told it about trips between the same two places, then from Android's walking, running and cycling signals and the speed; for anything in a vehicle it looks at your own corrected trips with a similar speed, and otherwise says "vehicle" until you pick Auto-rickshaw, Motorbike, Car, Bus, Train or metro, Cycle, Walk, Run or Other (tap a trip). What you pick is never overwritten, and the trips it had only guessed are looked at again using it. Trips show on the Timeline, on a Trips screen with totals per way of travelling, and in backups (restoring only adds). This was the tenth database change (version 10 to 11), and backups moved to format 11. Importing your Google Timeline history is not built; it would need the file you export from Google.
 
 **Step 14: Life events, month and year views.** Mark moments that changed your life, then look back by month or year to see what you did and how much you studied around each one.
 
@@ -263,6 +263,8 @@ life-tracker/
         │   │   ├── PlaceStats.kt      Place rules: distance, visits, stops, review groups, totals
         │   │   ├── PlaceEngine.kt     Turns position readings into stays, visits and stops
         │   │   ├── PlaceWatchService.kt  The position readings (foreground service, stops by itself)
+        │   │   ├── TripTables.kt      Trips and their position readings
+        │   │   ├── TripRules.kt       Trip distance and speed, and the guess at how you travelled
         │   │   ├── PlaceLookup.kt     Suggests a name for a stop from OpenStreetMap
         │   │   ├── PlacesTracker.kt   Hands places to Android and feeds Android's messages to the engine
         │   │   ├── PlacesReceivers.kt What Android calls: geofence, still/moving, restart
@@ -305,6 +307,8 @@ life-tracker/
         │       ├── StepsSleepViewModel.kt  What that screen shows and does
         │       ├── PlacesScreen.kt         Places: permissions, review list, your places, visits
         │       ├── PlacesViewModel.kt      What that screen shows and does
+        │       ├── TripsScreen.kt          Trips: totals, every trip, tap to say how you travelled
+        │       ├── TripsViewModel.kt       What that screen shows and does
         │       ├── RangePicker.kt          Quick choices plus From and To dates, shared by Calls and Phone usage
         │       ├── PhoneUsageScreen.kt     Phone usage: allow access, totals per app, links, Timeline options
         │       ├── PhoneUsageViewModel.kt  What that screen shows and does

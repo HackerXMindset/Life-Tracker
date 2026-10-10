@@ -70,6 +70,9 @@ import com.lifetracker.app.data.SleepNightEntity
 import com.lifetracker.app.data.SleepStats
 import com.lifetracker.app.data.StepDayEntity
 import com.lifetracker.app.data.StepStats
+import com.lifetracker.app.data.TripEntity
+import com.lifetracker.app.data.TripModes
+import com.lifetracker.app.data.TripRules
 import com.lifetracker.app.data.UsageCollector
 import com.lifetracker.app.data.UsageDays
 import com.lifetracker.app.data.UsageSettings
@@ -85,7 +88,7 @@ private const val DAYS_AHEAD = 30
 private fun EntryEntity.minutes(): Int = ActivityStats.minutes(this)
 
 @Composable
-fun TimelineScreen(onOpenData: () -> Unit, onOpenActivities: () -> Unit, onOpenPhone: () -> Unit, onOpenCalls: () -> Unit, onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPlaces: () -> Unit, vm: TimelineViewModel = viewModel()) {
+fun TimelineScreen(onOpenTrips: () -> Unit, onOpenData: () -> Unit, onOpenActivities: () -> Unit, onOpenPhone: () -> Unit, onOpenCalls: () -> Unit, onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPlaces: () -> Unit, vm: TimelineViewModel = viewModel()) {
     val date by vm.date.collectAsState()
     val entries by vm.entries.collectAsState()
     val todos by vm.todos.collectAsState()
@@ -102,6 +105,7 @@ fun TimelineScreen(onOpenData: () -> Unit, onOpenActivities: () -> Unit, onOpenP
     val sleepNight by vm.sleep.collectAsState()
     val placeVisits by vm.placeVisits.collectAsState()
     val placeNames by vm.placeNames.collectAsState()
+    val dayTrips by vm.trips.collectAsState()
 
     // Read fresh each time the Timeline comes into view, so changes made on the Phone usage screen show up.
     val context = LocalContext.current
@@ -110,6 +114,7 @@ fun TimelineScreen(onOpenData: () -> Unit, onOpenActivities: () -> Unit, onOpenP
     val showCharging = remember { ChargeSettings(context) }.showOnTimeline
     val showHealth = remember { HealthSettings(context) }.showOnTimeline
     val showPlaces = remember { PlacesSettings(context) }.showOnTimeline
+    val showTrips = remember { PlacesSettings(context) }.showTripsOnTimeline
     val zone = ZoneId.systemDefault()
     val dayStartMs = date.atStartOfDay(zone).toInstant().toEpochMilli()
     val dayEndMs = date.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
@@ -148,6 +153,7 @@ fun TimelineScreen(onOpenData: () -> Unit, onOpenActivities: () -> Unit, onOpenP
         if (showCalls) calls.forEach { add(CallItem(it)) }
         if (showCharging) charges.forEach { add(ChargeItem(it)) }
         sleepShown?.let { add(SleepItem(it)) }
+        if (showTrips) dayTrips.forEach { add(TripItem(it, placeNames)) }
         if (showPlaces) {
             placeVisits.filter { PlaceRules.isShown(it, nowMs) }.forEach { add(PlaceItem(it, placeNames[it.placeId] ?: "Place", dayStartMs)) }
         }
@@ -205,6 +211,9 @@ fun TimelineScreen(onOpenData: () -> Unit, onOpenActivities: () -> Unit, onOpenP
             }
             item(key = "health-summary") { HealthSummary(steps, sleepNight, onClick = onOpenSteps) }
             item(key = "places-summary") { PlacesSummary(dayPlaces, placeNames, onClick = onOpenPlaces) }
+            if (dayTrips.isNotEmpty()) {
+                item(key = "trips-summary") { TripsSummary(dayTrips, onClick = onOpenTrips) }
+            }
             if (callsAccess) {
                 if (calls.isNotEmpty()) {
                     item(key = "calls-summary") { CallsSummary(calls, onClick = onOpenCalls) }
@@ -250,6 +259,7 @@ fun TimelineScreen(onOpenData: () -> Unit, onOpenActivities: () -> Unit, onOpenP
                         is ChargeItem -> ChargeTimelineRow(item.session, onClick = onOpenCharging)
                         is SleepItem -> SleepTimelineRow(item.night, onClick = onOpenSteps)
                         is PlaceItem -> PlaceTimelineRow(item, nowMs, onClick = onOpenPlaces)
+                        is TripItem -> TripTimelineRow(item, onClick = onOpenTrips)
                         is PhoneItem -> PhoneRow(item.block, item.block.activityId.takeIf { it.isNotEmpty() }?.let { types.byId(it) })
                     }
                 }
@@ -560,6 +570,14 @@ private class PlaceItem(val visit: PlaceVisitEntity, val name: String, dayStartM
     override val minute: Int? = if (visit.startMs < dayStartMs) 0 else
         Instant.ofEpochMilli(visit.startMs).atZone(ZoneId.systemDefault()).let { it.hour * 60 + it.minute }
     override val key: String = "place" + visit.id
+}
+
+private class TripItem(val trip: TripEntity, names: Map<String, String>) : TimelineItem {
+    val from: String = names[trip.fromPlaceId] ?: ""
+    val to: String = names[trip.toPlaceId] ?: ""
+    override val minute: Int? = Instant.ofEpochMilli(trip.startMs).atZone(ZoneId.systemDefault())
+        .let { it.hour * 60 + it.minute }
+    override val key: String = "trip" + trip.id
 }
 
 private class PhoneItem(val block: UsageDays.Block) : TimelineItem {
@@ -1131,6 +1149,82 @@ private fun PlaceTimelineRow(item: PlaceItem, now: Long, onClick: () -> Unit) {
             )
             Text(
                 text = startText + " → " + endText + " · " + PlaceRules.durationText(PlaceRules.lengthMs(v, now)),
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun TripsSummary(trips: List<TripEntity>, onClick: () -> Unit) {
+    val distance = trips.sumOf { it.distanceM.toLong() }.toInt()
+    val ms = trips.sumOf { it.endMs - it.startMs }
+    Surface(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+    ) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                MonoLabel("Trips")
+                Text(
+                    text = "${trips.size} · " + TripRules.distanceText(distance) + " · " + PlaceRules.durationText(ms),
+                    fontSize = 14.sp,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+            Text(
+                text = "Tap for every trip and to say how you travelled",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun TripTimelineRow(item: TripItem, onClick: () -> Unit) {
+    val t = item.trip
+    val color = MaterialTheme.colorScheme.tertiary
+    val startText = formatMinute(item.minute ?: 0)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = 44.dp)
+            .clickable(onClick = onClick),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(
+            text = startText,
+            modifier = Modifier
+                .width(68.dp)
+                .padding(top = 3.dp),
+            fontSize = 12.sp,
+            fontFamily = FontFamily.Monospace,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Box(modifier = Modifier.width(10.dp), contentAlignment = Alignment.TopCenter) {
+            Box(
+                modifier = Modifier
+                    .padding(top = 5.dp)
+                    .size(10.dp)
+                    .clip(CircleShape)
+                    .background(color),
+            )
+        }
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = tripEnd(item.from) + " → " + tripEnd(item.to),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+            Text(
+                text = TripModes.label(t.mode) + (if (t.modeSource == "you") "" else " (guess)") + " · " + TripRules.distanceText(t.distanceM) +
+                    " · " + PlaceRules.durationText(t.endMs - t.startMs) + " · " + TripRules.avgKmh(t.distanceM, t.endMs - t.startMs) + " km/h",
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

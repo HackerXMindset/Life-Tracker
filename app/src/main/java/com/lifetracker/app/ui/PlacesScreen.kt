@@ -57,7 +57,7 @@ import java.time.ZoneId
 
 /** Places: the spots you named, the stops waiting for a name, and every visit. */
 @Composable
-fun PlacesScreen(onBack: () -> Unit, vm: PlacesViewModel = viewModel()) {
+fun PlacesScreen(onBack: () -> Unit, onOpenTrips: () -> Unit, vm: PlacesViewModel = viewModel()) {
     val context = LocalContext.current
     val data by vm.data.collectAsState()
     val clusters by vm.clusters.collectAsState()
@@ -152,6 +152,8 @@ fun PlacesScreen(onBack: () -> Unit, vm: PlacesViewModel = viewModel()) {
         item {
             PlacesCard(title = if (enabled) "Status" else "Status (switched off)", text = status) {}
         }
+
+        item { OutlinedButton(onClick = onOpenTrips) { Text("Trips: how you got between places") } }
 
         item { MonoLabel("How closely to watch") }
         item {

@@ -65,6 +65,7 @@ fun LifeTrackerApp() {
     var showCharging by rememberSaveable { mutableStateOf(false) }
     var showSteps by rememberSaveable { mutableStateOf(false) }
     var showPlaces by rememberSaveable { mutableStateOf(false) }
+    var showTrips by rememberSaveable { mutableStateOf(false) }
 
     // One automatic backup per day, the first time the app is opened.
     val context = LocalContext.current
@@ -127,11 +128,13 @@ fun LifeTrackerApp() {
                 ChargingScreen(onBack = { showCharging = false })
             } else if (showSteps) {
                 StepsSleepScreen(onBack = { showSteps = false })
+            } else if (showTrips) {
+                TripsScreen(onBack = { showTrips = false })
             } else if (showPlaces) {
-                PlacesScreen(onBack = { showPlaces = false })
+                PlacesScreen(onBack = { showPlaces = false }, onOpenTrips = { showTrips = true })
             } else {
                 when (tab) {
-                    Tab.Timeline -> TimelineScreen(onOpenData = { showData = true }, onOpenActivities = { showActivities = true }, onOpenPhone = { showPhone = true }, onOpenCalls = { showCalls = true }, onOpenCharging = { showCharging = true }, onOpenSteps = { showSteps = true }, onOpenPlaces = { showPlaces = true })
+                    Tab.Timeline -> TimelineScreen(onOpenTrips = { showTrips = true }, onOpenData = { showData = true }, onOpenActivities = { showActivities = true }, onOpenPhone = { showPhone = true }, onOpenCalls = { showCalls = true }, onOpenCharging = { showCharging = true }, onOpenSteps = { showSteps = true }, onOpenPlaces = { showPlaces = true })
                     Tab.Habits -> HabitsScreen()
                     Tab.Food -> FoodScreen()
                     Tab.Money -> MoneyScreen()

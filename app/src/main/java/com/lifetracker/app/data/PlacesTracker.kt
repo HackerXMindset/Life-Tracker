@@ -118,18 +118,14 @@ object PlacesTracker {
         }
 
         if (hasActivityRecognition(context)) {
-            val request = ActivityTransitionRequest(
-                listOf(
-                    ActivityTransition.Builder()
-                        .setActivityType(DetectedActivity.STILL)
-                        .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_ENTER)
-                        .build(),
-                    ActivityTransition.Builder()
-                        .setActivityType(DetectedActivity.STILL)
-                        .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_EXIT)
-                        .build(),
-                ),
-            )
+            val transitions = buildList {
+                add(ActivityTransition.Builder().setActivityType(DetectedActivity.STILL).setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_ENTER).build())
+                add(ActivityTransition.Builder().setActivityType(DetectedActivity.STILL).setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_EXIT).build())
+                listOf(DetectedActivity.WALKING, DetectedActivity.RUNNING, DetectedActivity.ON_BICYCLE, DetectedActivity.IN_VEHICLE).forEach { type ->
+                    add(ActivityTransition.Builder().setActivityType(type).setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_ENTER).build())
+                }
+            }
+            val request = ActivityTransitionRequest(transitions)
             val result = runCatching { recognition.requestActivityTransitionUpdates(request, transitionIntent(context)).outcome() }
             val error = result.exceptionOrNull() ?: result.getOrNull()?.error
             if (error != null) status.append("; still/moving detection failed: ").append(error.message ?: error.javaClass.simpleName)
@@ -174,19 +170,57 @@ object PlacesTracker {
             if (watch && hasLocation(context)) PlaceWatchService.start(context)
         }
 
-    /** One position reading from the watch service. Returns whether the readings should go on. */
-    suspend fun onFix(context: Context, fix: Fix): Boolean = withContext(Dispatchers.IO) {
+    /** What the watch service should do after a reading: keep going or stop, and how often to read. */
+    class Watch(val keep: Boolean, val intervalSec: Int)
+
+    /** Android says you are now walking, running, cycling or in a vehicle. */
+    suspend fun onActivity(context: Context, name: String, atMs: Long) = trigger(context, atMs) { state ->
+        PlaceEngine.onActivity(state, name, atMs, System.currentTimeMillis())
+    }
+
+    /** One position reading from the watch service. */
+    suspend fun onFix(context: Context, fix: Fix): Watch = withContext(Dispatchers.IO) {
         lock.withLock {
             val settings = PlacesSettings(context)
-            val dao = AppDatabase.get(context).placeDao()
+            val db = AppDatabase.get(context)
+            val dao = db.placeDao()
             val now = System.currentTimeMillis()
             val recent = dao.visitsAround(fix.timeMs - 12 * 60 * 60_000L, fix.timeMs)
-            val step = PlaceEngine.onFix(settings.engine, fix, dao.activePlaces(), recent, now)
+            val step = PlaceEngine.onFix(settings.engine, fix, dao.activePlaces(), recent, now, settings.recordTrips)
             if (step.saves.isNotEmpty()) dao.upsertVisits(step.saves)
+            if (step.points.isNotEmpty()) db.tripDao().addPoints(step.points)
+            step.finish?.let { finishTrip(db, it) }
             settings.engine = step.state
             settings.lastFixMs = now
-            step.keepWatching
+            Watch(step.keepWatching, PlaceEngine.intervalSec(step.state, settings.intervalSec, settings.tripIntervalSec))
         }
+    }
+
+    /** Works out the distance and speeds of a trip that has ended and saves it, unless it was only GPS drift. */
+    private suspend fun finishTrip(db: AppDatabase, f: TripFinish) {
+        val dao = db.tripDao()
+        val points = dao.points(f.id)
+        val stats = TripRules.stats(points, f.startMs, f.endMs)
+        if (!TripRules.isRealTrip(stats)) {
+            dao.dropPoints(f.id)
+            return
+        }
+        val guess = TripModes.guess(stats, f.acts, f.fromPlaceId, f.toPlaceId, dao.corrected().map { TripModes.learned(it) })
+        dao.upsertTrip(
+            TripEntity(
+                id = f.id,
+                startMs = f.startMs,
+                endMs = f.endMs,
+                fromPlaceId = f.fromPlaceId,
+                toPlaceId = f.toPlaceId,
+                distanceM = stats.distanceM,
+                medianKmh = stats.medianKmh,
+                topKmh = stats.topKmh,
+                activity = TripModes.activityText(f.acts),
+                mode = guess,
+                modeSource = "auto",
+            ),
+        )
     }
 
     /** Starts the readings if the app should be checking where you are right now (used when the app is opened). */

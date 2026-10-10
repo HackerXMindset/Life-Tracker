@@ -15,6 +15,7 @@ import com.lifetracker.app.data.PlaceVisitEntity
 import com.lifetracker.app.data.SleepNightEntity
 import com.lifetracker.app.data.StepDayEntity
 import com.lifetracker.app.data.TodoEntity
+import com.lifetracker.app.data.TripEntity
 import com.lifetracker.app.data.UsageDays
 import java.time.ZoneId
 import java.time.LocalDate
@@ -114,6 +115,18 @@ class TimelineViewModel(app: Application) : AndroidViewModel(app) {
             val start = d.atStartOfDay(zone).toInstant().toEpochMilli()
             val end = d.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
             db.placeDao().visitsBetween(start, end)
+        },
+    )
+
+    /** Trips that overlap the selected day. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val trips: StateFlow<List<TripEntity>> = share(
+        emptyList(),
+        selectedDate.flatMapLatest { d ->
+            val zone = ZoneId.systemDefault()
+            val start = d.atStartOfDay(zone).toInstant().toEpochMilli()
+            val end = d.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+            db.tripDao().tripsBetween(start, end).map { list -> list.filter { it.startMs in start until end } }
         },
     )
 

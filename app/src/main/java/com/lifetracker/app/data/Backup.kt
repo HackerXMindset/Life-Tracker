@@ -31,12 +31,15 @@ data class BackupData(
     val sleepNights: List<SleepNightEntity> = emptyList(),
     val places: List<PlaceEntity> = emptyList(),
     val placeVisits: List<PlaceVisitEntity> = emptyList(),
+    val trips: List<TripEntity> = emptyList(),
+    val tripPoints: List<TripPointEntity> = emptyList(),
 ) {
     val isEmpty: Boolean
         get() = entries.isEmpty() && habits.isEmpty() && completions.isEmpty() && categories.isEmpty() &&
             todoTags.isEmpty() && todos.isEmpty() && notes.isEmpty() && meals.isEmpty() && water.isEmpty() &&
             moneyItems.isEmpty() && moneyEntries.isEmpty() && usageSessions.isEmpty() && calls.isEmpty() &&
-            chargeSessions.isEmpty() && stepDays.isEmpty() && sleepNights.isEmpty() && places.isEmpty() && placeVisits.isEmpty()
+            chargeSessions.isEmpty() && stepDays.isEmpty() && sleepNights.isEmpty() && places.isEmpty() && placeVisits.isEmpty() &&
+            trips.isEmpty() && tripPoints.isEmpty()
 }
 
 /**
@@ -44,12 +47,12 @@ data class BackupData(
  *
  * `version` lets later steps add more data without breaking old backups.
  * Version 1 held only Timeline entries; version 2 adds habits, to-dos, notes
- * and the record of what was imported; version 3 adds meals, food goals and water; version 4 adds your own activities and their goals; version 5 adds money (categories, saved items and entries); version 6 adds phone usage (sessions are stored compactly as [app, start, end]); version 7 adds phone calls (each stored as [number, name, type, start, seconds]); version 8 adds charging sessions (each stored as [start, end, startLevel, endLevel, plug, source, samples, currentSamples, sumMa, sumMv, ongoing]); version 9 adds steps (each day stored as [date, steps, source]) and sleep (each night stored as [date, start, end, source]); version 10 adds places (the ones you named) and place visits (each stored as [id, place, start, end, lat, lng, source, ongoing, ignored]). A file from a newer version of the app
+ * and the record of what was imported; version 3 adds meals, food goals and water; version 4 adds your own activities and their goals; version 5 adds money (categories, saved items and entries); version 6 adds phone usage (sessions are stored compactly as [app, start, end]); version 7 adds phone calls (each stored as [number, name, type, start, seconds]); version 8 adds charging sessions (each stored as [start, end, startLevel, endLevel, plug, source, samples, currentSamples, sumMa, sumMv, ongoing]); version 9 adds steps (each day stored as [date, steps, source]) and sleep (each night stored as [date, start, end, source]); version 10 adds places (the ones you named) and place visits (each stored as [id, place, start, end, lat, lng, source, ongoing, ignored]); version 11 adds trips (each stored as [id, start, end, from, to, distance, medianKmh, topKmh, activity, mode, modeSource]) and the position readings of each trip (each stored as [trip, time, lat, lng, accuracy]). A file from a newer version of the app
  * is refused rather than half-read.
  */
 object BackupCodec {
     const val APP_NAME = "life-tracker"
-    const val FORMAT_VERSION = 10
+    const val FORMAT_VERSION = 11
 
     fun encode(data: BackupData): String =
         JSONObject()
@@ -79,6 +82,8 @@ object BackupCodec {
             .put("sleepNights", sleepJson(data.sleepNights))
             .put("places", array(data.places, ::placeJson))
             .put("placeVisits", visitsJson(data.placeVisits))
+            .put("trips", tripsJson(data.trips))
+            .put("tripPoints", tripPointsJson(data.tripPoints))
             .toString(2)
 
     /** Reads a backup. Throws [IllegalArgumentException] with a readable reason if it is not usable. */
@@ -116,6 +121,8 @@ object BackupCodec {
                 sleepNights = sleepNights(root),
                 places = list(root, "places", required = false, ::place),
                 placeVisits = placeVisits(root),
+                trips = trips(root),
+                tripPoints = tripPoints(root),
             )
         } catch (e: JSONException) {
             throw IllegalArgumentException("This file is damaged or is not a backup.")
@@ -503,6 +510,53 @@ object BackupCodec {
                 ongoing = r.getInt(7) == 1,
                 ignored = r.getInt(8) == 1,
             )
+        }
+    }
+
+    // Trips are one short list each: [id, start, end, from, to, distance, medianKmh, topKmh, activity, mode, modeSource].
+    private fun tripsJson(list: List<TripEntity>): JSONArray {
+        val out = JSONArray()
+        for (t in list) {
+            out.put(
+                JSONArray().put(t.id).put(t.startMs).put(t.endMs).put(t.fromPlaceId).put(t.toPlaceId).put(t.distanceM)
+                    .put(t.medianKmh).put(t.topKmh).put(t.activity).put(t.mode).put(t.modeSource),
+            )
+        }
+        return out
+    }
+
+    private fun trips(root: JSONObject): List<TripEntity> {
+        val array = root.optJSONArray("trips") ?: return emptyList()
+        return (0 until array.length()).map {
+            val r = array.getJSONArray(it)
+            TripEntity(
+                id = r.getString(0),
+                startMs = r.getLong(1),
+                endMs = r.getLong(2),
+                fromPlaceId = r.getString(3),
+                toPlaceId = r.getString(4),
+                distanceM = r.getInt(5),
+                medianKmh = r.getInt(6),
+                topKmh = r.getInt(7),
+                activity = r.getString(8),
+                mode = r.getString(9),
+                modeSource = r.getString(10),
+            )
+        }
+    }
+
+    // Trip readings are one short list each: [trip, time, lat, lng, accuracy].
+    private fun tripPointsJson(list: List<TripPointEntity>): JSONArray {
+        val out = JSONArray()
+        for (p in list) out.put(JSONArray().put(p.tripId).put(p.ms).put(p.lat).put(p.lng).put(p.acc.toDouble()))
+        return out
+    }
+
+    private fun tripPoints(root: JSONObject): List<TripPointEntity> {
+        val array = root.optJSONArray("tripPoints") ?: return emptyList()
+        return (0 until array.length()).map {
+            val r = array.getJSONArray(it)
+            TripPointEntity(r.getString(0), r.getLong(1), r.getDouble(2), r.getDouble(3), r.getDouble(4).toFloat())
         }
     }
 }
