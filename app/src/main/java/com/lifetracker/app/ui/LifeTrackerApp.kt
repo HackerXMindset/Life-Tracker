@@ -94,6 +94,7 @@ fun LifeTrackerApp() {
             if (PlacesSettings(context).enabled) {
                 PlacesWorker.schedule(context)
                 PlacesTracker.syncAll(context)
+                PlacesTracker.resumeIfNeeded(context)
             }
         }
     }

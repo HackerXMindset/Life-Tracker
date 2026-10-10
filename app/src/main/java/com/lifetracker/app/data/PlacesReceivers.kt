@@ -23,16 +23,15 @@ class GeofenceReceiver : BroadcastReceiver() {
             PlacesSettings(context).lastStatus = "Android reported a geofence problem (code ${event.errorCode}). It will be set up again soon."
             return
         }
-        val entered = when (event.geofenceTransition) {
-            Geofence.GEOFENCE_TRANSITION_ENTER -> true
-            Geofence.GEOFENCE_TRANSITION_EXIT -> false
-            else -> return
+        if (event.geofenceTransition != Geofence.GEOFENCE_TRANSITION_ENTER &&
+            event.geofenceTransition != Geofence.GEOFENCE_TRANSITION_EXIT
+        ) {
+            return
         }
-        val ids = event.triggeringGeofences?.map { it.requestId } ?: return
         val pending = goAsync()
         receiverScope.launch {
             try {
-                ids.forEach { PlacesTracker.onGeofence(context.applicationContext, it, entered) }
+                PlacesTracker.onGeofence(context.applicationContext)
             } finally {
                 pending.finish()
             }
@@ -57,7 +56,7 @@ class ActivityTransitionReceiver : BroadcastReceiver() {
                     if (e.transitionType == ActivityTransition.ACTIVITY_TRANSITION_ENTER) {
                         PlacesTracker.onStillStart(context.applicationContext, at)
                     } else {
-                        PlacesTracker.onStillEnd(context.applicationContext, at)
+                        PlacesTracker.onMoving(context.applicationContext, at)
                     }
                 }
             } finally {

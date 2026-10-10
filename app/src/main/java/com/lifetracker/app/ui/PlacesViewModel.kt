@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.lifetracker.app.data.AppDatabase
 import com.lifetracker.app.data.Fix
 import com.lifetracker.app.data.PlaceEntity
+import com.lifetracker.app.data.PlaceLookup
 import com.lifetracker.app.data.PlaceRules
 import com.lifetracker.app.data.PlaceVisitEntity
 import com.lifetracker.app.data.PlacesSettings
@@ -49,8 +50,11 @@ class PlacesViewModel(private val app: Application) : AndroidViewModel(app) {
     private val enabledFlow = MutableStateFlow(settings.enabled)
     val enabled: StateFlow<Boolean> = enabledFlow
 
-    private val detectFlow = MutableStateFlow(settings.detectStops)
-    val detectStops: StateFlow<Boolean> = detectFlow
+    private val intervalFlow = MutableStateFlow(settings.intervalSec)
+    val intervalSec: StateFlow<Int> = intervalFlow
+
+    private val gpsFlow = MutableStateFlow(settings.useGps)
+    val useGps: StateFlow<Boolean> = gpsFlow
 
     private val timelineFlow = MutableStateFlow(settings.showOnTimeline)
     val showOnTimeline: StateFlow<Boolean> = timelineFlow
@@ -70,7 +74,9 @@ class PlacesViewModel(private val app: Application) : AndroidViewModel(app) {
     private fun readStatus(): String = buildString {
         append(settings.lastStatus.ifEmpty { "Not set up yet" })
         append("\nLast set up with Android: ").append(PlacesTracker.timeText(settings.lastRegisterMs))
-        append("\nLast arrival or departure heard: ").append(PlacesTracker.timeText(settings.lastEventMs))
+        append("\nLast message from Android (near a place, still, moving): ").append(PlacesTracker.timeText(settings.lastEventMs))
+        append("\nLast position reading: ").append(PlacesTracker.timeText(settings.lastFixMs))
+        append("\nChecking now: ").append(if (settings.watching) "yes" else "no")
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -97,6 +103,44 @@ class PlacesViewModel(private val app: Application) : AndroidViewModel(app) {
     /** Stops at unnamed spots, grouped by where they were. */
     val clusters: StateFlow<List<PlaceRules.Cluster>> = share(emptyList(), dao.observeUnknown().map { PlaceRules.clusters(it) })
 
+    private val suggestionFlow = MutableStateFlow<Map<String, String>>(emptyMap())
+
+    /** Names found on the internet, by spot key (see [suggestionKey]). */
+    val suggestions: StateFlow<Map<String, String>> = suggestionFlow
+
+    private var looking = false
+
+    fun suggestionKey(cluster: PlaceRules.Cluster): String = PlaceLookup.key(cluster.lat, cluster.lng)
+
+    /** Looks up a name for the first few unnamed spots, one at a time and only once each (results are kept). */
+    fun lookUp(list: List<PlaceRules.Cluster>) {
+        if (looking) return
+        looking = true
+        viewModelScope.launch {
+            try {
+                var asked = 0
+                for (cluster in list) {
+                    val key = suggestionKey(cluster)
+                    val cached = settings.suggestion(key)
+                    if (cached != null) {
+                        if (cached.isNotEmpty()) suggestionFlow.value = suggestionFlow.value + (key to cached)
+                        continue
+                    }
+                    if (asked >= 5) break
+                    if (asked > 0) kotlinx.coroutines.delay(1_200L)
+                    asked++
+                    val found = PlaceLookup.suggest(cluster.lat, cluster.lng)
+                    if (found != null) {
+                        settings.setSuggestion(key, found)
+                        suggestionFlow.value = suggestionFlow.value + (key to found)
+                    }
+                }
+            } finally {
+                looking = false
+            }
+        }
+    }
+
     fun setRange(r: RangeChoice) {
         rangeFlow.value = r
     }
@@ -120,13 +164,14 @@ class PlacesViewModel(private val app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun setDetectStops(on: Boolean) {
-        settings.detectStops = on
-        detectFlow.value = on
-        viewModelScope.launch {
-            runCatching { PlacesTracker.syncAll(app) }
-            statusFlow.value = readStatus()
-        }
+    fun setIntervalSec(seconds: Int) {
+        settings.intervalSec = seconds
+        intervalFlow.value = seconds
+    }
+
+    fun setUseGps(on: Boolean) {
+        settings.useGps = on
+        gpsFlow.value = on
     }
 
     fun setShowOnTimeline(on: Boolean) {
