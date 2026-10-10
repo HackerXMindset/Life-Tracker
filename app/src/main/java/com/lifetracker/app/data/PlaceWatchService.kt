@@ -35,6 +35,7 @@ import kotlinx.coroutines.withContext
 class PlaceWatchService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var callback: LocationCallback? = null
+    private var currentIntervalSec = 0
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -65,7 +66,6 @@ class PlaceWatchService : Service() {
         ServiceCompat.startForeground(this, NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
     }
 
-    @SuppressLint("MissingPermission")
     private fun beginUpdates() {
         if (callback != null) return
         val settings = PlacesSettings(this)
@@ -73,7 +73,18 @@ class PlaceWatchService : Service() {
             stopSelf()
             return
         }
-        val interval = settings.intervalSec.coerceAtLeast(30) * 1000L
+        settings.watching = true
+        requestUpdates(PlaceEngine.intervalSec(settings.engine, settings.intervalSec, settings.tripIntervalSec))
+    }
+
+    /** Starts (or restarts, if the pace changed) the position readings. */
+    @SuppressLint("MissingPermission")
+    private fun requestUpdates(intervalSec: Int) {
+        val client = LocationServices.getFusedLocationProviderClient(this)
+        callback?.let { runCatching { client.removeLocationUpdates(it) } }
+        val settings = PlacesSettings(this)
+        val interval = intervalSec.coerceAtLeast(10) * 1000L
+        currentIntervalSec = intervalSec
         val request = LocationRequest.Builder(
             if (settings.useGps) Priority.PRIORITY_HIGH_ACCURACY else Priority.PRIORITY_BALANCED_POWER_ACCURACY,
             interval,
@@ -91,17 +102,20 @@ class PlaceWatchService : Service() {
                         location.time,
                     )
                     scope.launch {
-                        val keep = runCatching { PlacesTracker.onFix(applicationContext, fix) }.getOrDefault(true)
-                        if (!keep) withContext(Dispatchers.Main) { stopWatching() }
+                        val watch = runCatching { PlacesTracker.onFix(applicationContext, fix) }.getOrNull()
+                        withContext(Dispatchers.Main) {
+                            when {
+                                watch == null -> Unit
+                                !watch.keep -> stopWatching()
+                                watch.intervalSec != currentIntervalSec && callback != null -> requestUpdates(watch.intervalSec)
+                            }
+                        }
                     }
                 }
             }
         }
         callback = cb
-        settings.watching = true
-        runCatching {
-            LocationServices.getFusedLocationProviderClient(this).requestLocationUpdates(request, cb, Looper.getMainLooper())
-        }.onFailure { stopWatching() }
+        runCatching { client.requestLocationUpdates(request, cb, Looper.getMainLooper()) }.onFailure { stopWatching() }
     }
 
     private fun stopWatching() {

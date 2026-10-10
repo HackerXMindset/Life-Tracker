@@ -44,19 +44,27 @@ class ActivityTransitionReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (!ActivityTransitionResult.hasResult(intent)) return
         val result = ActivityTransitionResult.extractResult(intent) ?: return
-        val events = result.transitionEvents
-            .filter { it.activityType == DetectedActivity.STILL }
-            .sortedBy { it.elapsedRealTimeNanos }
+        val events = result.transitionEvents.sortedBy { it.elapsedRealTimeNanos }
         if (events.isEmpty()) return
         val pending = goAsync()
         receiverScope.launch {
             try {
                 for (e in events) {
                     val at = PlacesTracker.wallClock(e.elapsedRealTimeNanos)
-                    if (e.transitionType == ActivityTransition.ACTIVITY_TRANSITION_ENTER) {
-                        PlacesTracker.onStillStart(context.applicationContext, at)
-                    } else {
-                        PlacesTracker.onMoving(context.applicationContext, at)
+                    val entering = e.transitionType == ActivityTransition.ACTIVITY_TRANSITION_ENTER
+                    val name = when (e.activityType) {
+                        DetectedActivity.STILL -> "STILL"
+                        DetectedActivity.WALKING -> "WALKING"
+                        DetectedActivity.RUNNING -> "RUNNING"
+                        DetectedActivity.ON_BICYCLE -> "ON_BICYCLE"
+                        DetectedActivity.IN_VEHICLE -> "IN_VEHICLE"
+                        else -> continue
+                    }
+                    val context = context.applicationContext
+                    when {
+                        name == "STILL" && entering -> PlacesTracker.onStillStart(context, at)
+                        name == "STILL" -> PlacesTracker.onMoving(context, at)
+                        entering -> PlacesTracker.onActivity(context, name, at)
                     }
                 }
             } finally {

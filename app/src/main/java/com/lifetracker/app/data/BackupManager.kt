@@ -131,10 +131,12 @@ object BackupManager {
         sleepNights = db.sleepDao().allNights(),
         places = db.placeDao().allPlaces(),
         placeVisits = db.placeDao().allVisits(),
+        trips = db.tripDao().allTrips(),
+        tripPoints = db.tripDao().allPoints(),
     )
 
     /**
-     * A version 10 backup replaces everything except the phone usage, call, charging, step, sleep and place history, which are only ever added to. Older backups never held some of
+     * A version 11 backup replaces everything except the phone usage, call, charging, step, sleep, place and trip history, which are only ever added to. Older backups never held some of
      * the data (version 1: only Timeline entries; version 2: no food or water),
      * so they replace only what they hold and leave the rest alone; the import record is cleared so the next Streak import can
      * bring back any focus sessions the old backup did not have.
@@ -203,6 +205,11 @@ object BackupManager {
                 // Places are never removed, and visits only grow: restoring adds to them and keeps what you decided about a stop.
                 db.placeDao().upsertPlaces(data.places)
                 db.placeDao().insertMissingVisits(data.placeVisits)
+            }
+            if (data.version >= 11) {
+                // Trips only grow too: a trip you already corrected keeps your choice.
+                db.tripDao().insertMissingTrips(data.trips)
+                db.tripDao().insertMissingPoints(data.tripPoints)
             }
         }
     }

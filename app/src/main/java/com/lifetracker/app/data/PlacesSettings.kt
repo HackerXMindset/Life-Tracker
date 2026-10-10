@@ -17,6 +17,21 @@ class PlacesSettings(context: Context) {
         get() = prefs.getInt("interval_sec", 60)
         set(value) = prefs.edit { putInt("interval_sec", value) }
 
+    /** Whether trips (the way between two stays) are recorded. */
+    var recordTrips: Boolean
+        get() = prefs.getBoolean("record_trips", true)
+        set(value) = prefs.edit { putBoolean("record_trips", value) }
+
+    /** Seconds between position readings while you are travelling. */
+    var tripIntervalSec: Int
+        get() = prefs.getInt("trip_interval_sec", 30)
+        set(value) = prefs.edit { putInt("trip_interval_sec", value) }
+
+    /** Whether trips are drawn on the Timeline. */
+    var showTripsOnTimeline: Boolean
+        get() = prefs.getBoolean("show_trips_on_timeline", true)
+        set(value) = prefs.edit { putBoolean("show_trips_on_timeline", value) }
+
     /** Whether readings use GPS (most accurate, more battery) or only Wi-Fi and mobile network. */
     var useGps: Boolean
         get() = prefs.getBoolean("use_gps", true)
