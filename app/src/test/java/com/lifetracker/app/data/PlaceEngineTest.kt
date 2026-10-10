@@ -143,14 +143,14 @@ class PlaceEngineTest {
         for (m in 7..9) run.feed(fix(m, 28.62, 77.22))
         val first = run.rows.values.first()
         assertFalse(first.ongoing)
-        // Back at minute 15, for 6 minutes.
-        for (m in 15..21) run.feed(fix(m, 28.6100, 77.2100))
+        // A short trip away, back at minute 11 for 7 minutes.
+        for (m in 11..17) run.feed(fix(m, 28.6100, 77.2100))
         assertEquals(1, run.rows.size)
         val v = run.rows.values.first()
         assertEquals(first.id, v.id)
         assertEquals(t0, v.startMs)
         assertTrue(v.ongoing)
-        assertEquals(t0 + 21 * min, v.endMs)
+        assertEquals(t0 + 17 * min, v.endMs)
     }
 
     @Test
