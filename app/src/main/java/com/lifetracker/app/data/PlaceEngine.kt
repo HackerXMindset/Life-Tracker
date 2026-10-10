@@ -148,7 +148,8 @@ object PlaceEngine {
                 )
             } else {
                 val end = departure(stay.lastSeenMs, fix.timeMs, s.moveStartMs)
-                if (stay.visitId.isNotEmpty() || end - stay.startMs >= PlaceRules.MIN_STAY_MS) {
+                // One reading alone never makes a stop, however long ago it was.
+                if (stay.visitId.isNotEmpty() || (stay.n >= 2 && end - stay.startMs >= PlaceRules.MIN_STAY_MS)) {
                     val joined = if (stay.visitId.isEmpty()) join(stay.copy(lastSeenMs = end), recent) else stay
                     saves.add(visit(joined, max(end, joined.startMs), ongoing = false, places))
                 }

@@ -85,6 +85,14 @@ class PlaceEngineTest {
     }
 
     @Test
+    fun oneReadingAloneNeverMakesAStop() {
+        val run = Run(places)
+        run.feed(fix(0, 28.7, 77.3))
+        run.feed(fix(20, 28.72, 77.3))
+        assertTrue(run.rows.isEmpty())
+    }
+
+    @Test
     fun aShortStopIsNeverSaved() {
         val run = Run(places)
         for (m in 0..3) run.feed(fix(m, 28.7, 77.3))
@@ -132,7 +140,7 @@ class PlaceEngineTest {
     fun comingBackWithinTwentyMinutesJoinsTheSameVisit() {
         val run = Run(places)
         for (m in 0..6) run.feed(fix(m, 28.6100, 77.2100))
-        run.feed(fix(7, 28.62, 77.22))
+        for (m in 7..9) run.feed(fix(m, 28.62, 77.22))
         val first = run.rows.values.first()
         assertFalse(first.ongoing)
         // Back at minute 15, for 6 minutes.
