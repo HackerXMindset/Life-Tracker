@@ -31,7 +31,7 @@ jobs:
       - name: Show why the build failed
         if: failure()
         run: |
-          grep -E "^e: |error:|FAILED|What went wrong|Could not resolve|AssertionError|Execution failed|Manifest merger|^> " build.log | head -40 | sed 's/%/%25/g' > errors.txt || true
+          grep -E "^e: |error:|FAILED|What went wrong|Could not resolve|AssertionError|Execution failed|Manifest merger|^> " build.log | grep -v "^> Task .*\(UP-TO-DATE\|SKIPPED\|NO-SOURCE\)$" | grep -v "^> Task :app:[A-Za-z]*$" | head -40 | sed 's/%/%25/g' > errors.txt || true
           echo "::error title=Build errors::$(paste -sd '|' errors.txt | head -c 3500)"
 
       - name: Name the APK
