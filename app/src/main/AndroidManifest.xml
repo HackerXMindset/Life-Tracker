@@ -30,6 +30,11 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <!-- Lets the app check your position every minute while you are somewhere it does not know (shows a notification while it does). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <!-- Only used to suggest a name for a stop you have not named (OpenStreetMap). Nothing else uses the internet. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <!-- Android 9 and older use Google's own version of the Physical activity permission. -->
     <uses-permission android:name="com.google.android.gms.permission.ACTIVITY_RECOGNITION" />
     <!-- Sets the places up again after the phone restarts. -->
@@ -77,6 +82,10 @@
             android:name=".data.ChargeTagReceiver"
             android:exported="false" />
         <!-- Google Play services tells these about places and about the phone being still. -->
+        <service
+            android:name=".data.PlaceWatchService"
+            android:exported="false"
+            android:foregroundServiceType="location" />
         <receiver
             android:name=".data.GeofenceReceiver"
             android:exported="false" />

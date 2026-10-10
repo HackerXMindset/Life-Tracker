@@ -33,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -62,7 +63,9 @@ fun PlacesScreen(onBack: () -> Unit, vm: PlacesViewModel = viewModel()) {
     val clusters by vm.clusters.collectAsState()
     val range by vm.range.collectAsState()
     val enabled by vm.enabled.collectAsState()
-    val detect by vm.detectStops.collectAsState()
+    val interval by vm.intervalSec.collectAsState()
+    val useGps by vm.useGps.collectAsState()
+    val suggestions by vm.suggestions.collectAsState()
     val showOnTimeline by vm.showOnTimeline.collectAsState()
     val access by vm.access.collectAsState()
     val status by vm.status.collectAsState()
@@ -83,6 +86,8 @@ fun PlacesScreen(onBack: () -> Unit, vm: PlacesViewModel = viewModel()) {
         owner?.lifecycle?.addObserver(observer)
         onDispose { owner?.lifecycle?.removeObserver(observer) }
     }
+
+    LaunchedEffect(clusters) { vm.lookUp(clusters) }
 
     val now = System.currentTimeMillis()
     val shownMs = data.rows.sumOf { it.ms }
@@ -148,14 +153,29 @@ fun PlacesScreen(onBack: () -> Unit, vm: PlacesViewModel = viewModel()) {
             PlacesCard(title = if (enabled) "Status" else "Status (switched off)", text = status) {}
         }
 
+        item { MonoLabel("How closely to watch") }
+        item {
+            Text(
+                "At a spot the app does not know, it checks your position this often until you leave. At a place you named it checks twice and then rests.",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(60 to "1 min", 120 to "2 min", 300 to "5 min").forEach { (sec, label) ->
+                    FilterChip(selected = interval == sec, onClick = { vm.setIntervalSec(sec) }, label = { Text(label) })
+                }
+            }
+        }
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Notice stops at spots I have not named", color = MaterialTheme.colorScheme.onBackground)
-                Switch(checked = detect, onCheckedChange = vm::setDetectStops)
+                Text("Use GPS (most exact, more battery)", color = MaterialTheme.colorScheme.onBackground)
+                Switch(checked = useGps, onCheckedChange = vm::setUseGps)
             }
         }
 
@@ -164,7 +184,7 @@ fun PlacesScreen(onBack: () -> Unit, vm: PlacesViewModel = viewModel()) {
             items(clusters, key = { it.ids.first() }) { cluster ->
                 PlacesCard(
                     title = "${cluster.visits.size} stop${if (cluster.visits.size == 1) "" else "s"} · " + PlaceRules.durationText(cluster.totalMs),
-                    text = formatDateTime(cluster.firstMs) +
+                    text = (suggestions[vm.suggestionKey(cluster)]?.let { "Looks like: $it\n" } ?: "") + formatDateTime(cluster.firstMs) +
                         (if (cluster.visits.size > 1) "  to  " + formatDateTime(cluster.lastMs) else "") + "\n" +
                         PlaceRules.coordinatesText(cluster.lat, cluster.lng),
                 ) {
@@ -189,7 +209,7 @@ fun PlacesScreen(onBack: () -> Unit, vm: PlacesViewModel = viewModel()) {
         if (data.rows.isEmpty()) {
             item {
                 Text(
-                    "No places yet. Add one (Home, Library, Gym), or leave the phone still somewhere for 10 minutes and it appears above for you to name.",
+                    "No places yet. Add one (Home, Library, Gym), or stay somewhere for 5 minutes and it appears above for you to name.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -229,7 +249,7 @@ fun PlacesScreen(onBack: () -> Unit, vm: PlacesViewModel = viewModel()) {
         if (data.visits.isEmpty()) {
             item {
                 Text(
-                    "No visits on these days. Visits shorter than 5 minutes (driving past) are kept but not listed.",
+                    "No visits on these days.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -263,11 +283,13 @@ fun PlacesScreen(onBack: () -> Unit, vm: PlacesViewModel = viewModel()) {
         item { MonoLabel("How it works") }
         item {
             Text(
-                "Android itself watches your named places and wakes the app when you arrive or leave (usually within a couple of minutes, " +
-                    "sometimes later). The app also asks Android to tell it when the phone stays still; if that is for 10 minutes or more " +
-                    "it takes one quick, low-power position read, and a stop at an unnamed spot waits above for you to name it. " +
-                    "Nothing runs in between and nothing is looked up on the internet. " +
-                    "Stops at a named place also fill in a visit Android reported late or not at all. " +
+                "Android wakes the app when you come near a place, leave one, or the phone goes still or starts moving. " +
+                    "Then the app reads your position (a notification shows while it does). Staying in one spot for 5 minutes is a stay: " +
+                    "inside a place's circle it is a visit to that place, anywhere else it waits above for you to name it. " +
+                    "At a spot the app does not know it keeps checking at the pace you chose until you leave, and the start and end times come from when " +
+                    "the phone went still and started moving. At a named place it checks twice and rests until you move. " +
+                    "The circle you give a place is the real size used to decide you are there; Android's own ring around it is at least 150 m, only to wake the app. " +
+                    "Names for unnamed spots are suggested by OpenStreetMap over the internet (only the position of that stop is sent, once). " +
                     "Places are never deleted: \"not watched\" only stops the watching, and \"Not a place\" only hides.",
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -306,6 +328,7 @@ fun PlacesScreen(onBack: () -> Unit, vm: PlacesViewModel = viewModel()) {
             title = "Name this spot",
             initial = null,
             cluster = cluster,
+            suggestion = suggestions[vm.suggestionKey(cluster)],
             onFetchHere = vm::fetchHere,
             onSave = { name, kind, radius, lat, lng -> vm.addPlace(name, kind, radius, lat, lng) },
             onArchiveToggle = null,
@@ -334,12 +357,13 @@ private fun PlaceDialog(
     title: String,
     initial: PlaceEntity?,
     cluster: PlaceRules.Cluster?,
+    suggestion: String? = null,
     onFetchHere: ((com.lifetracker.app.data.Fix?) -> Unit) -> Unit,
     onSave: (String, String, Int, Double, Double) -> Unit,
     onArchiveToggle: (() -> Unit)?,
     onDismiss: () -> Unit,
 ) {
-    var name by remember { mutableStateOf(initial?.name ?: "") }
+    var name by remember { mutableStateOf(initial?.name ?: suggestion ?: "") }
     var kind by remember { mutableStateOf(initial?.kind ?: "other") }
     var radius by remember { mutableStateOf(initial?.radiusM ?: PlaceRules.DEFAULT_RADIUS) }
     var coords by remember {
@@ -404,7 +428,7 @@ private fun PlaceDialog(
                 Text(
                     message.ifEmpty {
                         "Tip: in Google Maps, press and hold a spot and copy the numbers at the top, then paste them here. " +
-                            "A bigger circle catches you earlier but may include the street outside."
+                            "The circle is the real size: 30 to 50 m suits a room or a shop, 100 to 150 m a campus."
                     },
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

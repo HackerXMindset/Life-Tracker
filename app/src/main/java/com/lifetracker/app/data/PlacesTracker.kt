@@ -43,9 +43,9 @@ private suspend fun <T> Task<T>.outcome(onCancel: (() -> Unit)? = null): Outcome
     }
 
 /**
- * Keeps places up to date. Android does the watching, so nothing of ours runs in the background between events:
- * Google Play services reports arriving at and leaving each named place (geofences) and when the phone goes still
- * or starts moving (activity transitions). Each report wakes the app for a moment, which saves a visit.
+ * Keeps places up to date. Android does the first watching: Google Play services says when you come near or leave a
+ * ring around a place (geofences) and when the phone goes still or starts moving (activity transitions). Each message
+ * wakes the app, which starts [PlaceWatchService] only if it needs position readings to know where you are.
  */
 object PlacesTracker {
     private val lock = Mutex()
@@ -98,7 +98,7 @@ object PlacesTracker {
             val list = places.map {
                 Geofence.Builder()
                     .setRequestId(it.id)
-                    .setCircularRegion(it.lat, it.lng, it.radiusM.toFloat())
+                    .setCircularRegion(it.lat, it.lng, maxOf(it.radiusM, PlaceRules.GEOFENCE_MIN_M).toFloat())
                     .setExpirationDuration(Geofence.NEVER_EXPIRE)
                     .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER or Geofence.GEOFENCE_TRANSITION_EXIT)
                     .build()
@@ -117,7 +117,7 @@ object PlacesTracker {
             }
         }
 
-        if (settings.detectStops && hasActivityRecognition(context)) {
+        if (hasActivityRecognition(context)) {
             val request = ActivityTransitionRequest(
                 listOf(
                     ActivityTransition.Builder()
@@ -132,10 +132,10 @@ object PlacesTracker {
             )
             val result = runCatching { recognition.requestActivityTransitionUpdates(request, transitionIntent(context)).outcome() }
             val error = result.exceptionOrNull() ?: result.getOrNull()?.error
-            if (error != null) status.append("; stop detection failed: ").append(error.message ?: error.javaClass.simpleName)
+            if (error != null) status.append("; still/moving detection failed: ").append(error.message ?: error.javaClass.simpleName)
         } else {
             runCatching { recognition.removeActivityTransitionUpdates(transitionIntent(context)) }
-            if (settings.detectStops) status.append("; stop detection needs the Physical activity permission")
+            status.append("; stops need the Physical activity permission")
         }
         remember(settings, now, status.toString())
     }
@@ -146,77 +146,73 @@ object PlacesTracker {
         return text
     }
 
-    /** Android said you arrived at ([entered]) or left a watched place. */
-    suspend fun onGeofence(context: Context, placeId: String, entered: Boolean, now: Long = System.currentTimeMillis()) =
+    /** Android said you came near, or went away from, one of the rings around your places. */
+    suspend fun onGeofence(context: Context, now: Long = System.currentTimeMillis()) = trigger(context, now) { state ->
+        PlaceEngine.onTrigger(state, now)
+    }
+
+    /** The phone went still at [atMs]. */
+    suspend fun onStillStart(context: Context, atMs: Long) = trigger(context, atMs) { state ->
+        PlaceEngine.onStill(state, atMs, System.currentTimeMillis())
+    }
+
+    /** The phone started moving at [atMs]. */
+    suspend fun onMoving(context: Context, atMs: Long) = trigger(context, atMs) { state ->
+        PlaceEngine.onMoving(state, atMs, System.currentTimeMillis())
+    }
+
+    private suspend fun trigger(context: Context, at: Long, change: (WatchState) -> WatchState) =
         withContext(Dispatchers.IO) {
-            lock.withLock {
-                val dao = AppDatabase.get(context).placeDao()
-                PlacesSettings(context).lastEventMs = now
-                val open = dao.openVisits()
-                val changes = if (entered) {
-                    val place = dao.place(placeId) ?: return@withLock
-                    PlaceRules.enter(open, place, now)
-                } else {
-                    PlaceRules.exit(open, placeId, now)
-                }
-                if (changes.isNotEmpty()) dao.upsertVisits(changes)
+            val settings = PlacesSettings(context)
+            if (!settings.enabled) return@withContext
+            val watch = lock.withLock {
+                settings.lastEventMs = System.currentTimeMillis()
+                val next = change(settings.engine)
+                settings.engine = next
+                PlaceEngine.keepWatching(next, System.currentTimeMillis())
             }
+            if (watch && hasLocation(context)) PlaceWatchService.start(context)
         }
 
-    /** The phone went still at [atMs]. Reads where it is and notes the start of a possible stop. */
-    suspend fun onStillStart(context: Context, atMs: Long) = withContext(Dispatchers.IO) {
-        val settings = PlacesSettings(context)
-        if (!settings.enabled || !settings.detectStops) return@withContext
-        val fix = currentFix(context)
+    /** One position reading from the watch service. Returns whether the readings should go on. */
+    suspend fun onFix(context: Context, fix: Fix): Boolean = withContext(Dispatchers.IO) {
         lock.withLock {
+            val settings = PlacesSettings(context)
             val dao = AppDatabase.get(context).placeDao()
-            if (fix != null) {
-                // Android sometimes never reports leaving a place: if the phone is now still somewhere else, you left.
-                val open = dao.openVisits()
-                if (open.isNotEmpty()) {
-                    val closed = PlaceRules.closeIfElsewhere(open, dao.allPlaces(), fix.lat, fix.lng, settings.moveStartMs, System.currentTimeMillis())
-                    if (closed.isNotEmpty()) dao.upsertVisits(closed)
-                }
-            }
-            settings.candidate = StopCandidate(atMs, fix?.lat, fix?.lng)
+            val now = System.currentTimeMillis()
+            val recent = dao.visitsAround(fix.timeMs - 12 * 60 * 60_000L, fix.timeMs)
+            val step = PlaceEngine.onFix(settings.engine, fix, dao.activePlaces(), recent, now)
+            if (step.saves.isNotEmpty()) dao.upsertVisits(step.saves)
+            settings.engine = step.state
+            settings.lastFixMs = now
+            step.keepWatching
         }
     }
 
-    /** The phone started moving at [atMs]: the stop (if any) ends here. */
-    suspend fun onStillEnd(context: Context, atMs: Long) = withContext(Dispatchers.IO) {
+    /** Starts the readings if the app should be checking where you are right now (used when the app is opened). */
+    fun resumeIfNeeded(context: Context) {
         val settings = PlacesSettings(context)
-        if (!settings.enabled) return@withContext
-        var candidate = settings.candidate
-        if (candidate != null && candidate.lat == null && atMs - candidate.startMs >= PlaceRules.MIN_STOP_MS) {
-            // No position at the start: you have only just picked the phone up, so it is still about where it was.
-            currentFix(context)?.let { candidate = StopCandidate(candidate!!.startMs, it.lat, it.lng) }
-        }
-        lock.withLock {
-            settings.candidate = null
-            settings.moveStartMs = atMs
-            val stop = candidate ?: return@withLock
-            val dao = AppDatabase.get(context).placeDao()
-            val around = dao.visitsAround(stop.startMs - PlaceRules.MERGE_GAP_MS, atMs + PlaceRules.MERGE_GAP_MS)
-            val changes = PlaceRules.finishStop(stop, atMs, dao.activePlaces(), around)
-            if (changes.isNotEmpty()) dao.upsertVisits(changes)
+        if (settings.enabled && hasLocation(context) && !settings.watching &&
+            PlaceEngine.keepWatching(settings.engine, System.currentTimeMillis())
+        ) {
+            PlaceWatchService.start(context)
         }
     }
 
-    /** Called after a restart: Android forgot the geofences, and a stop in progress cannot be trusted. */
+    /** Called after a restart: Android forgot the geofences. */
     suspend fun afterRestart(context: Context) {
-        PlacesSettings(context).candidate = null
         runCatching { syncAll(context) }
     }
 
-    /** One quick position read (not from the satellites, so it costs little battery). Null if none arrives in time. */
+    /** One position reading using the best source available (GPS if it can). Null if none arrives in time. */
     @SuppressLint("MissingPermission")
-    suspend fun currentFix(context: Context, timeoutMs: Long = 8_000L): Fix? {
+    suspend fun currentFix(context: Context, timeoutMs: Long = 15_000L): Fix? {
         if (!hasLocation(context)) return null
         val client = LocationServices.getFusedLocationProviderClient(context)
         val source = CancellationTokenSource()
         val fresh = withTimeoutOrNull(timeoutMs) {
             runCatching {
-                client.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, source.token)
+                client.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, source.token)
                     .outcome { source.cancel() }.value
             }.getOrNull()
         }
