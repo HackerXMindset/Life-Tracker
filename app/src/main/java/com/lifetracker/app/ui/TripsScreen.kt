@@ -175,7 +175,7 @@ fun TripsScreen(onBack: () -> Unit, vm: TripsViewModel = viewModel()) {
         item { MonoLabel("How it works") }
         item {
             Text(
-                "A trip starts when you leave a place or stop and ends when you stay somewhere for 5 minutes. " +
+                "A trip starts when you leave a place or stop and ends when you stay somewhere for 3 minutes. " +
                     "The route is the position readings in between; distance and speed come from them, with glitches skipped. " +
                     "Android's walking, cycling and vehicle signals and the speed give a guess at how you travelled. " +
                     "A guess that is not walking or cycling stays \"vehicle\" until you tell it which: tap a trip and pick Auto-rickshaw, Motorbike, Bus and so on. " +

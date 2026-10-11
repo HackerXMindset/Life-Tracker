@@ -31,17 +31,17 @@ class PlaceEngineTest {
     }
 
     @Test
-    fun fiveMinutesAtAnUnknownSpotBecomesAStopAndKeepsWatching() {
+    fun threeMinutesAtAnUnknownSpotBecomesAStopAndKeepsWatching() {
         val run = Run(places)
-        for (m in 0..3) run.feed(fix(m, 28.7000, 77.3000))
+        for (m in 0..2) run.feed(fix(m, 28.7000, 77.3000))
         assertTrue(run.rows.isEmpty())
-        val step = run.feed(fix(5, 28.7001, 77.3000))
+        val step = run.feed(fix(3, 28.7001, 77.3000))
         assertEquals(1, run.rows.size)
         val v = run.rows.values.first()
         assertEquals("", v.placeId)
         assertTrue(v.ongoing)
         assertEquals(t0, v.startMs)
-        assertEquals(t0 + 5 * min, v.endMs)
+        assertEquals(t0 + 3 * min, v.endMs)
         // Unnamed spot: the readings go on.
         assertTrue(step.keepWatching)
     }
@@ -95,7 +95,7 @@ class PlaceEngineTest {
     @Test
     fun aShortStopIsNeverSaved() {
         val run = Run(places)
-        for (m in 0..3) run.feed(fix(m, 28.7, 77.3))
+        for (m in 0..1) run.feed(fix(m, 28.7, 77.3))
         run.feed(fix(4, 28.7027, 77.3))
         assertTrue(run.rows.isEmpty())
     }
@@ -137,27 +137,57 @@ class PlaceEngineTest {
     }
 
     @Test
-    fun comingBackWithinTwentyMinutesJoinsTheSameVisit() {
+    fun comingBackAfterARealTripIsANewVisit() {
         val run = Run(places)
         for (m in 0..6) run.feed(fix(m, 28.6100, 77.2100))
+        // A short trip away, 2 km off for a few minutes, back at minute 11.
         for (m in 7..9) run.feed(fix(m, 28.62, 77.22))
         val first = run.rows.values.first()
         assertFalse(first.ongoing)
-        // A short trip away, back at minute 11 for 7 minutes.
         for (m in 11..17) run.feed(fix(m, 28.6100, 77.2100))
+        assertEquals(2, run.rows.size)
+        assertFalse(run.rows.getValue(first.id).ongoing)
+        assertEquals(t0 + 6 * min, run.rows.getValue(first.id).endMs)
+        val second = run.rows.values.first { it.id != first.id }
+        assertEquals("lib", second.placeId)
+        assertEquals(t0 + 11 * min, second.startMs)
+        assertTrue(second.ongoing)
+        assertEquals(t0 + 17 * min, second.endMs)
+    }
+
+    @Test
+    fun aWobbleThatNeverGetsFarKeepsOneVisit() {
+        val run = Run(places)
+        for (m in 0..6) run.feed(fix(m, 28.6100, 77.2100))
+        // Two readings 133 m off (outside the circle, but not really away), then back.
+        for (m in 7..8) run.feed(fix(m, 28.6112, 77.2100))
+        for (m in 9..16) run.feed(fix(m, 28.6100, 77.2100))
         assertEquals(1, run.rows.size)
         val v = run.rows.values.first()
-        assertEquals(first.id, v.id)
         assertEquals(t0, v.startMs)
         assertTrue(v.ongoing)
-        assertEquals(t0 + 17 * min, v.endMs)
+        assertEquals(t0 + 16 * min, v.endMs)
+    }
+
+    @Test
+    fun aStopInBetweenSplitsTheVisitEvenIfItIsClose() {
+        val run = Run(places)
+        for (m in 0..6) run.feed(fix(m, 28.6100, 77.2100))
+        // A shop 133 m away for 5 minutes, then back to the library.
+        for (m in 7..12) run.feed(fix(m, 28.6112, 77.2100))
+        for (m in 13..20) run.feed(fix(m, 28.6100, 77.2100))
+        val stops = run.rows.values.sortedBy { it.startMs }
+        assertEquals(3, stops.size)
+        assertEquals(listOf("lib", "", "lib"), stops.map { it.placeId })
+        assertTrue(stops[0].endMs <= stops[1].startMs)
+        assertTrue(stops[1].endMs <= stops[2].startMs)
     }
 
     @Test
     fun aStopYouHidIsStillHiddenWhenYouComeBack() {
         val run = Run(places)
         for (m in 0..6) run.feed(fix(m, 28.7, 77.3))
-        run.feed(fix(7, 28.72, 77.3))
+        run.feed(fix(7, 28.7012, 77.3))
         val id = run.rows.values.first().id
         run.rows[id] = run.rows.getValue(id).copy(ignored = true)
         for (m in 12..18) run.feed(fix(m, 28.7, 77.3))
@@ -203,6 +233,17 @@ class PlaceEngineTest {
         assertEquals(500L, PlaceEngine.departure(100L, 900L, 500L))
         assertEquals(100L, PlaceEngine.departure(100L, 100L + 4 * 60_000L, 0L))
         assertEquals(10_000_000L, PlaceEngine.departure(100L, 10_000_000L, 50L))
+    }
+
+    @Test
+    fun aTripRemembersWhereItBeganAndHowFarItWent() {
+        val state = WatchState(trip = Trip("t1", 5L, "lib", 9L, mapOf("WALKING" to 100L), 28.61, 77.21, 123.5))
+        val back = WatchState.fromJson(state.toJson())
+        assertEquals(state, back)
+        assertEquals(123.5, back.trip!!.farthestM, 0.0)
+        // A state saved before this existed still loads, with nothing remembered.
+        val old = WatchState.fromJson("""{"trip":{"id":"t","start":1,"from":"","last":2,"acts":{}}}""")
+        assertEquals(0.0, old.trip!!.farthestM, 0.0)
     }
 
     @Test

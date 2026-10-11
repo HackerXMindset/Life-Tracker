@@ -95,10 +95,10 @@ class BackupCodecTest {
             TripPointEntity("t1760020000000", 1_760_020_000_000L, 28.7, 77.3, 8f),
         ),
         rawFixes = listOf(
-            RawFixEntity(1_760_000_000_000L, 28.610123, 77.209456, 12f),
-            RawFixEntity(1_760_000_030_000L, 28.610200, 77.209400, 9f),
+            RawFixEntity(1_760_000_000_000L, 28.610123, 77.209456, 12f, 1.25f),
+            RawFixEntity(1_760_000_030_000L, 28.610200, 77.209400, 9f, 0f),
             RawFixEntity(1_760_000_090_500L, 28.609900, 77.209800, 30f),
-            RawFixEntity(1_760_200_000_000L, -33.868800, 151.209300, 5f),
+            RawFixEntity(1_760_200_000_000L, -33.868800, 151.209300, 5f, 27.5f),
         ),
     )
 
@@ -222,6 +222,28 @@ class BackupCodecTest {
         val only = BackupData(12, "x", emptyList(), rawFixes = full.rawFixes)
         assertTrue(!only.isEmpty)
         assertEquals(full.rawFixes, BackupCodec.decode(BackupCodec.encode(only)).rawFixes)
+    }
+
+    @Test
+    fun versionTwelveReadingsWithoutASpeedStillLoad() {
+        val v12 = """{"app":"life-tracker","version":12,"exportedAt":"x","entries":[],"rawFixes":[{"day":20000,"rows":"1000,28000000,77000000,12;60000,10,-5,8"}]}"""
+        val back = BackupCodec.decode(v12)
+        assertEquals(2, back.rawFixes.size)
+        assertEquals(20000L * 86_400_000L + 1000L, back.rawFixes[0].ms)
+        assertEquals(28.0, back.rawFixes[0].lat, 0.0)
+        assertEquals(-1f, back.rawFixes[0].speed, 0f)
+        assertEquals(-1f, back.rawFixes[1].speed, 0f)
+    }
+
+    @Test
+    fun theSpeedOfAReadingComesBackAndNoSpeedStaysNoSpeed() {
+        val list = listOf(
+            RawFixEntity(1_760_000_000_000L, 28.61, 77.21, 10f, 13.4f),
+            RawFixEntity(1_760_000_060_000L, 28.62, 77.22, 10f),
+        )
+        val back = BackupCodec.decode(BackupCodec.encode(BackupData(13, "x", emptyList(), rawFixes = list))).rawFixes
+        assertEquals(13.4f, back[0].speed, 0.001f)
+        assertEquals(-1f, back[1].speed, 0f)
     }
 
     @Test

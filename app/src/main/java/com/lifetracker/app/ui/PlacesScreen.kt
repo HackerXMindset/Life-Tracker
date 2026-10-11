@@ -259,7 +259,7 @@ fun PlacesScreen(onBack: () -> Unit, onOpenTrips: () -> Unit, vm: PlacesViewMode
         if (data.rows.isEmpty()) {
             item {
                 Text(
-                    "No places yet. Add one (Home, Library, Gym), or stay somewhere for 5 minutes and it appears above for you to name.",
+                    "No places yet. Add one (Home, Library, Gym), or stay somewhere for 3 minutes and it appears above for you to name.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -347,8 +347,10 @@ fun PlacesScreen(onBack: () -> Unit, onOpenTrips: () -> Unit, vm: PlacesViewMode
         item {
             Text(
                 "Android wakes the app when you come near a place, leave one, or the phone goes still or starts moving. " +
-                    "Then the app reads your position (a notification shows while it does). Staying in one spot for 5 minutes is a stay: " +
+                    "Then the app reads your position (a notification shows while it does). Staying in one spot for 3 minutes is a stay: " +
                     "inside a place's circle it is a visit to that place, anywhere else it waits above for you to name it. " +
+                    "If you go 200 m or more away and come back, that is a new visit (the trip between shows in Trips); " +
+                    "GPS wobble that never went that far stays one visit. " +
                     "At a spot the app does not know it keeps checking at the pace you chose until you leave, and the start and end times come from when " +
                     "the phone went still and started moving. At a named place it checks twice and rests until you move. " +
                     "The circle you give a place is the real size used to decide you are there; Android's own ring around it is at least 150 m, only to wake the app. " +

@@ -15,6 +15,27 @@ object FixFilter {
     /** After this many readings in a row rejected as too fast, the reading they were measured against was the bad one. */
     private const val RECOVER_AFTER = 3
 
+    /**
+     * A jump that is faster than 20 m/s and also more than 5 times the speed the phone itself measured is a glitch: the
+     * chip knows how fast it is going (from the radio signal), so a jump it did not feel is not real. Only checked
+     * when the previous reading was no more than 5 minutes earlier and not a coarse one.
+     */
+    const val JUMP_MIN_MS = 20.0
+    const val JUMP_RATIO = 5.0
+    const val JUMP_WINDOW_S = 300.0
+    const val JUMP_REFERENCE_ACC = 200f
+
+    /** Whether [next] is a position jump the phone's own speed does not explain, judged against the reading [prev] before it. */
+    fun isJump(prev: RawFixEntity, next: RawFixEntity): Boolean {
+        if (next.speed < 0f || prev.acc > JUMP_REFERENCE_ACC) return false
+        val seconds = (next.ms - prev.ms) / 1000.0
+        if (seconds < 1.0 || seconds > JUMP_WINDOW_S) return false
+        val d = dist(prev, next)
+        if (d <= 100.0) return false
+        val implied = d / seconds
+        return implied > JUMP_MIN_MS && implied > next.speed * JUMP_RATIO
+    }
+
     fun clean(fixes: List<RawFixEntity>): List<RawFixEntity> {
         val sorted = fixes
             .filter { it.acc <= PlaceRules.MAX_ACCURACY_M }
@@ -47,7 +68,7 @@ object FixFilter {
             val d = dist(last, f)
             // Faster than a car and also further than the readings' own error could explain.
             val tooFast = seconds > 0.0 && d / seconds > MAX_SPEED_MS && d > 200.0
-            if (tooFast && rejected < RECOVER_AFTER) {
+            if ((tooFast || isJump(last, f)) && rejected < RECOVER_AFTER) {
                 rejected++
             } else {
                 rejected = 0
@@ -98,11 +119,12 @@ object StayBuilder {
 
     /** [fixes] must already be cleaned (see [FixFilter.clean]). */
     fun build(fixes: List<RawFixEntity>): List<BuiltStay> {
-        val runs = sweep(fixes.sortedBy { it.ms })
-        val merged = merge(runs)
+        val sorted = fixes.sortedBy { it.ms }
+        val runs = sweep(sorted)
+        val merged = merge(runs, sorted)
         val kept = merged.filter { it.endMs - it.startMs >= PlaceRules.MIN_STAY_MS && it.points.size >= 2 }
-        // Runs dropped for being short may have been what kept two visits apart; join again if they are close.
-        return merge(kept).filter { it.endMs - it.startMs >= PlaceRules.MIN_STAY_MS }.map { finalize(it) }
+        // Runs dropped for being short may only have been wobble; join again if you never really went away (see wentAway).
+        return merge(kept, sorted).filter { it.endMs - it.startMs >= PlaceRules.MIN_STAY_MS }.map { finalize(it) }
     }
 
     private fun sweep(sorted: List<RawFixEntity>): List<Run> {
@@ -128,11 +150,11 @@ object StayBuilder {
         return out
     }
 
-    private fun merge(runs: List<Run>): List<Run> {
+    private fun merge(runs: List<Run>, all: List<RawFixEntity>): List<Run> {
         val out = ArrayList<Run>()
         for (run in runs) {
             val prev = out.lastOrNull()
-            if (prev != null && joinable(prev, run)) {
+            if (prev != null && joinable(prev, run, all)) {
                 val gap = run.startMs - prev.endMs
                 if (gap > SWEEP_GAP_MS) prev.bridgedMs += gap
                 prev.bridgedMs += run.bridgedMs
@@ -144,10 +166,32 @@ object StayBuilder {
         return out
     }
 
-    private fun joinable(a: Run, b: Run): Boolean {
+    private fun joinable(a: Run, b: Run, all: List<RawFixEntity>): Boolean {
         val gap = b.startMs - a.endMs
         val d = PlaceRules.distanceM(a.lat, a.lng, b.lat, b.lng)
-        return (gap <= BRIDGE_CAP_MS && d <= RADIUS_M) || (gap <= PlaceRules.MERGE_GAP_MS && d <= PlaceRules.MERGE_DISTANCE_M)
+        val near = (gap <= BRIDGE_CAP_MS && d <= RADIUS_M) || (gap <= PlaceRules.MERGE_GAP_MS && d <= PlaceRules.MERGE_DISTANCE_M)
+        return near && !wentAway(a, b, all)
+    }
+
+    /**
+     * Whether any reading between the two runs was [PlaceRules.DEPARTURE_M] or more from where the first one was (less its
+     * own error). If so you really left and came back, and those are two stays, not one. A silence has no readings, so it
+     * never counts as leaving.
+     */
+    private fun wentAway(a: Run, b: Run, all: List<RawFixEntity>): Boolean {
+        var lo = 0
+        var hi = all.size
+        while (lo < hi) {
+            val mid = (lo + hi) ushr 1
+            if (all[mid].ms <= a.endMs) lo = mid + 1 else hi = mid
+        }
+        var i = lo
+        while (i < all.size && all[i].ms < b.startMs) {
+            val f = all[i]
+            if (PlaceRules.awayM(a.lat, a.lng, f.lat, f.lng, f.acc) >= PlaceRules.DEPARTURE_M) return true
+            i++
+        }
+        return false
     }
 
     /** The centre counts each reading by how accurate it was. */

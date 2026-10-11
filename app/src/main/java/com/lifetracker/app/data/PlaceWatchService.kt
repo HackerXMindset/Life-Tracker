@@ -39,6 +39,7 @@ class PlaceWatchService : Service() {
     private var callback: LocationCallback? = null
     private var currentIntervalSec = 0
     private var currentHigh = true
+    private var motion: MotionSensor? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -90,10 +91,33 @@ class PlaceWatchService : Service() {
         }
         settings.watching = true
         settings.lastBeatMs = System.currentTimeMillis()
+        startMotion(settings)
         requestUpdates(
             PlaceEngine.intervalSec(settings.engine, PlacesTracker.baseIntervalSec(settings), settings.tripIntervalSec),
             PlacesTracker.useHighAccuracy(settings, settings.engine),
         )
+    }
+
+    /** Listens to the motion sensor too, so going still or moving is noticed even when Android's own detection is late. */
+    private fun startMotion(settings: PlacesSettings) {
+        if (motion != null) return
+        val sensor = MotionSensor(applicationContext) { still, since ->
+            val now = System.currentTimeMillis()
+            // A time that does not make sense (a different clock on some phones) is replaced by now.
+            val at = if (since in (now - 2 * 60 * 60_000L)..now) since else now
+            scope.launch { runCatching { PlacesTracker.onMotion(applicationContext, still, at) } }
+        }
+        if (sensor.start()) {
+            motion = sensor
+            settings.motionSensor = "yes"
+        } else {
+            settings.motionSensor = "no"
+        }
+    }
+
+    private fun stopMotion() {
+        motion?.stop()
+        motion = null
     }
 
     /** Starts (or restarts, if the pace changed) the position readings. */
@@ -121,6 +145,7 @@ class PlaceWatchService : Service() {
                         location.longitude,
                         if (location.hasAccuracy()) location.accuracy else 0f,
                         location.time,
+                        if (location.hasSpeed()) location.speed else -1f,
                     )
                     scope.launch {
                         val watch = runCatching { PlacesTracker.onFix(applicationContext, fix) }.getOrNull()
@@ -141,6 +166,7 @@ class PlaceWatchService : Service() {
     }
 
     private fun stopWatching() {
+        stopMotion()
         callback?.let { runCatching { LocationServices.getFusedLocationProviderClient(this).removeLocationUpdates(it) } }
         callback = null
         PlacesSettings(this).watching = false
@@ -148,6 +174,7 @@ class PlaceWatchService : Service() {
     }
 
     override fun onDestroy() {
+        stopMotion()
         callback?.let { runCatching { LocationServices.getFusedLocationProviderClient(this).removeLocationUpdates(it) } }
         callback = null
         PlacesSettings(this).watching = false
