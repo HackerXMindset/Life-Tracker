@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.lifetracker.app.data.KeepAlive
 import com.lifetracker.app.data.PlaceEntity
 import com.lifetracker.app.data.PlaceKinds
 import com.lifetracker.app.data.PlaceRules
@@ -69,6 +70,10 @@ fun PlacesScreen(onBack: () -> Unit, onOpenTrips: () -> Unit, vm: PlacesViewMode
     val showOnTimeline by vm.showOnTimeline.collectAsState()
     val access by vm.access.collectAsState()
     val status by vm.status.collectAsState()
+    val alwaysOn by vm.alwaysOn.collectAsState()
+    val alwaysOnInterval by vm.alwaysOnIntervalSec.collectAsState()
+    val readings by vm.readings.collectAsState()
+    val rebuilding by vm.rebuilding.collectAsState()
     var adding by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<PlaceEntity?>(null) }
     var naming by remember { mutableStateOf<PlaceRules.Cluster?>(null) }
@@ -154,6 +159,49 @@ fun PlacesScreen(onBack: () -> Unit, onOpenTrips: () -> Unit, vm: PlacesViewMode
         }
 
         item { OutlinedButton(onClick = onOpenTrips) { Text("Trips: how you got between places") } }
+
+        item { MonoLabel("Keep it running") }
+        item {
+            PlacesCard(
+                title = "Stop the phone putting the app to sleep",
+                text = "Battery: " + (if (access.battery) "no restrictions ✓" else "restricted, not yet allowed") + "\n\n" +
+                    "Xiaomi's HyperOS stops background apps to save battery, which is the main reason places and trips get missed. " +
+                    "Allow unrestricted battery, turn Autostart on, and set this app's battery saver to \"No restrictions\". " +
+                    "If a button opens the wrong page, use \"Open this app's settings\" above.",
+            ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = { KeepAlive.open(context, KeepAlive.exemptionIntents(context)) }) { Text("Allow unrestricted") }
+                    OutlinedButton(onClick = { KeepAlive.open(context, KeepAlive.autostartIntents(context)) }) { Text("Autostart") }
+                }
+                OutlinedButton(onClick = { KeepAlive.open(context, KeepAlive.batterySaverIntents(context)) }) { Text("Battery saver: No restrictions") }
+            }
+        }
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("Always on (more complete, more battery)", color = MaterialTheme.colorScheme.onBackground)
+                Switch(checked = alwaysOn, onCheckedChange = vm::setAlwaysOn)
+            }
+        }
+        if (alwaysOn) {
+            item {
+                Text(
+                    "Reads your position all the time, using Wi-Fi and mobile network while you stand still and GPS while you move. A notification shows all the time. How often while standing still:",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(60 to "1 min", 120 to "2 min", 300 to "5 min").forEach { (sec, label) ->
+                        FilterChip(selected = alwaysOnInterval == sec, onClick = { vm.setAlwaysOnIntervalSec(sec) }, label = { Text(label) })
+                    }
+                }
+            }
+        }
 
         item { MonoLabel("How closely to watch") }
         item {
@@ -267,6 +315,19 @@ fun PlacesScreen(onBack: () -> Unit, onOpenTrips: () -> Unit, vm: PlacesViewMode
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                }
+            }
+        }
+
+        item { MonoLabel("Readings") }
+        item {
+            PlacesCard(
+                title = "${readings.total} readings stored",
+                text = "Every position reading is kept for good, so visits and trips can be worked out again later.\n\n" +
+                    "Readings in each of the last 24 hours (oldest first):\n" + readings.hourly.joinToString(" ") + "\n\n" + readings.gapText,
+            ) {
+                OutlinedButton(enabled = !rebuilding, onClick = vm::rebuildAll) {
+                    Text(if (rebuilding) "Tidying..." else "Tidy everything from my readings")
                 }
             }
         }

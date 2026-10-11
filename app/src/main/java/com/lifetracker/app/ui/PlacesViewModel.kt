@@ -4,11 +4,14 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.lifetracker.app.data.AppDatabase
+import com.lifetracker.app.data.FixStats
+import com.lifetracker.app.data.KeepAlive
 import com.lifetracker.app.data.Fix
 import com.lifetracker.app.data.PlaceEntity
 import com.lifetracker.app.data.PlaceLookup
 import com.lifetracker.app.data.PlaceRules
 import com.lifetracker.app.data.PlaceVisitEntity
+import com.lifetracker.app.data.PlaceWatchService
 import com.lifetracker.app.data.PlacesSettings
 import com.lifetracker.app.data.PlacesTracker
 import com.lifetracker.app.data.PlacesWorker
@@ -33,9 +36,12 @@ class VisitRow(val visit: PlaceVisitEntity, val name: String)
 class PlacesData(val rows: List<PlaceRow>, val visits: List<VisitRow>)
 
 /** What the phone has allowed so far. */
-data class PlacesAccess(val location: Boolean, val background: Boolean, val activity: Boolean) {
+data class PlacesAccess(val location: Boolean, val background: Boolean, val activity: Boolean, val battery: Boolean = false) {
     val all: Boolean get() = location && background && activity
 }
+
+/** How the position readings have been arriving: how many are stored, how many each hour lately, and the longest silence. */
+class ReadingsInfo(val total: Int, val hourly: List<Int>, val gapText: String)
 
 class PlacesViewModel(private val app: Application) : AndroidViewModel(app) {
     private val dao = AppDatabase.get(app).placeDao()
@@ -59,6 +65,20 @@ class PlacesViewModel(private val app: Application) : AndroidViewModel(app) {
     private val timelineFlow = MutableStateFlow(settings.showOnTimeline)
     val showOnTimeline: StateFlow<Boolean> = timelineFlow
 
+    private val alwaysOnFlow = MutableStateFlow(settings.alwaysOn)
+    val alwaysOn: StateFlow<Boolean> = alwaysOnFlow
+
+    private val alwaysOnIntervalFlow = MutableStateFlow(settings.alwaysOnIntervalSec)
+    val alwaysOnIntervalSec: StateFlow<Int> = alwaysOnIntervalFlow
+
+    private val readingsFlow = MutableStateFlow(ReadingsInfo(0, List(24) { 0 }, ""))
+    val readings: StateFlow<ReadingsInfo> = readingsFlow
+
+    private val rebuildFlow = MutableStateFlow(false)
+
+    /** True while the whole history is being tidied from the stored readings. */
+    val rebuilding: StateFlow<Boolean> = rebuildFlow
+
     private val accessFlow = MutableStateFlow(readAccess())
     val access: StateFlow<PlacesAccess> = accessFlow
 
@@ -69,6 +89,7 @@ class PlacesViewModel(private val app: Application) : AndroidViewModel(app) {
         PlacesTracker.hasLocation(app),
         PlacesTracker.hasBackgroundLocation(app),
         PlacesTracker.hasActivityRecognition(app),
+        KeepAlive.isExempt(app),
     )
 
     private fun readStatus(): String = buildString {
@@ -77,6 +98,24 @@ class PlacesViewModel(private val app: Application) : AndroidViewModel(app) {
         append("\nLast message from Android (near a place, still, moving): ").append(PlacesTracker.timeText(settings.lastEventMs))
         append("\nLast position reading: ").append(PlacesTracker.timeText(settings.lastFixMs))
         append("\nChecking now: ").append(if (settings.watching) "yes" else "no")
+        append("\nAlways-on mode: ").append(if (settings.alwaysOn) "on" else "off")
+        append("\nStarted again by the 15 minute check: ").append(settings.watchdogStarts).append(" time(s)")
+        if (settings.watchdogStarts > 0) append(", last ").append(PlacesTracker.timeText(settings.lastWatchdogMs))
+        append("\nLast tidy-up from the stored readings: ").append(PlacesTracker.timeText(settings.lastCleanupMs))
+        if (settings.lastCleanupNote.isNotEmpty()) append("\n  ").append(settings.lastCleanupNote)
+    }
+
+    private suspend fun readReadings(): ReadingsInfo {
+        val dao = AppDatabase.get(app).rawDao()
+        val now = System.currentTimeMillis()
+        val day = 24 * 60 * 60_000L
+        val fixes = dao.between(now - day, now + 1)
+        val gap = FixStats.longestGap(fixes, now - day, now)
+        val text = when {
+            gap == null -> "No readings in the last 24 hours."
+            else -> "Longest silence in the last 24 hours: " + PlaceRules.durationText(gap.lengthMs) + ", from " + PlacesTracker.timeText(gap.startMs) + "."
+        }
+        return ReadingsInfo(dao.count(), FixStats.hourly(fixes, now), text)
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -151,6 +190,39 @@ class PlacesViewModel(private val app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             if (settings.enabled) runCatching { PlacesTracker.syncAll(app) }
             statusFlow.value = readStatus()
+            readingsFlow.value = runCatching { readReadings() }.getOrElse { readingsFlow.value }
+            // Look at the last days' readings again now and then, so opening the app keeps the visits tidy.
+            if (settings.enabled && System.currentTimeMillis() - settings.lastCleanupMs > 60 * 60_000L) {
+                PlacesTracker.cleanupRecent(app)
+                statusFlow.value = readStatus()
+            }
+        }
+    }
+
+    fun setAlwaysOn(on: Boolean) {
+        settings.alwaysOn = on
+        alwaysOnFlow.value = on
+        if (on && settings.enabled && PlacesTracker.hasLocation(app)) PlaceWatchService.start(app)
+        statusFlow.value = readStatus()
+    }
+
+    fun setAlwaysOnIntervalSec(seconds: Int) {
+        settings.alwaysOnIntervalSec = seconds
+        alwaysOnIntervalFlow.value = seconds
+    }
+
+    /** Looks at every stored reading again and tidies all the visits and trips. Nothing is deleted. */
+    fun rebuildAll() {
+        if (rebuildFlow.value) return
+        rebuildFlow.value = true
+        viewModelScope.launch {
+            try {
+                PlacesTracker.cleanupAll(app)
+            } finally {
+                rebuildFlow.value = false
+                statusFlow.value = readStatus()
+                readingsFlow.value = runCatching { readReadings() }.getOrElse { readingsFlow.value }
+            }
         }
     }
 

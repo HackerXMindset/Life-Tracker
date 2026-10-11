@@ -80,9 +80,10 @@ interface EntryDao {
         PlaceEntity::class,
         PlaceVisitEntity::class,
         TripEntity::class,
+        RawFixEntity::class,
         TripPointEntity::class,
     ],
-    version = 11,
+    version = 12,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -100,6 +101,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun sleepDao(): SleepDao
     abstract fun placeDao(): PlaceDao
     abstract fun tripDao(): TripDao
+    abstract fun rawDao(): RawFixDao
 
     companion object {
         @Volatile
@@ -112,7 +114,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "life-tracker.db",
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
                     .addCallback(object : RoomDatabase.Callback() {
                         // A brand new database starts with the built-in activities and money categories.
                         override fun onCreate(db: SupportSQLiteDatabase) {
@@ -350,6 +352,15 @@ val MIGRATION_10_11: Migration = object : Migration(10, 11) {
         db.execSQL(
             "CREATE TABLE IF NOT EXISTS `trip_points` (`tripId` TEXT NOT NULL, `ms` INTEGER NOT NULL, " +
                 "`lat` REAL NOT NULL, `lng` REAL NOT NULL, `acc` REAL NOT NULL, PRIMARY KEY(`tripId`, `ms`))",
+        )
+    }
+}
+
+val MIGRATION_11_12: Migration = object : Migration(11, 12) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `raw_fixes` (`ms` INTEGER NOT NULL, `lat` REAL NOT NULL, " +
+                "`lng` REAL NOT NULL, `acc` REAL NOT NULL, PRIMARY KEY(`ms`))",
         )
     }
 }

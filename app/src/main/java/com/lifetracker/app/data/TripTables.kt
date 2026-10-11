@@ -58,6 +58,13 @@ interface TripDao {
     @Query("SELECT * FROM trips ORDER BY startMs")
     suspend fun allTrips(): List<TripEntity>
 
+    /** Trips that started in [from, to), read once. */
+    @Query("SELECT * FROM trips WHERE startMs >= :from AND startMs < :to ORDER BY startMs")
+    suspend fun tripsIn(from: Long, to: Long): List<TripEntity>
+
+    @Query("UPDATE trips SET distanceM = :distanceM, medianKmh = :median, topKmh = :top WHERE id = :id")
+    suspend fun setStats(id: String, distanceM: Int, median: Int, top: Int)
+
     @Query("SELECT * FROM trips WHERE modeSource = 'you' ORDER BY startMs DESC LIMIT 500")
     suspend fun corrected(): List<TripEntity>
 

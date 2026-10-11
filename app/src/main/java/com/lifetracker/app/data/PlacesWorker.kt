@@ -9,22 +9,30 @@ import androidx.work.WorkerParameters
 import java.util.concurrent.TimeUnit
 
 /**
- * Every 6 hours, hands the places to Android again. Geofences can be lost (restart, location switched off,
- * Google Play services updated) without any message, and this brings them back. It takes a second and uses
- * no location itself.
+ * Every 15 minutes: starts the position readings again if Android stopped them while they should be running,
+ * every 6 hours hands the places to Android again (geofences can be lost without any message: restart, location
+ * switched off, Google Play services updated) and every 6 hours tidies the last days' visits and trips from the stored readings.
+ * It takes a moment and uses no location itself.
  */
 class PlacesWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
-        runCatching { PlacesTracker.syncAll(applicationContext) }
+        val context = applicationContext
+        val settings = PlacesSettings(context)
+        if (!settings.enabled) return Result.success()
+        val now = System.currentTimeMillis()
+        if (now - settings.lastRegisterMs > SIX_HOURS_MS) runCatching { PlacesTracker.syncAll(context) }
+        runCatching { PlacesTracker.watchdog(context, now) }
+        if (now - settings.lastCleanupMs > SIX_HOURS_MS) PlacesTracker.cleanupRecent(context, now)
         return Result.success()
     }
 
     companion object {
         private const val NAME = "places-refresh"
+        private const val SIX_HOURS_MS = 6 * 60 * 60_000L
 
         fun schedule(context: Context) {
-            val request = PeriodicWorkRequestBuilder<PlacesWorker>(6, TimeUnit.HOURS).build()
-            WorkManager.getInstance(context).enqueueUniquePeriodicWork(NAME, ExistingPeriodicWorkPolicy.KEEP, request)
+            val request = PeriodicWorkRequestBuilder<PlacesWorker>(15, TimeUnit.MINUTES).build()
+            WorkManager.getInstance(context).enqueueUniquePeriodicWork(NAME, ExistingPeriodicWorkPolicy.UPDATE, request)
         }
 
         fun cancel(context: Context) {
