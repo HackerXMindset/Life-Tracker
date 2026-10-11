@@ -23,6 +23,8 @@ data class Stay(
 /**
  * A trip in progress: since [startMs] you have been on the way from [fromPlaceId]. [lastPointMs] is the time of the
  * last position reading added to it, and [acts] how long Android said you were walking, cycling and so on (milliseconds).
+ * [originLat], [originLng] is where it began and [farthestM] how far from there the readings have been so far: a trip
+ * that never got [PlaceRules.DEPARTURE_M] away was only wobble, so coming back to the same place is still the same visit.
  */
 data class Trip(
     val id: String,
@@ -30,6 +32,9 @@ data class Trip(
     val fromPlaceId: String,
     val lastPointMs: Long,
     val acts: Map<String, Long> = emptyMap(),
+    val originLat: Double = 0.0,
+    val originLng: Double = 0.0,
+    val farthestM: Double = 0.0,
 )
 
 /** A trip that has ended; the app turns it into a saved trip from the position readings it kept. */
@@ -63,7 +68,8 @@ data class WatchState(
                 "trip",
                 JSONObject()
                     .put("id", trip.id).put("start", trip.startMs).put("from", trip.fromPlaceId)
-                    .put("last", trip.lastPointMs).put("acts", acts),
+                    .put("last", trip.lastPointMs).put("acts", acts)
+                    .put("oLat", trip.originLat).put("oLng", trip.originLng).put("far", trip.farthestM),
             )
         }
         if (stay != null) {
@@ -102,7 +108,16 @@ data class WatchState(
                 trip = o.optJSONObject("trip")?.let {
                     val acts = HashMap<String, Long>()
                     it.optJSONObject("acts")?.let { a -> a.keys().forEach { k -> acts[k] = a.getLong(k) } }
-                    Trip(it.getString("id"), it.getLong("start"), it.optString("from", ""), it.getLong("last"), acts)
+                    Trip(
+                        it.getString("id"),
+                        it.getLong("start"),
+                        it.optString("from", ""),
+                        it.getLong("last"),
+                        acts,
+                        it.optDouble("oLat", 0.0),
+                        it.optDouble("oLng", 0.0),
+                        it.optDouble("far", 0.0),
+                    )
                 },
                 activity = o.optString("activity", ""),
                 activitySinceMs = o.optLong("activitySince", 0L),
@@ -117,7 +132,7 @@ data class WatchState(
  * Turns position readings into stays, with no Android in it so it can be tested.
  *
  * A reading within about 60 m of the current stay's centre belongs to it; one further away ends the stay and
- * starts a new one. A stay of 5 minutes or more is saved as a visit (to the named place whose circle holds its
+ * starts a new one. A stay of 3 minutes or more is saved as a visit (to the named place whose circle holds its
  * centre, or to no place, which puts it in the review list) and updated with every reading. Readings come every
  * minute while the app does not know where you are; at a named place it takes two readings to be sure and then
  * leaves the watching to Android until you move.
@@ -195,7 +210,7 @@ object PlaceEngine {
 
     /** Whether the app should keep taking position readings right now. */
     fun keepWatching(state: WatchState, nowMs: Long): Boolean {
-        // On a trip the readings go on until you have been in one spot for 5 minutes.
+        // On a trip the readings go on until you have been in one spot for 3 minutes.
         if (state.trip != null) {
             val here = state.stay
             if (here == null || here.lastSeenMs - here.startMs < PlaceRules.MIN_STAY_MS) return true
@@ -248,13 +263,22 @@ object PlaceEngine {
                 val end = departure(stay.lastSeenMs, fix.timeMs, s.moveStartMs)
                 // One reading alone never makes a stop, however long ago it was.
                 if (stay.visitId.isNotEmpty() || (stay.n >= 2 && end - stay.startMs >= PlaceRules.MIN_STAY_MS)) {
-                    val joined = if (stay.visitId.isEmpty()) join(stay.copy(lastSeenMs = end), recent) else stay
+                    val joined = if (stay.visitId.isEmpty()) join(stay.copy(lastSeenMs = end), recent, s.trip?.farthestM ?: 0.0) else stay
                     saves.add(visit(joined, max(end, joined.startMs), ongoing = false, places))
                 }
                 // Leaving a stay you had been at for two readings or more starts a trip.
                 if (recordTrips && s.trip == null && stay.n >= 2) {
                     val id = "t" + max(end, stay.startMs)
-                    s = s.copy(trip = Trip(id, max(end, stay.startMs), stay.placeId, max(end, stay.startMs)))
+                    s = s.copy(
+                        trip = Trip(
+                            id,
+                            max(end, stay.startMs),
+                            stay.placeId,
+                            max(end, stay.startMs),
+                            originLat = stay.lat,
+                            originLng = stay.lng,
+                        ),
+                    )
                     points.add(TripPointEntity(id, max(end, stay.startMs), stay.lat, stay.lng, 15f))
                 }
                 s = s.copy(stay = null)
@@ -281,16 +305,21 @@ object PlaceEngine {
         val trip = s.trip
         if (trip != null) {
             points.add(TripPointEntity(trip.id, fix.timeMs, fix.lat, fix.lng, fix.accuracyM))
-            s = s.copy(trip = trip.copy(lastPointMs = max(trip.lastPointMs, fix.timeMs)))
+            val away = if (trip.originLat != 0.0 || trip.originLng != 0.0) {
+                PlaceRules.awayM(trip.originLat, trip.originLng, fix.lat, fix.lng, fix.accuracyM)
+            } else {
+                0.0
+            }
+            s = s.copy(trip = trip.copy(lastPointMs = max(trip.lastPointMs, fix.timeMs), farthestM = max(trip.farthestM, away)))
         }
 
         val current = s.stay
         if (current != null && current.lastSeenMs - current.startMs >= PlaceRules.MIN_STAY_MS) {
             val arrivedMs = current.startMs
-            val joined = if (current.visitId.isEmpty()) join(current, recent) else current
+            val joined = if (current.visitId.isEmpty()) join(current, recent, s.trip?.farthestM ?: 0.0) else current
             s = s.copy(stay = joined)
             saves.add(visit(joined, joined.lastSeenMs, ongoing = true, places))
-            // Five minutes in one spot: the trip ended when you got here.
+            // Three minutes in one spot: the trip ended when you got here.
             val arrived = s.trip
             if (arrived != null && finish == null) {
                 finish = finishOf(arrived, s, max(arrivedMs, arrived.startMs), joined.placeId)
@@ -305,10 +334,15 @@ object PlaceEngine {
         return Step(s, saves, keep, points, finish)
     }
 
-    /** Gives a stay the id (and the earlier start) of a saved visit it continues, or a new id. */
-    private fun join(stay: Stay, recent: List<PlaceVisitEntity>): Stay {
-        val hit = recent.firstOrNull { v ->
+    /**
+     * Gives a stay the id (and the earlier start) of a saved visit it continues, or a new id. It only continues a visit
+     * if you never really went away: not [PlaceRules.DEPARTURE_M] from where you were ([awayM] is how far the trip since then
+     * got) and no other stop saved in between. Going to a shop and coming back is a new visit.
+     */
+    private fun join(stay: Stay, recent: List<PlaceVisitEntity>, awayM: Double): Stay {
+        val hit = if (awayM >= PlaceRules.DEPARTURE_M) null else recent.firstOrNull { v ->
             !v.ongoing && PlaceRules.closeInTime(v, stay.startMs, stay.lastSeenMs) &&
+                recent.none { o -> o.id != v.id && o.startMs >= v.endMs && o.startMs < stay.startMs } &&
                 if (stay.placeId.isNotEmpty()) {
                     v.placeId == stay.placeId
                 } else {

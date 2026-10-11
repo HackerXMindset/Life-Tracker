@@ -104,6 +104,46 @@ class PlacesSettings(context: Context) {
         get() = WatchState.fromJson(prefs.getString("engine", "") ?: "")
         set(value) = prefs.edit { putString("engine", value.toJson()) }
 
+    /** The last reading that was believed (not a glitch), used to spot position jumps. Null if none yet. */
+    var lastGood: RawFixEntity?
+        get() {
+            val p = (prefs.getString("last_good", "") ?: "").split('|')
+            if (p.size != 5) return null
+            return try {
+                RawFixEntity(p[0].toLong(), p[1].toDouble(), p[2].toDouble(), p[3].toFloat(), p[4].toFloat())
+            } catch (e: NumberFormatException) {
+                null
+            }
+        }
+        set(value) = prefs.edit { putString("last_good", if (value == null) "" else "${value.ms}|${value.lat}|${value.lng}|${value.acc}|${value.speed}") }
+
+    /** How many readings in a row were thrown out as glitches just now, and how many in all. */
+    var glitchRun: Int
+        get() = prefs.getInt("glitch_run", 0)
+        set(value) = prefs.edit { putInt("glitch_run", value) }
+
+    var glitches: Int
+        get() = prefs.getInt("glitches", 0)
+        set(value) = prefs.edit { putInt("glitches", value) }
+
+    /** What the motion sensor last said: "still", "moving" or "" if it has not said anything. And since when, and how often. */
+    var motionState: String
+        get() = prefs.getString("motion_state", "") ?: ""
+        set(value) = prefs.edit { putString("motion_state", value) }
+
+    var motionSinceMs: Long
+        get() = prefs.getLong("motion_since", 0L)
+        set(value) = prefs.edit { putLong("motion_since", value) }
+
+    var motionChanges: Int
+        get() = prefs.getInt("motion_changes", 0)
+        set(value) = prefs.edit { putInt("motion_changes", value) }
+
+    /** Whether the phone has a motion sensor the service could use the last time it started: "yes", "no" or "" (not tried). */
+    var motionSensor: String
+        get() = prefs.getString("motion_sensor", "") ?: ""
+        set(value) = prefs.edit { putString("motion_sensor", value) }
+
     /** A name found on the internet for a spot, kept so each spot is only looked up once. */
     fun suggestion(key: String): String? = prefs.getString("sug_$key", null)
 

@@ -44,7 +44,7 @@ class PlaceTripsTest {
         for (i in 1..20) run.feed(fix(450 + 30 * i, 28.6100 + 0.002 * i))
     }
 
-    /** Sits at the end for five minutes, one reading every 30 seconds, from 17:30. */
+    /** Sits at the end for four and a half minutes, one reading every 30 seconds, from 18:00. */
     private fun arrive(run: Run) {
         for (s in 1080..1350 step 30) run.feed(fix(s, 28.6500))
     }
@@ -76,13 +76,13 @@ class PlaceTripsTest {
         val f = run.finishes[0]
         assertEquals(trip.id, f.id)
         assertEquals(t0 + 450_000L, f.startMs)
-        // Arrived when the stay at the far end began, not five minutes later.
+        // Arrived when the stay at the far end began, not three minutes later.
         assertEquals(t0 + 1_050_000L, f.endMs)
         assertEquals("lib", f.fromPlaceId)
         assertEquals("", f.toPlaceId)
         assertNull(run.state.trip)
-        // 1 start + 20 on the road + 10 at the end.
-        assertEquals(31, run.points.size)
+        // 1 start + 20 on the road + 6 at the end (the trip ends at the third minute there).
+        assertEquals(27, run.points.size)
 
         val stats = TripRules.stats(run.points, f.startMs, f.endMs)
         assertTrue(TripRules.isRealTrip(stats))

@@ -27,7 +27,7 @@ object PlaceKinds {
 }
 
 /** One reading of where the phone is. */
-data class Fix(val lat: Double, val lng: Double, val accuracyM: Float, val timeMs: Long)
+data class Fix(val lat: Double, val lng: Double, val accuracyM: Float, val timeMs: Long, val speedMs: Float = -1f)
 
 /**
  * The rules for places, kept free of Android so they can be tested.
@@ -39,10 +39,19 @@ data class Fix(val lat: Double, val lng: Double, val accuracyM: Float, val timeM
  */
 object PlaceRules {
     /** Being in one spot this long makes it a stay (a visit to a place, or a stop to review). Shorter is just passing. */
-    const val MIN_STAY_MS = 5 * 60_000L
+    const val MIN_STAY_MS = 3 * 60_000L
 
-    /** Two stays this close in time, at the same spot, are one stay (you walked around the library). */
+    /**
+     * Two stays at the same spot this close in time are one stay (GPS wobble, or you walked around the library) but only
+     * if you never really went away in between: see [DEPARTURE_M]. Coming back after a real trip is a new visit.
+     */
     const val MERGE_GAP_MS = 20 * 60_000L
+
+    /** Getting this far from a spot (the same distance, [TripRules.MIN_FARTHEST_M], that makes a trip real) means you really left it. */
+    const val DEPARTURE_M = 200.0
+
+    /** A tidy-up stay and a saved visit are the same one if they overlap or are no further apart than this. */
+    const val MATCH_SLACK_MS = 2 * 60_000L
 
     /** Two stays this close together are the same spot. */
     const val MERGE_DISTANCE_M = 100.0
@@ -81,6 +90,10 @@ object PlaceRules {
             .minWithOrNull(compareBy<Pair<PlaceEntity, Double>>({ it.first.radiusM }, { it.second }))
             ?.first
 
+    /** How far a reading is from a spot, less its own error (up to 100 m), so one poor reading does not look like leaving. */
+    fun awayM(lat: Double, lng: Double, fixLat: Double, fixLng: Double, accuracyM: Float): Double =
+        max(0.0, distanceM(lat, lng, fixLat, fixLng) - min(accuracyM.toDouble(), 100.0))
+
     fun newId(startMs: Long): String = "v$startMs"
 
     internal fun endOf(v: PlaceVisitEntity): Long = if (v.ongoing) Long.MAX_VALUE else v.endMs
@@ -88,6 +101,10 @@ object PlaceRules {
     /** Whether [v] is close enough in time to a stay from [startMs] to [endMs] to be the same stay. */
     internal fun closeInTime(v: PlaceVisitEntity, startMs: Long, endMs: Long): Boolean =
         v.startMs <= endMs + MERGE_GAP_MS && endOf(v) >= startMs - MERGE_GAP_MS
+
+    /** Whether [v] overlaps a stay from [startMs] to [endMs], or is only a moment away from it. */
+    internal fun overlapsInTime(v: PlaceVisitEntity, startMs: Long, endMs: Long): Boolean =
+        v.startMs <= endMs + MATCH_SLACK_MS && endOf(v) >= startMs - MATCH_SLACK_MS
 
     /** Unnamed stops that happened in about the same spot. */
     data class Cluster(val visits: List<PlaceVisitEntity>) {

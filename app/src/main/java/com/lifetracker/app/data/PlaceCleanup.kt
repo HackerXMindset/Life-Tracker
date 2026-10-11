@@ -28,7 +28,7 @@ object PlaceCleanup {
                 if (placeId.isNotEmpty()) v.placeId == placeId
                 else v.placeId.isEmpty() && PlaceRules.distanceM(v.lat, v.lng, s.lat, s.lng) <= PlaceRules.MERGE_DISTANCE_M
 
-            val matching = current.filter { samePlace(it) && PlaceRules.closeInTime(it, s.startMs, s.endMs) }
+            val matching = current.filter { samePlace(it) && PlaceRules.overlapsInTime(it, s.startMs, s.endMs) }
             if (matching.isEmpty()) {
                 // Somewhere else was already recorded at that time: leave it alone.
                 if (current.any { it.startMs < s.endMs && PlaceRules.endOf(it) > s.startMs }) continue

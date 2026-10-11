@@ -65,7 +65,7 @@ class PlaceRulesTest {
     @Test
     fun totalsSkipDriveBysAndSplitAtMidnight() {
         val day = 24 * 60 * min
-        val drive = PlaceVisitEntity("a", "home", 0L, 4 * min, 28.6, 77.2, "geofence", false, false)
+        val drive = PlaceVisitEntity("a", "home", 0L, 2 * min, 28.6, 77.2, "geofence", false, false)
         // Home from 22:00 to 07:00 the next day.
         val night = PlaceVisitEntity("b", "home", -2 * 60 * min, 7 * 60 * min, 28.6, 77.2, "geofence", false, false)
         val lib = PlaceVisitEntity("c", "lib", 9 * 60 * min, 12 * 60 * min, 28.61, 77.21, "stop", false, false)

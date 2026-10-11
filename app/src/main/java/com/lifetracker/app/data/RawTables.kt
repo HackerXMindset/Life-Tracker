@@ -1,5 +1,6 @@
 package com.lifetracker.app.data
 
+import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Entity
 import androidx.room.Insert
@@ -15,8 +16,11 @@ import androidx.room.Query
  * reading in milliseconds since 1970 (UTC), [acc] the accuracy radius in metres. Only readings accurate to
  * 150 m or better are kept.
  *
+ * Database version 13 added [speed]: how fast the phone itself said it was going, in metres per second, or -1 if it
+ * did not say. It lets a position jump the phone did not feel be told apart from real movement.
+ *
  * IMPORTANT: if any column here changes, the database version must go up and a
- * Migration must be added. See MIGRATION_11_12 in Database.kt.
+ * Migration must be added. See MIGRATION_11_12 and MIGRATION_12_13 in Database.kt.
  */
 @Entity(tableName = "raw_fixes")
 data class RawFixEntity(
@@ -24,6 +28,7 @@ data class RawFixEntity(
     val lat: Double,
     val lng: Double,
     val acc: Float,
+    @ColumnInfo(defaultValue = "-1") val speed: Float = -1f,
 )
 
 @Dao

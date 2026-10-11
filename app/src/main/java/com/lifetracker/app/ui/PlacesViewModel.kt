@@ -101,6 +101,14 @@ class PlacesViewModel(private val app: Application) : AndroidViewModel(app) {
         append("\nAlways-on mode: ").append(if (settings.alwaysOn) "on" else "off")
         append("\nStarted again by the 15 minute check: ").append(settings.watchdogStarts).append(" time(s)")
         if (settings.watchdogStarts > 0) append(", last ").append(PlacesTracker.timeText(settings.lastWatchdogMs))
+        append("\nMotion sensor: ").append(
+            when {
+                settings.motionSensor == "no" -> "this phone has none"
+                settings.motionState.isEmpty() -> if (settings.motionSensor == "yes") "listening, nothing felt yet" else "starts with the readings"
+                else -> settings.motionState + " since " + PlacesTracker.timeText(settings.motionSinceMs) + " (" + settings.motionChanges + " changes)"
+            },
+        )
+        append("\nPosition jumps thrown out while live: ").append(settings.glitches)
         append("\nLast tidy-up from the stored readings: ").append(PlacesTracker.timeText(settings.lastCleanupMs))
         if (settings.lastCleanupNote.isNotEmpty()) append("\n  ").append(settings.lastCleanupNote)
     }

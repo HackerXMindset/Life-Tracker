@@ -180,6 +180,25 @@ object PlacesTracker {
     fun useHighAccuracy(settings: PlacesSettings, state: WatchState): Boolean =
         settings.useGps && (!settings.alwaysOn || state.moving || state.trip != null)
 
+    /**
+     * The motion sensor says the phone went still ([still] true) or started moving, since [atMs]. It only adds to what Android's
+     * own detection says: moving always counts, but "still" is ignored on a trip (a smooth ride feels still) or when the phone
+     * is already known to be still.
+     */
+    suspend fun onMotion(context: Context, still: Boolean, atMs: Long) {
+        val settings = PlacesSettings(context)
+        settings.motionState = if (still) "still" else "moving"
+        settings.motionSinceMs = atMs
+        settings.motionChanges = settings.motionChanges + 1
+        trigger(context, atMs) { state ->
+            when {
+                still && state.moving && state.trip == null -> PlaceEngine.onStill(state, atMs, System.currentTimeMillis())
+                !still && !state.moving -> PlaceEngine.onMoving(state, atMs, System.currentTimeMillis())
+                else -> state
+            }
+        }
+    }
+
     /** Android says you are now walking, running, cycling or in a vehicle. */
     suspend fun onActivity(context: Context, name: String, atMs: Long) = trigger(context, atMs) { state ->
         PlaceEngine.onActivity(state, name, atMs, System.currentTimeMillis())
@@ -194,7 +213,24 @@ object PlacesTracker {
             val now = System.currentTimeMillis()
             val recent = dao.visitsAround(fix.timeMs - 12 * 60 * 60_000L, fix.timeMs)
             if (fix.accuracyM <= PlaceRules.MAX_ACCURACY_M) {
-                db.rawDao().add(RawFixEntity(fix.timeMs, fix.lat, fix.lng, fix.accuracyM))
+                // Every reading is kept for good, glitches too: the tidy-up filters them again when it looks back.
+                val raw = RawFixEntity(fix.timeMs, fix.lat, fix.lng, fix.accuracyM, fix.speedMs)
+                db.rawDao().add(raw)
+                val before = settings.lastGood
+                val glitch = before != null && settings.glitchRun < 3 && FixFilter.isJump(before, raw)
+                if (glitch) {
+                    // A jump the phone's own speed does not explain: do not let it end a stay or start a trip.
+                    settings.glitchRun = settings.glitchRun + 1
+                    settings.glitches = settings.glitches + 1
+                    settings.lastFixMs = now
+                    return@withLock Watch(
+                        PlaceEngine.keepWatching(settings.engine, now) || settings.alwaysOn,
+                        PlaceEngine.intervalSec(settings.engine, baseIntervalSec(settings), settings.tripIntervalSec),
+                        useHighAccuracy(settings, settings.engine),
+                    )
+                }
+                settings.glitchRun = 0
+                settings.lastGood = raw
             }
             val step = PlaceEngine.onFix(settings.engine, fix, dao.activePlaces(), recent, now, settings.recordTrips)
             if (step.saves.isNotEmpty()) dao.upsertVisits(step.saves)
@@ -357,7 +393,7 @@ object PlacesTracker {
         val location = fresh ?: runCatching { client.lastLocation.outcome().value }.getOrNull() ?: return null
         val accuracy = if (location.hasAccuracy()) location.accuracy else 0f
         if (accuracy > PlaceRules.MAX_ACCURACY_M) return null
-        return Fix(location.latitude, location.longitude, accuracy, location.time)
+        return Fix(location.latitude, location.longitude, accuracy, location.time, if (location.hasSpeed()) location.speed else -1f)
     }
 
     /** The clock time for an activity event, which Android stamps with time since the phone started. */

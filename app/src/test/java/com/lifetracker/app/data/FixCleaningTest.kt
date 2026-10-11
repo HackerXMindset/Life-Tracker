@@ -1,6 +1,7 @@
 package com.lifetracker.app.data
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -11,8 +12,8 @@ class FixCleaningTest {
     private val t0 = 1_760_000_000_000L
 
     // 0.001 degrees of latitude is about 111 m.
-    private fun fix(minute: Int, lat: Double, lng: Double = 77.2, acc: Float = 10f) =
-        RawFixEntity(t0 + minute * min, lat, lng, acc)
+    private fun fix(minute: Int, lat: Double, lng: Double = 77.2, acc: Float = 10f, speed: Float = -1f) =
+        RawFixEntity(t0 + minute * min, lat, lng, acc, speed)
 
     private fun still(from: Int, to: Int, lat: Double, lng: Double = 77.2) = (from..to).map { fix(it, lat, lng) }
 
@@ -55,6 +56,35 @@ class FixCleaningTest {
     }
 
     @Test
+    fun aJumpThePhoneDidNotFeelIsRecognised() {
+        val home = fix(0, 28.6, speed = 0f)
+        // 1.5 km in a minute is 25 m/s, and the phone says it is going 0.4 m/s.
+        assertTrue(FixFilter.isJump(home, fix(1, 28.6135, speed = 0.4f)))
+        // Without a speed from the phone nothing can be said.
+        assertFalse(FixFilter.isJump(home, fix(1, 28.6135)))
+        // A real drive: the phone itself says 25 m/s.
+        assertFalse(FixFilter.isJump(home, fix(1, 28.6135, speed = 25f)))
+        // Too small, too long ago, or measured against a coarse reading.
+        assertFalse(FixFilter.isJump(home, fix(1, 28.6005, speed = 0f)))
+        assertFalse(FixFilter.isJump(home, fix(10, 28.6135, speed = 0f)))
+        assertFalse(FixFilter.isJump(fix(0, 28.6, acc = 300f), fix(1, 28.6135, speed = 0f)))
+    }
+
+    @Test
+    fun aSuddenJumpWithNoSpeedBehindItIsDroppedButAMoveThatKeepsAgreeingIsBelieved() {
+        val list = (0..3).map { fix(it, 28.6, speed = 0f) } + (4..7).map { fix(it, 28.6135, speed = 0f) }
+        val clean = FixFilter.clean(list)
+        assertEquals(listOf(0L, 1L, 2L, 3L, 5L, 6L, 7L), clean.map { (it.ms - t0) / min })
+    }
+
+    @Test
+    fun aFastDriveWithItsOwnSpeedIsKept() {
+        // 1.5 km a minute is 90 km/h, and the phone says so.
+        val list = (0..10).map { fix(it, 28.6 + it * 0.0135, speed = 25f) }
+        assertEquals(11, FixFilter.clean(list).size)
+    }
+
+    @Test
     fun aRealDriveIsKept() {
         // 0.004 degrees (444 m) every minute is 27 km/h.
         val list = (0..10).map { fix(it, 28.6 + it * 0.004) }
@@ -75,7 +105,7 @@ class FixCleaningTest {
 
     @Test
     fun shortRunsAndWalkingMakeNoStay() {
-        assertTrue(StayBuilder.build(still(0, 3, 28.6)).isEmpty())
+        assertTrue(StayBuilder.build(still(0, 2, 28.6)).isEmpty())
         val walking = (0..20).map { fix(it, 28.6 + it * 0.002) }
         assertTrue(StayBuilder.build(walking).isEmpty())
     }
@@ -106,12 +136,36 @@ class FixCleaningTest {
     }
 
     @Test
-    fun aShortWalkAwayAndBackIsOneStay() {
-        // Library for 10 minutes, 3 minutes at a shop 200 m away, library again for 10 minutes.
+    fun threeMinutesIsTheShortestStay() {
+        assertEquals(1, StayBuilder.build(still(0, 3, 28.6)).size)
+    }
+
+    @Test
+    fun aWalkAwayAndBackIsTwoStaysEvenWhenTheWalkWasTooShortToBeAStay() {
+        // Library for 10 minutes, 2 minutes 222 m away, library again for 10 minutes: you really left.
         val list = still(0, 9, 28.6) + still(10, 12, 28.602) + still(13, 22, 28.6)
         val stays = StayBuilder.build(list)
+        assertEquals(2, stays.size)
+        assertEquals(t0 + 9 * min, stays[0].endMs)
+        assertEquals(t0 + 13 * min, stays[1].startMs)
+    }
+
+    @Test
+    fun aWobbleThatNeverGotFarIsOneStay() {
+        // Two readings 133 m off (outside the radius, but not really away), then back.
+        val list = still(0, 9, 28.6) + still(10, 11, 28.6012) + still(12, 21, 28.6)
+        val stays = StayBuilder.build(list)
         assertEquals(1, stays.size)
-        assertEquals(t0 + 22 * min, stays[0].endMs)
+        assertEquals(t0 + 21 * min, stays[0].endMs)
+    }
+
+    @Test
+    fun aShopYouStayedAtIsItsOwnStayBetweenTwoVisits() {
+        val list = still(0, 9, 28.6) + still(10, 14, 28.602) + still(15, 24, 28.6)
+        val stays = StayBuilder.build(list)
+        assertEquals(3, stays.size)
+        assertEquals(t0 + 10 * min, stays[1].startMs)
+        assertEquals(t0 + 14 * min, stays[1].endMs)
     }
 
     @Test
