@@ -82,7 +82,7 @@ class BackupCodecTest {
             PlaceEntity("p2", "Old gym", "gym", -33.8688, 151.2093, 100, true, 1_760_000_500_000L),
         ),
         placeVisits = listOf(
-            PlaceVisitEntity("v1760000000000", "p1", 1_760_000_000_000L, 1_760_003_600_000L, 28.6139, 77.2090, "geofence", false, false),
+            PlaceVisitEntity("v1760000000000", "p1", 1_760_000_000_000L, 1_760_003_600_000L, 28.6139, 77.2090, "geofence", false, false, 82),
             PlaceVisitEntity("v1760010000000", "", 1_760_010_000_000L, 1_760_010_000_000L, 28.7, 77.3, "stop", true, true),
         ),
         trips = listOf(
@@ -207,6 +207,16 @@ class BackupCodecTest {
         assertEquals(10, back.version)
         assertTrue(back.trips.isEmpty())
         assertTrue(back.tripPoints.isEmpty())
+    }
+
+    @Test
+    fun visitsWithoutAConfidenceStillLoadAndOnesWithItKeepIt() {
+        val v13 = """{"app":"life-tracker","version":13,"exportedAt":"x","entries":[],"placeVisits":[["v1","p1",1,2,28.6,77.2,"stop",0,0]]}"""
+        val old = BackupCodec.decode(v13).placeVisits.single()
+        assertEquals(-1, old.confidence)
+        val back = BackupCodec.decode(BackupCodec.encode(full)).placeVisits
+        assertEquals(82, back[0].confidence)
+        assertEquals(-1, back[1].confidence)
     }
 
     @Test

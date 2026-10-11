@@ -22,7 +22,10 @@ class PlacesWorker(context: Context, params: WorkerParameters) : CoroutineWorker
         val now = System.currentTimeMillis()
         if (now - settings.lastRegisterMs > SIX_HOURS_MS) runCatching { PlacesTracker.syncAll(context) }
         runCatching { PlacesTracker.watchdog(context, now) }
-        if (now - settings.lastCleanupMs > SIX_HOURS_MS) PlacesTracker.cleanupRecent(context, now)
+        if (now - settings.lastCleanupMs > SIX_HOURS_MS) {
+            PlacesTracker.cleanupRecent(context, now)
+            runCatching { PlacesTracker.prefetchNames(context) }
+        }
         return Result.success()
     }
 

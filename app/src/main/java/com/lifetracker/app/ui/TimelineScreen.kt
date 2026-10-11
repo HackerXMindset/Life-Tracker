@@ -65,6 +65,7 @@ import com.lifetracker.app.data.ChargeStats
 import com.lifetracker.app.data.HealthSettings
 import com.lifetracker.app.data.PlaceRules
 import com.lifetracker.app.data.PlaceVisitEntity
+import com.lifetracker.app.data.StayConfidence
 import com.lifetracker.app.data.PlacesSettings
 import com.lifetracker.app.data.SleepNightEntity
 import com.lifetracker.app.data.SleepStats
@@ -1148,7 +1149,8 @@ private fun PlaceTimelineRow(item: PlaceItem, now: Long, onClick: () -> Unit) {
                 color = MaterialTheme.colorScheme.onBackground,
             )
             Text(
-                text = startText + " → " + endText + " · " + PlaceRules.durationText(PlaceRules.lengthMs(v, now)),
+                text = startText + " → " + endText + " · " + PlaceRules.durationText(PlaceRules.lengthMs(v, now)) +
+                    (if (StayConfidence.isUnsure(v.confidence)) " · unsure" else ""),
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

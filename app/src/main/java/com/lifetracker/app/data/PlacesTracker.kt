@@ -22,6 +22,7 @@ import com.google.android.gms.tasks.Task
 import java.text.DateFormat
 import java.util.Date
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -312,11 +313,12 @@ object PlacesTracker {
     }
 
     /** What a tidy-up changed. */
-    class Cleanup(val added: Int = 0, val stretched: Int = 0, val trips: Int = 0) {
-        operator fun plus(o: Cleanup) = Cleanup(added + o.added, stretched + o.stretched, trips + o.trips)
+    class Cleanup(val added: Int = 0, val stretched: Int = 0, val trips: Int = 0, val scored: Int = 0) {
+        operator fun plus(o: Cleanup) = Cleanup(added + o.added, stretched + o.stretched, trips + o.trips, scored + o.scored)
 
         fun text(): String =
-            "Added $added visit${if (added == 1) "" else "s"}, stretched $stretched, corrected $trips trip${if (trips == 1) "" else "s"}"
+            "Added $added visit${if (added == 1) "" else "s"}, stretched $stretched, corrected $trips trip${if (trips == 1) "" else "s"}, " +
+                "checked $scored visit${if (scored == 1) "" else "s"}"
     }
 
     /**
@@ -344,9 +346,41 @@ object PlacesTracker {
                     db.tripDao().setStats(fixed.id, fixed.distanceM, fixed.medianKmh, fixed.topKmh)
                     trips++
                 }
-                Cleanup(plan.adds.size, plan.updates.size, trips)
+                // How sure the app is of each finished visit, from the readings taken during it.
+                var scored = 0
+                for (v in db.placeDao().visitsAround(fromMs, end)) {
+                    if (v.ongoing) continue
+                    val fixes = FixFilter.clean(db.rawDao().between(v.startMs, v.endMs + 1))
+                    val confidence = StayConfidence.score(v.startMs, v.endMs, fixes, v.placeId.isNotEmpty())
+                    if (confidence != v.confidence) {
+                        db.placeDao().setConfidence(v.id, confidence)
+                        scored++
+                    }
+                }
+                Cleanup(plan.adds.size, plan.updates.size, trips, scored)
             }
         }
+
+    /**
+     * Looks up a name on the internet for the unnamed spots that have none yet, a few at a time and politely (one a
+     * second), so the hint is ready when you open the review list. Only the position of the spot is sent, once.
+     * Returns how many spots were asked about.
+     */
+    suspend fun prefetchNames(context: Context, maxLookups: Int = 6): Int = withContext(Dispatchers.IO) {
+        val settings = PlacesSettings(context)
+        val clusters = PlaceRules.clusters(AppDatabase.get(context).placeDao().unknownOnce())
+        var asked = 0
+        for (cluster in clusters) {
+            val key = PlaceLookup.key(cluster.lat, cluster.lng)
+            if (settings.suggestion(key) != null) continue
+            if (asked >= maxLookups) break
+            if (asked > 0) delay(1_200L)
+            asked++
+            val found = PlaceLookup.suggest(cluster.lat, cluster.lng)
+            if (found != null) settings.setSuggestion(key, found)
+        }
+        asked
+    }
 
     /** The tidy-up the app does by itself: the last three days. */
     suspend fun cleanupRecent(context: Context, now: Long = System.currentTimeMillis()) {
