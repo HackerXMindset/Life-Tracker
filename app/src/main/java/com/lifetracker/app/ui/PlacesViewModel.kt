@@ -1,10 +1,12 @@
 package com.lifetracker.app.ui
 
 import android.app.Application
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.lifetracker.app.data.AppDatabase
 import com.lifetracker.app.data.FixStats
+import com.lifetracker.app.data.Gpx
 import com.lifetracker.app.data.KeepAlive
 import com.lifetracker.app.data.Fix
 import com.lifetracker.app.data.PlaceEntity
@@ -15,7 +17,12 @@ import com.lifetracker.app.data.PlaceWatchService
 import com.lifetracker.app.data.PlacesSettings
 import com.lifetracker.app.data.PlacesTracker
 import com.lifetracker.app.data.PlacesWorker
+import com.lifetracker.app.data.TripModes
+import com.lifetracker.app.data.TripRules
+import java.io.IOException
+import java.time.Instant
 import java.time.ZoneId
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,6 +33,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** One place with the time you spent there in the chosen days. */
 class PlaceRow(val place: PlaceEntity, val ms: Long, val visits: Int)
@@ -231,6 +239,91 @@ class PlacesViewModel(private val app: Application) : AndroidViewModel(app) {
                 statusFlow.value = readStatus()
                 readingsFlow.value = runCatching { readReadings() }.getOrElse { readingsFlow.value }
             }
+        }
+    }
+
+    private val transferFlow = MutableStateFlow("")
+
+    /** What the last export or import did (or failed to do), shown under the Readings buttons. */
+    val transfer: StateFlow<String> = transferFlow
+
+    /** Writes every stored reading to the file you chose, as GPX or CSV. */
+    fun exportReadings(uri: Uri, csv: Boolean) {
+        viewModelScope.launch {
+            transferFlow.value = "Exporting..."
+            transferFlow.value = runCatching { withContext(Dispatchers.IO) { writeReadings(uri, csv) } }
+                .getOrElse { "Export failed: ${it.message ?: it.javaClass.simpleName}" }
+        }
+    }
+
+    private suspend fun writeReadings(uri: Uri, csv: Boolean): String {
+        val raw = AppDatabase.get(app).rawDao()
+        val first = raw.firstMs() ?: return "No readings stored yet"
+        val stream = app.contentResolver.openOutputStream(uri, "wt") ?: throw IOException("Android would not open that file for writing.")
+        var count = 0
+        stream.bufferedWriter(Charsets.UTF_8).use { w ->
+            val gpx = if (csv) null else Gpx.Writer(w, "Life Tracker readings")
+            if (gpx != null) gpx.begin() else w.append(Gpx.csvHeader())
+            val chunk = 7L * 24 * 60 * 60_000L
+            val end = System.currentTimeMillis() + 1
+            var from = first
+            while (from < end) {
+                val fixes = raw.between(from, from + chunk)
+                count += fixes.size
+                if (gpx != null) gpx.add(fixes) else Gpx.csvRows(w, fixes)
+                from += chunk
+            }
+            gpx?.end()
+        }
+        return "Exported $count reading${if (count == 1) "" else "s"} as ${if (csv) "CSV" else "GPX"}."
+    }
+
+    /** Writes every trip, one track each, to the file you chose. */
+    fun exportTrips(uri: Uri) {
+        viewModelScope.launch {
+            transferFlow.value = "Exporting..."
+            transferFlow.value = runCatching {
+                withContext(Dispatchers.IO) {
+                    val tripDao = AppDatabase.get(app).tripDao()
+                    val trips = tripDao.allTrips().sortedBy { it.startMs }
+                    val points = tripDao.allPoints().groupBy { it.tripId }
+                    val zone = ZoneId.systemDefault()
+                    val tracks = trips.map { t ->
+                        val day = Instant.ofEpochMilli(t.startMs).atZone(zone).toLocalDate()
+                        "$day ${TripModes.label(t.mode)} ${TripRules.distanceText(t.distanceM)}" to (points[t.id] ?: emptyList())
+                    }
+                    val stream = app.contentResolver.openOutputStream(uri, "wt") ?: throw IOException("Android would not open that file for writing.")
+                    stream.bufferedWriter(Charsets.UTF_8).use { Gpx.writeTrips(it, tracks) }
+                    "Exported ${trips.size} trip${if (trips.size == 1) "" else "s"} as GPX."
+                }
+            }.getOrElse { "Export failed: ${it.message ?: it.javaClass.simpleName}" }
+        }
+    }
+
+    /**
+     * Adds the positions in a GPX file (from GPSLogger or any other app) to the stored readings, which are only ever added to,
+     * then works the visits out again from all the readings. Readings you already had (same second) are left alone.
+     */
+    fun importGpx(uri: Uri) {
+        viewModelScope.launch {
+            transferFlow.value = "Reading the file..."
+            transferFlow.value = runCatching {
+                withContext(Dispatchers.IO) {
+                    val parsed = app.contentResolver.openInputStream(uri)?.use { Gpx.parse(it) }
+                        ?: throw IOException("Android would not open that file.")
+                    val usable = parsed.fixes.filter { it.acc <= PlaceRules.MAX_ACCURACY_M }
+                    val raw = AppDatabase.get(app).rawDao()
+                    val before = raw.count()
+                    usable.chunked(2_000).forEach { raw.insertMissing(it) }
+                    val added = raw.count() - before
+                    if (added > 0) PlacesTracker.cleanupAll(app)
+                    "Found ${parsed.fixes.size} reading${if (parsed.fixes.size == 1) "" else "s"} in the file: $added new, " +
+                        "${usable.size - added} already here, ${parsed.fixes.size - usable.size} too inaccurate, ${parsed.skipped} without a position or time." +
+                        if (added > 0) " Visits were worked out again." else ""
+                }
+            }.getOrElse { "Import failed: ${it.message ?: it.javaClass.simpleName}" }
+            statusFlow.value = readStatus()
+            readingsFlow.value = runCatching { readReadings() }.getOrElse { readingsFlow.value }
         }
     }
 

@@ -74,6 +74,19 @@ fun PlacesScreen(onBack: () -> Unit, onOpenTrips: () -> Unit, vm: PlacesViewMode
     val alwaysOn by vm.alwaysOn.collectAsState()
     val alwaysOnInterval by vm.alwaysOnIntervalSec.collectAsState()
     val readings by vm.readings.collectAsState()
+    val transfer by vm.transfer.collectAsState()
+    val exportGpx = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/gpx+xml")) { uri ->
+        if (uri != null) vm.exportReadings(uri, csv = false)
+    }
+    val exportCsv = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
+        if (uri != null) vm.exportReadings(uri, csv = true)
+    }
+    val exportTrips = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/gpx+xml")) { uri ->
+        if (uri != null) vm.exportTrips(uri)
+    }
+    val importGpx = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) vm.importGpx(uri)
+    }
     val rebuilding by vm.rebuilding.collectAsState()
     var adding by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<PlaceEntity?>(null) }
@@ -337,6 +350,24 @@ fun PlacesScreen(onBack: () -> Unit, onOpenTrips: () -> Unit, vm: PlacesViewMode
             ) {
                 OutlinedButton(enabled = !rebuilding, onClick = vm::rebuildAll) {
                     Text(if (rebuilding) "Tidying..." else "Tidy everything from my readings")
+                }
+            }
+        }
+        item { MonoLabel("Export and import") }
+        item {
+            PlacesCard(
+                title = "GPX and CSV files",
+                text = "Save your readings or trips as a file other apps can open, or add the positions from a GPX file (for example from GPSLogger). " +
+                    "Importing only adds readings; nothing is replaced or deleted, and visits are worked out again afterwards." +
+                    (if (transfer.isNotEmpty()) "\n\n$transfer" else ""),
+            ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { exportGpx.launch("life-tracker-readings.gpx") }) { Text("Readings GPX") }
+                    OutlinedButton(onClick = { exportCsv.launch("life-tracker-readings.csv") }) { Text("Readings CSV") }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { exportTrips.launch("life-tracker-trips.gpx") }) { Text("Trips GPX") }
+                    Button(onClick = { importGpx.launch(arrayOf("*/*")) }) { Text("Import GPX") }
                 }
             }
         }
