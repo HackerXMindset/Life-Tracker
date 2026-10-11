@@ -1,5 +1,6 @@
 package com.lifetracker.app.data
 
+import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Entity
 import androidx.room.Index
@@ -21,6 +22,8 @@ import kotlinx.coroutines.flow.Flow
  * the app you arrived and left), "stop" (the phone stayed still for a while there) or "manual".
  * [ongoing] is true while you are still there. [ignored] hides an unnamed stop you said is not a place.
  * For an unnamed stop [lat] and [lng] are where the phone was; for a named place they are the place's centre.
+ * [confidence] (added in database version 14) is how sure the app is that the visit happened as shown, 0 to 100, worked
+ * out from the readings taken during it (see StayConfidence); -1 means not worked out (yet).
  *
  * IMPORTANT: if any column here changes, the database version must go up and a
  * Migration must be added. See MIGRATION_9_10 in Database.kt.
@@ -48,6 +51,7 @@ data class PlaceVisitEntity(
     val source: String,
     val ongoing: Boolean,
     val ignored: Boolean,
+    @ColumnInfo(defaultValue = "-1") val confidence: Int = -1,
 )
 
 @Dao
@@ -106,4 +110,7 @@ interface PlaceDao {
 
     @Query("UPDATE place_visits SET ignored = 1 WHERE id IN (:ids)")
     suspend fun ignore(ids: List<String>)
+
+    @Query("UPDATE place_visits SET confidence = :confidence WHERE id = :id")
+    suspend fun setConfidence(id: String, confidence: Int)
 }

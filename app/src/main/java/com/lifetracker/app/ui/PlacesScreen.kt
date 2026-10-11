@@ -53,6 +53,7 @@ import com.lifetracker.app.data.KeepAlive
 import com.lifetracker.app.data.PlaceEntity
 import com.lifetracker.app.data.PlaceKinds
 import com.lifetracker.app.data.PlaceRules
+import com.lifetracker.app.data.StayConfidence
 import java.time.Instant
 import java.time.ZoneId
 
@@ -238,8 +239,15 @@ fun PlacesScreen(onBack: () -> Unit, onOpenTrips: () -> Unit, vm: PlacesViewMode
                         (if (cluster.visits.size > 1) "  to  " + formatDateTime(cluster.lastMs) else "") + "\n" +
                         PlaceRules.coordinatesText(cluster.lat, cluster.lng),
                 ) {
+                    val hint = suggestions[vm.suggestionKey(cluster)]
+                    if (hint != null) {
+                        Button(
+                            onClick = { vm.addPlace(hint, "other", PlaceRules.DEFAULT_RADIUS, cluster.lat, cluster.lng) },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) { Text("Use \"$hint\"") }
+                    }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = { naming = cluster }) { Text("Name it") }
+                        if (hint != null) OutlinedButton(onClick = { naming = cluster }) { Text("Rename") } else Button(onClick = { naming = cluster }) { Text("Name it") }
                         OutlinedButton(onClick = {
                             val label = Uri.encode("Stop")
                             runCatching {
@@ -311,7 +319,8 @@ fun PlacesScreen(onBack: () -> Unit, onOpenTrips: () -> Unit, vm: PlacesViewMode
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(row.name, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onBackground)
                     Text(
-                        formatDateTime(v.startMs) + " → " + end + " · " + PlaceRules.durationText(PlaceRules.lengthMs(v, now)),
+                        formatDateTime(v.startMs) + " → " + end + " · " + PlaceRules.durationText(PlaceRules.lengthMs(v, now)) +
+                            (if (StayConfidence.isUnsure(v.confidence)) " · unsure" else ""),
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
