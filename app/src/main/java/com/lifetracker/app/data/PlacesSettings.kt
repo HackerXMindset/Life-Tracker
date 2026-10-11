@@ -17,6 +17,54 @@ class PlacesSettings(context: Context) {
         get() = prefs.getInt("interval_sec", 60)
         set(value) = prefs.edit { putInt("interval_sec", value) }
 
+    /** Whether trips (the way between two stays) are recorded. */
+    var recordTrips: Boolean
+        get() = prefs.getBoolean("record_trips", true)
+        set(value) = prefs.edit { putBoolean("record_trips", value) }
+
+    /** Seconds between position readings while you are travelling. */
+    var tripIntervalSec: Int
+        get() = prefs.getInt("trip_interval_sec", 30)
+        set(value) = prefs.edit { putInt("trip_interval_sec", value) }
+
+    /** Always-on mode: the position readings run all the time (more complete, more battery) instead of only when needed. */
+    var alwaysOn: Boolean
+        get() = prefs.getBoolean("always_on", false)
+        set(value) = prefs.edit { putBoolean("always_on", value) }
+
+    /** Seconds between readings in always-on mode while you are not moving. */
+    var alwaysOnIntervalSec: Int
+        get() = prefs.getInt("always_on_interval_sec", 120)
+        set(value) = prefs.edit { putInt("always_on_interval_sec", value) }
+
+    /** The last time the readings were seen running (a reading arrived or the service started). */
+    var lastBeatMs: Long
+        get() = prefs.getLong("last_beat", 0L)
+        set(value) = prefs.edit { putLong("last_beat", value) }
+
+    /** How many times the 15 minute check had to start the readings again because Android had stopped them, and when last. */
+    var watchdogStarts: Int
+        get() = prefs.getInt("watchdog_starts", 0)
+        set(value) = prefs.edit { putInt("watchdog_starts", value) }
+
+    var lastWatchdogMs: Long
+        get() = prefs.getLong("last_watchdog", 0L)
+        set(value) = prefs.edit { putLong("last_watchdog", value) }
+
+    /** When the readings were last looked at again to tidy visits and trips, and what it found. */
+    var lastCleanupMs: Long
+        get() = prefs.getLong("last_cleanup", 0L)
+        set(value) = prefs.edit { putLong("last_cleanup", value) }
+
+    var lastCleanupNote: String
+        get() = prefs.getString("last_cleanup_note", "") ?: ""
+        set(value) = prefs.edit { putString("last_cleanup_note", value) }
+
+    /** Whether trips are drawn on the Timeline. */
+    var showTripsOnTimeline: Boolean
+        get() = prefs.getBoolean("show_trips_on_timeline", true)
+        set(value) = prefs.edit { putBoolean("show_trips_on_timeline", value) }
+
     /** Whether readings use GPS (most accurate, more battery) or only Wi-Fi and mobile network. */
     var useGps: Boolean
         get() = prefs.getBoolean("use_gps", true)

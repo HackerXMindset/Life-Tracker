@@ -118,18 +118,14 @@ object PlacesTracker {
         }
 
         if (hasActivityRecognition(context)) {
-            val request = ActivityTransitionRequest(
-                listOf(
-                    ActivityTransition.Builder()
-                        .setActivityType(DetectedActivity.STILL)
-                        .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_ENTER)
-                        .build(),
-                    ActivityTransition.Builder()
-                        .setActivityType(DetectedActivity.STILL)
-                        .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_EXIT)
-                        .build(),
-                ),
-            )
+            val transitions = buildList {
+                add(ActivityTransition.Builder().setActivityType(DetectedActivity.STILL).setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_ENTER).build())
+                add(ActivityTransition.Builder().setActivityType(DetectedActivity.STILL).setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_EXIT).build())
+                listOf(DetectedActivity.WALKING, DetectedActivity.RUNNING, DetectedActivity.ON_BICYCLE, DetectedActivity.IN_VEHICLE).forEach { type ->
+                    add(ActivityTransition.Builder().setActivityType(type).setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_ENTER).build())
+                }
+            }
+            val request = ActivityTransitionRequest(transitions)
             val result = runCatching { recognition.requestActivityTransitionUpdates(request, transitionIntent(context)).outcome() }
             val error = result.exceptionOrNull() ?: result.getOrNull()?.error
             if (error != null) status.append("; still/moving detection failed: ").append(error.message ?: error.javaClass.simpleName)
@@ -171,37 +167,179 @@ object PlacesTracker {
                 settings.engine = next
                 PlaceEngine.keepWatching(next, System.currentTimeMillis())
             }
-            if (watch && hasLocation(context)) PlaceWatchService.start(context)
+            if ((watch || settings.alwaysOn) && hasLocation(context)) PlaceWatchService.start(context)
         }
 
-    /** One position reading from the watch service. Returns whether the readings should go on. */
-    suspend fun onFix(context: Context, fix: Fix): Boolean = withContext(Dispatchers.IO) {
+    /** What the watch service should do after a reading: keep going or stop, how often to read, and whether to use GPS. */
+    class Watch(val keep: Boolean, val intervalSec: Int, val highAccuracy: Boolean)
+
+    /** Seconds between readings while you are standing still: the always-on pace in always-on mode, else the usual one. */
+    fun baseIntervalSec(settings: PlacesSettings): Int = if (settings.alwaysOn) settings.alwaysOnIntervalSec else settings.intervalSec
+
+    /** GPS is used when you chose it, except in always-on mode while you are standing still (Wi-Fi and mobile network then). */
+    fun useHighAccuracy(settings: PlacesSettings, state: WatchState): Boolean =
+        settings.useGps && (!settings.alwaysOn || state.moving || state.trip != null)
+
+    /** Android says you are now walking, running, cycling or in a vehicle. */
+    suspend fun onActivity(context: Context, name: String, atMs: Long) = trigger(context, atMs) { state ->
+        PlaceEngine.onActivity(state, name, atMs, System.currentTimeMillis())
+    }
+
+    /** One position reading from the watch service. */
+    suspend fun onFix(context: Context, fix: Fix): Watch = withContext(Dispatchers.IO) {
         lock.withLock {
             val settings = PlacesSettings(context)
-            val dao = AppDatabase.get(context).placeDao()
+            val db = AppDatabase.get(context)
+            val dao = db.placeDao()
             val now = System.currentTimeMillis()
             val recent = dao.visitsAround(fix.timeMs - 12 * 60 * 60_000L, fix.timeMs)
-            val step = PlaceEngine.onFix(settings.engine, fix, dao.activePlaces(), recent, now)
+            if (fix.accuracyM <= PlaceRules.MAX_ACCURACY_M) {
+                db.rawDao().add(RawFixEntity(fix.timeMs, fix.lat, fix.lng, fix.accuracyM))
+            }
+            val step = PlaceEngine.onFix(settings.engine, fix, dao.activePlaces(), recent, now, settings.recordTrips)
             if (step.saves.isNotEmpty()) dao.upsertVisits(step.saves)
+            if (step.points.isNotEmpty()) db.tripDao().addPoints(step.points)
+            step.finish?.let { finishTrip(db, it) }
             settings.engine = step.state
             settings.lastFixMs = now
-            step.keepWatching
+            Watch(
+                step.keepWatching || settings.alwaysOn,
+                PlaceEngine.intervalSec(step.state, baseIntervalSec(settings), settings.tripIntervalSec),
+                useHighAccuracy(settings, step.state),
+            )
         }
     }
+
+    /** Works out the distance and speeds of a trip that has ended and saves it, unless it was only GPS drift. */
+    private suspend fun finishTrip(db: AppDatabase, f: TripFinish) {
+        val dao = db.tripDao()
+        val points = dao.points(f.id)
+        val stats = TripRules.stats(points, f.startMs, f.endMs)
+        if (!TripRules.isRealTrip(stats)) {
+            dao.dropPoints(f.id)
+            return
+        }
+        val guess = TripModes.guess(stats, f.acts, f.fromPlaceId, f.toPlaceId, dao.corrected().map { TripModes.learned(it) })
+        dao.upsertTrip(
+            TripEntity(
+                id = f.id,
+                startMs = f.startMs,
+                endMs = f.endMs,
+                fromPlaceId = f.fromPlaceId,
+                toPlaceId = f.toPlaceId,
+                distanceM = stats.distanceM,
+                medianKmh = stats.medianKmh,
+                topKmh = stats.topKmh,
+                activity = TripModes.activityText(f.acts),
+                mode = guess,
+                modeSource = "auto",
+            ),
+        )
+    }
+
+    /** Whether the readings should be running right now and are not. */
+    private fun needsStarting(settings: PlacesSettings, now: Long): Boolean =
+        PlacesWatchdog.shouldStart(
+            enabled = settings.enabled,
+            alwaysOn = settings.alwaysOn,
+            wanted = PlaceEngine.keepWatching(settings.engine, now),
+            watching = settings.watching,
+            lastBeatMs = settings.lastBeatMs,
+            nowMs = now,
+            intervalSec = PlaceEngine.intervalSec(settings.engine, baseIntervalSec(settings), settings.tripIntervalSec),
+        )
 
     /** Starts the readings if the app should be checking where you are right now (used when the app is opened). */
     fun resumeIfNeeded(context: Context) {
         val settings = PlacesSettings(context)
-        if (settings.enabled && hasLocation(context) && !settings.watching &&
-            PlaceEngine.keepWatching(settings.engine, System.currentTimeMillis())
-        ) {
-            PlaceWatchService.start(context)
+        if (hasLocation(context) && needsStarting(settings, System.currentTimeMillis())) PlaceWatchService.start(context)
+    }
+
+    /**
+     * The 15 minute check: if Android stopped the readings while they should be running, start them again and count it,
+     * so the Places screen shows how often the phone is doing that.
+     */
+    fun watchdog(context: Context, now: Long = System.currentTimeMillis()) {
+        val settings = PlacesSettings(context)
+        if (!hasLocation(context) || !needsStarting(settings, now)) return
+        if (PlaceWatchService.start(context)) {
+            settings.watchdogStarts = settings.watchdogStarts + 1
+            settings.lastWatchdogMs = now
         }
     }
 
     /** Called after a restart: Android forgot the geofences. */
     suspend fun afterRestart(context: Context) {
         runCatching { syncAll(context) }
+        val settings = PlacesSettings(context)
+        if (settings.enabled && settings.alwaysOn && hasLocation(context)) PlaceWatchService.start(context)
+    }
+
+    /** What a tidy-up changed. */
+    class Cleanup(val added: Int = 0, val stretched: Int = 0, val trips: Int = 0) {
+        operator fun plus(o: Cleanup) = Cleanup(added + o.added, stretched + o.stretched, trips + o.trips)
+
+        fun text(): String =
+            "Added $added visit${if (added == 1) "" else "s"}, stretched $stretched, corrected $trips trip${if (trips == 1) "" else "s"}"
+    }
+
+    /**
+     * Looks at the readings between [fromMs] and [toMs] again and tidies the visits and trips (see [PlaceCleanup]).
+     * Readings from the last half hour are left to the live detector.
+     */
+    private suspend fun cleanup(context: Context, fromMs: Long, toMs: Long, now: Long): Cleanup =
+        withContext(Dispatchers.IO) {
+            lock.withLock {
+                val db = AppDatabase.get(context)
+                val end = minOf(toMs, now - PlaceCleanup.SETTLE_MS)
+                if (end <= fromMs) return@withLock Cleanup()
+                val margin = 6 * 60 * 60_000L
+                val readings = db.rawDao().between(fromMs - margin, end)
+                val stays = StayBuilder.build(FixFilter.clean(readings)).filter { it.endMs >= fromMs }
+                val places = db.placeDao().activePlaces()
+                val saved = db.placeDao().visitsAround(fromMs - 24 * 60 * 60_000L, end + 24 * 60 * 60_000L)
+                val plan = PlaceCleanup.plan(stays, places, saved)
+                val rows = plan.adds + plan.updates
+                if (rows.isNotEmpty()) db.placeDao().upsertVisits(rows)
+
+                var trips = 0
+                for (t in db.tripDao().tripsIn(fromMs, end)) {
+                    val fixed = PlaceCleanup.refreshTrip(t, db.tripDao().points(t.id)) ?: continue
+                    db.tripDao().setStats(fixed.id, fixed.distanceM, fixed.medianKmh, fixed.topKmh)
+                    trips++
+                }
+                Cleanup(plan.adds.size, plan.updates.size, trips)
+            }
+        }
+
+    /** The tidy-up the app does by itself: the last three days. */
+    suspend fun cleanupRecent(context: Context, now: Long = System.currentTimeMillis()) {
+        val note = runCatching { cleanup(context, now - 3 * 24 * 60 * 60_000L, now, now).text() }
+            .getOrElse { "Stopped: ${it.message ?: it.javaClass.simpleName}" }
+        val settings = PlacesSettings(context)
+        settings.lastCleanupMs = now
+        settings.lastCleanupNote = note
+    }
+
+    /** Tidies everything the readings cover, a week at a time. Returns a line saying what it did. */
+    suspend fun cleanupAll(context: Context, now: Long = System.currentTimeMillis()): String {
+        val first = AppDatabase.get(context).rawDao().firstMs() ?: return "No readings stored yet"
+        val week = 7 * 24 * 60 * 60_000L
+        var from = first
+        var total = Cleanup()
+        val note = try {
+            while (from < now) {
+                total += cleanup(context, from, from + week, now)
+                from += week
+            }
+            "Whole history: " + total.text()
+        } catch (e: Exception) {
+            "Stopped: ${e.message ?: e.javaClass.simpleName}"
+        }
+        val settings = PlacesSettings(context)
+        settings.lastCleanupMs = now
+        settings.lastCleanupNote = note
+        return note
     }
 
     /** One position reading using the best source available (GPS if it can). Null if none arrives in time. */

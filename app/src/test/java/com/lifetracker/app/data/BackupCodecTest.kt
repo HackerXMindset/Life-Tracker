@@ -85,6 +85,21 @@ class BackupCodecTest {
             PlaceVisitEntity("v1760000000000", "p1", 1_760_000_000_000L, 1_760_003_600_000L, 28.6139, 77.2090, "geofence", false, false),
             PlaceVisitEntity("v1760010000000", "", 1_760_010_000_000L, 1_760_010_000_000L, 28.7, 77.3, "stop", true, true),
         ),
+        trips = listOf(
+            TripEntity("t1760003600000", 1_760_003_600_000L, 1_760_004_800_000L, "p1", "", 4450, 26, 31, "IN_VEHICLE=595000,WALKING=30000", "auto", "you"),
+            TripEntity("t1760020000000", 1_760_020_000_000L, 1_760_020_600_000L, "", "p2", 800, 5, 7, "", "walk", "auto"),
+        ),
+        tripPoints = listOf(
+            TripPointEntity("t1760003600000", 1_760_003_600_000L, 28.61, 77.21, 15f),
+            TripPointEntity("t1760003600000", 1_760_003_630_000L, 28.6122, 77.2101, 12.5f),
+            TripPointEntity("t1760020000000", 1_760_020_000_000L, 28.7, 77.3, 8f),
+        ),
+        rawFixes = listOf(
+            RawFixEntity(1_760_000_000_000L, 28.610123, 77.209456, 12f),
+            RawFixEntity(1_760_000_030_000L, 28.610200, 77.209400, 9f),
+            RawFixEntity(1_760_000_090_500L, 28.609900, 77.209800, 30f),
+            RawFixEntity(1_760_200_000_000L, -33.868800, 151.209300, 5f),
+        ),
     )
 
     @Test
@@ -183,6 +198,43 @@ class BackupCodecTest {
         assertEquals(9, back.version)
         assertTrue(back.places.isEmpty())
         assertTrue(back.placeVisits.isEmpty())
+    }
+
+    @Test
+    fun versionTenBackupsStillLoad() {
+        val v10 = """{"app":"life-tracker","version":10,"exportedAt":"x","entries":[],"places":[],"placeVisits":[]}"""
+        val back = BackupCodec.decode(v10)
+        assertEquals(10, back.version)
+        assertTrue(back.trips.isEmpty())
+        assertTrue(back.tripPoints.isEmpty())
+    }
+
+    @Test
+    fun versionElevenBackupsStillLoad() {
+        val v11 = """{"app":"life-tracker","version":11,"exportedAt":"x","entries":[],"trips":[],"tripPoints":[]}"""
+        val back = BackupCodec.decode(v11)
+        assertEquals(11, back.version)
+        assertTrue(back.rawFixes.isEmpty())
+    }
+
+    @Test
+    fun readingsAloneMakeABackupNonEmptyAndComeBackExactly() {
+        val only = BackupData(12, "x", emptyList(), rawFixes = full.rawFixes)
+        assertTrue(!only.isEmpty)
+        assertEquals(full.rawFixes, BackupCodec.decode(BackupCodec.encode(only)).rawFixes)
+    }
+
+    @Test
+    fun damagedReadingsAreRefusedNotCrashed() {
+        val bad = """{"app":"life-tracker","version":12,"exportedAt":"x","entries":[],"rawFixes":[{"day":20000,"rows":"1,2,x,4"}]}"""
+        expectRefusal(bad)
+    }
+
+    @Test
+    fun tripsAloneMakeABackupNonEmpty() {
+        val only = BackupData(11, "x", emptyList(), trips = full.trips)
+        assertTrue(!only.isEmpty)
+        assertEquals(full.trips, BackupCodec.decode(BackupCodec.encode(only)).trips)
     }
 
     @Test

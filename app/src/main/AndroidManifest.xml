@@ -39,6 +39,8 @@
     <uses-permission android:name="com.google.android.gms.permission.ACTIVITY_RECOGNITION" />
     <!-- Sets the places up again after the phone restarts. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Lets the app ask you to stop the phone from putting it to sleep, so places and trips are not missed. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <!-- Lets the app see whether Health Connect is installed (Android 13 and older). -->
     <queries>
@@ -85,7 +87,8 @@
         <service
             android:name=".data.PlaceWatchService"
             android:exported="false"
-            android:foregroundServiceType="location" />
+            android:foregroundServiceType="location"
+            android:stopWithTask="false" />
         <receiver
             android:name=".data.GeofenceReceiver"
             android:exported="false" />
