@@ -59,7 +59,7 @@ import java.time.ZoneId
 
 /** Places: the spots you named, the stops waiting for a name, and every visit. */
 @Composable
-fun PlacesScreen(onBack: () -> Unit, onOpenTrips: () -> Unit, vm: PlacesViewModel = viewModel()) {
+fun PlacesScreen(onBack: () -> Unit, onOpenTrips: () -> Unit, part: Part = Part.Data, vm: PlacesViewModel = viewModel()) {
     val context = LocalContext.current
     val data by vm.data.collectAsState()
     val clusters by vm.clusters.collectAsState()
@@ -117,93 +117,118 @@ fun PlacesScreen(onBack: () -> Unit, onOpenTrips: () -> Unit, vm: PlacesViewMode
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item { TextButton(onClick = onBack) { Text("Back") } }
-        item { ScreenHeader(label = "Phone", badge = "On this phone", title = "Places") }
+        item { ScreenHeader(label = if (part == Part.Data) "Stats" else "Settings", badge = "On this phone", title = "Places") }
 
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("Watch my places", color = MaterialTheme.colorScheme.onBackground)
-                Switch(checked = enabled, onCheckedChange = vm::setEnabled)
+        if (part == Part.Settings) {
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Watch my places", color = MaterialTheme.colorScheme.onBackground)
+                    Switch(checked = enabled, onCheckedChange = vm::setEnabled)
+                }
             }
-        }
 
-        if (!access.all) {
+            if (!access.all) {
+                item {
+                    PlacesCard(
+                        title = "Three permissions, one after the other",
+                        text = "1. Location: " + tick(access.location) + "\n" +
+                            "2. Location \"Allow all the time\": " + tick(access.background) + "\n" +
+                            "3. Physical activity (notices when the phone stays still): " + tick(access.activity) + "\n\n" +
+                            "Without \"all the time\", Android only tells the app about places while it is open. " +
+                            "Nothing leaves the phone.",
+                    ) {
+                        if (!access.location) {
+                            Button(onClick = {
+                                askLocation.launch(
+                                    arrayOf(
+                                        android.Manifest.permission.ACCESS_FINE_LOCATION,
+                                        android.Manifest.permission.ACCESS_COARSE_LOCATION,
+                                    ),
+                                )
+                            }) { Text("Allow location") }
+                        } else if (!access.background) {
+                            Button(onClick = {
+                                if (Build.VERSION.SDK_INT >= 29) askBackground.launch(android.Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                            }) { Text("Allow all the time") }
+                        } else if (!access.activity) {
+                            Button(onClick = {
+                                if (Build.VERSION.SDK_INT >= 29) askActivity.launch(android.Manifest.permission.ACTIVITY_RECOGNITION)
+                            }) { Text("Allow physical activity") }
+                        }
+                        TextButton(onClick = {
+                            context.startActivity(
+                                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                            )
+                        }) { Text("Open this app's settings") }
+                    }
+                }
+            }
+
+            item {
+                PlacesCard(title = if (enabled) "Status" else "Status (switched off)", text = status) {}
+            }
+
+        }
+        if (part == Part.Data && !enabled) {
+            item { SetupNote("Place watching is switched off. Turn it on in the Settings tab, under Places.") }
+        }
+        if (part == Part.Data) {
+            item { OutlinedButton(onClick = onOpenTrips) { Text("Trips: how you got between places") } }
+
+        }
+        if (part == Part.Settings) {
+            item { MonoLabel("Keep it running") }
             item {
                 PlacesCard(
-                    title = "Three permissions, one after the other",
-                    text = "1. Location: " + tick(access.location) + "\n" +
-                        "2. Location \"Allow all the time\": " + tick(access.background) + "\n" +
-                        "3. Physical activity (notices when the phone stays still): " + tick(access.activity) + "\n\n" +
-                        "Without \"all the time\", Android only tells the app about places while it is open. " +
-                        "Nothing leaves the phone.",
+                    title = "Stop the phone putting the app to sleep",
+                    text = "Battery: " + (if (access.battery) "no restrictions ✓" else "restricted, not yet allowed") + "\n\n" +
+                        "Xiaomi's HyperOS stops background apps to save battery, which is the main reason places and trips get missed. " +
+                        "Allow unrestricted battery, turn Autostart on, and set this app's battery saver to \"No restrictions\". " +
+                        "If a button opens the wrong page, use \"Open this app's settings\" above.",
                 ) {
-                    if (!access.location) {
-                        Button(onClick = {
-                            askLocation.launch(
-                                arrayOf(
-                                    android.Manifest.permission.ACCESS_FINE_LOCATION,
-                                    android.Manifest.permission.ACCESS_COARSE_LOCATION,
-                                ),
-                            )
-                        }) { Text("Allow location") }
-                    } else if (!access.background) {
-                        Button(onClick = {
-                            if (Build.VERSION.SDK_INT >= 29) askBackground.launch(android.Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-                        }) { Text("Allow all the time") }
-                    } else if (!access.activity) {
-                        Button(onClick = {
-                            if (Build.VERSION.SDK_INT >= 29) askActivity.launch(android.Manifest.permission.ACTIVITY_RECOGNITION)
-                        }) { Text("Allow physical activity") }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = { KeepAlive.open(context, KeepAlive.exemptionIntents(context)) }) { Text("Allow unrestricted") }
+                        OutlinedButton(onClick = { KeepAlive.open(context, KeepAlive.autostartIntents(context)) }) { Text("Autostart") }
                     }
-                    TextButton(onClick = {
-                        context.startActivity(
-                            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))
-                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                        )
-                    }) { Text("Open this app's settings") }
+                    OutlinedButton(onClick = { KeepAlive.open(context, KeepAlive.batterySaverIntents(context)) }) { Text("Battery saver: No restrictions") }
                 }
             }
-        }
-
-        item {
-            PlacesCard(title = if (enabled) "Status" else "Status (switched off)", text = status) {}
-        }
-
-        item { OutlinedButton(onClick = onOpenTrips) { Text("Trips: how you got between places") } }
-
-        item { MonoLabel("Keep it running") }
-        item {
-            PlacesCard(
-                title = "Stop the phone putting the app to sleep",
-                text = "Battery: " + (if (access.battery) "no restrictions ✓" else "restricted, not yet allowed") + "\n\n" +
-                    "Xiaomi's HyperOS stops background apps to save battery, which is the main reason places and trips get missed. " +
-                    "Allow unrestricted battery, turn Autostart on, and set this app's battery saver to \"No restrictions\". " +
-                    "If a button opens the wrong page, use \"Open this app's settings\" above.",
-            ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { KeepAlive.open(context, KeepAlive.exemptionIntents(context)) }) { Text("Allow unrestricted") }
-                    OutlinedButton(onClick = { KeepAlive.open(context, KeepAlive.autostartIntents(context)) }) { Text("Autostart") }
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Always on (more complete, more battery)", color = MaterialTheme.colorScheme.onBackground)
+                    Switch(checked = alwaysOn, onCheckedChange = vm::setAlwaysOn)
                 }
-                OutlinedButton(onClick = { KeepAlive.open(context, KeepAlive.batterySaverIntents(context)) }) { Text("Battery saver: No restrictions") }
             }
-        }
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("Always on (more complete, more battery)", color = MaterialTheme.colorScheme.onBackground)
-                Switch(checked = alwaysOn, onCheckedChange = vm::setAlwaysOn)
+            if (alwaysOn) {
+                item {
+                    Text(
+                        "Reads your position all the time, using Wi-Fi and mobile network while you stand still and GPS while you move. A notification shows all the time. How often while standing still:",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(60 to "1 min", 120 to "2 min", 300 to "5 min").forEach { (sec, label) ->
+                            FilterChip(selected = alwaysOnInterval == sec, onClick = { vm.setAlwaysOnIntervalSec(sec) }, label = { Text(label) })
+                        }
+                    }
+                }
             }
-        }
-        if (alwaysOn) {
+
+            item { MonoLabel("How closely to watch") }
             item {
                 Text(
-                    "Reads your position all the time, using Wi-Fi and mobile network while you stand still and GPS while you move. A notification shows all the time. How often while standing still:",
+                    "At a spot the app does not know, it checks your position this often until you leave. At a place you named it checks twice and then rests.",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -211,209 +236,197 @@ fun PlacesScreen(onBack: () -> Unit, onOpenTrips: () -> Unit, vm: PlacesViewMode
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(60 to "1 min", 120 to "2 min", 300 to "5 min").forEach { (sec, label) ->
-                        FilterChip(selected = alwaysOnInterval == sec, onClick = { vm.setAlwaysOnIntervalSec(sec) }, label = { Text(label) })
+                        FilterChip(selected = interval == sec, onClick = { vm.setIntervalSec(sec) }, label = { Text(label) })
                     }
                 }
             }
-        }
-
-        item { MonoLabel("How closely to watch") }
-        item {
-            Text(
-                "At a spot the app does not know, it checks your position this often until you leave. At a place you named it checks twice and then rests.",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(60 to "1 min", 120 to "2 min", 300 to "5 min").forEach { (sec, label) ->
-                    FilterChip(selected = interval == sec, onClick = { vm.setIntervalSec(sec) }, label = { Text(label) })
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Use GPS (most exact, more battery)", color = MaterialTheme.colorScheme.onBackground)
+                    Switch(checked = useGps, onCheckedChange = vm::setUseGps)
                 }
             }
-        }
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("Use GPS (most exact, more battery)", color = MaterialTheme.colorScheme.onBackground)
-                Switch(checked = useGps, onCheckedChange = vm::setUseGps)
-            }
-        }
 
-        if (clusters.isNotEmpty()) {
-            item { MonoLabel("To review · ${clusters.size} spot${if (clusters.size == 1) "" else "s"}") }
-            items(clusters, key = { it.ids.first() }) { cluster ->
+        }
+        if (part == Part.Data) {
+            if (clusters.isNotEmpty()) {
+                item { MonoLabel("To review · ${clusters.size} spot${if (clusters.size == 1) "" else "s"}") }
+                items(clusters, key = { it.ids.first() }) { cluster ->
+                    PlacesCard(
+                        title = "${cluster.visits.size} stop${if (cluster.visits.size == 1) "" else "s"} · " + PlaceRules.durationText(cluster.totalMs),
+                        text = (suggestions[vm.suggestionKey(cluster)]?.let { "Looks like: $it\n" } ?: "") + formatDateTime(cluster.firstMs) +
+                            (if (cluster.visits.size > 1) "  to  " + formatDateTime(cluster.lastMs) else "") + "\n" +
+                            PlaceRules.coordinatesText(cluster.lat, cluster.lng),
+                    ) {
+                        val hint = suggestions[vm.suggestionKey(cluster)]
+                        if (hint != null) {
+                            Button(
+                                onClick = { vm.addPlace(hint, "other", PlaceRules.DEFAULT_RADIUS, cluster.lat, cluster.lng) },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) { Text("Use \"$hint\"") }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (hint != null) OutlinedButton(onClick = { naming = cluster }) { Text("Rename") } else Button(onClick = { naming = cluster }) { Text("Name it") }
+                            OutlinedButton(onClick = {
+                                val label = Uri.encode("Stop")
+                                runCatching {
+                                    context.startActivity(
+                                        Intent(Intent.ACTION_VIEW, Uri.parse("geo:${cluster.lat},${cluster.lng}?q=${cluster.lat},${cluster.lng}($label)"))
+                                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                                    )
+                                }
+                            }) { Text("Map") }
+                            TextButton(onClick = { vm.ignore(cluster) }) { Text("Not a place") }
+                        }
+                    }
+                }
+            }
+
+            item { MonoLabel("Your places") }
+            if (data.rows.isEmpty()) {
+                item {
+                    Text(
+                        "No places yet. Add one (Home, Library, Gym), or stay somewhere for 3 minutes and it appears above for you to name.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            } else {
+                items(data.rows, key = { it.place.id }) { row ->
+                    Column(
+                        modifier = Modifier.fillMaxWidth().clickable { editing = row.place },
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        Text(
+                            row.place.name + if (row.place.archived) "  (not watched)" else "",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onBackground,
+                        )
+                        Text(
+                            PlaceKinds.label(row.place.kind) + " · ${row.place.radiusM} m" +
+                                if (row.visits > 0) " · " + PlaceRules.durationText(row.ms) + " in ${row.visits} visit${if (row.visits == 1) "" else "s"}" else "",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+            item { Button(onClick = { adding = true }) { Text("Add a place") } }
+
+            item { MonoLabel("Visits") }
+            item { RangePicker(choice = range, onChange = vm::setRange) }
+            item {
+                Text(
+                    "Time at your places: " + PlaceRules.durationText(shownMs),
+                    fontSize = 17.sp,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+            }
+            if (data.visits.isEmpty()) {
+                item {
+                    Text(
+                        "No visits on these days.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            } else {
+                items(data.visits.take(200), key = { it.visit.id }) { row ->
+                    val v = row.visit
+                    val zone = ZoneId.systemDefault()
+                    val end = if (v.ongoing) "now" else Instant.ofEpochMilli(v.endMs).atZone(zone).let { formatMinute(it.hour * 60 + it.minute) }
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(row.name, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onBackground)
+                        Text(
+                            formatDateTime(v.startMs) + " → " + end + " · " + PlaceRules.durationText(PlaceRules.lengthMs(v, now)) +
+                                (if (StayConfidence.isUnsure(v.confidence)) " · unsure" else ""),
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+
+        }
+        if (part == Part.Settings) {
+            item { MonoLabel("Readings") }
+            item {
                 PlacesCard(
-                    title = "${cluster.visits.size} stop${if (cluster.visits.size == 1) "" else "s"} · " + PlaceRules.durationText(cluster.totalMs),
-                    text = (suggestions[vm.suggestionKey(cluster)]?.let { "Looks like: $it\n" } ?: "") + formatDateTime(cluster.firstMs) +
-                        (if (cluster.visits.size > 1) "  to  " + formatDateTime(cluster.lastMs) else "") + "\n" +
-                        PlaceRules.coordinatesText(cluster.lat, cluster.lng),
+                    title = "${readings.total} readings stored",
+                    text = "Every position reading is kept for good, so visits and trips can be worked out again later.\n\n" +
+                        "Readings in each of the last 24 hours (oldest first):\n" + readings.hourly.joinToString(" ") + "\n\n" + readings.gapText,
                 ) {
-                    val hint = suggestions[vm.suggestionKey(cluster)]
-                    if (hint != null) {
-                        Button(
-                            onClick = { vm.addPlace(hint, "other", PlaceRules.DEFAULT_RADIUS, cluster.lat, cluster.lng) },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) { Text("Use \"$hint\"") }
+                    OutlinedButton(enabled = !rebuilding, onClick = vm::rebuildAll) {
+                        Text(if (rebuilding) "Tidying..." else "Tidy everything from my readings")
+                    }
+                }
+            }
+            item { MonoLabel("Export and import") }
+            item {
+                PlacesCard(
+                    title = "GPX and CSV files",
+                    text = "Save your readings or trips as a file other apps can open, or add the positions from a GPX file (for example from GPSLogger). " +
+                        "Importing only adds readings; nothing is replaced or deleted, and visits are worked out again afterwards." +
+                        (if (transfer.isNotEmpty()) "\n\n$transfer" else ""),
+                ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = { exportGpx.launch("life-tracker-readings.gpx") }) { Text("Readings GPX") }
+                        OutlinedButton(onClick = { exportCsv.launch("life-tracker-readings.csv") }) { Text("Readings CSV") }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        if (hint != null) OutlinedButton(onClick = { naming = cluster }) { Text("Rename") } else Button(onClick = { naming = cluster }) { Text("Name it") }
-                        OutlinedButton(onClick = {
-                            val label = Uri.encode("Stop")
-                            runCatching {
-                                context.startActivity(
-                                    Intent(Intent.ACTION_VIEW, Uri.parse("geo:${cluster.lat},${cluster.lng}?q=${cluster.lat},${cluster.lng}($label)"))
-                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                                )
-                            }
-                        }) { Text("Map") }
-                        TextButton(onClick = { vm.ignore(cluster) }) { Text("Not a place") }
+                        OutlinedButton(onClick = { exportTrips.launch("life-tracker-trips.gpx") }) { Text("Trips GPX") }
+                        Button(onClick = { importGpx.launch(arrayOf("*/*")) }) { Text("Import GPX") }
                     }
                 }
             }
-        }
 
-        item { MonoLabel("Your places") }
-        if (data.rows.isEmpty()) {
+            item { MonoLabel("On the Timeline") }
             item {
-                Text(
-                    "No places yet. Add one (Home, Library, Gym), or stay somewhere for 3 minutes and it appears above for you to name.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        } else {
-            items(data.rows, key = { it.place.id }) { row ->
-                Column(
-                    modifier = Modifier.fillMaxWidth().clickable { editing = row.place },
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        row.place.name + if (row.place.archived) "  (not watched)" else "",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
-                    Text(
-                        PlaceKinds.label(row.place.kind) + " · ${row.place.radiusM} m" +
-                            if (row.visits > 0) " · " + PlaceRules.durationText(row.ms) + " in ${row.visits} visit${if (row.visits == 1) "" else "s"}" else "",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    Text("Show visits on the Timeline", color = MaterialTheme.colorScheme.onBackground)
+                    Switch(checked = showOnTimeline, onCheckedChange = vm::setShowOnTimeline)
                 }
             }
-        }
-        item { Button(onClick = { adding = true }) { Text("Add a place") } }
-
-        item { MonoLabel("Visits") }
-        item { RangePicker(choice = range, onChange = vm::setRange) }
-        item {
-            Text(
-                "Time at your places: " + PlaceRules.durationText(shownMs),
-                fontSize = 17.sp,
-                fontFamily = FontFamily.Monospace,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-        }
-        if (data.visits.isEmpty()) {
+            item { MonoLabel("How it works") }
             item {
                 Text(
-                    "No visits on these days.",
+                    "Android wakes the app when you come near a place, leave one, or the phone goes still or starts moving. " +
+                        "Then the app reads your position (a notification shows while it does). Staying in one spot for 3 minutes is a stay: " +
+                        "inside a place's circle it is a visit to that place, anywhere else it waits above for you to name it. " +
+                        "If you go 200 m or more away and come back, that is a new visit (the trip between shows in Trips); " +
+                        "GPS wobble that never went that far stays one visit. " +
+                        "At a spot the app does not know it keeps checking at the pace you chose until you leave, and the start and end times come from when " +
+                        "the phone went still and started moving. At a named place it checks twice and rests until you move. " +
+                        "The circle you give a place is the real size used to decide you are there; Android's own ring around it is at least 150 m, only to wake the app. " +
+                        "Names for unnamed spots are suggested by OpenStreetMap over the internet (only the position of that stop is sent, once). " +
+                        "Places are never deleted: \"not watched\" only stops the watching, and \"Not a place\" only hides.",
+                    fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-        } else {
-            items(data.visits.take(200), key = { it.visit.id }) { row ->
-                val v = row.visit
-                val zone = ZoneId.systemDefault()
-                val end = if (v.ongoing) "now" else Instant.ofEpochMilli(v.endMs).atZone(zone).let { formatMinute(it.hour * 60 + it.minute) }
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(row.name, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onBackground)
-                    Text(
-                        formatDateTime(v.startMs) + " → " + end + " · " + PlaceRules.durationText(PlaceRules.lengthMs(v, now)) +
-                            (if (StayConfidence.isUnsure(v.confidence)) " · unsure" else ""),
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+            item {
+                PlacesCard(
+                    title = "If visits never appear (Xiaomi / HyperOS)",
+                    text = "Open Android Settings > Apps > this app and turn on Autostart, set Battery saver to No restrictions, " +
+                        "and set Location to Allow all the time. HyperOS otherwise stops background work to save battery. " +
+                        "The status line above shows when Android last told the app something, so you can tell whether it works.",
+                ) {}
             }
-        }
-
-        item { MonoLabel("Readings") }
-        item {
-            PlacesCard(
-                title = "${readings.total} readings stored",
-                text = "Every position reading is kept for good, so visits and trips can be worked out again later.\n\n" +
-                    "Readings in each of the last 24 hours (oldest first):\n" + readings.hourly.joinToString(" ") + "\n\n" + readings.gapText,
-            ) {
-                OutlinedButton(enabled = !rebuilding, onClick = vm::rebuildAll) {
-                    Text(if (rebuilding) "Tidying..." else "Tidy everything from my readings")
-                }
+            item {
+                Text(
+                    "Backups include your places and visits. Nothing leaves the phone.",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
-        }
-        item { MonoLabel("Export and import") }
-        item {
-            PlacesCard(
-                title = "GPX and CSV files",
-                text = "Save your readings or trips as a file other apps can open, or add the positions from a GPX file (for example from GPSLogger). " +
-                    "Importing only adds readings; nothing is replaced or deleted, and visits are worked out again afterwards." +
-                    (if (transfer.isNotEmpty()) "\n\n$transfer" else ""),
-            ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { exportGpx.launch("life-tracker-readings.gpx") }) { Text("Readings GPX") }
-                    OutlinedButton(onClick = { exportCsv.launch("life-tracker-readings.csv") }) { Text("Readings CSV") }
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { exportTrips.launch("life-tracker-trips.gpx") }) { Text("Trips GPX") }
-                    Button(onClick = { importGpx.launch(arrayOf("*/*")) }) { Text("Import GPX") }
-                }
-            }
-        }
-
-        item { MonoLabel("On the Timeline") }
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("Show visits on the Timeline", color = MaterialTheme.colorScheme.onBackground)
-                Switch(checked = showOnTimeline, onCheckedChange = vm::setShowOnTimeline)
-            }
-        }
-        item { MonoLabel("How it works") }
-        item {
-            Text(
-                "Android wakes the app when you come near a place, leave one, or the phone goes still or starts moving. " +
-                    "Then the app reads your position (a notification shows while it does). Staying in one spot for 3 minutes is a stay: " +
-                    "inside a place's circle it is a visit to that place, anywhere else it waits above for you to name it. " +
-                    "If you go 200 m or more away and come back, that is a new visit (the trip between shows in Trips); " +
-                    "GPS wobble that never went that far stays one visit. " +
-                    "At a spot the app does not know it keeps checking at the pace you chose until you leave, and the start and end times come from when " +
-                    "the phone went still and started moving. At a named place it checks twice and rests until you move. " +
-                    "The circle you give a place is the real size used to decide you are there; Android's own ring around it is at least 150 m, only to wake the app. " +
-                    "Names for unnamed spots are suggested by OpenStreetMap over the internet (only the position of that stop is sent, once). " +
-                    "Places are never deleted: \"not watched\" only stops the watching, and \"Not a place\" only hides.",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        item {
-            PlacesCard(
-                title = "If visits never appear (Xiaomi / HyperOS)",
-                text = "Open Android Settings > Apps > this app and turn on Autostart, set Battery saver to No restrictions, " +
-                    "and set Location to Allow all the time. HyperOS otherwise stops background work to save battery. " +
-                    "The status line above shows when Android last told the app something, so you can tell whether it works.",
-            ) {}
-        }
-        item {
-            Text(
-                "Backups include your places and visits. Nothing leaves the phone.",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
 

@@ -86,10 +86,13 @@ import java.time.format.DateTimeFormatter
 private const val DAYS_BACK = 60
 private const val DAYS_AHEAD = 30
 
+/** The id of the built-in Study activity. */
+private const val STUDY_ID = "Study"
+
 private fun EntryEntity.minutes(): Int = ActivityStats.minutes(this)
 
 @Composable
-fun TimelineScreen(onOpenTrips: () -> Unit, onOpenData: () -> Unit, onOpenActivities: () -> Unit, onOpenPhone: () -> Unit, onOpenCalls: () -> Unit, onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPlaces: () -> Unit, vm: TimelineViewModel = viewModel()) {
+fun TimelineScreen(onOpenTrips: () -> Unit, onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPlaces: () -> Unit, vm: TimelineViewModel = viewModel()) {
     val date by vm.date.collectAsState()
     val entries by vm.entries.collectAsState()
     val todos by vm.todos.collectAsState()
@@ -120,29 +123,20 @@ fun TimelineScreen(onOpenTrips: () -> Unit, onOpenData: () -> Unit, onOpenActivi
     val dayStartMs = date.atStartOfDay(zone).toInstant().toEpochMilli()
     val dayEndMs = date.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
     val nowMs = System.currentTimeMillis()
-    val dayPlaces = PlaceRules.totals(placeVisits, dayStartMs, dayEndMs, nowMs)
     val sleepShown = if (showHealth) sleepNight?.takeIf { it.source != SleepStats.SKIPPED } else null
     val usageAccess = UsageCollector.hasAccess(context)
     val showPhone = usageAccess && usageSettings.showOnTimeline
     val minBlockMs = usageSettings.minBlockMinutes * 60_000L
-    var promptDismissed by remember { mutableStateOf(usageSettings.promptDismissed) }
     val callsAccess = CallsCollector.hasAccess(context)
     val showCalls = callsAccess && callsSettings.showOnTimeline
-    var callsPromptDismissed by remember { mutableStateOf(callsSettings.promptDismissed) }
 
     var showLog by remember { mutableStateOf(false) }
     var toDelete by remember { mutableStateOf<EntryEntity?>(null) }
 
-    // Sleep from the Steps and sleep screen counts towards the Sleep goal, unless you logged Sleep yourself that day.
-    val extraMinutes = usageDay.minutesByActivity.toMutableMap().also { map ->
-        if (sleepShown != null && entries.none { it.category == "Sleep" }) {
-            map["Sleep"] = (map["Sleep"] ?: 0) + SleepStats.minutes(sleepShown)
-        }
-    }
-    val goals = ActivityStats.goalProgress(types, entries, extraMinutes)
-    val reachedGoals = goals.count { !it.isLimit && it.ok }
-    val minimumGoals = goals.count { !it.isLimit }
-    val trackedMinutes = entries.sumOf { it.minutes() }
+    // The three numbers at the top: steps, time on the phone, and time studying (what you logged plus apps linked to Study).
+    val stepCount = steps?.steps ?: 0
+    val phoneMinutes = (usageDay.totalMs / 60_000L).toInt()
+    val studyMinutes = (ActivityStats.minutesByActivity(entries)[STUDY_ID] ?: 0) + (usageDay.minutesByActivity[STUDY_ID] ?: 0)
     val title = remember(date) { date.format(DateTimeFormatter.ofPattern("EEEE d MMMM")) }
 
     // Timed items sit in order with the entries; items without a time get their own sections below.
@@ -175,57 +169,17 @@ fun TimelineScreen(onOpenTrips: () -> Unit, onOpenData: () -> Unit, onOpenActivi
                     label = "Timeline",
                     badge = "Saved on this phone",
                     title = title,
-                    trailing = {
-                        IconButton(onClick = onOpenActivities) {
-                            Icon(painterResource(R.drawable.ic_activities), contentDescription = "Activities and goals")
-                        }
-                        IconButton(onClick = onOpenData) {
-                            Icon(painterResource(R.drawable.ic_settings), contentDescription = "Data sources")
-                        }
-                    },
                 )
             }
             item {
                 DayStrip(selected = date, datesWithEntries = datesWithEntries, onSelect = vm::selectDate)
             }
-            item {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    SummaryStat("Tracked", formatDuration(trackedMinutes), Modifier.weight(1f))
-                    SummaryStat("Entries", entries.size.toString(), Modifier.weight(1f))
-                    if (minimumGoals > 0) {
-                        SummaryStat("Goals met", "$reachedGoals of $minimumGoals", Modifier.weight(1f))
-                    }
-                }
-            }
-            items(goals, key = { "g" + it.type.id }) { GoalBar(it) }
-            if (usageAccess) {
-                if (usageDay.totalMs >= 60_000L) {
-                    item(key = "phone-summary") { PhoneSummary(usageDay, onClick = onOpenPhone) }
-                }
-            } else if (!promptDismissed) {
-                item(key = "phone-prompt") {
-                    PhonePrompt(
-                        onOpen = onOpenPhone,
-                        onDismiss = { usageSettings.promptDismissed = true; promptDismissed = true },
-                    )
-                }
-            }
-            item(key = "health-summary") { HealthSummary(steps, sleepNight, onClick = onOpenSteps) }
-            item(key = "places-summary") { PlacesSummary(dayPlaces, placeNames, onClick = onOpenPlaces) }
-            if (dayTrips.isNotEmpty()) {
-                item(key = "trips-summary") { TripsSummary(dayTrips, onClick = onOpenTrips) }
-            }
-            if (callsAccess) {
-                if (calls.isNotEmpty()) {
-                    item(key = "calls-summary") { CallsSummary(calls, onClick = onOpenCalls) }
-                }
-            } else if (!callsPromptDismissed) {
-                item(key = "calls-prompt") {
-                    CallsPrompt(
-                        onOpen = onOpenCalls,
-                        onDismiss = { callsSettings.promptDismissed = true; callsPromptDismissed = true },
-                    )
-                }
+            item(key = "day-numbers") {
+                DayNumbers(
+                    steps = if (stepCount > 0) StepStats.text(stepCount) else "–",
+                    phone = if (phoneMinutes > 0) formatDuration(phoneMinutes) else "–",
+                    study = if (studyMinutes > 0) formatDuration(studyMinutes) else "–",
+                )
             }
             if (timed.isEmpty() && anyTimeTodos.isEmpty() && anyTimeNotes.isEmpty()) {
                 item {
@@ -391,52 +345,7 @@ private fun DayStrip(selected: LocalDate, datesWithEntries: Set<String>, onSelec
     }
 }
 
-@Composable
-private fun GoalBar(progress: ActivityStats.GoalProgress) {
-    val type = progress.type
-    val color = if (progress.isLimit && !progress.ok) MaterialTheme.colorScheme.error else type.displayColor()
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            MonoLabel(if (progress.isLimit) "${type.name} limit" else "${type.name} goal")
-            Text(
-                text = "${formatDuration(progress.minutes)} of ${formatDuration(progress.goal)}",
-                fontSize = 12.sp,
-                fontFamily = FontFamily.Monospace,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(8.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)),
-        ) {
-            if (progress.fraction > 0f) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(progress.fraction)
-                        .height(8.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(color),
-                )
-            }
-        }
-    }
-}
 
-@Composable
-private fun SummaryStat(label: String, value: String, modifier: Modifier = Modifier) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        MonoLabel(label)
-        Text(
-            text = value,
-            fontSize = 17.sp,
-            fontFamily = FontFamily.Monospace,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
-    }
-}
 
 @Composable
 private fun EntryRow(entry: EntryEntity, type: ActivityTypeEntity, onClick: () -> Unit) {
@@ -738,72 +647,7 @@ private fun MealRow(meal: MealEntity, foodType: ActivityTypeEntity) {
     }
 }
 
-@Composable
-private fun PhoneSummary(day: UsageDays.Day, onClick: () -> Unit) {
-    val top = day.perApp.take(3)
-    Surface(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-    ) {
-        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                MonoLabel("On your phone")
-                Text(
-                    text = formatDuration((day.totalMs / 60_000L).toInt()),
-                    fontSize = 14.sp,
-                    fontFamily = FontFamily.Monospace,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-            top.forEach { (pkg, ms) ->
-                val label = day.blocks.firstOrNull { it.pkg == pkg }?.label ?: pkg
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(label, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(
-                        text = formatDuration((ms / 60_000L).toInt()),
-                        fontSize = 12.sp,
-                        fontFamily = FontFamily.Monospace,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-            Text(
-                text = "Tap for every app and settings",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
 
-@Composable
-private fun PhonePrompt(onOpen: () -> Unit, onDismiss: () -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-    ) {
-        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(
-                text = "See your phone use here",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = "Allow usage access and every app you open appears on the Timeline with its exact time.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = onOpen) { Text("Set up") }
-                TextButton(onClick = onDismiss) { Text("Not now") }
-            }
-        }
-    }
-}
 
 @Composable
 private fun PhoneRow(block: UsageDays.Block, activity: ActivityTypeEntity?) {
@@ -850,67 +694,7 @@ private fun PhoneRow(block: UsageDays.Block, activity: ActivityTypeEntity?) {
     }
 }
 
-@Composable
-private fun CallsSummary(calls: List<CallEntity>, onClick: () -> Unit) {
-    val totals = CallStats.totals(calls)
-    Surface(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-    ) {
-        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                MonoLabel("Calls")
-                Text(
-                    text = "${totals.calls} · " + CallStats.durationText(totals.talkSec),
-                    fontSize = 14.sp,
-                    fontFamily = FontFamily.Monospace,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-            if (totals.missed > 0) {
-                Text(
-                    text = "${totals.missed} missed",
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.error,
-                )
-            }
-            Text(
-                text = "Tap for people and settings",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
 
-@Composable
-private fun CallsPrompt(onOpen: () -> Unit, onDismiss: () -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-    ) {
-        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(
-                text = "See your calls here",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = "Allow call log access and every call appears on the Timeline with who it was and how long it lasted.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = onOpen) { Text("Set up") }
-                TextButton(onClick = onDismiss) { Text("Not now") }
-            }
-        }
-    }
-}
 
 @Composable
 private fun CallRow(call: CallEntity) {
@@ -1002,37 +786,6 @@ private fun ChargeTimelineRow(session: ChargeSessionEntity, onClick: () -> Unit)
     }
 }
 
-@Composable
-private fun HealthSummary(steps: StepDayEntity?, sleep: SleepNightEntity?, onClick: () -> Unit) {
-    val stepsText = steps?.takeIf { it.steps > 0 }?.let { StepStats.text(it.steps) }
-    val sleepMinutes = sleep?.takeIf { it.source != SleepStats.SKIPPED }?.let { SleepStats.minutes(it) } ?: 0
-    Surface(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-    ) {
-        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                MonoLabel("Steps and sleep")
-                Text(
-                    text = listOfNotNull(
-                        stepsText?.let { "$it steps" },
-                        if (sleepMinutes > 0) "slept " + formatDuration(sleepMinutes) else null,
-                    ).joinToString(" · ").ifEmpty { "–" },
-                    fontSize = 14.sp,
-                    fontFamily = FontFamily.Monospace,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-            Text(
-                text = if (stepsText == null && sleepMinutes == 0) "Tap to set up steps and sleep" else "Tap for days, nights and settings",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
 
 @Composable
 private fun SleepTimelineRow(night: SleepNightEntity, onClick: () -> Unit) {
@@ -1081,33 +834,6 @@ private fun SleepTimelineRow(night: SleepNightEntity, onClick: () -> Unit) {
     }
 }
 
-@Composable
-private fun PlacesSummary(totals: List<PlaceRules.PlaceTotal>, names: Map<String, String>, onClick: () -> Unit) {
-    val text = totals.take(3).joinToString(" · ") { (names[it.placeId] ?: "Place") + " " + PlaceRules.durationText(it.ms) }
-    Surface(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-    ) {
-        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                MonoLabel("Places")
-                Text(
-                    text = text.ifEmpty { "–" },
-                    fontSize = 14.sp,
-                    fontFamily = FontFamily.Monospace,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-            Text(
-                text = if (totals.isEmpty()) "Tap to set up places" else "Tap for places, visits and stops to review",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
 
 @Composable
 private fun PlaceTimelineRow(item: PlaceItem, now: Long, onClick: () -> Unit) {
@@ -1158,34 +884,6 @@ private fun PlaceTimelineRow(item: PlaceItem, now: Long, onClick: () -> Unit) {
     }
 }
 
-@Composable
-private fun TripsSummary(trips: List<TripEntity>, onClick: () -> Unit) {
-    val distance = trips.sumOf { it.distanceM.toLong() }.toInt()
-    val ms = trips.sumOf { it.endMs - it.startMs }
-    Surface(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-    ) {
-        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                MonoLabel("Trips")
-                Text(
-                    text = "${trips.size} · " + TripRules.distanceText(distance) + " · " + PlaceRules.durationText(ms),
-                    fontSize = 14.sp,
-                    fontFamily = FontFamily.Monospace,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-            Text(
-                text = "Tap for every trip and to say how you travelled",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
 
 @Composable
 private fun TripTimelineRow(item: TripItem, onClick: () -> Unit) {
@@ -1231,5 +929,51 @@ private fun TripTimelineRow(item: TripItem, onClick: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+}
+
+/** Steps, time on the phone and time studying for the chosen day, in one card. */
+@Composable
+private fun DayNumbers(steps: String, phone: String, study: String) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+    ) {
+        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            DayNumber(R.drawable.ic_stat_steps, "steps", steps, Modifier.weight(1f))
+            Box(modifier = Modifier.width(1.dp).height(40.dp).background(MaterialTheme.colorScheme.outline))
+            DayNumber(R.drawable.ic_stat_phone, "phone", phone, Modifier.weight(1f))
+            Box(modifier = Modifier.width(1.dp).height(40.dp).background(MaterialTheme.colorScheme.outline))
+            DayNumber(R.drawable.ic_stat_study, "studied", study, Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun DayNumber(icon: Int, label: String, value: String, modifier: Modifier = Modifier) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            Icon(
+                painter = painterResource(icon),
+                contentDescription = null,
+                modifier = Modifier.size(13.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = label,
+                fontSize = 12.sp,
+                fontFamily = FontFamily.Monospace,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Text(
+            text = value,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.SemiBold,
+            fontFamily = FontFamily.Monospace,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
     }
 }

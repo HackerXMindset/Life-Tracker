@@ -52,18 +52,6 @@ fun ActivityEditorDialog(
 ) {
     var name by remember { mutableStateOf(initial?.name.orEmpty()) }
     var color by remember { mutableLongStateOf(initial?.color ?: ACTIVITY_PALETTE.first()) }
-    // 0 = no goal, 1 = at least, 2 = at most
-    var mode by remember {
-        mutableIntStateOf(
-            when {
-                initial == null || initial.goalMinutes <= 0 -> 0
-                initial.goalKind == ActivityTypeEntity.GOAL_AT_MOST -> 2
-                else -> 1
-            },
-        )
-    }
-    var hours by remember { mutableStateOf(((initial?.goalMinutes ?: 0) / 60).takeIf { it > 0 }?.toString().orEmpty()) }
-    var minutes by remember { mutableStateOf(((initial?.goalMinutes ?: 0) % 60).takeIf { it > 0 }?.toString().orEmpty()) }
     var error by remember { mutableStateOf<String?>(null) }
 
     AlertDialog(
@@ -103,45 +91,6 @@ fun ActivityEditorDialog(
                     }
                 }
 
-                MonoLabel("Daily goal")
-                Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    FilterChip(selected = mode == 0, onClick = { mode = 0 }, label = { Text("None") })
-                    FilterChip(selected = mode == 1, onClick = { mode = 1 }, label = { Text("At least") })
-                    FilterChip(selected = mode == 2, onClick = { mode = 2 }, label = { Text("At most") })
-                }
-                if (mode != 0) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        OutlinedTextField(
-                            value = hours,
-                            onValueChange = { hours = it.filter(Char::isDigit).take(2); error = null },
-                            modifier = Modifier.weight(1f),
-                            label = { Text("Hours") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            singleLine = true,
-                        )
-                        OutlinedTextField(
-                            value = minutes,
-                            onValueChange = { minutes = it.filter(Char::isDigit).take(2); error = null },
-                            modifier = Modifier.weight(1f),
-                            label = { Text("Minutes") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            singleLine = true,
-                        )
-                    }
-                    Text(
-                        text = if (mode == 1) "A bar on the Timeline fills up as you log this, until you reach the goal."
-                        else "A limit, such as screen time. The bar turns red if you go over it.",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-
                 error?.let { Text(text = it, color = MaterialTheme.colorScheme.error, fontSize = 13.sp) }
 
                 if (onToggleArchived != null && initial != null) {
@@ -153,18 +102,16 @@ fun ActivityEditorDialog(
         },
         confirmButton = {
             TextButton(onClick = {
-                val goal = if (mode == 0) 0 else (hours.toIntOrNull() ?: 0) * 60 + (minutes.toIntOrNull() ?: 0)
                 when {
                     name.isBlank() -> error = "Give it a name."
-                    mode != 0 && goal <= 0 -> error = "Set a goal above zero, or choose None."
-                    mode != 0 && goal > 24 * 60 -> error = "A day only has 24 hours."
                     else -> onSave(
                         ActivityTypeEntity(
                             id = initial?.id ?: ActivityStats.newId(System.currentTimeMillis()),
                             name = name.trim(),
                             color = color,
-                            goalMinutes = goal,
-                            goalKind = if (mode == 2) ActivityTypeEntity.GOAL_AT_MOST else ActivityTypeEntity.GOAL_AT_LEAST,
+                            // Goals are no longer shown anywhere, but whatever was stored is kept as it was.
+                            goalMinutes = initial?.goalMinutes ?: 0,
+                            goalKind = initial?.goalKind ?: ActivityTypeEntity.GOAL_AT_LEAST,
                             archived = initial?.archived ?: false,
                             sortOrder = initial?.sortOrder ?: -1,
                         ),

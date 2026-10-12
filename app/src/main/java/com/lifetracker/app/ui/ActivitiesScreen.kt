@@ -37,7 +37,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lifetracker.app.data.ActivityTypeEntity
 
-/** Settings screen for the kinds of activity you log: names, colours and daily goals. */
+/** Settings screen for the kinds of activity you log: names and colours. */
 @Composable
 fun ActivitiesScreen(onBack: () -> Unit, vm: ActivitiesViewModel = viewModel()) {
     val types by vm.types.collectAsState()
@@ -58,7 +58,7 @@ fun ActivitiesScreen(onBack: () -> Unit, vm: ActivitiesViewModel = viewModel()) 
         item { ScreenHeader(label = "Settings", badge = "On this phone", title = "Activities") }
         item {
             Text(
-                text = "These are the choices in the Log pop-up. Give any activity a daily goal and it gets a bar on the Timeline.",
+                text = "These are the choices in the Log pop-up. Change a name or colour, add your own, or hide one you never use. Nothing you logged is ever removed.",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -109,11 +109,6 @@ private fun ActivityCard(type: ActivityTypeEntity, onClick: () -> Unit) {
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
-                )
-                Text(
-                    text = goalText(type),
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }

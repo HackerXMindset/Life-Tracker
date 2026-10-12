@@ -68,7 +68,7 @@ private class NightEdit(val date: LocalDate, val startMinute: Int, val endMinute
 
 /** Steps and sleep: connect Health Connect, see steps by day, see and fix each night's sleep. */
 @Composable
-fun StepsSleepScreen(onBack: () -> Unit, vm: StepsSleepViewModel = viewModel()) {
+fun StepsSleepScreen(onBack: () -> Unit, part: Part = Part.Data, vm: StepsSleepViewModel = viewModel()) {
     val context = LocalContext.current
     val hc by vm.hcState.collectAsState()
     val days by vm.days.collectAsState()
@@ -143,194 +143,204 @@ fun StepsSleepScreen(onBack: () -> Unit, vm: StepsSleepViewModel = viewModel()) 
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item { TextButton(onClick = onBack) { Text("Back") } }
-        item { ScreenHeader(label = "Phone", badge = "On this phone", title = "Steps and sleep") }
+        item { ScreenHeader(label = if (part == Part.Data) "Stats" else "Settings", badge = "On this phone", title = "Steps and sleep") }
 
-        item {
-            when (hc) {
-                HcState.Checking -> Unit
-                HcState.Connected -> HealthCard(
-                    title = "Health Connect is connected",
-                    text = "Steps come from Health Connect, which on Android 14 and newer counts your phone's steps itself. " +
-                        "It only started counting when an app was first allowed to read steps, so earlier days stay empty unless another app saved them there.",
-                ) {
-                    TextButton(onClick = ::openSettings) { Text("Open Health Connect") }
+        if (part == Part.Settings) {
+            item {
+                when (hc) {
+                    HcState.Checking -> Unit
+                    HcState.Connected -> HealthCard(
+                        title = "Health Connect is connected",
+                        text = "Steps come from Health Connect, which on Android 14 and newer counts your phone's steps itself. " +
+                            "It only started counting when an app was first allowed to read steps, so earlier days stay empty unless another app saved them there.",
+                    ) {
+                        TextButton(onClick = ::openSettings) { Text("Open Health Connect") }
+                    }
+                    HcState.NeedsPermission -> HealthCard(
+                        title = "Allow Health Connect",
+                        text = "The app reads your steps and any sleep other apps saved there, and keeps its own copy on this phone. Nothing leaves the phone.",
+                    ) {
+                        Button(onClick = { askHealth.launch(HealthConnectSync.REQUEST) }) { Text("Allow") }
+                        TextButton(onClick = ::openSettings) { Text("Open Health Connect settings") }
+                    }
+                    HcState.NeedsUpdate -> HealthCard(
+                        title = "Update Health Connect",
+                        text = "Health Connect needs an update from the Play Store before the app can read it.",
+                    ) {
+                        Button(onClick = {
+                            runCatching {
+                                context.startActivity(
+                                    Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=${HealthConnectSync.PACKAGE}"))
+                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                                )
+                            }
+                        }) { Text("Open Play Store") }
+                    }
+                    HcState.Unavailable -> HealthCard(
+                        title = "Health Connect is not available",
+                        text = "This phone does not have Health Connect. Switch on the phone's step counter below to count steps.",
+                    ) {}
                 }
-                HcState.NeedsPermission -> HealthCard(
-                    title = "Allow Health Connect",
-                    text = "The app reads your steps and any sleep other apps saved there, and keeps its own copy on this phone. Nothing leaves the phone.",
-                ) {
-                    Button(onClick = { askHealth.launch(HealthConnectSync.REQUEST) }) { Text("Allow") }
-                    TextButton(onClick = ::openSettings) { Text("Open Health Connect settings") }
-                }
-                HcState.NeedsUpdate -> HealthCard(
-                    title = "Update Health Connect",
-                    text = "Health Connect needs an update from the Play Store before the app can read it.",
-                ) {
-                    Button(onClick = {
-                        runCatching {
-                            context.startActivity(
-                                Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=${HealthConnectSync.PACKAGE}"))
-                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            }
+
+            if (vm.hasCounterSensor) {
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text("Use the phone's step counter", color = MaterialTheme.colorScheme.onBackground)
+                            Switch(
+                                checked = useCounter && counterPermission,
+                                onCheckedChange = { on ->
+                                    if (!on) vm.setUseStepCounter(false)
+                                    else if (counterPermission) vm.setUseStepCounter(true)
+                                    else askActivity.launch(android.Manifest.permission.ACTIVITY_RECOGNITION)
+                                },
                             )
                         }
-                    }) { Text("Open Play Store") }
+                        Text(
+                            "Only used on days Health Connect has no steps. Counts from when you switch it on, in readings taken whenever the app syncs, " +
+                                "so steps are filed under the day of the reading. Asks for the \"Physical activity\" permission.",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
-                HcState.Unavailable -> HealthCard(
-                    title = "Health Connect is not available",
-                    text = "This phone does not have Health Connect. Switch on the phone's step counter below to count steps.",
-                ) {}
             }
+
+        }
+        if (part == Part.Data && hc != HcState.Connected && !(useCounter && counterPermission)) {
+            item { SetupNote("No step source is switched on yet. Allow Health Connect or the phone's step counter in the Settings tab, under Steps and sleep.") }
         }
 
-        if (vm.hasCounterSensor) {
+        if (part == Part.Data) {
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text("Use the phone's step counter", color = MaterialTheme.colorScheme.onBackground)
-                        Switch(
-                            checked = useCounter && counterPermission,
-                            onCheckedChange = { on ->
-                                if (!on) vm.setUseStepCounter(false)
-                                else if (counterPermission) vm.setUseStepCounter(true)
-                                else askActivity.launch(android.Manifest.permission.ACTIVITY_RECOGNITION)
-                            },
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column {
+                        MonoLabel("Last updated")
+                        Text(
+                            text = if (lastSync.isEmpty()) "Not yet" else lastSync,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 13.sp,
+                        )
+                    }
+                    OutlinedButton(onClick = vm::sync, enabled = !syncing) { Text(if (syncing) "Updating..." else "Update now") }
+                }
+            }
+
+            item { RangePicker(choice = range, onChange = vm::setRange) }
+            item {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    HealthStat("Steps", StepStats.text(stepTotals.total.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()), Modifier.weight(1f))
+                    HealthStat("Per day", StepStats.text(stepTotals.average), Modifier.weight(1f))
+                    HealthStat("Sleep per night", if (avgSleep == 0) "–" else formatDuration(avgSleep), Modifier.weight(1f))
+                }
+            }
+
+            item { MonoLabel("Sleep · tap a night to fix it") }
+            if (nights.none { it.source != SleepStats.SKIPPED }) {
+                item {
+                    Text(
+                        "No sleep found on these days. It is worked out from when you stop using the phone at night, so it needs Phone usage switched on, " +
+                            "and it only covers days the app has copied. You can add a night yourself.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            items(nights.filter { it.source != SleepStats.SKIPPED }, key = { "n" + it.date }) { night ->
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            editing = NightEdit(LocalDate.parse(night.date), minuteOf(night.startMs), minuteOf(night.endMs), night)
+                        },
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(
+                            dayText(night.date),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onBackground,
+                        )
+                        Text(
+                            formatDuration(SleepStats.minutes(night)),
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onBackground,
                         )
                     }
                     Text(
-                        "Only used on days Health Connect has no steps. Counts from when you switch it on, in readings taken whenever the app syncs, " +
-                            "so steps are filed under the day of the reading. Asks for the \"Physical activity\" permission.",
+                        formatMinute(minuteOf(night.startMs)) + " → " + formatMinute(minuteOf(night.endMs)) + " · " + SleepStats.label(night.source),
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
-        }
+            item { OutlinedButton(onClick = ::addNight) { Text("Add or fix a night") } }
 
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column {
-                    MonoLabel("Last updated")
+            item { MonoLabel("Steps by day") }
+            if (days.none { it.steps > 0 }) {
+                item {
                     Text(
-                        text = if (lastSync.isEmpty()) "Not yet" else lastSync,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 13.sp,
+                        "No steps on these days yet.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                OutlinedButton(onClick = vm::sync, enabled = !syncing) { Text(if (syncing) "Updating..." else "Update now") }
             }
-        }
-
-        item { RangePicker(choice = range, onChange = vm::setRange) }
-        item {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                HealthStat("Steps", StepStats.text(stepTotals.total.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()), Modifier.weight(1f))
-                HealthStat("Per day", StepStats.text(stepTotals.average), Modifier.weight(1f))
-                HealthStat("Sleep per night", if (avgSleep == 0) "–" else formatDuration(avgSleep), Modifier.weight(1f))
-            }
-        }
-
-        item { MonoLabel("Sleep · tap a night to fix it") }
-        if (nights.none { it.source != SleepStats.SKIPPED }) {
-            item {
-                Text(
-                    "No sleep found on these days. It is worked out from when you stop using the phone at night, so it needs Phone usage switched on, " +
-                        "and it only covers days the app has copied. You can add a night yourself.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-        items(nights.filter { it.source != SleepStats.SKIPPED }, key = { "n" + it.date }) { night ->
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        editing = NightEdit(LocalDate.parse(night.date), minuteOf(night.startMs), minuteOf(night.endMs), night)
-                    },
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
+            items(days.filter { it.steps > 0 }.take(120), key = { "d" + it.date }) { day ->
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(dayText(day.date), color = MaterialTheme.colorScheme.onBackground)
                     Text(
-                        dayText(night.date),
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
-                    Text(
-                        formatDuration(SleepStats.minutes(night)),
+                        StepStats.text(day.steps),
                         fontFamily = FontFamily.Monospace,
                         fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.onBackground,
                     )
                 }
+            }
+
+        }
+        if (part == Part.Settings) {
+            item { MonoLabel("Settings") }
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Work out sleep from phone use", color = MaterialTheme.colorScheme.onBackground)
+                    Switch(checked = estimate, onCheckedChange = vm::setEstimateSleep)
+                }
+            }
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Show on the Timeline", color = MaterialTheme.colorScheme.onBackground)
+                    Switch(checked = showOnTimeline, onCheckedChange = vm::setShowOnTimeline)
+                }
+            }
+            item {
                 Text(
-                    formatMinute(minuteOf(night.startMs)) + " → " + formatMinute(minuteOf(night.endMs)) + " · " + SleepStats.label(night.source),
+                    "The sleep estimate is the longest stretch of 3 to 14 hours at night with no phone use, ignoring quick checks under 5 minutes between 12:30 and 6 am. " +
+                        "Reading in bed without touching the phone looks like sleep, so fix any night that is off. A night you edit is never overwritten. " +
+                        "" +
+                        "Steps and sleep are included in backups and only ever added to.",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-        }
-        item { OutlinedButton(onClick = ::addNight) { Text("Add or fix a night") } }
-
-        item { MonoLabel("Steps by day") }
-        if (days.none { it.steps > 0 }) {
-            item {
-                Text(
-                    "No steps on these days yet.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-        items(days.filter { it.steps > 0 }.take(120), key = { "d" + it.date }) { day ->
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(dayText(day.date), color = MaterialTheme.colorScheme.onBackground)
-                Text(
-                    StepStats.text(day.steps),
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onBackground,
-                )
-            }
-        }
-
-        item { MonoLabel("Settings") }
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("Work out sleep from phone use", color = MaterialTheme.colorScheme.onBackground)
-                Switch(checked = estimate, onCheckedChange = vm::setEstimateSleep)
-            }
-        }
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("Show on the Timeline", color = MaterialTheme.colorScheme.onBackground)
-                Switch(checked = showOnTimeline, onCheckedChange = vm::setShowOnTimeline)
-            }
-        }
-        item {
-            Text(
-                "The sleep estimate is the longest stretch of 3 to 14 hours at night with no phone use, ignoring quick checks under 5 minutes between 12:30 and 6 am. " +
-                    "Reading in bed without touching the phone looks like sleep, so fix any night that is off. A night you edit is never overwritten. " +
-                    "On the Timeline, sleep counts towards your Sleep goal on days you did not log Sleep yourself. " +
-                    "Steps and sleep are included in backups and only ever added to.",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
 

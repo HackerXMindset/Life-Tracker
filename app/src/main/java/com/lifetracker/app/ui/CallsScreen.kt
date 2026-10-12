@@ -49,7 +49,7 @@ private fun whenText(ms: Long): String =
 
 /** Calls: allow access, totals, the people you talked to most, and Timeline options. */
 @Composable
-fun CallsScreen(onBack: () -> Unit, vm: CallsViewModel = viewModel()) {
+fun CallsScreen(onBack: () -> Unit, part: Part = Part.Data, vm: CallsViewModel = viewModel()) {
     val context = LocalContext.current
     val hasAccess by vm.hasAccess.collectAsState()
     val calls by vm.calls.collectAsState()
@@ -85,7 +85,12 @@ fun CallsScreen(onBack: () -> Unit, vm: CallsViewModel = viewModel()) {
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item { TextButton(onClick = onBack) { Text("Back") } }
-        item { ScreenHeader(label = "Phone", badge = "On this phone", title = "Calls") }
+        item { ScreenHeader(label = if (part == Part.Data) "Stats" else "Settings", badge = "On this phone", title = "Calls") }
+
+        if (!hasAccess && part == Part.Data) {
+            item { SetupNote("Call log access is off, so there is nothing to show yet. Allow it in the Settings tab, under Calls.") }
+            return@LazyColumn
+        }
 
         if (!hasAccess) {
             item {
@@ -121,121 +126,125 @@ fun CallsScreen(onBack: () -> Unit, vm: CallsViewModel = viewModel()) {
             return@LazyColumn
         }
 
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column {
-                    MonoLabel("Last copied")
-                    Text(
-                        text = if (lastSync.isEmpty()) "Not yet" else lastSync,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 13.sp,
-                    )
-                }
-                OutlinedButton(onClick = vm::sync, enabled = !syncing) { Text(if (syncing) "Copying..." else "Sync now") }
-            }
-        }
-        item { RangePicker(choice = range, onChange = vm::setRange) }
-        item {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                CallStat("Calls", totals.calls.toString(), Modifier.weight(1f))
-                CallStat("Talked", CallStats.durationText(totals.talkSec), Modifier.weight(1f))
-                CallStat("Missed", totals.missed.toString(), Modifier.weight(1f))
-            }
-        }
-
-        if (calls.isEmpty()) {
+        if (part == Part.Data) {
             item {
-                Text(
-                    "No calls on these days. If you just allowed access, tap Sync now. For older days, use Copy older calls below.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        } else {
-            item { MonoLabel("People") }
-            items(people.take(15), key = { "p" + it.key }) { person ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
+                    Column {
+                        MonoLabel("Last copied")
                         Text(
-                            person.name,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold,
+                            text = if (lastSync.isEmpty()) "Not yet" else lastSync,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 13.sp,
+                        )
+                    }
+                    OutlinedButton(onClick = vm::sync, enabled = !syncing) { Text(if (syncing) "Copying..." else "Sync now") }
+                }
+            }
+            item { RangePicker(choice = range, onChange = vm::setRange) }
+            item {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    CallStat("Calls", totals.calls.toString(), Modifier.weight(1f))
+                    CallStat("Talked", CallStats.durationText(totals.talkSec), Modifier.weight(1f))
+                    CallStat("Missed", totals.missed.toString(), Modifier.weight(1f))
+                }
+            }
+
+            if (calls.isEmpty()) {
+                item {
+                    Text(
+                        "No calls on these days. If you just allowed access, tap Sync now. For older days, use Copy older calls below.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            } else {
+                item { MonoLabel("People") }
+                items(people.take(15), key = { "p" + it.key }) { person ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                person.name,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onBackground,
+                            )
+                            Text(
+                                "${person.calls} call${if (person.calls == 1) "" else "s"} · last ${whenText(person.lastMs)}",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Text(
+                            CallStats.durationText(person.talkSec),
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 14.sp,
                             color = MaterialTheme.colorScheme.onBackground,
                         )
+                    }
+                }
+
+                item { MonoLabel("Latest calls") }
+                items(calls.sortedByDescending { it.startMs }.take(30), key = { "c" + it.id }) { call ->
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
-                            "${person.calls} call${if (person.calls == 1) "" else "s"} · last ${whenText(person.lastMs)}",
+                            CallStats.title(call),
+                            fontSize = 15.sp,
+                            color = if (call.type == CallStats.MISSED) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onBackground,
+                        )
+                        Text(
+                            whenText(call.startMs) + " · " + CallStats.detail(call),
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    Text(
-                        CallStats.durationText(person.talkSec),
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
                 }
             }
 
-            item { MonoLabel("Latest calls") }
-            items(calls.sortedByDescending { it.startMs }.take(30), key = { "c" + it.id }) { call ->
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        }
+        if (part == Part.Settings) {
+            item { MonoLabel("Older calls") }
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
-                        CallStats.title(call),
-                        fontSize = 15.sp,
-                        color = if (call.type == CallStats.MISSED) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onBackground,
-                    )
-                    Text(
-                        whenText(call.startMs) + " · " + CallStats.detail(call),
+                        "Normal syncs only look at new calls. If days before your first copy look empty, copy the whole call log once. Safe to repeat.",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    OutlinedButton(onClick = vm::copyOlder, enabled = !copyingOlder) {
+                        Text(if (copyingOlder) "Copying..." else "Copy older calls")
+                    }
+                    if (olderResult.isNotEmpty()) {
+                        Text(olderResult, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
             }
-        }
 
-        item { MonoLabel("Older calls") }
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            item { MonoLabel("On the Timeline") }
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Show calls on the Timeline", color = MaterialTheme.colorScheme.onBackground)
+                    Switch(checked = showOnTimeline, onCheckedChange = vm::setShowOnTimeline)
+                }
+            }
+            item {
                 Text(
-                    "Normal syncs only look at new calls. If days before your first copy look empty, copy the whole call log once. Safe to repeat.",
+                    "Backups include your calls, with numbers and names, as plain text. Keep the backup folder private.",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                OutlinedButton(onClick = vm::copyOlder, enabled = !copyingOlder) {
-                    Text(if (copyingOlder) "Copying..." else "Copy older calls")
-                }
-                if (olderResult.isNotEmpty()) {
-                    Text(olderResult, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
             }
-        }
-
-        item { MonoLabel("On the Timeline") }
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("Show calls on the Timeline", color = MaterialTheme.colorScheme.onBackground)
-                Switch(checked = showOnTimeline, onCheckedChange = vm::setShowOnTimeline)
-            }
-        }
-        item {
-            Text(
-                "Backups include your calls, with numbers and names, as plain text. Keep the backup folder private.",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
 }

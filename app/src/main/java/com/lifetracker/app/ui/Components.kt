@@ -71,3 +71,26 @@ fun ScreenHeader(
         )
     }
 }
+
+/**
+ * Each detail screen has two halves: the numbers (opened from the Stats tab) and the permissions and switches
+ * (opened from the Settings tab). Nothing is lost by splitting them; every control still exists.
+ */
+enum class Part { Data, Settings }
+
+/** A small card telling you a source still needs switching on in Settings. */
+@Composable
+fun SetupNote(text: String) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(14.dp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
