@@ -286,38 +286,12 @@ fun PhoneUsageScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PhoneUsageV
     }
 
     editing?.let { app ->
-        AlertDialog(
-            onDismissRequest = { editing = null },
-            title = { Text(app.label) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    MonoLabel("Counts as")
-                    Row(
-                        modifier = Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        FilterChip(
-                            selected = app.activityId.isEmpty(),
-                            onClick = { vm.link(app, ""); editing = null },
-                            label = { Text("None") },
-                        )
-                        types.filter { !it.archived }.forEach { t ->
-                            FilterChip(
-                                selected = app.activityId == t.id,
-                                onClick = { vm.link(app, t.id); editing = null },
-                                label = { Text(t.name) },
-                                leadingIcon = {
-                                    Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(t.displayColor()))
-                                },
-                            )
-                        }
-                    }
-                    TextButton(onClick = { vm.setIgnored(app, !app.ignored); editing = null }) {
-                        Text(if (app.ignored) "Show this app again" else "Hide this app everywhere")
-                    }
-                }
-            },
-            confirmButton = { TextButton(onClick = { editing = null }) { Text("Close") } },
+        AppCategoryDialog(
+            app = app,
+            types = types,
+            onLink = { vm.link(app, it) },
+            onIgnore = { vm.setIgnored(app, it) },
+            onDismiss = { editing = null },
         )
     }
 }

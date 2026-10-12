@@ -75,6 +75,7 @@ import com.lifetracker.app.data.TripEntity
 import com.lifetracker.app.data.TripModes
 import com.lifetracker.app.data.TripRules
 import com.lifetracker.app.data.UsageCollector
+import com.lifetracker.app.data.UsageAppEntity
 import com.lifetracker.app.data.UsageDays
 import com.lifetracker.app.data.UsageSettings
 import androidx.compose.ui.platform.LocalContext
@@ -132,6 +133,9 @@ fun TimelineScreen(onOpenTrips: () -> Unit, onOpenCharging: () -> Unit, onOpenSt
 
     var showLog by remember { mutableStateOf(false) }
     var toDelete by remember { mutableStateOf<EntryEntity?>(null) }
+    var editEntry by remember { mutableStateOf<EntryEntity?>(null) }
+    var editApp by remember { mutableStateOf<UsageAppEntity?>(null) }
+    val usageApps by vm.usageApps.collectAsState()
 
     // The three numbers at the top: steps, time on the phone, and time studying (what you logged plus apps linked to Study).
     val stepCount = steps?.steps ?: 0
@@ -206,7 +210,7 @@ fun TimelineScreen(onOpenTrips: () -> Unit, onOpenCharging: () -> Unit, onOpenSt
             } else {
                 items(timed, key = { it.key }) { item ->
                     when (item) {
-                        is EntryItem -> EntryRow(item.entry, types.byId(item.entry.category), onClick = { toDelete = item.entry })
+                        is EntryItem -> EntryRow(item.entry, types.byId(item.entry.category), onClick = { editEntry = item.entry })
                         is TodoItem -> TodoRow(item.todo, projectNames[item.todo.project], onToggle = { vm.toggleTodo(item.todo) })
                         is NoteItem -> NoteRow(item.note, habitNames[item.note.habitId])
                         is MealItem -> MealRow(item.meal, types.byId("Food"))
@@ -215,7 +219,11 @@ fun TimelineScreen(onOpenTrips: () -> Unit, onOpenCharging: () -> Unit, onOpenSt
                         is SleepItem -> SleepTimelineRow(item.night, onClick = onOpenSteps)
                         is PlaceItem -> PlaceTimelineRow(item, nowMs, onClick = onOpenPlaces)
                         is TripItem -> TripTimelineRow(item, onClick = onOpenTrips)
-                        is PhoneItem -> PhoneRow(item.block, item.block.activityId.takeIf { it.isNotEmpty() }?.let { types.byId(it) })
+                        is PhoneItem -> PhoneRow(
+                            item.block,
+                            item.block.activityId.takeIf { it.isNotEmpty() }?.let { types.byId(it) },
+                            onClick = { editApp = usageApps[item.block.pkg] ?: UsageAppEntity(item.block.pkg, item.block.label, "", false) },
+                        )
                     }
                 }
                 if (anyTimeTodos.isNotEmpty()) {
@@ -236,7 +244,7 @@ fun TimelineScreen(onOpenTrips: () -> Unit, onOpenCharging: () -> Unit, onOpenSt
                 if (entries.isNotEmpty()) {
                     item {
                         Text(
-                            text = "Tap an entry to delete it. Tap a to-do to tick it off.",
+                            text = "Tap an entry or an app to change it. Tap a to-do to tick it off.",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -266,6 +274,35 @@ fun TimelineScreen(onOpenTrips: () -> Unit, onOpenCharging: () -> Unit, onOpenSt
                 vm.add(it)
                 showLog = false
             },
+        )
+    }
+
+    editEntry?.let { entry ->
+        LogSheet(
+            date = date,
+            existing = entries,
+            types = types,
+            onCreateType = vm::createActivity,
+            onDismiss = { editEntry = null },
+            onSave = {
+                vm.update(it)
+                editEntry = null
+            },
+            initial = entry,
+            onDelete = {
+                toDelete = entry
+                editEntry = null
+            },
+        )
+    }
+
+    editApp?.let { app ->
+        AppCategoryDialog(
+            app = app,
+            types = types,
+            onLink = { vm.linkApp(app, it) },
+            onIgnore = { vm.setAppIgnored(app, it) },
+            onDismiss = { editApp = null },
         )
     }
 
@@ -650,14 +687,15 @@ private fun MealRow(meal: MealEntity, foodType: ActivityTypeEntity) {
 
 
 @Composable
-private fun PhoneRow(block: UsageDays.Block, activity: ActivityTypeEntity?) {
+private fun PhoneRow(block: UsageDays.Block, activity: ActivityTypeEntity?, onClick: () -> Unit) {
     val color = activity?.displayColor() ?: MaterialTheme.colorScheme.onSurfaceVariant
     val minutes = (block.activeMs / 60_000L).toInt()
     val startMinute = Instant.ofEpochMilli(block.startMs).atZone(ZoneId.systemDefault()).let { it.hour * 60 + it.minute }
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .defaultMinSize(minHeight = 44.dp),
+            .defaultMinSize(minHeight = 44.dp)
+            .clickable(onClick = onClick),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Text(
@@ -686,7 +724,9 @@ private fun PhoneRow(block: UsageDays.Block, activity: ActivityTypeEntity?) {
                 color = MaterialTheme.colorScheme.onBackground,
             )
             Text(
-                text = "Phone · " + formatDuration(minutes.coerceAtLeast(1)) + (activity?.let { " · " + it.name } ?: ""),
+                text = "Phone · " + formatDuration(minutes.coerceAtLeast(1)) +
+                    (if (block.opens > 1) " · opened ${block.opens} times" else "") +
+                    " · " + (activity?.name ?: "no category, tap to set"),
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

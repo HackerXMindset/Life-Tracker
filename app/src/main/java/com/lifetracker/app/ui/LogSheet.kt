@@ -54,6 +54,10 @@ fun LogSheet(
     onCreateType: (ActivityTypeEntity, (ActivityTypeEntity) -> Unit) -> Unit,
     onDismiss: () -> Unit,
     onSave: (EntryEntity) -> Unit,
+    /** Set to change an entry that is already on the Timeline instead of adding a new one. */
+    initial: EntryEntity? = null,
+    /** Shown as a Delete button when editing. */
+    onDelete: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val isToday = date == LocalDate.now()
@@ -71,16 +75,16 @@ fun LogSheet(
         if (isToday && nowMinute > defaultStart) nowMinute else (defaultStart + 30).coerceAtMost(1439)
     }
 
-    val choices = types.filter { !it.archived }
+    val choices = types.filter { !it.archived || it.id == initial?.category }
     // The id of the chosen activity. Until one is picked, the first available is used.
-    var chosenId by remember { mutableStateOf<String?>(null) }
+    var chosenId by remember { mutableStateOf<String?>(initial?.category) }
     val category = choices.firstOrNull { it.id == chosenId } ?: choices.firstOrNull { it.id == "Study" } ?: choices.firstOrNull()
     var showNewType by remember { mutableStateOf(false) }
-    var title by remember { mutableStateOf("") }
-    var note by remember { mutableStateOf("") }
-    var start by remember { mutableIntStateOf(defaultStart) }
-    var end by remember { mutableIntStateOf(defaultEnd) }
-    var moment by remember { mutableStateOf(false) }
+    var title by remember { mutableStateOf(initial?.title.orEmpty()) }
+    var note by remember { mutableStateOf(initial?.note.orEmpty()) }
+    var start by remember { mutableIntStateOf(initial?.startMinute ?: defaultStart) }
+    var end by remember { mutableIntStateOf(initial?.endMinute ?: defaultEnd) }
+    var moment by remember { mutableStateOf(initial != null && initial.endMinute == null) }
     var error by remember { mutableStateOf<String?>(null) }
 
     fun pickTime(initial: Int, onPicked: (Int) -> Unit) {
@@ -103,7 +107,7 @@ fun LogSheet(
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Text(
-                text = "Log something",
+                text = if (initial == null) "Log something" else "Edit entry",
                 fontSize = 22.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = MaterialTheme.colorScheme.onBackground,
@@ -189,6 +193,9 @@ fun LogSheet(
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                if (initial != null && onDelete != null) {
+                    TextButton(onClick = onDelete) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                }
                 TextButton(onClick = onDismiss) { Text("Cancel") }
                 Spacer(Modifier.padding(horizontal = 4.dp))
                 Button(onClick = {
@@ -198,7 +205,8 @@ fun LogSheet(
                         !moment && end <= start -> error = "End time must be after the start time."
                         else -> onSave(
                             EntryEntity(
-                                date = date.toString(),
+                                id = initial?.id ?: 0,
+                                date = initial?.date ?: date.toString(),
                                 startMinute = start,
                                 endMinute = if (moment) null else end,
                                 category = category!!.id,
@@ -207,7 +215,7 @@ fun LogSheet(
                             ),
                         )
                     }
-                }) { Text("Add to timeline") }
+                }) { Text(if (initial == null) "Add to timeline" else "Save") }
             }
             Spacer(Modifier.height(12.dp))
         }

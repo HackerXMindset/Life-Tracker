@@ -52,6 +52,9 @@ interface EntryDao {
 
     @Delete
     suspend fun delete(entry: EntryEntity)
+
+    @androidx.room.Update
+    suspend fun update(entry: EntryEntity)
 }
 
 @Database(

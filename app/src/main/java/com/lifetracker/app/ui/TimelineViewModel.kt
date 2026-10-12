@@ -16,6 +16,7 @@ import com.lifetracker.app.data.SleepNightEntity
 import com.lifetracker.app.data.StepDayEntity
 import com.lifetracker.app.data.TodoEntity
 import com.lifetracker.app.data.TripEntity
+import com.lifetracker.app.data.UsageAppEntity
 import com.lifetracker.app.data.UsageDays
 import java.time.ZoneId
 import java.time.LocalDate
@@ -180,6 +181,23 @@ class TimelineViewModel(app: Application) : AndroidViewModel(app) {
 
     fun add(entry: EntryEntity) {
         viewModelScope.launch { dao.insert(entry) }
+    }
+
+    fun update(entry: EntryEntity) {
+        viewModelScope.launch { dao.update(entry) }
+    }
+
+    /** Every app the phone-usage copy has seen, by package name, so a block on the Timeline can be edited. */
+    val usageApps: StateFlow<Map<String, UsageAppEntity>> =
+        share(emptyMap(), db.usageDao().observeApps().map { list -> list.associateBy { it.pkg } })
+
+    /** Files an app under a category ("" for none); it applies to every day, past and future. */
+    fun linkApp(app: UsageAppEntity, activityId: String) {
+        viewModelScope.launch { db.usageDao().upsertApp(app.copy(activityId = activityId)) }
+    }
+
+    fun setAppIgnored(app: UsageAppEntity, ignored: Boolean) {
+        viewModelScope.launch { db.usageDao().upsertApp(app.copy(ignored = ignored)) }
     }
 
     fun delete(entry: EntryEntity) {
