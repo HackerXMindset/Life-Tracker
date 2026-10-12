@@ -118,6 +118,8 @@ Each step is small enough to build, install and try before the next begins. The 
  DONE         Step 13d How sure each visit is, name hints
  DONE         Step 13f GPX and CSV export, GPX import
  DONE         Polish 1 Timeline top numbers, Stats tab, Settings tab
+ DONE         Polish 2a Merged app blocks, edit apps and entries
+ DONE         Polish 2b Place blocks, travel rows, no-data gaps
  NEXT  ──►    Step 14 Life events, month and year views
               Step 15 Stats
               Step 16 Polish
@@ -176,6 +178,8 @@ The next steps were planned together after asking for more automatic tracking. T
 **Step 13f: GPX and CSV export, GPX import.** The Places screen has an Export and import card. **Readings GPX** and **Readings CSV** save every stored reading (CSV: time in milliseconds and as a date, latitude, longitude, accuracy, speed), **Trips GPX** saves each trip as its own track named with its day, how you travelled and distance, and **Import GPX** adds the positions in a GPX file from any app (GPSLogger, Google Earth, OsmAnd...) to the stored readings. A written file has a new track segment after a silence of 30 minutes and keeps each point's accuracy and speed in an extensions block, so reading it back gives exactly what was written. A point from another app needs a position and a time; its accuracy comes from `acc`, else `hdop` times 5 m, else a guess from the source (network 50 m, cell 150 m, anything else 20 m). Importing only ever adds readings (the same second is skipped, readings worse than 150 m are left out) and then works the visits out again from all the readings; it does not build trips (the way between stays) from the imported positions. Files with an XML DOCTYPE are refused.
 
 **Polish 1: a plainer Timeline, a Stats tab and a Settings tab.** The top of the Timeline is now one card with three numbers for the day: steps, time on the phone and time studied (what you logged as Study plus apps you linked to Study). The Tracked / Entries / Goals met row, the goal and limit bars, the Activities and settings buttons and the five cards (phone, steps and sleep, places, trips, calls) are gone from it, so the Timeline is only the day's entries in order. Daily goals are no longer shown or edited anywhere; goals already stored are kept untouched. The **Stats** tab now holds the numbers: one card per source for the chosen day, each opening the full figures over any range of days. The new **Settings** tab holds every permission and switch (Phone usage, Steps and sleep, Places, Trips, Calls, Charging), each row saying whether it is on, plus Activities and Backup and import. Each detail screen has a numbers half (from Stats) and a settings half (from Settings); every control that existed before still exists. Tapping a place, trip, charge or sleep row on the Timeline opens the numbers half. Tapping a bottom tab now also closes any detail screen that was open.
+
+**Polish 2a and 2b: the Timeline as place blocks.** Uses of the same app within 10 minutes of each other are one block ("Telegram · 23m · opened 6 times"). Tap an app block to choose which category it counts as (kept for the app, so it applies to every day); tap something you logged to edit or delete it. Everything you did at a place (phone use, meals, sleep, calls, charging, your own entries) sits inside one tall block for that place, with the place's name running up its side. The way between two places is a travel row: the mode and distance when the phone recorded the trip (tap to change it), or "Unknown way of travel" with quick choices (Walked, Cycled, Bus, Drove, Auto, Metro, Train) when it can't tell, or when there is no trip record at all. Ten minutes or more with nothing known becomes a "No data" card with a Fill in button that opens the Log pop-up with those times. Gaps are only drawn between the first and last thing of the day, and on today never after now. Tapping a meal, call, charge or sleep row opens the screen where it is edited. The arranging is in `DayLayout.kt` (tested); the drawing is in `DayTimeline.kt`.
 
 **Step 14: Life events, month and year views.** Mark moments that changed your life, then look back by month or year to see what you did and how much you studied around each one.
 
@@ -349,6 +353,8 @@ life-tracker/
         │       ├── MoneyScreen.kt     Money tab: totals, quick log, categories, entries by day
         │       ├── MoneyViewModel.kt  Selected month, adding, logging and saving money items
         │       ├── MoneyDialogs.kt    The add flow (Expense or Income, then the kind) and its forms
+        │       ├── DayTimeline.kt     The Timeline's place blocks, travel rows, gaps and item cards
+        │       ├── AppEditor.kt       The pop-up that files an app under a category
         │       ├── StatsScreen.kt     Stats tab: one card per source for the day, opening the full figures
         │       ├── SettingsScreen.kt  Settings tab: every permission and switch, plus Activities and Backup
         │       └── EventsScreen.kt                (planned, Step 14)
