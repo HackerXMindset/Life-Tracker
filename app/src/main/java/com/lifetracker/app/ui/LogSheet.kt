@@ -58,12 +58,16 @@ fun LogSheet(
     initial: EntryEntity? = null,
     /** Shown as a Delete button when editing. */
     onDelete: (() -> Unit)? = null,
+    /** Start and end (minutes into the day) to begin with, for filling in a gap. */
+    presetStartMinute: Int? = null,
+    presetEndMinute: Int? = null,
 ) {
     val context = LocalContext.current
     val isToday = date == LocalDate.now()
     val nowMinute = LocalTime.now().let { it.hour * 60 + it.minute }
 
     val defaultStart = remember {
+        if (presetStartMinute != null) return@remember presetStartMinute
         val lastEnd = existing.mapNotNull { it.endMinute }.maxOrNull()
         when {
             lastEnd != null -> lastEnd.coerceAtMost(1438)
@@ -72,6 +76,7 @@ fun LogSheet(
         }
     }
     val defaultEnd = remember {
+        if (presetEndMinute != null) return@remember presetEndMinute
         if (isToday && nowMinute > defaultStart) nowMinute else (defaultStart + 30).coerceAtMost(1439)
     }
 
