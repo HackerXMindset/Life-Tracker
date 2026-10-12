@@ -122,7 +122,13 @@ Each step is small enough to build, install and try before the next begins. The 
  DONE         Polish 2b Place blocks, travel rows, no-data gaps
  DONE         Polish 2c Timeline | Pie switch, 24-hour bar and pie
  DONE         Polish 3 Every Stats screen opens on Today
- NEXT  ──►    Step 14 Life events, month and year views
+ NEXT  ──►    Polish 4a Places and Trips become one list (Stats)
+              Polish 4b A "Places and trips" page in Settings
+              Polish 4c Calls: Stats and Settings, minimum call length, calls in the 24-hour bar
+              Polish 4d Edit everything on the Timeline (a "your edits" layer)
+              Polish 4e Trips start 50 m from a stop
+              Polish 4f Tab labels that fit
+              Step 14 Life events, month and year views
               Step 15 Stats
               Step 16 Polish
 ```
@@ -184,6 +190,19 @@ The next steps were planned together after asking for more automatic tracking. T
 **Polish 2a and 2b: the Timeline as place blocks.** Uses of the same app within 10 minutes of each other are one block ("Telegram · 23m · opened 6 times"). Tap an app block to choose which category it counts as (kept for the app, so it applies to every day); tap something you logged to edit or delete it. Everything you did at a place (phone use, meals, sleep, calls, charging, your own entries) sits inside one tall block for that place, with the place's name running up its side. The way between two places is a travel row: the mode and distance when the phone recorded the trip (tap to change it), or "Unknown way of travel" with quick choices (Walked, Cycled, Bus, Drove, Auto, Metro, Train) when it can't tell, or when there is no trip record at all. Ten minutes or more with nothing known becomes a "No data" card with a Fill in button that opens the Log pop-up with those times. Gaps are only drawn between the first and last thing of the day, and on today never after now. Tapping a meal, call, charge or sleep row opens the screen where it is edited. The arranging is in `DayLayout.kt` (tested); the drawing is in `DayTimeline.kt`.
 
 **Polish 2c: Timeline | Pie.** A switch under the day numbers flips the day between the Timeline and a Pie. Both show the same 24-hour bar first: one bar, the same length every day, with marks at 6, 12 and 18 hours and a marker for now on today. Each stretch is coloured by what is known; where you logged something and the phone also collected something, what you logged wins, and nothing is counted twice. The Pie has two rings: the outer one is what you logged, the inner one is what was collected for you (sleep, meals, phone, travel), with the total in the middle, a legend, and a "Where the time went" list per category. The arranging is in `DaySegments.kt` (tested); the drawing is in `DayOverview.kt`.
+
+**Polish 3: every Stats screen opens on Today.** Phone usage, Steps and sleep, Trips, Places, Charging and Calls start on Today each time they are opened, whatever range you looked at last time. You can still pick another range once inside.
+
+**Polish 4 (planned, not built; the order below is the build order, one small step at a time, and nothing is built until you say so).**
+
+- **4a Places and Trips become one list (Stats).** One view of where you went and how you got there: a place (name, arrival to leaving, time spent), then a journey row ("Walked, 1.6 km, 15 min"), then the next place. The separate Trips screen goes away (its data stays). It opens on Today. When you moved but there is no record in between, the journey row shows the straight-line distance and "Unknown way of travel" with the quick choices (Walked, Cycled, Bus, Drove, Auto, Metro, Train).
+- **4b A "Places and trips" page in Settings.** Moves out of the Stats view: Watch my places, Record my trips and how closely to follow one, how closely to watch, GPS, Always on, "Stop the phone putting the app to sleep" (unrestricted battery, Autostart, Battery saver), the list of your places with Add a place, and the Timeline switches. The Status card and the readings card go to the bottom of that page under "Status". Switch labels that run off the screen are fixed.
+- **4c Calls.** Calls move to Stats (totals, people, latest calls, Sync now, opens on Today). The access prompt, Copy older calls and the Timeline switch go to a Calls page in Settings, with a new **minimum talk time for the Timeline** you choose (1, 2, 5 or 10 minutes; starts at 2). Missed calls and calls nobody answered never show on the Timeline (they stay in the Stats list). Calls become their own segment in the 24-hour bar and the Pie, so a 38-minute call takes 38 minutes' worth of the line.
+- **4d Edit everything on the Timeline.** Every kind of item gets an editor for its category and its times (visits also their name; meals, calls, charges and sleep no longer send you to another screen). The phone's own records (visits, calls, app usage, trips) are never changed: your changes are saved in a separate "your edits" table (database version 14 to 15, backups move to format 15) and the Timeline shows your version on top. Hiding an item is an edit, never a delete, and removing an edit brings the original back.
+- **4e Trips start 50 m from a stop.** A trip begins as soon as you are more than 50 m from the stop you were at, for every stop the app detects, named or not. The old rule that a trip must get 200 m away is dropped. To stop GPS drift making fake trips, two readings in a row must be outside the 50 m (counting each reading's own error). Old days can be rebuilt with "Tidy everything from my readings"; nothing is deleted. This needs a real walk on the phone to check, so it is its own small step.
+- **4f Tab labels that fit.** With six tabs the labels "Timeline" and "Settings" wrapped onto two lines; they will fit on one.
+
+Not part of Polish 4, and not built: **Step 13e** (fixing trips and visits by hand: split and join), which you have not asked for yet.
 
 **Step 14: Life events, month and year views.** Mark moments that changed your life, then look back by month or year to see what you did and how much you studied around each one.
 
