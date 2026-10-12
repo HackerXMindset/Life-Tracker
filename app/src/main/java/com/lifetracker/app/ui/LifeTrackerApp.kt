@@ -136,6 +136,8 @@ fun LifeTrackerApp() {
                         onOpenCharging = { openPage(Page.Charging, Part.Data) },
                         onOpenSteps = { openPage(Page.Steps, Part.Data) },
                         onOpenPlaces = { openPage(Page.Places, Part.Data) },
+                        onOpenCalls = { openPage(Page.Calls, Part.Data) },
+                        onOpenFood = { tab = Tab.Food },
                     )
                     Tab.Habits -> HabitsScreen()
                     Tab.Food -> FoodScreen()

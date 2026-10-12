@@ -62,6 +62,7 @@ import com.lifetracker.app.data.CallsSettings
 import com.lifetracker.app.data.ChargeSessionEntity
 import com.lifetracker.app.data.ChargeSettings
 import com.lifetracker.app.data.ChargeStats
+import com.lifetracker.app.data.DayLayout
 import com.lifetracker.app.data.HealthSettings
 import com.lifetracker.app.data.PlaceRules
 import com.lifetracker.app.data.PlaceVisitEntity
@@ -93,7 +94,7 @@ private const val STUDY_ID = "Study"
 private fun EntryEntity.minutes(): Int = ActivityStats.minutes(this)
 
 @Composable
-fun TimelineScreen(onOpenTrips: () -> Unit, onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPlaces: () -> Unit, vm: TimelineViewModel = viewModel()) {
+fun TimelineScreen(onOpenTrips: () -> Unit, onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPlaces: () -> Unit, onOpenCalls: () -> Unit, onOpenFood: () -> Unit, vm: TimelineViewModel = viewModel()) {
     val date by vm.date.collectAsState()
     val entries by vm.entries.collectAsState()
     val todos by vm.todos.collectAsState()
@@ -135,6 +136,7 @@ fun TimelineScreen(onOpenTrips: () -> Unit, onOpenCharging: () -> Unit, onOpenSt
     var toDelete by remember { mutableStateOf<EntryEntity?>(null) }
     var editEntry by remember { mutableStateOf<EntryEntity?>(null) }
     var editApp by remember { mutableStateOf<UsageAppEntity?>(null) }
+    var fillIn by remember { mutableStateOf<Pair<Long, Long>?>(null) }
     val usageApps by vm.usageApps.collectAsState()
 
     // The three numbers at the top: steps, time on the phone, and time studying (what you logged plus apps linked to Study).
@@ -143,21 +145,50 @@ fun TimelineScreen(onOpenTrips: () -> Unit, onOpenCharging: () -> Unit, onOpenSt
     val studyMinutes = (ActivityStats.minutesByActivity(entries)[STUDY_ID] ?: 0) + (usageDay.minutesByActivity[STUDY_ID] ?: 0)
     val title = remember(date) { date.format(DateTimeFormatter.ofPattern("EEEE d MMMM")) }
 
-    // Timed items sit in order with the entries; items without a time get their own sections below.
-    val timed: List<TimelineItem> = buildList {
-        entries.forEach { add(EntryItem(it)) }
-        todos.filter { it.minutes != null }.forEach { add(TodoItem(it)) }
-        notes.filter { it.minutes != null }.forEach { add(NoteItem(it)) }
-        meals.forEach { add(MealItem(it)) }
-        if (showCalls) calls.forEach { add(CallItem(it)) }
-        if (showCharging) charges.forEach { add(ChargeItem(it)) }
-        sleepShown?.let { add(SleepItem(it)) }
-        if (showTrips) dayTrips.forEach { add(TripItem(it, placeNames)) }
-        if (showPlaces) {
-            placeVisits.filter { PlaceRules.isShown(it, nowMs) }.forEach { add(PlaceItem(it, placeNames[it.placeId] ?: "Place", dayStartMs)) }
+    // Everything that has a time, as items the day layout can place: inside a place block, between places, or on its own.
+    fun at(minute: Int) = dayStartMs + minute * 60_000L
+    val items = buildList {
+        entries.forEach {
+            add(DayLayout.Item("e" + it.id, DayLayout.Kind.ENTRY, at(it.startMinute), at(it.endMinute ?: it.startMinute), it.endMinute != null, it))
         }
-        if (showPhone) usageDay.blocks.filter { it.activeMs >= minBlockMs }.forEach { add(PhoneItem(it)) }
-    }.sortedBy { it.minute ?: 0 }
+        todos.filter { it.minutes != null }.forEach {
+            add(DayLayout.Item("t" + it.id, DayLayout.Kind.TODO, at(it.minutes!!), at(it.minutes!!), false, it))
+        }
+        notes.filter { it.minutes != null }.forEach {
+            add(DayLayout.Item("n" + it.id, DayLayout.Kind.NOTE, at(it.minutes!!), at(it.minutes!!), false, it))
+        }
+        meals.forEach {
+            add(DayLayout.Item("m" + it.id, DayLayout.Kind.MEAL, at(it.minuteOfDay), at(it.minuteOfDay) + 15 * 60_000L, false, it))
+        }
+        if (showCalls) calls.forEach {
+            add(DayLayout.Item("call" + it.id, DayLayout.Kind.CALL, it.startMs, it.startMs + it.durationSec * 1000L, it.durationSec > 0, it))
+        }
+        if (showCharging) charges.forEach {
+            add(DayLayout.Item("charge" + it.id, DayLayout.Kind.CHARGE, it.startMs, if (it.ongoing) maxOf(nowMs, it.startMs) else it.endMs, true, it))
+        }
+        sleepShown?.let {
+            add(DayLayout.Item("sleep" + it.date, DayLayout.Kind.SLEEP, maxOf(it.startMs, dayStartMs), minOf(it.endMs, dayEndMs), true, it))
+        }
+        if (showPhone) usageDay.blocks.filter { it.activeMs >= minBlockMs }.forEach {
+            add(DayLayout.Item("p" + it.pkg + it.startMs, DayLayout.Kind.PHONE, it.startMs, it.endMs, true, it))
+        }
+    }
+    val rows = DayLayout.build(items, placeVisits, dayTrips, placeNames, dayStartMs, dayEndMs, nowMs, showPlaces, showTrips)
+    val actions = DayActions(
+        types = types,
+        projectNames = projectNames,
+        habitNames = habitNames,
+        onEntry = { editEntry = it },
+        onApp = { block -> editApp = usageApps[block.pkg] ?: UsageAppEntity(block.pkg, block.label, "", false) },
+        onTodo = vm::toggleTodo,
+        onPlaces = onOpenPlaces,
+        onCalls = onOpenCalls,
+        onCharging = onOpenCharging,
+        onSleep = onOpenSteps,
+        onFood = onOpenFood,
+        onFillIn = { s, e -> fillIn = s to e },
+        onTripMode = vm::setTripMode,
+    )
     val anyTimeTodos = todos.filter { it.minutes == null }
     val anyTimeNotes = notes.filter { it.minutes == null }
     val plannedMinutes = todos.filter { !it.done }.sumOf { it.estimate ?: 0 }
@@ -185,7 +216,7 @@ fun TimelineScreen(onOpenTrips: () -> Unit, onOpenCharging: () -> Unit, onOpenSt
                     study = if (studyMinutes > 0) formatDuration(studyMinutes) else "–",
                 )
             }
-            if (timed.isEmpty() && anyTimeTodos.isEmpty() && anyTimeNotes.isEmpty()) {
+            if (rows.isEmpty() && anyTimeTodos.isEmpty() && anyTimeNotes.isEmpty()) {
                 item {
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
@@ -208,24 +239,7 @@ fun TimelineScreen(onOpenTrips: () -> Unit, onOpenCharging: () -> Unit, onOpenSt
                     }
                 }
             } else {
-                items(timed, key = { it.key }) { item ->
-                    when (item) {
-                        is EntryItem -> EntryRow(item.entry, types.byId(item.entry.category), onClick = { editEntry = item.entry })
-                        is TodoItem -> TodoRow(item.todo, projectNames[item.todo.project], onToggle = { vm.toggleTodo(item.todo) })
-                        is NoteItem -> NoteRow(item.note, habitNames[item.note.habitId])
-                        is MealItem -> MealRow(item.meal, types.byId("Food"))
-                        is CallItem -> CallRow(item.call)
-                        is ChargeItem -> ChargeTimelineRow(item.session, onClick = onOpenCharging)
-                        is SleepItem -> SleepTimelineRow(item.night, onClick = onOpenSteps)
-                        is PlaceItem -> PlaceTimelineRow(item, nowMs, onClick = onOpenPlaces)
-                        is TripItem -> TripTimelineRow(item, onClick = onOpenTrips)
-                        is PhoneItem -> PhoneRow(
-                            item.block,
-                            item.block.activityId.takeIf { it.isNotEmpty() }?.let { types.byId(it) },
-                            onClick = { editApp = usageApps[item.block.pkg] ?: UsageAppEntity(item.block.pkg, item.block.label, "", false) },
-                        )
-                    }
-                }
+                items(rows, key = { it.key }) { row -> DayRow(row, actions) }
                 if (anyTimeTodos.isNotEmpty()) {
                     item(key = "todos-header") {
                         val estimate = if (plannedMinutes > 0) " · ${formatDuration(plannedMinutes)} planned" else ""
@@ -274,6 +288,22 @@ fun TimelineScreen(onOpenTrips: () -> Unit, onOpenCharging: () -> Unit, onOpenSt
                 vm.add(it)
                 showLog = false
             },
+        )
+    }
+
+    fillIn?.let { (from, to) ->
+        LogSheet(
+            date = date,
+            existing = entries,
+            types = types,
+            onCreateType = vm::createActivity,
+            onDismiss = { fillIn = null },
+            onSave = {
+                vm.add(it)
+                fillIn = null
+            },
+            presetStartMinute = ((from - dayStartMs) / 60_000L).toInt().coerceIn(0, 1438),
+            presetEndMinute = ((to - dayStartMs) / 60_000L).toInt().coerceIn(1, 1439),
         )
     }
 
@@ -384,159 +414,6 @@ private fun DayStrip(selected: LocalDate, datesWithEntries: Set<String>, onSelec
 
 
 
-@Composable
-private fun EntryRow(entry: EntryEntity, type: ActivityTypeEntity, onClick: () -> Unit) {
-    val color = type.displayColor()
-    val minutes = entry.minutes()
-    val isBlock = entry.endMinute != null
-    val barHeight = (minutes * 0.45f).coerceIn(56f, 150f).dp
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .defaultMinSize(minHeight = 44.dp)
-            .clickable(onClick = onClick),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Text(
-            text = formatMinute(entry.startMinute),
-            modifier = Modifier
-                .width(68.dp)
-                .padding(top = 3.dp),
-            fontSize = 12.sp,
-            fontFamily = FontFamily.Monospace,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Box(modifier = Modifier.width(10.dp), contentAlignment = Alignment.TopCenter) {
-            if (isBlock) {
-                Box(
-                    modifier = Modifier
-                        .width(6.dp)
-                        .height(barHeight)
-                        .clip(RoundedCornerShape(3.dp))
-                        .background(color),
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .padding(top = 5.dp)
-                        .size(10.dp)
-                        .clip(CircleShape)
-                        .background(color),
-                )
-            }
-        }
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                text = entry.title,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .clip(CircleShape)
-                            .background(color),
-                    )
-                    Text(
-                        text = type.name,
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                if (isBlock) {
-                    Text(
-                        text = formatDuration(minutes),
-                        fontSize = 12.sp,
-                        fontFamily = FontFamily.Monospace,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
-                }
-            }
-            if (entry.note.isNotEmpty()) {
-                Text(
-                    text = entry.note,
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-    }
-}
-
-private sealed interface TimelineItem {
-    val minute: Int?
-    val key: String
-}
-
-private class EntryItem(val entry: EntryEntity) : TimelineItem {
-    override val minute: Int? = entry.startMinute
-    override val key: String = "e" + entry.id
-}
-
-private class TodoItem(val todo: TodoEntity) : TimelineItem {
-    override val minute: Int? = todo.minutes
-    override val key: String = "t" + todo.id
-}
-
-private class MealItem(val meal: MealEntity) : TimelineItem {
-    override val minute: Int? = meal.minuteOfDay
-    override val key: String = "m" + meal.id
-}
-
-private class CallItem(val call: CallEntity) : TimelineItem {
-    override val minute: Int? = Instant.ofEpochMilli(call.startMs).atZone(ZoneId.systemDefault())
-        .let { it.hour * 60 + it.minute }
-    override val key: String = "call" + call.id
-}
-
-private class ChargeItem(val session: ChargeSessionEntity) : TimelineItem {
-    override val minute: Int? = Instant.ofEpochMilli(session.startMs).atZone(ZoneId.systemDefault())
-        .let { it.hour * 60 + it.minute }
-    override val key: String = "charge" + session.id
-}
-
-private class SleepItem(val night: SleepNightEntity) : TimelineItem {
-    // Sleep is listed at the moment you woke up.
-    override val minute: Int? = Instant.ofEpochMilli(night.endMs).atZone(ZoneId.systemDefault())
-        .let { it.hour * 60 + it.minute }
-    override val key: String = "sleep" + night.date
-}
-
-private class PlaceItem(val visit: PlaceVisitEntity, val name: String, dayStartMs: Long) : TimelineItem {
-    // A stay that began on an earlier day is listed at the start of this one.
-    override val minute: Int? = if (visit.startMs < dayStartMs) 0 else
-        Instant.ofEpochMilli(visit.startMs).atZone(ZoneId.systemDefault()).let { it.hour * 60 + it.minute }
-    override val key: String = "place" + visit.id
-}
-
-private class TripItem(val trip: TripEntity, names: Map<String, String>) : TimelineItem {
-    val from: String = names[trip.fromPlaceId] ?: ""
-    val to: String = names[trip.toPlaceId] ?: ""
-    override val minute: Int? = Instant.ofEpochMilli(trip.startMs).atZone(ZoneId.systemDefault())
-        .let { it.hour * 60 + it.minute }
-    override val key: String = "trip" + trip.id
-}
-
-private class PhoneItem(val block: UsageDays.Block) : TimelineItem {
-    override val minute: Int? = Instant.ofEpochMilli(block.startMs).atZone(ZoneId.systemDefault())
-        .let { it.hour * 60 + it.minute }
-    override val key: String = "p" + block.pkg + block.startMs
-}
-
-private class NoteItem(val note: NoteEntity) : TimelineItem {
-    override val minute: Int? = note.minutes
-    override val key: String = "n" + note.id
-}
 
 @Composable
 private fun TodoRow(todo: TodoEntity, projectName: String?, onToggle: () -> Unit) {
@@ -641,338 +518,19 @@ private fun NoteRow(note: NoteEntity, habitName: String?) {
     }
 }
 
-@Composable
-private fun MealRow(meal: MealEntity, foodType: ActivityTypeEntity) {
-    val color = foodType.displayColor()
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .defaultMinSize(minHeight = 44.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Text(
-            text = formatMinute(meal.minuteOfDay),
-            modifier = Modifier
-                .width(68.dp)
-                .padding(top = 3.dp),
-            fontSize = 12.sp,
-            fontFamily = FontFamily.Monospace,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Box(modifier = Modifier.width(10.dp), contentAlignment = Alignment.TopCenter) {
-            Box(
-                modifier = Modifier
-                    .padding(top = 5.dp)
-                    .size(10.dp)
-                    .clip(CircleShape)
-                    .background(color),
-            )
-        }
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                text = meal.name,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-            Text(
-                text = "${mealTypeLabel(meal.mealType)} · ${Math.round(meal.kcal)} kcal · ${Math.round(meal.grams)} g",
-                fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
 
 
 
-@Composable
-private fun PhoneRow(block: UsageDays.Block, activity: ActivityTypeEntity?, onClick: () -> Unit) {
-    val color = activity?.displayColor() ?: MaterialTheme.colorScheme.onSurfaceVariant
-    val minutes = (block.activeMs / 60_000L).toInt()
-    val startMinute = Instant.ofEpochMilli(block.startMs).atZone(ZoneId.systemDefault()).let { it.hour * 60 + it.minute }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .defaultMinSize(minHeight = 44.dp)
-            .clickable(onClick = onClick),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Text(
-            text = formatMinute(startMinute),
-            modifier = Modifier
-                .width(68.dp)
-                .padding(top = 3.dp),
-            fontSize = 12.sp,
-            fontFamily = FontFamily.Monospace,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Box(modifier = Modifier.width(10.dp), contentAlignment = Alignment.TopCenter) {
-            Box(
-                modifier = Modifier
-                    .padding(top = 6.dp)
-                    .size(8.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .border(2.dp, color, RoundedCornerShape(2.dp)),
-            )
-        }
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                text = block.label,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-            Text(
-                text = "Phone · " + formatDuration(minutes.coerceAtLeast(1)) +
-                    (if (block.opens > 1) " · opened ${block.opens} times" else "") +
-                    " · " + (activity?.name ?: "no category, tap to set"),
-                fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
 
 
 
-@Composable
-private fun CallRow(call: CallEntity) {
-    val missed = call.type == CallStats.MISSED
-    val color = if (missed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-    val startMinute = Instant.ofEpochMilli(call.startMs).atZone(ZoneId.systemDefault()).let { it.hour * 60 + it.minute }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .defaultMinSize(minHeight = 44.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Text(
-            text = formatMinute(startMinute),
-            modifier = Modifier
-                .width(68.dp)
-                .padding(top = 3.dp),
-            fontSize = 12.sp,
-            fontFamily = FontFamily.Monospace,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Box(modifier = Modifier.width(10.dp), contentAlignment = Alignment.TopCenter) {
-            Box(
-                modifier = Modifier
-                    .padding(top = 5.dp)
-                    .size(10.dp)
-                    .clip(CircleShape)
-                    .background(color),
-            )
-        }
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                text = CallStats.title(call),
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-            Text(
-                text = "Call · " + CallStats.detail(call),
-                fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@Composable
-private fun ChargeTimelineRow(session: ChargeSessionEntity, onClick: () -> Unit) {
-    val color = MaterialTheme.colorScheme.tertiary
-    val startMinute = Instant.ofEpochMilli(session.startMs).atZone(ZoneId.systemDefault()).let { it.hour * 60 + it.minute }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .defaultMinSize(minHeight = 44.dp)
-            .clickable(onClick = onClick),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Text(
-            text = formatMinute(startMinute),
-            modifier = Modifier
-                .width(68.dp)
-                .padding(top = 3.dp),
-            fontSize = 12.sp,
-            fontFamily = FontFamily.Monospace,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Box(modifier = Modifier.width(10.dp), contentAlignment = Alignment.TopCenter) {
-            Box(
-                modifier = Modifier
-                    .padding(top = 5.dp)
-                    .size(10.dp)
-                    .clip(CircleShape)
-                    .background(color),
-            )
-        }
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                text = "Charging · " + ChargeStats.title(session),
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-            Text(
-                text = ChargeStats.detail(session),
-                fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
 
 
-@Composable
-private fun SleepTimelineRow(night: SleepNightEntity, onClick: () -> Unit) {
-    val zone = ZoneId.systemDefault()
-    val wake = Instant.ofEpochMilli(night.endMs).atZone(zone).let { it.hour * 60 + it.minute }
-    val bed = Instant.ofEpochMilli(night.startMs).atZone(zone).let { it.hour * 60 + it.minute }
-    val color = MaterialTheme.colorScheme.secondary
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .defaultMinSize(minHeight = 44.dp)
-            .clickable(onClick = onClick),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Text(
-            text = formatMinute(wake),
-            modifier = Modifier
-                .width(68.dp)
-                .padding(top = 3.dp),
-            fontSize = 12.sp,
-            fontFamily = FontFamily.Monospace,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Box(modifier = Modifier.width(10.dp), contentAlignment = Alignment.TopCenter) {
-            Box(
-                modifier = Modifier
-                    .padding(top = 5.dp)
-                    .size(10.dp)
-                    .clip(CircleShape)
-                    .background(color),
-            )
-        }
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                text = "Slept " + formatDuration(SleepStats.minutes(night)),
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-            Text(
-                text = formatMinute(bed) + " → " + formatMinute(wake) + " · " + SleepStats.label(night.source),
-                fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
 
 
-@Composable
-private fun PlaceTimelineRow(item: PlaceItem, now: Long, onClick: () -> Unit) {
-    val v = item.visit
-    val zone = ZoneId.systemDefault()
-    val color = MaterialTheme.colorScheme.primary
-    val startText = formatMinute(item.minute ?: 0)
-    val endText = if (v.ongoing) "now" else Instant.ofEpochMilli(v.endMs).atZone(zone).let { formatMinute(it.hour * 60 + it.minute) }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .defaultMinSize(minHeight = 44.dp)
-            .clickable(onClick = onClick),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Text(
-            text = startText,
-            modifier = Modifier
-                .width(68.dp)
-                .padding(top = 3.dp),
-            fontSize = 12.sp,
-            fontFamily = FontFamily.Monospace,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Box(modifier = Modifier.width(10.dp), contentAlignment = Alignment.TopCenter) {
-            Box(
-                modifier = Modifier
-                    .padding(top = 5.dp)
-                    .size(10.dp)
-                    .clip(CircleShape)
-                    .background(color),
-            )
-        }
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                text = "At " + item.name,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-            Text(
-                text = startText + " → " + endText + " · " + PlaceRules.durationText(PlaceRules.lengthMs(v, now)) +
-                    (if (StayConfidence.isUnsure(v.confidence)) " · unsure" else ""),
-                fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
 
 
-@Composable
-private fun TripTimelineRow(item: TripItem, onClick: () -> Unit) {
-    val t = item.trip
-    val color = MaterialTheme.colorScheme.tertiary
-    val startText = formatMinute(item.minute ?: 0)
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .defaultMinSize(minHeight = 44.dp)
-            .clickable(onClick = onClick),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Text(
-            text = startText,
-            modifier = Modifier
-                .width(68.dp)
-                .padding(top = 3.dp),
-            fontSize = 12.sp,
-            fontFamily = FontFamily.Monospace,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Box(modifier = Modifier.width(10.dp), contentAlignment = Alignment.TopCenter) {
-            Box(
-                modifier = Modifier
-                    .padding(top = 5.dp)
-                    .size(10.dp)
-                    .clip(CircleShape)
-                    .background(color),
-            )
-        }
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                text = tripEnd(item.from) + " → " + tripEnd(item.to),
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-            Text(
-                text = TripModes.label(t.mode) + (if (t.modeSource == "you") "" else " (guess)") + " · " + TripRules.distanceText(t.distanceM) +
-                    " · " + PlaceRules.durationText(t.endMs - t.startMs) + " · " + TripRules.avgKmh(t.distanceM, t.endMs - t.startMs) + " km/h",
-                fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
 
-/** Steps, time on the phone and time studying for the chosen day, in one card. */
 @Composable
 private fun DayNumbers(steps: String, phone: String, study: String) {
     Surface(

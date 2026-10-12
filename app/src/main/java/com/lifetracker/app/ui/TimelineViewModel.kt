@@ -200,6 +200,11 @@ class TimelineViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { db.usageDao().upsertApp(app.copy(ignored = ignored)) }
     }
 
+    /** Sets how a trip was made; it counts as your own answer, so later guesses learn from it. */
+    fun setTripMode(trip: TripEntity, mode: String) {
+        viewModelScope.launch { db.tripDao().setMode(trip.id, mode, "you") }
+    }
+
     fun delete(entry: EntryEntity) {
         viewModelScope.launch { dao.delete(entry) }
     }
