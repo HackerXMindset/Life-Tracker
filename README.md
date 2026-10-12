@@ -117,6 +117,7 @@ Each step is small enough to build, install and try before the next begins. The 
  DONE         Step 13c Cleaner readings (3 minute stays, motion sensor, jump filter)
  DONE         Step 13d How sure each visit is, name hints
  DONE         Step 13f GPX and CSV export, GPX import
+ DONE         Polish 1 Timeline top numbers, Stats tab, Settings tab
  NEXT  ──►    Step 14 Life events, month and year views
               Step 15 Stats
               Step 16 Polish
@@ -173,6 +174,8 @@ The next steps were planned together after asking for more automatic tracking. T
 **Step 13d: How sure each visit is, and name hints.** Every finished visit gets a **confidence** from 0 to 100, worked out from the position readings taken during it: how long you stayed (full marks at 30 minutes), how tightly the readings sit together (nine in ten within the 60 m stay radius), how many readings there are, how accurate they were, how much of the visit has readings instead of silence (gaps over 10 minutes count against it) and whether the spot is a place you named (an unnamed spot just leaves that part out). It is stored on the visit (database version 13 to 14, backups format 14; older backups still load) and worked out again by every tidy-up, so it improves when the readings do. Visits scoring under 50 show an **unsure** tag on the Timeline and in the Places visit list; a visit that could not be judged (no readings) shows nothing. Name hints: every 6 hours, together with the tidy-up, the app looks up a name on OpenStreetMap for up to 6 unnamed spots that have none yet (one lookup a second; only the position of that spot is sent, once), so "Looks like: ..." is already there when you open the review list, and a **Use "name"** button saves it as a place (kind Other, 50 m circle) in one tap. Nothing is named without your tap, and names in OpenStreetMap are patchy in India, so many hints will be street addresses.
 
 **Step 13f: GPX and CSV export, GPX import.** The Places screen has an Export and import card. **Readings GPX** and **Readings CSV** save every stored reading (CSV: time in milliseconds and as a date, latitude, longitude, accuracy, speed), **Trips GPX** saves each trip as its own track named with its day, how you travelled and distance, and **Import GPX** adds the positions in a GPX file from any app (GPSLogger, Google Earth, OsmAnd...) to the stored readings. A written file has a new track segment after a silence of 30 minutes and keeps each point's accuracy and speed in an extensions block, so reading it back gives exactly what was written. A point from another app needs a position and a time; its accuracy comes from `acc`, else `hdop` times 5 m, else a guess from the source (network 50 m, cell 150 m, anything else 20 m). Importing only ever adds readings (the same second is skipped, readings worse than 150 m are left out) and then works the visits out again from all the readings; it does not build trips (the way between stays) from the imported positions. Files with an XML DOCTYPE are refused.
+
+**Polish 1: a plainer Timeline, a Stats tab and a Settings tab.** The top of the Timeline is now one card with three numbers for the day: steps, time on the phone and time studied (what you logged as Study plus apps you linked to Study). The Tracked / Entries / Goals met row, the goal and limit bars, the Activities and settings buttons and the five cards (phone, steps and sleep, places, trips, calls) are gone from it, so the Timeline is only the day's entries in order. Daily goals are no longer shown or edited anywhere; goals already stored are kept untouched. The **Stats** tab now holds the numbers: one card per source for the chosen day, each opening the full figures over any range of days. The new **Settings** tab holds every permission and switch (Phone usage, Steps and sleep, Places, Trips, Calls, Charging), each row saying whether it is on, plus Activities and Backup and import. Each detail screen has a numbers half (from Stats) and a settings half (from Settings); every control that existed before still exists. Tapping a place, trip, charge or sleep row on the Timeline opens the numbers half. Tapping a bottom tab now also closes any detail screen that was open.
 
 **Step 14: Life events, month and year views.** Mark moments that changed your life, then look back by month or year to see what you did and how much you studied around each one.
 
@@ -312,7 +315,7 @@ life-tracker/
         │   │
         │   └── ui/                    ── The screen layer ──
         │       ├── LifeTrackerApp.kt  The frame: bottom tab bar and tab switching
-        │       ├── TimelineScreen.kt  Timeline: day strip, summary, goal bar, entries
+        │       ├── TimelineScreen.kt  Timeline: day strip, the three day numbers, entries in order
         │       ├── TimelineViewModel.kt  Selected day, adding and deleting entries
         │       ├── LogSheet.kt        The "Log something" pop-up
         │       ├── DataSourcesScreen.kt     Folders, Back up now and Restore
@@ -331,7 +334,7 @@ life-tracker/
         │       ├── RangePicker.kt          Quick choices plus From and To dates, shared by Calls and Phone usage
         │       ├── PhoneUsageScreen.kt     Phone usage: allow access, totals per app, links, Timeline options
         │       ├── PhoneUsageViewModel.kt  What that screen shows and does
-        │       ├── ActivitiesScreen.kt     Activities settings: list, colours, goals
+        │       ├── ActivitiesScreen.kt     Activities settings: list and colours
         │       ├── ActivitiesViewModel.kt  Saving and hiding activities
         │       ├── ActivityEditor.kt       The pop-up for making or editing an activity
         │       ├── Format.kt          Turns minutes into "2h 05m" and "8:15 AM"
@@ -346,11 +349,12 @@ life-tracker/
         │       ├── MoneyScreen.kt     Money tab: totals, quick log, categories, entries by day
         │       ├── MoneyViewModel.kt  Selected month, adding, logging and saving money items
         │       ├── MoneyDialogs.kt    The add flow (Expense or Income, then the kind) and its forms
-        │       ├── EventsScreen.kt                (planned, Step 14)
-        │       └── StatsScreen.kt                 (planned, Step 15)
+        │       ├── StatsScreen.kt     Stats tab: one card per source for the day, opening the full figures
+        │       ├── SettingsScreen.kt  Settings tab: every permission and switch, plus Activities and Backup
+        │       └── EventsScreen.kt                (planned, Step 14)
         │
         └── res/                       ── Look and feel ──
-            ├── drawable/              Icons: five tab icons, add, settings, the launcher icon
+            ├── drawable/              Icons: six tab icons, add, settings, the three day-number icons, the launcher icon
             ├── mipmap-anydpi-v26/     The adaptive app icon
             ├── values/                Colours, text, light theme
             └── values-night/          Dark theme

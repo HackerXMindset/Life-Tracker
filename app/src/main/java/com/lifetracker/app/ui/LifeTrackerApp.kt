@@ -53,19 +53,19 @@ enum class Tab(val title: String, @DrawableRes val icon: Int) {
     Habits("Habits", R.drawable.ic_tab_habits),
     Money("Money", R.drawable.ic_tab_money),
     Stats("Stats", R.drawable.ic_tab_stats),
+    Settings("Settings", R.drawable.ic_tab_settings),
 }
 
 @Composable
 fun LifeTrackerApp() {
     var tab by rememberSaveable { mutableStateOf(Tab.Timeline) }
-    var showData by rememberSaveable { mutableStateOf(false) }
-    var showActivities by rememberSaveable { mutableStateOf(false) }
-    var showPhone by rememberSaveable { mutableStateOf(false) }
-    var showCalls by rememberSaveable { mutableStateOf(false) }
-    var showCharging by rememberSaveable { mutableStateOf(false) }
-    var showSteps by rememberSaveable { mutableStateOf(false) }
-    var showPlaces by rememberSaveable { mutableStateOf(false) }
-    var showTrips by rememberSaveable { mutableStateOf(false) }
+    // A detail screen opened over the tabs, and which half of it: the numbers (from Stats or the Timeline) or the settings.
+    var page by rememberSaveable { mutableStateOf<Page?>(null) }
+    var part by rememberSaveable { mutableStateOf(Part.Data) }
+    fun openPage(target: Page, half: Part) {
+        part = half
+        page = target
+    }
 
     // One automatic backup per day, the first time the app is opened.
     val context = LocalContext.current
@@ -107,7 +107,7 @@ fun LifeTrackerApp() {
                 Tab.entries.forEach { item ->
                     NavigationBarItem(
                         selected = tab == item,
-                        onClick = { tab = item },
+                        onClick = { tab = item; page = null },
                         icon = { Icon(painter = painterResource(item.icon), contentDescription = null) },
                         label = { Text(item.title) },
                     )
@@ -116,67 +116,39 @@ fun LifeTrackerApp() {
         },
     ) { padding ->
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
-            if (showData) {
-                DataSourcesScreen(onBack = { showData = false })
-            } else if (showActivities) {
-                ActivitiesScreen(onBack = { showActivities = false })
-            } else if (showPhone) {
-                PhoneUsageScreen(onBack = { showPhone = false })
-            } else if (showCalls) {
-                CallsScreen(onBack = { showCalls = false })
-            } else if (showCharging) {
-                ChargingScreen(onBack = { showCharging = false })
-            } else if (showSteps) {
-                StepsSleepScreen(onBack = { showSteps = false })
-            } else if (showTrips) {
-                TripsScreen(onBack = { showTrips = false })
-            } else if (showPlaces) {
-                PlacesScreen(onBack = { showPlaces = false }, onOpenTrips = { showTrips = true })
+            val current = page
+            if (current != null) {
+                val back = { page = null }
+                when (current) {
+                    Page.Backup -> DataSourcesScreen(onBack = back)
+                    Page.Activities -> ActivitiesScreen(onBack = back)
+                    Page.Phone -> PhoneUsageScreen(onBack = back, part = part)
+                    Page.Calls -> CallsScreen(onBack = back, part = part)
+                    Page.Charging -> ChargingScreen(onBack = back, part = part)
+                    Page.Steps -> StepsSleepScreen(onBack = back, part = part)
+                    Page.Trips -> TripsScreen(onBack = back, part = part)
+                    Page.Places -> PlacesScreen(onBack = back, part = part, onOpenTrips = { openPage(Page.Trips, Part.Data) })
+                }
             } else {
                 when (tab) {
-                    Tab.Timeline -> TimelineScreen(onOpenTrips = { showTrips = true }, onOpenData = { showData = true }, onOpenActivities = { showActivities = true }, onOpenPhone = { showPhone = true }, onOpenCalls = { showCalls = true }, onOpenCharging = { showCharging = true }, onOpenSteps = { showSteps = true }, onOpenPlaces = { showPlaces = true })
+                    Tab.Timeline -> TimelineScreen(
+                        onOpenTrips = { openPage(Page.Trips, Part.Data) },
+                        onOpenCharging = { openPage(Page.Charging, Part.Data) },
+                        onOpenSteps = { openPage(Page.Steps, Part.Data) },
+                        onOpenPlaces = { openPage(Page.Places, Part.Data) },
+                    )
                     Tab.Habits -> HabitsScreen()
                     Tab.Food -> FoodScreen()
                     Tab.Money -> MoneyScreen()
-                    else -> ComingNextScreen(tab)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ComingNextScreen(tab: Tab) {
-    val text = when (tab) {
-        Tab.Food -> "Meals, calories and macros against your goals, plus water. It will import your OpenNutriTracker export."
-        Tab.Habits -> "A 14-day grid, streaks and totals for each habit. It will import your Streak backup."
-        Tab.Money -> "Income by source, spending by category and the monthly net."
-        Tab.Stats -> "Pick any metric and see it by day, week, month or year, with a heatmap and short insights."
-        Tab.Timeline -> ""
-    }
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp),
-    ) {
-        item {
-            ScreenHeader(label = tab.title, badge = "Not built yet", title = tab.title)
-        }
-        item {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
-                color = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-            ) {
-                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = "Coming next",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface,
+                    Tab.Stats -> StatsScreen(
+                        onOpenPhone = { openPage(Page.Phone, Part.Data) },
+                        onOpenSteps = { openPage(Page.Steps, Part.Data) },
+                        onOpenPlaces = { openPage(Page.Places, Part.Data) },
+                        onOpenTrips = { openPage(Page.Trips, Part.Data) },
+                        onOpenCalls = { openPage(Page.Calls, Part.Data) },
+                        onOpenCharging = { openPage(Page.Charging, Part.Data) },
                     )
-                    Text(text = text, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Tab.Settings -> SettingsScreen(onOpen = { openPage(it, Part.Settings) })
                 }
             }
         }

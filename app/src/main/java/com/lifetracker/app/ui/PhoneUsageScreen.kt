@@ -67,7 +67,7 @@ private fun msToMinutes(ms: Long): Int = (ms / 60_000L).toInt()
 
 /** Settings and totals for app usage: allow access, sync, link apps to activities, choose what the Timeline shows. */
 @Composable
-fun PhoneUsageScreen(onBack: () -> Unit, vm: PhoneUsageViewModel = viewModel()) {
+fun PhoneUsageScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PhoneUsageViewModel = viewModel()) {
     val context = LocalContext.current
     val hasAccess by vm.hasAccess.collectAsState()
     val summary by vm.summary.collectAsState()
@@ -103,7 +103,12 @@ fun PhoneUsageScreen(onBack: () -> Unit, vm: PhoneUsageViewModel = viewModel()) 
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item { TextButton(onClick = onBack) { Text("Back") } }
-        item { ScreenHeader(label = "Phone", badge = "On this phone", title = "Phone usage") }
+        item { ScreenHeader(label = if (part == Part.Data) "Stats" else "Settings", badge = "On this phone", title = "Phone usage") }
+
+        if (!hasAccess && part == Part.Data) {
+            item { SetupNote("Usage access is off, so there is nothing to show yet. Switch it on in the Settings tab, under Phone usage.") }
+            return@LazyColumn
+        }
 
         if (!hasAccess) {
             item {
@@ -136,141 +141,145 @@ fun PhoneUsageScreen(onBack: () -> Unit, vm: PhoneUsageViewModel = viewModel()) 
             return@LazyColumn
         }
 
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column {
-                    MonoLabel("Last copied")
-                    Text(
-                        text = if (lastSync.isEmpty()) "Not yet" else lastSync,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 13.sp,
-                    )
-                }
-                OutlinedButton(onClick = vm::sync, enabled = !syncing) { Text(if (syncing) "Copying..." else "Sync now") }
-            }
-        }
-        item { RangePicker(choice = range, onChange = vm::setRange) }
-        item {
-            Column {
-                MonoLabel("Total on your phone")
-                Text(
-                    text = formatDuration(msToMinutes(summary.totalMs)),
-                    fontSize = 30.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.onBackground,
-                )
-            }
-        }
-
-        if (summary.perApp.isEmpty()) {
+        if (part == Part.Data) {
             item {
-                Text(
-                    "Nothing copied for these days. If you just allowed access, tap Sync now. Android keeps only about a week of detail, so days from before the app first copied cannot be recovered.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-        items(summary.perApp, key = { "a" + it.first }) { (pkg, ms) ->
-            val info = byPkg[pkg]
-            val activity = info?.activityId?.takeIf { it.isNotEmpty() }?.let { types.byId(it) }
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(enabled = info != null) { editing = info },
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
+                    Column {
+                        MonoLabel("Last copied")
                         Text(
-                            info?.label ?: pkg,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold,
+                            text = if (lastSync.isEmpty()) "Not yet" else lastSync,
                             color = MaterialTheme.colorScheme.onBackground,
-                        )
-                        Text(
-                            text = if (activity != null) "Counts as ${activity.name}" else "Not linked to an activity",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 13.sp,
                         )
                     }
+                    OutlinedButton(onClick = vm::sync, enabled = !syncing) { Text(if (syncing) "Copying..." else "Sync now") }
+                }
+            }
+            item { RangePicker(choice = range, onChange = vm::setRange) }
+            item {
+                Column {
+                    MonoLabel("Total on your phone")
                     Text(
-                        formatDuration(msToMinutes(ms)),
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 14.sp,
+                        text = formatDuration(msToMinutes(summary.totalMs)),
+                        fontSize = 30.sp,
+                        fontWeight = FontWeight.ExtraBold,
                         color = MaterialTheme.colorScheme.onBackground,
                     )
                 }
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(6.dp)
-                        .clip(RoundedCornerShape(3.dp))
-                        .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth((ms.toFloat() / biggest).coerceIn(0.02f, 1f))
-                            .height(6.dp)
-                            .clip(RoundedCornerShape(3.dp))
-                            .background(activity?.let { it.displayColor() } ?: MaterialTheme.colorScheme.onSurfaceVariant),
+            }
+
+            if (summary.perApp.isEmpty()) {
+                item {
+                    Text(
+                        "Nothing copied for these days. If you just allowed access, tap Sync now. Android keeps only about a week of detail, so days from before the app first copied cannot be recovered.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
-        }
-        item {
-            Text(
-                "Tap an app to link it to an activity. Time on a linked app counts towards that activity's daily goal, on top of what you log yourself.",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-
-        item { MonoLabel("On the Timeline") }
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("Show app use on the Timeline", color = MaterialTheme.colorScheme.onBackground)
-                Switch(checked = showOnTimeline, onCheckedChange = vm::setShowOnTimeline)
-            }
-        }
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Leave out stretches shorter than", color = MaterialTheme.colorScheme.onBackground)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(1, 2, 5, 10).forEach { m ->
-                        FilterChip(selected = minBlock == m, onClick = { vm.setMinBlockMinutes(m) }, label = { Text("$m min") })
+            items(summary.perApp, key = { "a" + it.first }) { (pkg, ms) ->
+                val info = byPkg[pkg]
+                val activity = info?.activityId?.takeIf { it.isNotEmpty() }?.let { types.byId(it) }
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(enabled = info != null) { editing = info },
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                info?.label ?: pkg,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onBackground,
+                            )
+                            Text(
+                                text = if (activity != null) "Counts as ${activity.name}" else "Not linked to an activity",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Text(
+                            formatDuration(msToMinutes(ms)),
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onBackground,
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(6.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)),
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth((ms.toFloat() / biggest).coerceIn(0.02f, 1f))
+                                .height(6.dp)
+                                .clip(RoundedCornerShape(3.dp))
+                                .background(activity?.let { it.displayColor() } ?: MaterialTheme.colorScheme.onSurfaceVariant),
+                        )
                     }
                 }
+            }
+            item {
                 Text(
-                    "Short stretches still count in the totals. Stretches of the same app less than 2 minutes apart are shown as one.",
+                    "Tap an app to link it to an activity. Time on a linked app counts as time on that activity (for example Study), on top of what you log yourself.",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-        }
 
-        if (hidden.isNotEmpty()) {
-            item { MonoLabel("Hidden apps") }
-            items(hidden, key = { "h" + it.pkg }) { app ->
+        }
+        if (part == Part.Settings) {
+            item { MonoLabel("On the Timeline") }
+            item {
                 Row(
-                    modifier = Modifier.fillMaxWidth().clickable { editing = app },
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.onSurfaceVariant))
-                    Text(app.label, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Show app use on the Timeline", color = MaterialTheme.colorScheme.onBackground)
+                    Switch(checked = showOnTimeline, onCheckedChange = vm::setShowOnTimeline)
+                }
+            }
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Leave out stretches shorter than", color = MaterialTheme.colorScheme.onBackground)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(1, 2, 5, 10).forEach { m ->
+                            FilterChip(selected = minBlock == m, onClick = { vm.setMinBlockMinutes(m) }, label = { Text("$m min") })
+                        }
+                    }
+                    Text(
+                        "Short stretches still count in the totals. Stretches of the same app less than 2 minutes apart are shown as one.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            if (hidden.isNotEmpty()) {
+                item { MonoLabel("Hidden apps") }
+                items(hidden, key = { "h" + it.pkg }) { app ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clickable { editing = app },
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.onSurfaceVariant))
+                        Text(app.label, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
             }
         }

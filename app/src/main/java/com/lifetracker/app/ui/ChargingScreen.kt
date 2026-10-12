@@ -47,7 +47,7 @@ import com.lifetracker.app.data.ChargeStats
 
 /** Charging: settings, the banner, and every time your phone was on a charger. */
 @Composable
-fun ChargingScreen(onBack: () -> Unit, vm: ChargingViewModel = viewModel()) {
+fun ChargingScreen(onBack: () -> Unit, part: Part = Part.Data, vm: ChargingViewModel = viewModel()) {
     val context = LocalContext.current
     val rows by vm.rows.collectAsState()
     val range by vm.range.collectAsState()
@@ -80,139 +80,148 @@ fun ChargingScreen(onBack: () -> Unit, vm: ChargingViewModel = viewModel()) {
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item { TextButton(onClick = onBack) { Text("Back") } }
-        item { ScreenHeader(label = "Phone", badge = "On this phone", title = "Charging") }
+        item { ScreenHeader(label = if (part == Part.Data) "Stats" else "Settings", badge = "On this phone", title = "Charging") }
 
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("Record charging", color = MaterialTheme.colorScheme.onBackground)
-                Switch(checked = track, onCheckedChange = vm::setTrack)
-            }
-        }
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("Banner when I plug in", color = MaterialTheme.colorScheme.onBackground)
-                Switch(checked = showBanner, onCheckedChange = vm::setShowBanner)
-            }
-        }
-        if (showBanner && !notificationsOn) {
+        if (part == Part.Settings) {
             item {
-                InfoCard(
-                    title = "Allow notifications",
-                    text = "The banner is a notification. Without permission the app still records charging, but cannot ask what you plugged into.",
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Button(onClick = {
-                        if (Build.VERSION.SDK_INT >= 33) {
-                            askNotifications.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-                        } else {
-                            context.startActivity(
-                                Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-                                    .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                            )
-                        }
-                    }) { Text("Allow") }
-                    TextButton(onClick = {
-                        context.startActivity(
-                            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))
-                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                        )
-                    }) { Text("Open this app's settings") }
+                    Text("Record charging", color = MaterialTheme.colorScheme.onBackground)
+                    Switch(checked = track, onCheckedChange = vm::setTrack)
                 }
             }
-        }
-
-        item { RangePicker(choice = range, onChange = vm::setRange) }
-        item {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                ChargeStat("Sessions", totals.sessions.toString(), Modifier.weight(1f))
-                ChargeStat("Charging", ChargeStats.durationText(totals.chargingMs), Modifier.weight(1f))
-                ChargeStat("Used phone", ChargeStats.durationText(usedMs), Modifier.weight(1f))
-            }
-        }
-
-        if (rows.isEmpty()) {
             item {
-                Text(
-                    "No charging on these days. Plug in your phone and it appears here. Days from before this step cannot be filled in.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        } else {
-            item { MonoLabel("Sessions · tap to say what you used") }
-            items(rows.take(100), key = { it.session.id }) { row ->
-                val s = row.session
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { editing = row },
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        ChargeStats.title(s, row.guess),
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
-                    Text(
-                        formatDateTime(s.startMs) + " · " + ChargeStats.detail(s),
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    if (row.phoneUseMs >= 60_000L) {
-                        Text(
-                            "Used the phone for " + ChargeStats.durationText(row.phoneUseMs) + " of this",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                    Text("Banner when I plug in", color = MaterialTheme.colorScheme.onBackground)
+                    Switch(checked = showBanner, onCheckedChange = vm::setShowBanner)
+                }
+            }
+            if (showBanner && !notificationsOn) {
+                item {
+                    InfoCard(
+                        title = "Allow notifications",
+                        text = "The banner is a notification. Without permission the app still records charging, but cannot ask what you plugged into.",
+                    ) {
+                        Button(onClick = {
+                            if (Build.VERSION.SDK_INT >= 33) {
+                                askNotifications.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                            } else {
+                                context.startActivity(
+                                    Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                                        .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                                )
+                            }
+                        }) { Text("Allow") }
+                        TextButton(onClick = {
+                            context.startActivity(
+                                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                            )
+                        }) { Text("Open this app's settings") }
                     }
                 }
             }
-        }
 
-        item { MonoLabel("On the Timeline") }
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("Show charging on the Timeline", color = MaterialTheme.colorScheme.onBackground)
-                Switch(checked = showOnTimeline, onCheckedChange = vm::setShowOnTimeline)
+        }
+        if (part == Part.Data && !track) {
+            item { SetupNote("Charging is not being recorded. Turn it on in the Settings tab, under Charging.") }
+        }
+        if (part == Part.Data) {
+            item { RangePicker(choice = range, onChange = vm::setRange) }
+            item {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    ChargeStat("Sessions", totals.sessions.toString(), Modifier.weight(1f))
+                    ChargeStat("Charging", ChargeStats.durationText(totals.chargingMs), Modifier.weight(1f))
+                    ChargeStat("Used phone", ChargeStats.durationText(usedMs), Modifier.weight(1f))
+                }
             }
+
+            if (rows.isEmpty()) {
+                item {
+                    Text(
+                        "No charging on these days. Plug in your phone and it appears here. Days from before this step cannot be filled in.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            } else {
+                item { MonoLabel("Sessions · tap to say what you used") }
+                items(rows.take(100), key = { it.session.id }) { row ->
+                    val s = row.session
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { editing = row },
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        Text(
+                            ChargeStats.title(s, row.guess),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onBackground,
+                        )
+                        Text(
+                            formatDateTime(s.startMs) + " · " + ChargeStats.detail(s),
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        if (row.phoneUseMs >= 60_000L) {
+                            Text(
+                                "Used the phone for " + ChargeStats.durationText(row.phoneUseMs) + " of this",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            }
+
         }
-        item { MonoLabel("How it works") }
-        item {
-            Text(
-                "Android cannot tell a power bank from a wall charger, so you tell the app once from the banner and it learns: " +
-                    "the same kind of plug and about the same speed, tagged the same way at least 3 times, shows up as \"(guess)\". " +
-                    "The app does not run in the background while the phone is not charging. While charging, Android wakes it about every 15 minutes " +
-                    "to note the battery level and speed, so a session's end time can be up to 15 minutes early, unless the app was open when you unplugged. " +
-                    "The speed shown is what goes into the battery, a little less than the charger's label, and lower if you were using the phone.",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        item {
-            InfoCard(
-                title = "If the banner never appears (Xiaomi / HyperOS)",
-                text = "Open Android Settings > Apps > this app and turn on Autostart, set Battery saver to No restrictions, " +
-                    "and allow Notifications including pop-ups. HyperOS otherwise stops background work to save battery.",
-            ) {}
-        }
-        item {
-            Text(
-                "Backups include your charging history. Nothing leaves the phone.",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        if (part == Part.Settings) {
+            item { MonoLabel("On the Timeline") }
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Show charging on the Timeline", color = MaterialTheme.colorScheme.onBackground)
+                    Switch(checked = showOnTimeline, onCheckedChange = vm::setShowOnTimeline)
+                }
+            }
+            item { MonoLabel("How it works") }
+            item {
+                Text(
+                    "Android cannot tell a power bank from a wall charger, so you tell the app once from the banner and it learns: " +
+                        "the same kind of plug and about the same speed, tagged the same way at least 3 times, shows up as \"(guess)\". " +
+                        "The app does not run in the background while the phone is not charging. While charging, Android wakes it about every 15 minutes " +
+                        "to note the battery level and speed, so a session's end time can be up to 15 minutes early, unless the app was open when you unplugged. " +
+                        "The speed shown is what goes into the battery, a little less than the charger's label, and lower if you were using the phone.",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            item {
+                InfoCard(
+                    title = "If the banner never appears (Xiaomi / HyperOS)",
+                    text = "Open Android Settings > Apps > this app and turn on Autostart, set Battery saver to No restrictions, " +
+                        "and allow Notifications including pop-ups. HyperOS otherwise stops background work to save battery.",
+                ) {}
+            }
+            item {
+                Text(
+                    "Backups include your charging history. Nothing leaves the phone.",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 
