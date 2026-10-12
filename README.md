@@ -120,6 +120,7 @@ Each step is small enough to build, install and try before the next begins. The 
  DONE         Polish 1 Timeline top numbers, Stats tab, Settings tab
  DONE         Polish 2a Merged app blocks, edit apps and entries
  DONE         Polish 2b Place blocks, travel rows, no-data gaps
+ DONE         Polish 2c Timeline | Pie switch, 24-hour bar and pie
  NEXT  ──►    Step 14 Life events, month and year views
               Step 15 Stats
               Step 16 Polish
@@ -180,6 +181,8 @@ The next steps were planned together after asking for more automatic tracking. T
 **Polish 1: a plainer Timeline, a Stats tab and a Settings tab.** The top of the Timeline is now one card with three numbers for the day: steps, time on the phone and time studied (what you logged as Study plus apps you linked to Study). The Tracked / Entries / Goals met row, the goal and limit bars, the Activities and settings buttons and the five cards (phone, steps and sleep, places, trips, calls) are gone from it, so the Timeline is only the day's entries in order. Daily goals are no longer shown or edited anywhere; goals already stored are kept untouched. The **Stats** tab now holds the numbers: one card per source for the chosen day, each opening the full figures over any range of days. The new **Settings** tab holds every permission and switch (Phone usage, Steps and sleep, Places, Trips, Calls, Charging), each row saying whether it is on, plus Activities and Backup and import. Each detail screen has a numbers half (from Stats) and a settings half (from Settings); every control that existed before still exists. Tapping a place, trip, charge or sleep row on the Timeline opens the numbers half. Tapping a bottom tab now also closes any detail screen that was open.
 
 **Polish 2a and 2b: the Timeline as place blocks.** Uses of the same app within 10 minutes of each other are one block ("Telegram · 23m · opened 6 times"). Tap an app block to choose which category it counts as (kept for the app, so it applies to every day); tap something you logged to edit or delete it. Everything you did at a place (phone use, meals, sleep, calls, charging, your own entries) sits inside one tall block for that place, with the place's name running up its side. The way between two places is a travel row: the mode and distance when the phone recorded the trip (tap to change it), or "Unknown way of travel" with quick choices (Walked, Cycled, Bus, Drove, Auto, Metro, Train) when it can't tell, or when there is no trip record at all. Ten minutes or more with nothing known becomes a "No data" card with a Fill in button that opens the Log pop-up with those times. Gaps are only drawn between the first and last thing of the day, and on today never after now. Tapping a meal, call, charge or sleep row opens the screen where it is edited. The arranging is in `DayLayout.kt` (tested); the drawing is in `DayTimeline.kt`.
+
+**Polish 2c: Timeline | Pie.** A switch under the day numbers flips the day between the Timeline and a Pie. Both show the same 24-hour bar first: one bar, the same length every day, with marks at 6, 12 and 18 hours and a marker for now on today. Each stretch is coloured by what is known; where you logged something and the phone also collected something, what you logged wins, and nothing is counted twice. The Pie has two rings: the outer one is what you logged, the inner one is what was collected for you (sleep, meals, phone, travel), with the total in the middle, a legend, and a "Where the time went" list per category. The arranging is in `DaySegments.kt` (tested); the drawing is in `DayOverview.kt`.
 
 **Step 14: Life events, month and year views.** Mark moments that changed your life, then look back by month or year to see what you did and how much you studied around each one.
 
@@ -259,6 +262,7 @@ life-tracker/
         │   │   ├── ActivityStats.kt   Time per activity and goal progress
         │   │   ├── UsageTables.kt     App sessions and what you told the app about each app
         │   │   ├── UsageSessions.kt   Turns Android's app events into sessions, and sessions into a day
+        │   │   ├── DaySegments.kt     Flattens a day into non-overlapping 24-hour stretches
         │   │   ├── UsageCollector.kt  Reads Android's usage history (needs Usage access)
         │   │   ├── UsageSyncWorker.kt Copies that history every few hours in the background
         │   │   ├── UsageSettings.kt   Timeline and sync settings for phone usage
@@ -354,6 +358,7 @@ life-tracker/
         │       ├── MoneyViewModel.kt  Selected month, adding, logging and saving money items
         │       ├── MoneyDialogs.kt    The add flow (Expense or Income, then the kind) and its forms
         │       ├── DayTimeline.kt     The Timeline's place blocks, travel rows, gaps and item cards
+        │       ├── DayOverview.kt     The Timeline | Pie switch, the 24-hour bar and the pie
         │       ├── AppEditor.kt       The pop-up that files an app under a category
         │       ├── StatsScreen.kt     Stats tab: one card per source for the day, opening the full figures
         │       ├── SettingsScreen.kt  Settings tab: every permission and switch, plus Activities and Backup
