@@ -113,7 +113,7 @@ class DayLayoutTest {
         val rows = build(
             items = listOf(item("a", 0, 20)),
             visits = listOf(visit("v1", "home", 0, 0, ongoing = true)),
-            now = 50,
+            now = 50 * min,
         )
         val home = rows.single() as DayLayout.Place
         assertEquals(50 * min, home.endMs)
