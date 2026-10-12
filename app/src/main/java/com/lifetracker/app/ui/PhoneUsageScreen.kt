@@ -79,6 +79,7 @@ fun PhoneUsageScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PhoneUsageV
     val showOnTimeline by vm.showOnTimeline.collectAsState()
     val minBlock by vm.minBlockMinutes.collectAsState()
     BackHandler(onBack = onBack)
+    StartOnToday(vm::setRange)
 
     // When you come back from Android's settings, check again, and copy the history if access was just allowed.
     DisposableEffect(context) {

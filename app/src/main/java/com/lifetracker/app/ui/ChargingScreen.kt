@@ -57,6 +57,7 @@ fun ChargingScreen(onBack: () -> Unit, part: Part = Part.Data, vm: ChargingViewM
     val notificationsOn by vm.notificationsOn.collectAsState()
     var editing by remember { mutableStateOf<ChargeRow?>(null) }
     BackHandler(onBack = onBack)
+    StartOnToday(vm::setRange)
 
     val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
         vm.refreshNotifications()

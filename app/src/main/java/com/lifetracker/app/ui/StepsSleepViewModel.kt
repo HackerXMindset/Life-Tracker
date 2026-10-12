@@ -30,7 +30,7 @@ class StepsSleepViewModel(private val app: Application) : AndroidViewModel(app) 
     private val db = AppDatabase.get(app)
     private val settings = HealthSettings(app)
 
-    private val rangeFlow = MutableStateFlow(RangeChoice.preset("7"))
+    private val rangeFlow = MutableStateFlow(RangeChoice.preset("today"))
     val range: StateFlow<RangeChoice> = rangeFlow
 
     private val hcFlow = MutableStateFlow(HcState.Checking)

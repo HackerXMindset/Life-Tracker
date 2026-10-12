@@ -92,6 +92,7 @@ fun PlacesScreen(onBack: () -> Unit, onOpenTrips: () -> Unit, part: Part = Part.
     var editing by remember { mutableStateOf<PlaceEntity?>(null) }
     var naming by remember { mutableStateOf<PlaceRules.Cluster?>(null) }
     BackHandler(onBack = onBack)
+    StartOnToday(vm::setRange)
 
     val askLocation = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { vm.refresh() }
     val askBackground = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { vm.refresh() }

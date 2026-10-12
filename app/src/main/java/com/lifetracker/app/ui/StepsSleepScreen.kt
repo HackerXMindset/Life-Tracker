@@ -82,6 +82,7 @@ fun StepsSleepScreen(onBack: () -> Unit, part: Part = Part.Data, vm: StepsSleepV
     val lastSync by vm.lastSync.collectAsState()
     var editing by remember { mutableStateOf<NightEdit?>(null) }
     BackHandler(onBack = onBack)
+    StartOnToday(vm::setRange)
 
     val askHealth = rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) {
         vm.refresh()
