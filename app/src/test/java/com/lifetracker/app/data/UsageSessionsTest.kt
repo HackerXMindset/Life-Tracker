@@ -158,4 +158,39 @@ class UsageSessionsTest {
         assertEquals("com.x", day.blocks.single().label)
         assertTrue(day.minutesByActivity.isEmpty())
     }
+
+    @Test
+    fun theSameAppTenMinutesApartIsOneBlockEvenWithAnotherAppBetween() {
+        val day = UsageDays.build(
+            listOf(
+                session("t", 0, 5 * min),
+                session("b", 6 * min, 8 * min),
+                session("t", 9 * min, 12 * min),
+                session("t", 20 * min, 22 * min),
+            ),
+            mapOf(app("t", "Telegram"), app("b", "Brave")),
+            dayStart,
+            dayEnd,
+        )
+        val telegram = day.blocks.filter { it.pkg == "t" }
+        assertEquals(1, telegram.size)
+        assertEquals(0L, telegram[0].startMs)
+        assertEquals(22 * min, telegram[0].endMs)
+        assertEquals(10 * min, telegram[0].activeMs)
+        assertEquals(3, telegram[0].opens)
+        assertEquals(1, day.blocks.count { it.pkg == "b" })
+        assertEquals(12 * min, day.totalMs)
+    }
+
+    @Test
+    fun moreThanTenMinutesApartStartsANewBlock() {
+        val day = UsageDays.build(
+            listOf(session("t", 0, 5 * min), session("t", 16 * min, 18 * min)),
+            mapOf(app("t", "Telegram")),
+            dayStart,
+            dayEnd,
+        )
+        assertEquals(2, day.blocks.size)
+        assertEquals(listOf(1, 1), day.blocks.map { it.opens })
+    }
 }

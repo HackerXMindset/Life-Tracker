@@ -65,10 +65,13 @@ object UsageSessions {
 
 /** Turns one day's sessions into what the Timeline and the Phone usage screen show. */
 object UsageDays {
-    /** Stretches of the same app closer than this are shown as one block. */
-    const val BLOCK_GAP_MS = 2 * 60_000L
+    /**
+     * Stretches of the same app closer than this are shown as one block, even if other apps were used in between.
+     * So Telegram, then Brave, then Telegram again a few minutes later is one Telegram block and one Brave block.
+     */
+    const val BLOCK_GAP_MS = 10 * 60_000L
 
-    /** A run of one app, with [activeMs] actually on screen inside it. */
+    /** A run of one app, with [activeMs] actually on screen inside it and [opens] separate times it was opened. */
     data class Block(
         val pkg: String,
         val label: String,
@@ -76,6 +79,7 @@ object UsageDays {
         val startMs: Long,
         val endMs: Long,
         val activeMs: Long,
+        val opens: Int = 1,
     )
 
     data class Day(
@@ -101,13 +105,21 @@ object UsageDays {
             if (b > a && apps[s.pkg]?.ignored != true) s.copy(startMs = a, endMs = b) else null
         }.sortedBy { it.startMs }
 
+        // Each app has one block open at a time; a new stretch joins it if it starts within blockGapMs of where the block ended.
         val blocks = ArrayList<Block>()
+        val openBlock = HashMap<String, Int>()
         for (s in clipped) {
             val info = apps[s.pkg]
-            val last = blocks.lastOrNull()
-            if (last != null && last.pkg == s.pkg && s.startMs - last.endMs <= blockGapMs) {
-                blocks[blocks.size - 1] = last.copy(endMs = maxOf(last.endMs, s.endMs), activeMs = last.activeMs + (s.endMs - s.startMs))
+            val at = openBlock[s.pkg]
+            val last = at?.let { blocks[it] }
+            if (last != null && s.startMs - last.endMs <= blockGapMs) {
+                blocks[at] = last.copy(
+                    endMs = maxOf(last.endMs, s.endMs),
+                    activeMs = last.activeMs + (s.endMs - s.startMs),
+                    opens = last.opens + 1,
+                )
             } else {
+                openBlock[s.pkg] = blocks.size
                 blocks += Block(s.pkg, info?.label ?: s.pkg, info?.activityId.orEmpty(), s.startMs, s.endMs, s.endMs - s.startMs)
             }
         }
