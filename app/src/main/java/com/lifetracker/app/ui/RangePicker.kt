@@ -13,6 +13,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -88,3 +89,9 @@ fun RangePicker(choice: RangeChoice, onChange: (RangeChoice) -> Unit) {
 
 private val SHORT: java.time.format.DateTimeFormatter =
     java.time.format.DateTimeFormatter.ofPattern("d MMM yy", java.util.Locale.ENGLISH)
+
+/** Call once at the top of a screen: every time the screen is opened it starts on today, whatever you looked at last time. */
+@Composable
+fun StartOnToday(setRange: (RangeChoice) -> Unit) {
+    LaunchedEffect(Unit) { setRange(RangeChoice.preset("today")) }
+}

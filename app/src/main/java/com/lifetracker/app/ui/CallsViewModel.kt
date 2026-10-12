@@ -22,7 +22,7 @@ class CallsViewModel(private val app: Application) : AndroidViewModel(app) {
     private val dao = AppDatabase.get(app).callDao()
     private val settings = CallsSettings(app)
 
-    private val rangeFlow = MutableStateFlow(RangeChoice.preset("30"))
+    private val rangeFlow = MutableStateFlow(RangeChoice.preset("today"))
     val range: StateFlow<RangeChoice> = rangeFlow
 
     private val accessFlow = MutableStateFlow(CallsCollector.hasAccess(app))

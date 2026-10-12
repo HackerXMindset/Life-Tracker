@@ -36,7 +36,7 @@ class TripsViewModel(private val app: Application) : AndroidViewModel(app) {
     private fun <T> share(initial: T, flow: Flow<T>): StateFlow<T> =
         flow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), initial)
 
-    private val rangeFlow = MutableStateFlow(RangeChoice.preset("7"))
+    private val rangeFlow = MutableStateFlow(RangeChoice.preset("today"))
     val range: StateFlow<RangeChoice> = rangeFlow
 
     private val recordFlow = MutableStateFlow(settings.recordTrips)

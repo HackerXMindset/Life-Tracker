@@ -55,6 +55,7 @@ fun TripsScreen(onBack: () -> Unit, part: Part = Part.Data, vm: TripsViewModel =
     val showOnTimeline by vm.showOnTimeline.collectAsState()
     var choosing by remember { mutableStateOf<TripEntity?>(null) }
     BackHandler(onBack = onBack)
+    StartOnToday(vm::setRange)
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),

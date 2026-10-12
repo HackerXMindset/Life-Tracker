@@ -121,6 +121,7 @@ Each step is small enough to build, install and try before the next begins. The 
  DONE         Polish 2a Merged app blocks, edit apps and entries
  DONE         Polish 2b Place blocks, travel rows, no-data gaps
  DONE         Polish 2c Timeline | Pie switch, 24-hour bar and pie
+ DONE         Polish 3 Every Stats screen opens on Today
  NEXT  ──►    Step 14 Life events, month and year views
               Step 15 Stats
               Step 16 Polish

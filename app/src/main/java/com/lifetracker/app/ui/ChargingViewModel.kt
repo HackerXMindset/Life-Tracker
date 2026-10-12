@@ -33,7 +33,7 @@ class ChargingViewModel(private val app: Application) : AndroidViewModel(app) {
     private val dao = db.chargeDao()
     private val settings = ChargeSettings(app)
 
-    private val rangeFlow = MutableStateFlow(RangeChoice.preset("7"))
+    private val rangeFlow = MutableStateFlow(RangeChoice.preset("today"))
     val range: StateFlow<RangeChoice> = rangeFlow
 
     private val trackFlow = MutableStateFlow(settings.track)

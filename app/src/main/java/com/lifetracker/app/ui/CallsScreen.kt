@@ -60,6 +60,7 @@ fun CallsScreen(onBack: () -> Unit, part: Part = Part.Data, vm: CallsViewModel =
     val copyingOlder by vm.copyingOlder.collectAsState()
     val olderResult by vm.olderResult.collectAsState()
     BackHandler(onBack = onBack)
+    StartOnToday(vm::setRange)
 
     val askPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         vm.refreshAccess()
