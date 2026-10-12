@@ -37,6 +37,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,6 +65,7 @@ import com.lifetracker.app.data.ChargeSessionEntity
 import com.lifetracker.app.data.ChargeSettings
 import com.lifetracker.app.data.ChargeStats
 import com.lifetracker.app.data.DayLayout
+import com.lifetracker.app.data.DaySegments
 import com.lifetracker.app.data.HealthSettings
 import com.lifetracker.app.data.PlaceRules
 import com.lifetracker.app.data.PlaceVisitEntity
@@ -173,6 +176,28 @@ fun TimelineScreen(onOpenTrips: () -> Unit, onOpenCharging: () -> Unit, onOpenSt
             add(DayLayout.Item("p" + it.pkg + it.startMs, DayLayout.Kind.PHONE, it.startMs, it.endMs, true, it))
         }
     }
+    // The same day as 24-hour stretches, for the bar and the pie: what you logged, and what the phone collected for you.
+    val sleepArgb = types.byId("Sleep").displayColor().toArgb()
+    val foodArgb = types.byId("Food").displayColor().toArgb()
+    val loggedSegs = entries.filter { it.endMinute != null && it.endMinute > it.startMinute }.map {
+        val t = types.byId(it.category)
+        DaySegments.Seg(at(it.startMinute), at(it.endMinute!!), t.displayColor().toArgb(), t.name, true)
+    }
+    val collectedSegs = buildList {
+        sleepShown?.let { add(DaySegments.Seg(it.startMs, it.endMs, sleepArgb, "Sleep", false)) }
+        meals.forEach { add(DaySegments.Seg(at(it.minuteOfDay), at(it.minuteOfDay) + 15 * 60_000L, foodArgb, "Food", false)) }
+        if (usageAccess) usageDay.blocks.forEach {
+            val t = it.activityId.takeIf { id -> id.isNotEmpty() }?.let { id -> types.byId(id) }
+            add(DaySegments.Seg(it.startMs, it.endMs, t?.displayColor()?.toArgb() ?: 0xFF738078.toInt(), t?.name ?: "Phone", false))
+        }
+        if (showTrips) dayTrips.forEach { add(DaySegments.Seg(it.startMs, it.endMs, 0xFF8E94E8.toInt(), "Travel", false)) }
+    }
+    val flatAll = DaySegments.flatten(loggedSegs + collectedSegs, dayStartMs, dayEndMs)
+    val flatLogged = DaySegments.flatten(loggedSegs, dayStartMs, dayEndMs)
+    val flatCollected = DaySegments.flatten(collectedSegs, dayStartMs, dayEndMs)
+    val nowMarker = if (nowMs in dayStartMs until dayEndMs) nowMs else null
+    var pie by rememberSaveable { mutableStateOf(false) }
+
     val rows = DayLayout.build(items, placeVisits, dayTrips, placeNames, dayStartMs, dayEndMs, nowMs, showPlaces, showTrips)
     val actions = DayActions(
         types = types,
@@ -216,7 +241,15 @@ fun TimelineScreen(onOpenTrips: () -> Unit, onOpenCharging: () -> Unit, onOpenSt
                     study = if (studyMinutes > 0) formatDuration(studyMinutes) else "–",
                 )
             }
-            if (rows.isEmpty() && anyTimeTodos.isEmpty() && anyTimeNotes.isEmpty()) {
+            item(key = "view-switch") { ViewSwitch(pie = pie, onChange = { pie = it }) }
+            if (pie) {
+                item(key = "pie") { DayPie(flatLogged, flatCollected, flatAll, dayStartMs, nowMarker) }
+            } else {
+                item(key = "hours-bar") { HoursBar(flatAll, dayStartMs, nowMarker) }
+            }
+            if (pie) {
+                // Only the pie is shown.
+            } else if (rows.isEmpty() && anyTimeTodos.isEmpty() && anyTimeNotes.isEmpty()) {
                 item {
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
