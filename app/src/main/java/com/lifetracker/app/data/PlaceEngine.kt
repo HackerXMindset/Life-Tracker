@@ -131,7 +131,7 @@ data class WatchState(
 /**
  * Turns position readings into stays, with no Android in it so it can be tested.
  *
- * A reading within about 60 m of the current stay's centre belongs to it; one further away ends the stay and
+ * A reading within about 50 m of the current stay's centre belongs to it; one further away ends the stay and
  * starts a new one. A stay of 3 minutes or more is saved as a visit (to the named place whose circle holds its
  * centre, or to no place, which puts it in the review list) and updated with every reading. Readings come every
  * minute while the app does not know where you are; at a named place it takes two readings to be sure and then
@@ -139,7 +139,7 @@ data class WatchState(
  */
 object PlaceEngine {
     /** How far a reading may be from a stay's centre and still belong to it (plus the reading's own error, up to 50 m). */
-    const val STAY_RADIUS_M = 60.0
+    const val STAY_RADIUS_M = 50.0
 
     /** While you are moving, readings are only taken this long, to see whether you really left or are about to stop. */
     const val MOVE_CHECK_MS = 10 * 60_000L

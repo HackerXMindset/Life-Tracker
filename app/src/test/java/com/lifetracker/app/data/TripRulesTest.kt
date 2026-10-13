@@ -51,8 +51,8 @@ class TripRulesTest {
     @Test
     fun aShortTripOrOneThatNeverGetsAwayIsNotReal() {
         assertFalse(TripRules.isRealTrip(TripStats(900, 30_000L, 20, 30, 300)))
-        assertFalse(TripRules.isRealTrip(TripStats(900, 300_000L, 20, 30, 150)))
-        assertTrue(TripRules.isRealTrip(TripStats(900, 300_000L, 20, 30, 250)))
+        assertFalse(TripRules.isRealTrip(TripStats(900, 300_000L, 20, 30, 40)))
+        assertTrue(TripRules.isRealTrip(TripStats(900, 300_000L, 20, 30, 60)))
     }
 
     @Test

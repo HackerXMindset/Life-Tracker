@@ -152,8 +152,8 @@ class FixCleaningTest {
 
     @Test
     fun aWobbleThatNeverGotFarIsOneStay() {
-        // Two readings 133 m off (outside the radius, but not really away), then back.
-        val list = still(0, 9, 28.6) + still(10, 11, 28.6012) + still(12, 21, 28.6)
+        // Two poor readings (90 m error) 133 m off: outside the radius, but with that much error not really away. Then back.
+        val list = still(0, 9, 28.6) + (10..11).map { fix(it, 28.6012, acc = 90f) } + still(12, 21, 28.6)
         val stays = StayBuilder.build(list)
         assertEquals(1, stays.size)
         assertEquals(t0 + 21 * min, stays[0].endMs)

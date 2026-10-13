@@ -149,8 +149,8 @@ class PlaceTripsTest {
     fun gpsDriftThatComesBackIsNotARealTrip() {
         val run = Run(places)
         for (s in 0..360 step 60) run.feed(fix(s, 28.6100))
-        // One reading 122 m off, then back where you were.
-        run.feed(fix(420, 28.6111))
+        // One poor reading (90 m error) 122 m off, then back where you were: with that much error it was not really away.
+        run.feed(fix(420, 28.6111, acc = 90f))
         assertNotNull(run.state.trip)
         for (s in 480..780 step 60) run.feed(fix(s, 28.6100))
         val f = run.finishes.single()
