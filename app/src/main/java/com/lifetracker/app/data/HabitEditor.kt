@@ -145,6 +145,35 @@ object HabitEditor {
         return habit.copy(archived = archived, raw = o.toString())
     }
 
+    /** Reasons offered for a missed day, as in Streak. You can also write your own. */
+    val MISS_PRESETS = listOf("Overslept", "Busy", "Traveling", "Sick", "Tired", "Forgot")
+
+    /** The reasons you gave for missed days, by day. */
+    fun missReasons(raw: String): Map<LocalDate, String> {
+        val reasons = parse(raw).optJSONObject("missReasons") ?: return emptyMap()
+        val out = HashMap<LocalDate, String>()
+        for (key in reasons.keys()) {
+            val day = HabitPlan.dayKey(key) ?: continue
+            val text = reasons.optString(key).trim()
+            if (text.isNotEmpty()) out[day] = text
+        }
+        return out
+    }
+
+    /** The habit with a reason for a day (an empty or null reason removes it). Everything else is kept. */
+    fun withMissReason(habit: HabitEntity, day: LocalDate, reason: String?): HabitEntity {
+        val o = parse(habit.raw)
+        val reasons = o.optJSONObject("missReasons") ?: JSONObject()
+        val text = reason?.trim().orEmpty()
+        if (text.isEmpty()) reasons.remove(dayKey(day)) else reasons.put(dayKey(day), text)
+        if (reasons.length() == 0) o.remove("missReasons") else o.put("missReasons", reasons)
+        return habit.copy(raw = o.toString())
+    }
+
+    /** The presets first, then any other reason you have used before. */
+    fun reasonOptions(habit: HabitEntity): List<String> =
+        (MISS_PRESETS + missReasons(habit.raw).values).distinct()
+
     /** "Every day", "Mon, Wed, Fri", "3 times a week" ... for the habit page. */
     fun describe(plan: HabitPlan): String = when (plan.interval) {
         HabitPlan.WEEKLY -> "${plan.timesPerPeriod} ${if (plan.timesPerPeriod == 1) "day" else "days"} a week"

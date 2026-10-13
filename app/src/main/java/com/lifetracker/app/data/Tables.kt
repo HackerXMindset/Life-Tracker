@@ -139,6 +139,9 @@ interface HabitDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertHabit(habit: HabitEntity)
 
+    @Query("SELECT * FROM habits WHERE id = :id")
+    suspend fun habit(id: String): HabitEntity?
+
     @Query("SELECT COALESCE(MAX(sortOrder), -1) FROM habits")
     suspend fun maxHabitOrder(): Int
 

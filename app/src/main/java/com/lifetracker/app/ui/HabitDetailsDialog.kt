@@ -58,7 +58,7 @@ fun HabitDetailsDialog(
                 Line("Type", kind)
                 if (habit.category.isNotEmpty()) Line("Category", habit.category)
                 Text(
-                    text = "Tap a day on the card to tick it. Press and hold a day to clear it.",
+                    text = "Tap a day on the card to tick it. Press and hold a day for more: an exact amount, why you missed it, or clearing it.",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
