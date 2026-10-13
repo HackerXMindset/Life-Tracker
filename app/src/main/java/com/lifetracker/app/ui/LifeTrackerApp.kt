@@ -109,7 +109,8 @@ fun LifeTrackerApp() {
                         selected = tab == item,
                         onClick = { tab = item; page = null },
                         icon = { Icon(painter = painterResource(item.icon), contentDescription = null) },
-                        label = { Text(item.title) },
+                        // Six tabs share the width, so the names stay on one line and a little smaller.
+                        label = { Text(item.title, fontSize = 11.sp, maxLines = 1, softWrap = false) },
                     )
                 }
             }
