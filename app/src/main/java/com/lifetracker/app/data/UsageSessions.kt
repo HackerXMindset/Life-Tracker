@@ -80,6 +80,8 @@ object UsageDays {
         val endMs: Long,
         val activeMs: Long,
         val opens: Int = 1,
+        /** Where the block began as the phone recorded it; stays the same when you move the block, so your change can be found again. */
+        val refStartMs: Long = startMs,
     )
 
     data class Day(

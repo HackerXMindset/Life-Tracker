@@ -13,6 +13,7 @@ import com.lifetracker.app.data.EntryEntity
 import com.lifetracker.app.data.MealEntity
 import com.lifetracker.app.data.NoteEntity
 import com.lifetracker.app.data.PlaceTrail
+import com.lifetracker.app.data.TimelineEditEntity
 import com.lifetracker.app.data.PlaceVisitEntity
 import com.lifetracker.app.data.SleepNightEntity
 import com.lifetracker.app.data.StepDayEntity
@@ -205,6 +206,19 @@ class TimelineViewModel(app: Application) : AndroidViewModel(app) {
     /** Sets how a trip was made; it counts as your own answer, so later guesses learn from it. */
     fun setTripMode(trip: TripEntity, mode: String) {
         viewModelScope.launch { db.tripDao().setMode(trip.id, mode, "you") }
+    }
+
+    /** What you changed about things on the Timeline, by [TimelineEdits.key]. */
+    val edits: StateFlow<Map<String, TimelineEditEntity>> =
+        share(emptyMap(), db.timelineEditDao().observeAll().map { list -> list.associateBy { it.key } })
+
+    fun saveEdit(edit: TimelineEditEntity) {
+        viewModelScope.launch { db.timelineEditDao().upsert(edit) }
+    }
+
+    /** Removes only your change; the record underneath was never touched. */
+    fun resetEdit(kind: String, refId: String) {
+        viewModelScope.launch { db.timelineEditDao().remove(kind, refId) }
     }
 
     /** You say how you went on a journey the phone has no trip for; that is saved as a new trip record. */
