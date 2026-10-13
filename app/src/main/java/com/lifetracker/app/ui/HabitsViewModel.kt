@@ -7,7 +7,9 @@ import com.lifetracker.app.data.AppDatabase
 import com.lifetracker.app.data.CategoryEntity
 import com.lifetracker.app.data.CompletionEntity
 import com.lifetracker.app.data.HabitCalendar
+import com.lifetracker.app.data.HabitEditor
 import com.lifetracker.app.data.HabitEntity
+import com.lifetracker.app.data.HabitForm
 import com.lifetracker.app.data.HabitMode
 import com.lifetracker.app.data.HabitPlan
 import com.lifetracker.app.data.HabitRules
@@ -15,6 +17,7 @@ import com.lifetracker.app.data.HabitStats
 import com.lifetracker.app.data.HabitsSettings
 import com.lifetracker.app.data.TodayProgress
 import java.time.LocalDate
+import java.time.LocalDateTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -43,6 +46,10 @@ data class HabitsUi(
     val hasAny: Boolean,
     val progress: TodayProgress,
     val chips: List<String>,
+    /** Every category name there is, for the habit form. */
+    val allCategories: List<String>,
+    /** Hidden habits, which can be shown again. */
+    val archived: List<HabitEntity>,
     /** Empty means All. */
     val category: String,
     val mode: HabitMode,
@@ -75,7 +82,10 @@ class HabitsViewModel(app: Application) : AndroidViewModel(app) {
             .stateIn(
                 viewModelScope,
                 SharingStarted.WhileSubscribed(5_000),
-                HabitsUi(LocalDate.now(), emptyList(), false, TodayProgress(0, 0), emptyList(), "", settings.mode, settings.compact),
+                HabitsUi(
+                    LocalDate.now(), emptyList(), false, TodayProgress(0, 0), emptyList(), emptyList(), emptyList(), "",
+                    settings.mode, settings.compact,
+                ),
             )
 
     fun setMode(value: HabitMode) {
@@ -112,6 +122,27 @@ class HabitsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Saves a new habit ([existing] null) or the changes to one. */
+    fun save(form: HabitForm, existing: HabitEntity?) {
+        viewModelScope.launch {
+            val id = existing?.id ?: HabitEditor.newId()
+            val order = if (existing == null) dao.maxHabitOrder() + 1 else existing.sortOrder
+            val habit = HabitEditor.build(form, existing, id, order, LocalDate.now(), LocalDateTime.now())
+            val known = dao.allCategories()
+            if (habit.category.isNotEmpty() && known.none { it.name == habit.category }) {
+                dao.upsertCategories(
+                    listOf(CategoryEntity(HabitEditor.newId(), habit.category, habit.color, (known.maxOfOrNull { it.sortOrder } ?: -1) + 1)),
+                )
+            }
+            dao.upsertHabit(habit)
+        }
+    }
+
+    /** Hides a habit, or shows it again. Everything it recorded stays. */
+    fun setArchived(habit: HabitEntity, archived: Boolean) {
+        viewModelScope.launch { dao.upsertHabit(HabitEditor.withArchived(habit, archived, LocalDateTime.now())) }
+    }
+
     /** Press and hold on a day: clears it. */
     fun clear(habit: HabitEntity, date: LocalDate) {
         viewModelScope.launch { dao.deleteCompletion(habit.id, date.toString()) }
@@ -146,6 +177,8 @@ class HabitsViewModel(app: Application) : AndroidViewModel(app) {
             hasAny = all.isNotEmpty(),
             progress = HabitCalendar.todayProgress(all.map { it.rules }, today),
             chips = chips,
+            allCategories = (src.categories.map { it.name } + all.map { it.habit.category }).filter { it.isNotBlank() }.distinct(),
+            archived = src.habits.filter { it.archived },
             category = selected,
             mode = m,
             compact = small,
