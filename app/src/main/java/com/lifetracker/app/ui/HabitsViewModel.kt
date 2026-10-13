@@ -143,7 +143,29 @@ class HabitsViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { dao.upsertHabit(HabitEditor.withArchived(habit, archived, LocalDateTime.now())) }
     }
 
-    /** Press and hold on a day: clears it. */
+    /** Sets the exact amount for a day (counted habits). Zero or less clears the day. */
+    fun setAmount(habit: HabitEntity, date: LocalDate, amount: Double) {
+        if (date.isAfter(LocalDate.now())) return
+        viewModelScope.launch {
+            val key = date.toString()
+            if (amount <= 0) {
+                dao.deleteCompletion(habit.id, key)
+            } else {
+                val existing = dao.completion(habit.id, key)
+                dao.upsertCompletion(CompletionEntity(habit.id, key, amount, existing?.minuteOfDay))
+            }
+        }
+    }
+
+    /** Why a day was missed. A blank reason removes it. */
+    fun setMissReason(habit: HabitEntity, date: LocalDate, reason: String?) {
+        viewModelScope.launch {
+            val current = dao.habit(habit.id) ?: return@launch
+            dao.upsertHabit(HabitEditor.withMissReason(current, date, reason))
+        }
+    }
+
+    /** Clears a day: the one way a day's record is removed. */
     fun clear(habit: HabitEntity, date: LocalDate) {
         viewModelScope.launch { dao.deleteCompletion(habit.id, date.toString()) }
     }

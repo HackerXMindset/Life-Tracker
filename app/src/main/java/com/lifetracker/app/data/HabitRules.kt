@@ -132,6 +132,9 @@ class HabitRules(
     fun reaches(count: Double): Boolean =
         if (kind == HabitStats.KIND_COUNTED && (anyAmount || target <= 0)) count > 0 else count >= target - 1e-9
 
+    /** What was recorded on a day: the amount, or 0 if nothing. For a "relapse" habit a record means a relapse. */
+    fun amountOn(day: LocalDate): Double = counts[day] ?: 0.0
+
     /** Did you do the habit on this day? For a "relapse" habit, a day with no relapse. */
     fun isCompleted(day: LocalDate): Boolean {
         if (day.isAfter(today)) return false
@@ -257,6 +260,10 @@ class HabitRules(
         }
         return false
     }
+
+    /** Can a reason for missing this day be given? Only a past, due day that was not done and not paused. */
+    fun canMiss(day: LocalDate): Boolean =
+        day.isBefore(today) && !day.isBefore(startedAt) && !isCompleted(day) && !isNeutral(day)
 
     /** True when there is nothing left to do today: not due, done, or covered. A "relapse" habit is never "done for now". */
     fun isDoneForNow(): Boolean = !relapse && (isOffDay(today) || isCompleted(today) || isCovered(today))

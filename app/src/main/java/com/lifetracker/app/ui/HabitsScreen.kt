@@ -85,6 +85,7 @@ fun HabitsScreen(vm: HabitsViewModel = viewModel()) {
     var editing by remember { mutableStateOf<HabitEntity?>(null) }
     var adding by remember { mutableStateOf(false) }
     var showArchived by remember { mutableStateOf(false) }
+    var dayMenu by remember { mutableStateOf<Pair<String, LocalDate>?>(null) }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -114,7 +115,7 @@ fun HabitsScreen(vm: HabitsViewModel = viewModel()) {
                     else vm.tap(row.habit, ui.today)
                 },
                 onDay = { vm.tap(row.habit, it) },
-                onClear = { vm.clear(row.habit, it) },
+                onMenu = { dayMenu = row.habit.id to it },
             )
         }
         if (ui.archived.isNotEmpty()) {
@@ -143,6 +144,19 @@ fun HabitsScreen(vm: HabitsViewModel = viewModel()) {
             onEdit = { editing = row.habit; detailsId = null },
             onArchive = { vm.setArchived(row.habit, true); detailsId = null },
             onDismiss = { detailsId = null },
+        )
+    }
+    dayMenu?.let { (id, date) ->
+        val row = ui.rows.firstOrNull { it.habit.id == id }
+        if (row == null) dayMenu = null
+        else HabitDayDialog(
+            row = row,
+            date = date,
+            onToggle = { vm.tap(row.habit, date) },
+            onAmount = { vm.setAmount(row.habit, date, it) },
+            onReason = { vm.setMissReason(row.habit, date, it) },
+            onClear = { vm.clear(row.habit, date) },
+            onDismiss = { dayMenu = null },
         )
     }
     if (adding) {
@@ -426,7 +440,7 @@ private fun HabitCardView(
     onOpen: () -> Unit,
     onToday: () -> Unit,
     onDay: (LocalDate) -> Unit,
-    onClear: (LocalDate) -> Unit,
+    onMenu: (LocalDate) -> Unit,
 ) {
     val habit = row.habit
     val accent = Color(habit.color.toInt())
@@ -477,7 +491,7 @@ private fun HabitCardView(
                 }
             } else {
                 Spacer(Modifier.height(16.dp))
-                HabitCalendarView(row.rules, mode, today, accent, onDay, onClear)
+                HabitCalendarView(row.rules, mode, today, accent, onDay, onMenu)
             }
         }
     }
@@ -627,9 +641,9 @@ private fun inkOn(fill: Color, muted: Color): Color = when {
     else -> Color.White
 }
 
-private fun Modifier.dayTouch(date: LocalDate, today: LocalDate, onTap: (LocalDate) -> Unit, onClear: (LocalDate) -> Unit): Modifier =
+private fun Modifier.dayTouch(date: LocalDate, today: LocalDate, onTap: (LocalDate) -> Unit, onMenu: (LocalDate) -> Unit): Modifier =
     if (date.isAfter(today)) this
-    else this.pointerInput(date) { detectTapGestures(onTap = { onTap(date) }, onLongPress = { onClear(date) }) }
+    else this.pointerInput(date) { detectTapGestures(onTap = { onTap(date) }, onLongPress = { onMenu(date) }) }
 
 @Composable
 private fun HabitCalendarView(
@@ -638,17 +652,17 @@ private fun HabitCalendarView(
     today: LocalDate,
     accent: Color,
     onTap: (LocalDate) -> Unit,
-    onClear: (LocalDate) -> Unit,
+    onMenu: (LocalDate) -> Unit,
 ) {
     when (mode) {
-        HabitMode.Week -> WeekRow(rules, today, accent, onTap, onClear)
-        HabitMode.Month -> MonthGrid(rules, today, accent, onTap, onClear)
-        HabitMode.Year -> YearGrid(rules, today, accent, onTap, onClear)
+        HabitMode.Week -> WeekRow(rules, today, accent, onTap, onMenu)
+        HabitMode.Month -> MonthGrid(rules, today, accent, onTap, onMenu)
+        HabitMode.Year -> YearGrid(rules, today, accent, onTap, onMenu)
     }
 }
 
 @Composable
-private fun WeekRow(rules: HabitRules, today: LocalDate, accent: Color, onTap: (LocalDate) -> Unit, onClear: (LocalDate) -> Unit) {
+private fun WeekRow(rules: HabitRules, today: LocalDate, accent: Color, onTap: (LocalDate) -> Unit, onMenu: (LocalDate) -> Unit) {
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     val week = remember(today) { HabitCalendar.weekDays(today) }
     Row(modifier = Modifier.fillMaxWidth()) {
@@ -664,7 +678,7 @@ private fun WeekRow(rules: HabitRules, today: LocalDate, accent: Color, onTap: (
                     .clip(RoundedCornerShape(11.dp))
                     .background(fill)
                     .then(if (date == today) Modifier.border(2.dp, ringColor(fill, accent), RoundedCornerShape(11.dp)) else Modifier)
-                    .dayTouch(date, today, onTap, onClear),
+                    .dayTouch(date, today, onTap, onMenu),
                 contentAlignment = Alignment.Center,
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -686,7 +700,7 @@ private fun ringColor(fill: Color, accent: Color): Color =
     if (fill.alpha < 0.55f) accent else if (fill.luminance() > 0.55f) Color.Black.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.6f)
 
 @Composable
-private fun MonthGrid(rules: HabitRules, today: LocalDate, accent: Color, onTap: (LocalDate) -> Unit, onClear: (LocalDate) -> Unit) {
+private fun MonthGrid(rules: HabitRules, today: LocalDate, accent: Color, onTap: (LocalDate) -> Unit, onMenu: (LocalDate) -> Unit) {
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     val weeks = remember(today) { HabitCalendar.monthWeeks(today) }
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
@@ -712,7 +726,7 @@ private fun MonthGrid(rules: HabitRules, today: LocalDate, accent: Color, onTap:
                                     .clip(shape)
                                     .background(fill)
                                     .then(if (date == today) Modifier.border(1.5.dp, ringColor(fill, accent), shape) else Modifier)
-                                    .dayTouch(date, today, onTap, onClear),
+                                    .dayTouch(date, today, onTap, onMenu),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 if (side >= 20.dp) {
@@ -739,7 +753,7 @@ private fun MonthGrid(rules: HabitRules, today: LocalDate, accent: Color, onTap:
 }
 
 @Composable
-private fun YearGrid(rules: HabitRules, today: LocalDate, accent: Color, onTap: (LocalDate) -> Unit, onClear: (LocalDate) -> Unit) {
+private fun YearGrid(rules: HabitRules, today: LocalDate, accent: Color, onTap: (LocalDate) -> Unit, onMenu: (LocalDate) -> Unit) {
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     val columns = remember(today) { HabitCalendar.yearColumns(today) }
     val labels = remember(columns) { HabitCalendar.yearMonthLabels(columns) }
@@ -767,7 +781,7 @@ private fun YearGrid(rules: HabitRules, today: LocalDate, accent: Color, onTap: 
                             .size(13.dp)
                             .clip(RoundedCornerShape(3.dp))
                             .background(cellColor(rules.cell(date), accent))
-                            .dayTouch(date, today, onTap, onClear),
+                            .dayTouch(date, today, onTap, onMenu),
                     )
                 }
             }

@@ -172,4 +172,41 @@ class HabitEditorTest {
     fun newIdsAreDifferent() {
         assertTrue(HabitEditor.newId() != HabitEditor.newId())
     }
+
+    private fun plain(raw: String = "{}") =
+        HabitEntity("h", "x", "target", "", 0, 0, 0, "", 1.0, 1.0, false, -1, 0, "2026-10-01", false, 0, raw)
+
+    @Test
+    fun aMissReasonIsStoredByStreaksDayKeyAndKeepsTheRest() {
+        val h = plain("""{"id":"h","name":"x","focusMinutes":50}""")
+        val with = HabitEditor.withMissReason(h, LocalDate.of(2026, 10, 13), "  Sick ")
+        assertEquals("Sick", JSONObject(with.raw).getJSONObject("missReasons").getString("13-10-2026"))
+        assertEquals(50, JSONObject(with.raw).getInt("focusMinutes"))
+        assertEquals(mapOf(LocalDate.of(2026, 10, 13) to "Sick"), HabitEditor.missReasons(with.raw))
+    }
+
+    @Test
+    fun aMissReasonCanBeChangedAndRemovedAndTheLastRemovalDropsTheField() {
+        val a = HabitEditor.withMissReason(plain(), LocalDate.of(2026, 10, 12), "Busy")
+        val b = HabitEditor.withMissReason(a, LocalDate.of(2026, 10, 13), "Tired")
+        val c = HabitEditor.withMissReason(b, LocalDate.of(2026, 10, 12), "Forgot")
+        assertEquals("Forgot", HabitEditor.missReasons(c.raw)[LocalDate.of(2026, 10, 12)])
+        assertEquals("Tired", HabitEditor.missReasons(c.raw)[LocalDate.of(2026, 10, 13)])
+        val d = HabitEditor.withMissReason(HabitEditor.withMissReason(c, LocalDate.of(2026, 10, 12), null), LocalDate.of(2026, 10, 13), " ")
+        assertFalse(JSONObject(d.raw).has("missReasons"))
+    }
+
+    @Test
+    fun reasonOptionsAreThePresetsThenYourOwnWordsOnce() {
+        val a = HabitEditor.withMissReason(plain(), LocalDate.of(2026, 10, 12), "Exam day")
+        val b = HabitEditor.withMissReason(a, LocalDate.of(2026, 10, 13), "Exam day")
+        val c = HabitEditor.withMissReason(b, LocalDate.of(2026, 10, 11), "Sick")
+        assertEquals(HabitEditor.MISS_PRESETS + "Exam day", HabitEditor.reasonOptions(c))
+    }
+
+    @Test
+    fun aDayWithAnUnreadableKeyIsSkipped() {
+        val raw = """{"missReasons":{"bad":"x","13-10-2026":"Sick"}}"""
+        assertEquals(1, HabitEditor.missReasons(raw).size)
+    }
 }
