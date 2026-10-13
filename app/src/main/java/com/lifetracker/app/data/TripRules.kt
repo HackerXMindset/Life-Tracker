@@ -8,14 +8,14 @@ data class TripStats(
     val durationMs: Long,
     val medianKmh: Int,
     val topKmh: Int,
-    /** How far from where it began the trip ever got. A "trip" that never got 200 m away was only GPS drift. */
+    /** How far from where it began the trip ever got. A "trip" that never got [MIN_FARTHEST_M] away was only GPS drift. */
     val farthestM: Int,
 )
 
 /** The arithmetic of trips, free of Android so it can be tested. */
 object TripRules {
-    /** A trip must get at least this far from where it began. */
-    const val MIN_FARTHEST_M = 200
+    /** A trip must get at least this far from where it began (it was 200 m before Polish 4e). */
+    const val MIN_FARTHEST_M = 50
 
     /** If no reading comes for this long during a trip, the trip ended at the last reading. */
     const val TRIP_GAP_MS = 30 * 60_000L
@@ -39,7 +39,8 @@ object TripRules {
             if (seconds <= 0.0) continue
             val v = d / seconds
             if (v > MAX_SPEED_MS) continue
-            farthest = max(farthest, PlaceRules.distanceM(pts.first().lat, pts.first().lng, p.lat, p.lng))
+            // How far from where it began, less the reading's own error, the same way the live trip measures it.
+            farthest = max(farthest, PlaceRules.awayM(pts.first().lat, pts.first().lng, p.lat, p.lng, p.acc))
             distance += d
             speeds.add(v * 3.6)
             last = p

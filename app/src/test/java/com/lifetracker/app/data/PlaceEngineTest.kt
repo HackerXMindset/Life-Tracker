@@ -159,8 +159,8 @@ class PlaceEngineTest {
     fun aWobbleThatNeverGetsFarKeepsOneVisit() {
         val run = Run(places)
         for (m in 0..6) run.feed(fix(m, 28.6100, 77.2100))
-        // Two readings 133 m off (outside the circle, but not really away), then back.
-        for (m in 7..8) run.feed(fix(m, 28.6112, 77.2100))
+        // Two poor readings (90 m error) 133 m off: outside the circle, but with that much error not really away. Then back.
+        for (m in 7..8) run.feed(fix(m, 28.6112, 77.2100, acc = 90f))
         for (m in 9..16) run.feed(fix(m, 28.6100, 77.2100))
         assertEquals(1, run.rows.size)
         val v = run.rows.values.first()
@@ -187,7 +187,7 @@ class PlaceEngineTest {
     fun aStopYouHidIsStillHiddenWhenYouComeBack() {
         val run = Run(places)
         for (m in 0..6) run.feed(fix(m, 28.7, 77.3))
-        run.feed(fix(7, 28.7012, 77.3))
+        run.feed(fix(7, 28.7012, 77.3, acc = 90f))
         val id = run.rows.values.first().id
         run.rows[id] = run.rows.getValue(id).copy(ignored = true)
         for (m in 12..18) run.feed(fix(m, 28.7, 77.3))

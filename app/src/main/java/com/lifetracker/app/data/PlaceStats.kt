@@ -48,7 +48,7 @@ object PlaceRules {
     const val MERGE_GAP_MS = 20 * 60_000L
 
     /** Getting this far from a spot (the same distance, [TripRules.MIN_FARTHEST_M], that makes a trip real) means you really left it. */
-    const val DEPARTURE_M = 200.0
+    const val DEPARTURE_M = TripRules.MIN_FARTHEST_M.toDouble()
 
     /** A tidy-up stay and a saved visit are the same one if they overlap or are no further apart than this. */
     const val MATCH_SLACK_MS = 2 * 60_000L
