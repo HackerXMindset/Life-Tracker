@@ -124,8 +124,8 @@ Each step is small enough to build, install and try before the next begins. The 
  DONE         Polish 3 Every Stats screen opens on Today
  DONE         Polish 4a Places and Trips become one list (Stats)
  DONE         Polish 4b A "Places and trips" page in Settings
- NEXT  ──►    Polish 4c Calls: Stats and Settings, minimum call length, calls in the 24-hour bar
-              Polish 4d Edit everything on the Timeline (a "your edits" layer)
+ DONE         Polish 4c Calls: Stats and Settings, minimum call length, calls in the 24-hour bar
+ NEXT  ──►    Polish 4d Edit everything on the Timeline (a "your edits" layer)
               Polish 4e Trips start 50 m from a stop
               Polish 4f Tab labels that fit
               Step 14 Life events, month and year views
@@ -193,11 +193,11 @@ The next steps were planned together after asking for more automatic tracking. T
 
 **Polish 3: every Stats screen opens on Today.** Phone usage, Steps and sleep, Trips, Places, Charging and Calls start on Today each time they are opened, whatever range you looked at last time. You can still pick another range once inside.
 
-**Polish 4 (4a and 4b are built; the rest is planned, in this build order, one small step at a time).**
+**Polish 4 (4a, 4b and 4c are built; the rest is planned, in this build order, one small step at a time).**
 
 - **4a Places and Trips become one list (Stats). Built.** One view of where you went and how you got there: a place (name, arrival to leaving, time spent), then a journey row ("Walked, 1.6 km, 15 min"), then the next place. The separate Trips screen is gone (its data stays). A journey with no trip record shows the straight-line distance and asks how you went; your answer is saved as a new trip record (nothing is changed). The same quick choices now work on the Timeline's unknown-journey rows. The logic is in `PlaceTrail.kt` (tested); the cards are in `Journeys.kt`. It opens on Today. When you moved but there is no record in between, the journey row shows the straight-line distance and "Unknown way of travel" with the quick choices (Walked, Cycled, Bus, Drove, Auto, Metro, Train).
 - **4b A "Places and trips" page in Settings. Built.** Moves out of the Stats view: Watch my places, Record my trips and how closely to follow one, how closely to watch, GPS, Always on, "Stop the phone putting the app to sleep" (unrestricted battery, Autostart, Battery saver), the list of your places with Add a place, and the Timeline switches. The Status card and the readings card go to the bottom of that page under "Status". Switch labels that run off the screen are fixed.
-- **4c Calls.** Calls move to Stats (totals, people, latest calls, Sync now, opens on Today). The access prompt, Copy older calls and the Timeline switch go to a Calls page in Settings, with a new **minimum talk time for the Timeline** you choose (1, 2, 5 or 10 minutes; starts at 2). Missed calls and calls nobody answered never show on the Timeline (they stay in the Stats list). Calls become their own segment in the 24-hour bar and the Pie, so a 38-minute call takes 38 minutes' worth of the line.
+- **4c Calls. Built.** Calls move to Stats (totals, people, latest calls, Sync now, opens on Today). The access prompt, Copy older calls and the Timeline switch go to a Calls page in Settings, with a new **minimum talk time for the Timeline** you choose (1, 2, 5 or 10 minutes; starts at 2; the check is `CallStats.shownOnTimeline`, tested). Missed calls and calls nobody answered never show on the Timeline (they stay in the Stats list). Calls become their own segment in the 24-hour bar and the Pie, so a 38-minute call takes 38 minutes' worth of the line.
 - **4d Edit everything on the Timeline.** Every kind of item gets an editor for its category and its times (visits also their name; meals, calls, charges and sleep no longer send you to another screen). The phone's own records (visits, calls, app usage, trips) are never changed: your changes are saved in a separate "your edits" table (database version 14 to 15, backups move to format 15) and the Timeline shows your version on top. Hiding an item is an edit, never a delete, and removing an edit brings the original back.
 - **4e Trips start 50 m from a stop.** A trip begins as soon as you are more than 50 m from the stop you were at, for every stop the app detects, named or not. The old rule that a trip must get 200 m away is dropped. To stop GPS drift making fake trips, two readings in a row must be outside the 50 m (counting each reading's own error). Old days can be rebuilt with "Tidy everything from my readings"; nothing is deleted. This needs a real walk on the phone to check, so it is its own small step.
 - **4f Tab labels that fit.** With six tabs the labels "Timeline" and "Settings" wrapped onto two lines; they will fit on one.

@@ -37,6 +37,14 @@ class CallsViewModel(private val app: Application) : AndroidViewModel(app) {
     private val showFlow = MutableStateFlow(settings.showOnTimeline)
     val showOnTimeline: StateFlow<Boolean> = showFlow
 
+    private val minTalkFlow = MutableStateFlow(settings.minTalkMinutes)
+    val minTalkMinutes: StateFlow<Int> = minTalkFlow
+
+    fun setMinTalkMinutes(minutes: Int) {
+        settings.minTalkMinutes = minutes
+        minTalkFlow.value = minutes
+    }
+
     @OptIn(ExperimentalCoroutinesApi::class)
     val calls: StateFlow<List<CallEntity>> = rangeFlow.flatMapLatest { r ->
         val zone = ZoneId.systemDefault()

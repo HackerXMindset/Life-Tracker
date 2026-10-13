@@ -87,4 +87,25 @@ class CallStatsTest {
         assertEquals("1234|98765", CallStats.idFor(1234, "98765"))
         assertEquals(call(1, 5, start = 1234).id, call(1, 5, start = 1234).id)
     }
+
+    @Test
+    fun theTimelineShowsOnlyCallsYouTalkedOnForLongEnough() {
+        assertTrue(CallStats.shownOnTimeline(call(CallStats.INCOMING, 120), 2))
+        assertFalse(CallStats.shownOnTimeline(call(CallStats.INCOMING, 119), 2))
+        assertTrue(CallStats.shownOnTimeline(call(CallStats.OUTGOING, 38 * 60), 5))
+        assertFalse(CallStats.shownOnTimeline(call(CallStats.OUTGOING, 4 * 60), 5))
+    }
+
+    @Test
+    fun missedDeclinedAndUnansweredCallsNeverShowOnTheTimeline() {
+        assertFalse(CallStats.shownOnTimeline(call(CallStats.MISSED, 0), 1))
+        assertFalse(CallStats.shownOnTimeline(call(CallStats.DECLINED, 0), 1))
+        assertFalse(CallStats.shownOnTimeline(call(CallStats.OUTGOING, 0), 1))
+        assertFalse(CallStats.shownOnTimeline(call(CallStats.MISSED, 600), 1))
+    }
+
+    @Test
+    fun theChoicesIncludeTheDefault() {
+        assertTrue(CallStats.DEFAULT_MIN_TALK_MINUTES in CallStats.MIN_TALK_CHOICES)
+    }
 }

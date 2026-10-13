@@ -12,6 +12,11 @@ class CallsSettings(context: Context) {
         get() = prefs.getBoolean("show_on_timeline", true)
         set(value) = prefs.edit { putBoolean("show_on_timeline", value) }
 
+    /** The Timeline only shows calls you talked for at least this many minutes. */
+    var minTalkMinutes: Int
+        get() = prefs.getInt("min_talk_minutes", CallStats.DEFAULT_MIN_TALK_MINUTES)
+        set(value) = prefs.edit { putInt("min_talk_minutes", value) }
+
     /** When the call log was last copied, as text for the screen. Empty if never. */
     var lastSync: String
         get() = prefs.getString("last_sync", "") ?: ""
