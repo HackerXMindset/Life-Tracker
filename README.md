@@ -129,8 +129,8 @@ Each step is small enough to build, install and try before the next begins. The 
  DONE         Polish 4e Trips start 50 m from a stop
  DONE         Polish 4f Tab labels that fit
  DONE         Habits H1 Habit rules (schedules, streaks), tested
- NEXT  ──►    Habits H2 Streak's classic view, Week / Month / Year, expand button
-              Habits H3 Add, edit and note habits inside this app
+ DONE         Habits H2 Streak's classic view, Week / Month / Year, expand button
+ NEXT  ──►    Habits H3 Add, edit and note habits inside this app
               Habits H4 Settings: Streak or this app's own data; tap a habit to open it in Streak
               Habits H5 Your edits reach Streak (through Streak's backup folder)
               Step 14 Life events, month and year views
@@ -212,7 +212,7 @@ Not part of Polish 4, and not built: **Step 13e** (fixing trips and visits by ha
 **Habits rework (H1 to H5, planned, in this order, one small step each).** The Habits tab was a plain list of cards. It becomes Streak's classic view, and the app gets its own habit tracker that works like Streak's. Only the core Streak features come first: the classic view, Week / Month / Year, notes, categories, counted habits and miss reasons. Focus timers, to-dos, reminders, widgets, cover images and the book and water special types are not part of this. The app already stores habits in its own tables (from the Streak import), so no new database version is expected unless a step says so.
 
 - **H1 Habit rules. Built.** Streak's schedules (every day, some days of the week, a number of times a week or month, every X days) and the streak, goal and "done today" maths as tested code with no screens (`HabitRules.kt`). Days off a schedule never break a streak.
-- **H2 Streak's classic view. Planned.** The Today ring at the top, category chips, habit cards (colour, icon, streak, progress, a heat strip) and a month calendar on an open card. A **Week | Month | Year** switch changes the calendar the way Streak's does. The up-down button between the notes icon and Focus expands or collapses every card. It remembers its choice.
+- **H2 Streak's classic view. Built.** The Today ring at the top ("3 of 5 completed"), the **Week | Month | Year** switch, category chips, and one card per habit: coloured tile, name, streak, category, a strength bar with a percent, a tick button on the right, and the calendar under it (a row of seven days, a month grid with day numbers, or a 53-week year grid that opens on the newest weeks). Tapping a day ticks it, pressing and holding clears it. The up-down button at the top right makes every card small (the calendar becomes a thin coloured bar) or big again. It remembers the mode, the card size and the category you picked. Day colours follow Streak: paused days blue, days covered by a weekly or monthly target faded, partial counted days lighter. Habit icons: Streak's named icons are not drawn yet; an emoji icon shows as is, otherwise the habit's first letter. The notes icon and **+ New** come with H3 (they have nothing to open yet), and Focus is not part of this rework.
 - **H3 Add, edit and note habits here. Planned.** Add or edit a habit (name, icon, colour, category, yes/no, avoid or counted, goal, schedule), tick or untick a day, add a count or a time, write notes, give a miss reason, archive. Nothing is ever hard-deleted: archiving hides, and a backup keeps everything.
 - **H4 Settings and tap to open. Planned.** A **Habits** page in Settings with the choice **This app's own data** (the default) or **Import from Streak**. With Streak chosen, the app reads Streak's newest backup as today. Tapping a habit's name opens Streak on that exact habit (Streak accepts a habit ID; if Streak is not installed, a short message says so). Ticking and editing stay in this app.
 - **H5 Your edits reach Streak. Planned.** Streak can read other devices' backups from a shared folder ("Keep devices in sync"). This app writes its own Streak-format backup file there under its own device name, with a "last changed" stamp on each habit you edit, and Streak merges it like a second phone. Streak's owner is adding an option to save its backup after every change, so changes from Streak will come back here faster. Changes reach Streak when it next checks the folder, not instantly. This needs the Streak folder picked in both apps and cannot be fully tested without a phone running Streak.
@@ -291,6 +291,9 @@ life-tracker/
         │   │   ├── Database.kt        Entries table, the database itself and its upgrade steps
         │   │   ├── Tables.kt          Habits, completions, to-dos, notes and import records
         │   │   ├── HabitStats.kt      Streak arithmetic
+        │   │   ├── HabitRules.kt      Streak's schedules, streaks, goals, day colours (Habits H1)
+        │   │   ├── HabitCalendar.kt   Week, month and year grids, Today ring maths (H2)
+        │   │   ├── HabitsSettings.kt  Which calendar, card size, category
         │   │   ├── ActivityTypes.kt   Your activities (names, colours, goals) and the built-in ones
         │   │   ├── ActivityStats.kt   Time per activity and goal progress
         │   │   ├── UsageTables.kt     App sessions and what you told the app about each app
