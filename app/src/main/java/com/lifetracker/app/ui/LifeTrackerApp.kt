@@ -126,13 +126,11 @@ fun LifeTrackerApp() {
                     Page.Calls -> CallsScreen(onBack = back, part = part)
                     Page.Charging -> ChargingScreen(onBack = back, part = part)
                     Page.Steps -> StepsSleepScreen(onBack = back, part = part)
-                    Page.Trips -> TripsScreen(onBack = back, part = part)
-                    Page.Places -> PlacesScreen(onBack = back, part = part, onOpenTrips = { openPage(Page.Trips, Part.Data) })
+                    Page.Places -> PlacesScreen(onBack = back, part = part)
                 }
             } else {
                 when (tab) {
                     Tab.Timeline -> TimelineScreen(
-                        onOpenTrips = { openPage(Page.Trips, Part.Data) },
                         onOpenCharging = { openPage(Page.Charging, Part.Data) },
                         onOpenSteps = { openPage(Page.Steps, Part.Data) },
                         onOpenPlaces = { openPage(Page.Places, Part.Data) },
@@ -146,7 +144,6 @@ fun LifeTrackerApp() {
                         onOpenPhone = { openPage(Page.Phone, Part.Data) },
                         onOpenSteps = { openPage(Page.Steps, Part.Data) },
                         onOpenPlaces = { openPage(Page.Places, Part.Data) },
-                        onOpenTrips = { openPage(Page.Trips, Part.Data) },
                         onOpenCalls = { openPage(Page.Calls, Part.Data) },
                         onOpenCharging = { openPage(Page.Charging, Part.Data) },
                     )

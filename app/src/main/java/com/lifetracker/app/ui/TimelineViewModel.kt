@@ -8,9 +8,11 @@ import com.lifetracker.app.data.ActivityTypeEntity
 import com.lifetracker.app.data.AppDatabase
 import com.lifetracker.app.data.CallEntity
 import com.lifetracker.app.data.ChargeSessionEntity
+import com.lifetracker.app.data.DayLayout
 import com.lifetracker.app.data.EntryEntity
 import com.lifetracker.app.data.MealEntity
 import com.lifetracker.app.data.NoteEntity
+import com.lifetracker.app.data.PlaceTrail
 import com.lifetracker.app.data.PlaceVisitEntity
 import com.lifetracker.app.data.SleepNightEntity
 import com.lifetracker.app.data.StepDayEntity
@@ -203,6 +205,14 @@ class TimelineViewModel(app: Application) : AndroidViewModel(app) {
     /** Sets how a trip was made; it counts as your own answer, so later guesses learn from it. */
     fun setTripMode(trip: TripEntity, mode: String) {
         viewModelScope.launch { db.tripDao().setMode(trip.id, mode, "you") }
+    }
+
+    /** You say how you went on a journey the phone has no trip for; that is saved as a new trip record. */
+    fun setUnknownJourney(journey: DayLayout.Travel, mode: String) {
+        val from = journey.from ?: return
+        val to = journey.to ?: return
+        val made = PlaceTrail.journeyTrip(from, to, journey.startMs, journey.endMs, journey.straightLineM, mode)
+        viewModelScope.launch { db.tripDao().upsertTrip(made) }
     }
 
     fun delete(entry: EntryEntity) {

@@ -97,7 +97,7 @@ private const val STUDY_ID = "Study"
 private fun EntryEntity.minutes(): Int = ActivityStats.minutes(this)
 
 @Composable
-fun TimelineScreen(onOpenTrips: () -> Unit, onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPlaces: () -> Unit, onOpenCalls: () -> Unit, onOpenFood: () -> Unit, vm: TimelineViewModel = viewModel()) {
+fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPlaces: () -> Unit, onOpenCalls: () -> Unit, onOpenFood: () -> Unit, vm: TimelineViewModel = viewModel()) {
     val date by vm.date.collectAsState()
     val entries by vm.entries.collectAsState()
     val todos by vm.todos.collectAsState()
@@ -213,6 +213,7 @@ fun TimelineScreen(onOpenTrips: () -> Unit, onOpenCharging: () -> Unit, onOpenSt
         onFood = onOpenFood,
         onFillIn = { s, e -> fillIn = s to e },
         onTripMode = vm::setTripMode,
+        onUnknownJourney = vm::setUnknownJourney,
     )
     val anyTimeTodos = todos.filter { it.minutes == null }
     val anyTimeNotes = notes.filter { it.minutes == null }

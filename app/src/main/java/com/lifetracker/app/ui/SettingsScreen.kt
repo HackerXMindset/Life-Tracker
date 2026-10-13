@@ -28,7 +28,7 @@ import com.lifetracker.app.data.PlacesSettings
 import com.lifetracker.app.data.UsageCollector
 
 /** Everything that can be opened from the Settings tab. The numbers for each live under Stats. */
-enum class Page { Phone, Steps, Places, Trips, Calls, Charging, Activities, Backup }
+enum class Page { Phone, Steps, Places, Calls, Charging, Activities, Backup }
 
 /**
  * The Settings tab: one place for every permission and switch. Each row opens the settings half of that part of the app
@@ -76,20 +76,11 @@ fun SettingsScreen(onOpen: (Page) -> Unit) {
         }
         item {
             SettingsRow(
-                title = "Places",
+                title = "Places and trips",
                 status = if (places.enabled) "Watching" else "Switched off",
                 good = places.enabled,
-                hint = "Location permissions, keeping the app awake, how closely to watch, GPX and CSV files",
+                hint = "Location permissions, your places, trips, keeping the app awake, how closely to watch, status, GPX and CSV files",
                 onClick = { onOpen(Page.Places) },
-            )
-        }
-        item {
-            SettingsRow(
-                title = "Trips",
-                status = if (places.recordTrips) "Recording" else "Switched off",
-                good = places.recordTrips,
-                hint = "Whether to record trips, how closely to follow them",
-                onClick = { onOpen(Page.Trips) },
             )
         }
         item {

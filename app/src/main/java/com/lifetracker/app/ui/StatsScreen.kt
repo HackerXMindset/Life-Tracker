@@ -49,7 +49,6 @@ fun StatsScreen(
     onOpenPhone: () -> Unit,
     onOpenSteps: () -> Unit,
     onOpenPlaces: () -> Unit,
-    onOpenTrips: () -> Unit,
     onOpenCalls: () -> Unit,
     onOpenCharging: () -> Unit,
     vm: TimelineViewModel = viewModel(),
@@ -85,8 +84,7 @@ fun StatsScreen(
             else SetupNote("Phone usage is not switched on yet. Allow it in the Settings tab to see your app time here.")
         }
         item(key = "steps") { HealthSummary(steps, sleep, onClick = onOpenSteps) }
-        item(key = "places") { PlacesSummary(dayPlaces, placeNames, onClick = onOpenPlaces) }
-        item(key = "trips") { TripsSummary(trips, onClick = onOpenTrips) }
+        item(key = "places") { PlacesSummary(dayPlaces, placeNames, trips, onClick = onOpenPlaces) }
         item(key = "calls") { CallsSummary(calls, onClick = onOpenCalls) }
         item(key = "charging") { ChargingSummary(charges, onClick = onOpenCharging) }
     }
@@ -228,7 +226,7 @@ internal fun HealthSummary(steps: StepDayEntity?, sleep: SleepNightEntity?, onCl
 }
 
 @Composable
-internal fun PlacesSummary(totals: List<PlaceRules.PlaceTotal>, names: Map<String, String>, onClick: () -> Unit) {
+internal fun PlacesSummary(totals: List<PlaceRules.PlaceTotal>, names: Map<String, String>, trips: List<TripEntity>, onClick: () -> Unit) {
     val text = totals.take(3).joinToString(" · ") { (names[it.placeId] ?: "Place") + " " + PlaceRules.durationText(it.ms) }
     Surface(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
@@ -247,36 +245,15 @@ internal fun PlacesSummary(totals: List<PlaceRules.PlaceTotal>, names: Map<Strin
                 )
             }
             Text(
-                text = "Tap for places, visits and stops to review",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = "Travel: ${trips.size} trip${if (trips.size == 1) "" else "s"} · " +
+                    TripRules.distanceText(trips.sumOf { it.distanceM.toLong() }.toInt()) + " · " +
+                    PlaceRules.durationText(trips.sumOf { it.endMs - it.startMs }),
+                fontSize = 13.sp,
+                fontFamily = FontFamily.Monospace,
+                color = MaterialTheme.colorScheme.onSurface,
             )
-        }
-    }
-}
-
-@Composable
-internal fun TripsSummary(trips: List<TripEntity>, onClick: () -> Unit) {
-    val distance = trips.sumOf { it.distanceM.toLong() }.toInt()
-    val ms = trips.sumOf { it.endMs - it.startMs }
-    Surface(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-    ) {
-        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                MonoLabel("Trips")
-                Text(
-                    text = "${trips.size} · " + TripRules.distanceText(distance) + " · " + PlaceRules.durationText(ms),
-                    fontSize = 14.sp,
-                    fontFamily = FontFamily.Monospace,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
             Text(
-                text = "Tap for every trip and to say how you travelled",
+                text = "Tap for where you went, how you got there, and stops to review",
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

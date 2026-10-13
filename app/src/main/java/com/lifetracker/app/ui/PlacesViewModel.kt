@@ -12,6 +12,7 @@ import com.lifetracker.app.data.Fix
 import com.lifetracker.app.data.PlaceEntity
 import com.lifetracker.app.data.PlaceLookup
 import com.lifetracker.app.data.PlaceRules
+import com.lifetracker.app.data.PlaceTrail
 import com.lifetracker.app.data.PlaceVisitEntity
 import com.lifetracker.app.data.PlaceWatchService
 import com.lifetracker.app.data.PlacesSettings
@@ -52,7 +53,9 @@ data class PlacesAccess(val location: Boolean, val background: Boolean, val acti
 class ReadingsInfo(val total: Int, val hourly: List<Int>, val gapText: String)
 
 class PlacesViewModel(private val app: Application) : AndroidViewModel(app) {
-    private val dao = AppDatabase.get(app).placeDao()
+    private val db = AppDatabase.get(app)
+    private val dao = db.placeDao()
+    private val tripDao = db.tripDao()
     private val settings = PlacesSettings(app)
 
     private fun <T> share(initial: T, flow: Flow<T>): StateFlow<T> =
@@ -154,6 +157,69 @@ class PlacesViewModel(private val app: Application) : AndroidViewModel(app) {
             }
         },
     )
+
+    /** Where you were and how you got from one place to the next, oldest first. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val trail: StateFlow<List<PlaceTrail.Row>> = share(
+        emptyList(),
+        rangeFlow.flatMapLatest { r ->
+            val zone = ZoneId.systemDefault()
+            val from = r.span.startMs(zone)
+            val to = r.span.endMs(zone)
+            combine(dao.observePlaces(), dao.visitsBetween(from, to), tripDao.tripsBetween(from, to)) { places, visits, trips ->
+                PlaceTrail.build(visits, trips, places.associate { it.id to it.name }, System.currentTimeMillis())
+            }
+        },
+    )
+
+    private val recordTripsFlow = MutableStateFlow(settings.recordTrips)
+    val recordTrips: StateFlow<Boolean> = recordTripsFlow
+
+    private val tripPaceFlow = MutableStateFlow(settings.tripIntervalSec)
+    val tripIntervalSec: StateFlow<Int> = tripPaceFlow
+
+    private val tripsTimelineFlow = MutableStateFlow(settings.showTripsOnTimeline)
+    val showTripsOnTimeline: StateFlow<Boolean> = tripsTimelineFlow
+
+    fun setRecordTrips(on: Boolean) {
+        settings.recordTrips = on
+        recordTripsFlow.value = on
+    }
+
+    fun setTripIntervalSec(seconds: Int) {
+        settings.tripIntervalSec = seconds
+        tripPaceFlow.value = seconds
+    }
+
+    fun setShowTripsOnTimeline(on: Boolean) {
+        settings.showTripsOnTimeline = on
+        tripsTimelineFlow.value = on
+    }
+
+    /**
+     * You say how you travelled. For a trip the phone recorded this is your answer and the app looks again at the trips
+     * it had only guessed; for a journey with no trip it is saved as a new trip record.
+     */
+    fun setJourneyMode(journey: PlaceTrail.Journey, mode: String) {
+        viewModelScope.launch {
+            val trip = journey.trip
+            if (trip != null) {
+                tripDao.setMode(trip.id, mode, "you")
+                reguess()
+            } else {
+                PlaceTrail.tripFor(journey, mode)?.let { tripDao.upsertTrip(it) }
+            }
+        }
+    }
+
+    private suspend fun reguess() {
+        val learned = tripDao.corrected().map { TripModes.learned(it) }
+        for (t in tripDao.guessed()) {
+            val stats = com.lifetracker.app.data.TripStats(t.distanceM, t.endMs - t.startMs, t.medianKmh, t.topKmh, TripRules.MIN_FARTHEST_M)
+            val mode = TripModes.guess(stats, TripModes.parseActivity(t.activity), t.fromPlaceId, t.toPlaceId, learned)
+            if (mode != t.mode) tripDao.setMode(t.id, mode, "auto")
+        }
+    }
 
     /** Stops at unnamed spots, grouped by where they were. */
     val clusters: StateFlow<List<PlaceRules.Cluster>> = share(emptyList(), dao.observeUnknown().map { PlaceRules.clusters(it) })
