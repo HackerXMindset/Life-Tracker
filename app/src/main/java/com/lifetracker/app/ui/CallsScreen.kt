@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -57,6 +58,7 @@ fun CallsScreen(onBack: () -> Unit, part: Part = Part.Data, vm: CallsViewModel =
     val syncing by vm.syncing.collectAsState()
     val lastSync by vm.lastSync.collectAsState()
     val showOnTimeline by vm.showOnTimeline.collectAsState()
+    val minTalk by vm.minTalkMinutes.collectAsState()
     val copyingOlder by vm.copyingOlder.collectAsState()
     val olderResult by vm.olderResult.collectAsState()
     BackHandler(onBack = onBack)
@@ -229,15 +231,26 @@ fun CallsScreen(onBack: () -> Unit, part: Part = Part.Data, vm: CallsViewModel =
             }
 
             item { MonoLabel("On the Timeline") }
+            item { SwitchRow("Show calls on the Timeline", showOnTimeline, vm::setShowOnTimeline) }
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text("Show calls on the Timeline", color = MaterialTheme.colorScheme.onBackground)
-                    Switch(checked = showOnTimeline, onCheckedChange = vm::setShowOnTimeline)
+                Text(
+                    "Only show a call on the Timeline if you talked for at least:",
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+            }
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    CallStats.MIN_TALK_CHOICES.forEach { minutes ->
+                        FilterChip(selected = minTalk == minutes, onClick = { vm.setMinTalkMinutes(minutes) }, label = { Text("$minutes min") })
+                    }
                 }
+            }
+            item {
+                Text(
+                    "Missed calls, declined calls and calls nobody answered are never drawn on the Timeline. They still count in the Calls stats.",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
             item {
                 Text(

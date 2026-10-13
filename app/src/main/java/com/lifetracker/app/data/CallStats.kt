@@ -10,6 +10,14 @@ object CallStats {
     const val BLOCKED = 6
     const val ELSEWHERE = 7
 
+    /** The Timeline shows a call only when you really talked, for at least this long unless you choose otherwise. */
+    const val DEFAULT_MIN_TALK_MINUTES = 2
+    val MIN_TALK_CHOICES = listOf(1, 2, 5, 10)
+
+    /** Missed, declined and unanswered calls are never on the Timeline; a call you talked on is, once it is long enough. */
+    fun shownOnTimeline(call: CallEntity, minMinutes: Int): Boolean =
+        connected(call) && call.durationSec >= minMinutes * 60
+
     fun idFor(startMs: Long, number: String) = "$startMs|$number"
 
     /** Who the call was with: the contact's name, else the number, else "Unknown number". */

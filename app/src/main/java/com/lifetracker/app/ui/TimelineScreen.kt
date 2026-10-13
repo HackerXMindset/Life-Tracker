@@ -134,6 +134,8 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
     val minBlockMs = usageSettings.minBlockMinutes * 60_000L
     val callsAccess = CallsCollector.hasAccess(context)
     val showCalls = callsAccess && callsSettings.showOnTimeline
+    val minTalk = callsSettings.minTalkMinutes
+    val shownCalls = if (showCalls) calls.filter { CallStats.shownOnTimeline(it, minTalk) } else emptyList()
 
     var showLog by remember { mutableStateOf(false) }
     var toDelete by remember { mutableStateOf<EntryEntity?>(null) }
@@ -163,7 +165,7 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
         meals.forEach {
             add(DayLayout.Item("m" + it.id, DayLayout.Kind.MEAL, at(it.minuteOfDay), at(it.minuteOfDay) + 15 * 60_000L, false, it))
         }
-        if (showCalls) calls.forEach {
+        shownCalls.forEach {
             add(DayLayout.Item("call" + it.id, DayLayout.Kind.CALL, it.startMs, it.startMs + it.durationSec * 1000L, it.durationSec > 0, it))
         }
         if (showCharging) charges.forEach {
@@ -179,6 +181,7 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
     // The same day as 24-hour stretches, for the bar and the pie: what you logged, and what the phone collected for you.
     val sleepArgb = types.byId("Sleep").displayColor().toArgb()
     val foodArgb = types.byId("Food").displayColor().toArgb()
+    val callArgb = MaterialTheme.colorScheme.primary.toArgb()
     val loggedSegs = entries.filter { it.endMinute != null && it.endMinute > it.startMinute }.map {
         val t = types.byId(it.category)
         DaySegments.Seg(at(it.startMinute), at(it.endMinute!!), t.displayColor().toArgb(), t.name, true)
@@ -191,6 +194,7 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
             add(DaySegments.Seg(it.startMs, it.endMs, t?.displayColor()?.toArgb() ?: 0xFF738078.toInt(), t?.name ?: "Phone", false))
         }
         if (showTrips) dayTrips.forEach { add(DaySegments.Seg(it.startMs, it.endMs, 0xFF8E94E8.toInt(), "Travel", false)) }
+        shownCalls.forEach { add(DaySegments.Seg(it.startMs, it.startMs + it.durationSec * 1000L, callArgb, "Calls", false)) }
     }
     val flatAll = DaySegments.flatten(loggedSegs + collectedSegs, dayStartMs, dayEndMs)
     val flatLogged = DaySegments.flatten(loggedSegs, dayStartMs, dayEndMs)
