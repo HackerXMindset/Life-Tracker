@@ -4,6 +4,12 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import org.json.JSONObject
 
+/** What a day on the calendar looks like. */
+enum class DayKind { DONE, PARTIAL, COVERED, PAUSED, MISSED, OFF, FUTURE, BEFORE, RELAPSE, CLEAN }
+
+/** One calendar day: how it looks, and for done days how full it is (0.25 to 1). */
+data class HabitCell(val kind: DayKind, val ratio: Float)
+
 /** A stretch of days a habit was paused (a holiday). An open end means it is still going. */
 data class VacationSpan(val start: LocalDate, val end: LocalDate?)
 
@@ -430,6 +436,62 @@ class HabitRules(
         }
         return best
     }
+
+    /** How one day looks on the calendar, the way Streak colours it. */
+    fun cell(day: LocalDate): HabitCell {
+        val before = day.isBefore(startedAt)
+        val future = day.isAfter(today)
+        if (!before && !future && isNeutral(day)) return HabitCell(DayKind.PAUSED, 0f)
+        if (relapse) {
+            return when {
+                before -> HabitCell(DayKind.BEFORE, 0f)
+                future -> HabitCell(DayKind.FUTURE, 0f)
+                counts[day] != null -> HabitCell(DayKind.RELAPSE, 1f)
+                else -> HabitCell(DayKind.CLEAN, 1f)
+            }
+        }
+        if (!before && isCovered(day)) return HabitCell(DayKind.COVERED, 0f)
+        val amount = if (future) 0.0 else counts[day] ?: 0.0
+        if (amount <= 0) {
+            return when {
+                before -> HabitCell(DayKind.BEFORE, 0f)
+                future || isOffDay(day) -> HabitCell(DayKind.OFF, 0f)
+                else -> HabitCell(DayKind.MISSED, 0f)
+            }
+        }
+        val ratio = if (target <= 0) 1.0 else (amount / target).coerceIn(0.25, 1.0)
+        return HabitCell(if (reaches(amount)) DayKind.DONE else DayKind.PARTIAL, ratio.toFloat())
+    }
+
+    /** How full one day is, 0 to 1. Used for the strength bar. */
+    private fun dayValue(day: LocalDate): Double {
+        if (day.isBefore(startedAt) || day.isAfter(today)) return 0.0
+        if (relapse) return if (counts[day] != null) 0.0 else 1.0
+        val amount = counts[day] ?: 0.0
+        if (target <= 0) return if (amount > 0) 1.0 else 0.0
+        return (amount / target).coerceIn(0.0, 1.0)
+    }
+
+    /**
+     * How steady the habit has been lately, 0 to 1: the last 90 days, with recent days counting more (the weight
+     * halves every 12 days). Days off, paused or covered days are left out. Streak shows it as a bar and a percent.
+     */
+    fun strength(): Double {
+        if (counts.isEmpty() && !relapse) return 0.0
+        var score = 0.0
+        var norm = 0.0
+        for (i in 0 until 90) {
+            val day = today.minusDays(i.toLong())
+            if (day.isBefore(startedAt) || !isScheduled(day) || isNeutral(day) || isCovered(day)) continue
+            val weight = Math.pow(0.5, i / 12.0)
+            norm += weight
+            score += weight * dayValue(day)
+        }
+        return if (norm == 0.0) 0.0 else (score / norm).coerceIn(0.0, 1.0)
+    }
+
+    /** The strength as a whole percent, as shown on the card. */
+    fun consistency(): Int = Math.round(strength() * 100).toInt()
 
     /** The numbers shown on a habit's card. */
     fun streaks(): Streaks = Streaks(

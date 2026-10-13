@@ -130,6 +130,9 @@ interface HabitDao {
     @Query("SELECT * FROM categories")
     suspend fun allCategories(): List<CategoryEntity>
 
+    @Query("SELECT * FROM categories ORDER BY sortOrder, name")
+    fun observeCategories(): Flow<List<CategoryEntity>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertHabits(habits: List<HabitEntity>)
 
