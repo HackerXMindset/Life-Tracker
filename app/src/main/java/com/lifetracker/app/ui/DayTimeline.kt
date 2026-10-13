@@ -85,6 +85,7 @@ class DayActions(
     val onFood: () -> Unit,
     val onFillIn: (startMs: Long, endMs: Long) -> Unit,
     val onTripMode: (TripEntity, String) -> Unit,
+    val onUnknownJourney: (DayLayout.Travel, String) -> Unit,
 )
 
 private val RAIL_WIDTH = 26.dp
@@ -479,7 +480,7 @@ private fun GapRow(gap: DayLayout.Gap, a: DayActions) {
 }
 
 /** Chip label, then the mode id it sets. */
-private val QUICK_MODES = listOf(
+internal val QUICK_MODES = listOf(
     "Walked" to "walk", "Cycled" to "cycle", "Bus" to "bus", "Drove" to "car",
     "Auto" to "auto", "Metro" to "train", "Train" to "train",
 )
@@ -491,7 +492,7 @@ private fun TravelCard(t: DayLayout.Travel, a: DayActions) {
     var picking by remember { mutableStateOf(false) }
     val length = lengthText(t.endMs - t.startMs)
     val title = when {
-        trip == null -> "Unknown way of travel · $length"
+        trip == null -> "Unknown way of travel · $length" + (if (t.straightLineM > 0) " · " + TripRules.distanceText(t.straightLineM) + " in a straight line" else "")
         unknown -> "Unknown way of travel · $length · " + TripRules.distanceText(trip.distanceM)
         else -> TripModes.label(trip.mode) + (if (trip.modeSource == "you") "" else " (guess)") + " · $length · " + TripRules.distanceText(trip.distanceM)
     }
@@ -531,6 +532,21 @@ private fun TravelCard(t: DayLayout.Travel, a: DayActions) {
                         modifier = Modifier.size(16.dp),
                         tint = accent,
                     )
+                }
+            }
+        }
+        if (trip == null && t.from != null && t.to != null) {
+            Text(
+                text = "How did you go? The phone has no record of the way, so the distance is a straight line.",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                QUICK_MODES.forEach { (label, mode) ->
+                    FilterChip(selected = false, onClick = { a.onUnknownJourney(t, mode) }, label = { Text(label) })
                 }
             }
         }

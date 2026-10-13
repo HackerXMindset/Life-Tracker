@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -92,5 +93,18 @@ fun SetupNote(text: String) {
             modifier = Modifier.padding(14.dp),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+    }
+}
+
+/** A label with a switch. The label wraps onto more lines instead of pushing the switch off the screen. */
+@Composable
+fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(label, modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.onBackground)
+        Switch(checked = checked, onCheckedChange = onChange)
     }
 }

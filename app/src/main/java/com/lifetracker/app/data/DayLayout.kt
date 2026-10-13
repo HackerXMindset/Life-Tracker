@@ -59,6 +59,10 @@ object DayLayout {
         val trip: TripEntity?,
         val fromName: String,
         val toName: String,
+        /** For a journey with no trip: the stays on either side and the straight-line distance between them. */
+        val from: PlaceVisitEntity? = null,
+        val to: PlaceVisitEntity? = null,
+        val straightLineM: Int = 0,
     ) : Row
 
     class Thing(val item: Item) : Row {
@@ -156,7 +160,10 @@ object DayLayout {
             val before = frontierRow
             if (before != null && row.startMs - frontier >= minGapMs) {
                 out += if (showTrips && before is Place && row is Place && before.placeId != row.placeId) {
-                    Travel("unknown$frontier", frontier, row.startMs, null, before.name, row.name)
+                    Travel(
+                        "unknown$frontier", frontier, row.startMs, null, before.name, row.name,
+                        from = before.visit, to = row.visit, straightLineM = PlaceTrail.straightLineM(before.visit, row.visit),
+                    )
                 } else {
                     Gap("gap$frontier", frontier, row.startMs, "no place and no phone data")
                 }
