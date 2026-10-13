@@ -81,13 +81,17 @@ private val PAUSED_BLUE = Color(0xFF4A90D9)
 fun HabitsScreen(vm: HabitsViewModel = viewModel()) {
     val ui by vm.state.collectAsState()
     var relapseFor by remember { mutableStateOf<HabitEntity?>(null) }
+    var detailsId by remember { mutableStateOf<String?>(null) }
+    var editing by remember { mutableStateOf<HabitEntity?>(null) }
+    var adding by remember { mutableStateOf(false) }
+    var showArchived by remember { mutableStateOf(false) }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item(key = "top") { TopBar(compact = ui.compact, onToggle = vm::toggleCompact) }
+        item(key = "top") { TopBar(compact = ui.compact, onToggle = vm::toggleCompact, onNew = { adding = true }) }
         item(key = "today") { TodayCard(ui.today, ui.progress) }
         if (!ui.hasAny) {
             item(key = "empty") { EmptyCard() }
@@ -103,6 +107,7 @@ fun HabitsScreen(vm: HabitsViewModel = viewModel()) {
                 today = ui.today,
                 mode = ui.mode,
                 compact = ui.compact,
+                onOpen = { detailsId = row.habit.id },
                 onToday = {
                     val relapse = row.habit.kind == HabitStats.KIND_RELAPSE
                     if (relapse && !row.rules.cellIsRelapse(ui.today)) relapseFor = row.habit
@@ -112,6 +117,49 @@ fun HabitsScreen(vm: HabitsViewModel = viewModel()) {
                 onClear = { vm.clear(row.habit, it) },
             )
         }
+        if (ui.archived.isNotEmpty()) {
+            item(key = "archived") {
+                Text(
+                    text = (if (showArchived) "Hide archived" else "Archived habits") + " (${ui.archived.size})",
+                    modifier = Modifier.clickable { showArchived = !showArchived }.padding(vertical = 8.dp),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+            if (showArchived) {
+                items(ui.archived, key = { "archived-" + it.id }) { habit ->
+                    ArchivedRow(habit, onShow = { vm.setArchived(habit, false) })
+                }
+            }
+        }
+    }
+
+    detailsId?.let { id ->
+        val row = ui.rows.firstOrNull { it.habit.id == id }
+        if (row == null) detailsId = null
+        else HabitDetailsDialog(
+            row = row,
+            onEdit = { editing = row.habit; detailsId = null },
+            onArchive = { vm.setArchived(row.habit, true); detailsId = null },
+            onDismiss = { detailsId = null },
+        )
+    }
+    if (adding) {
+        HabitEditorDialog(
+            initial = null,
+            categories = ui.allCategories,
+            onSave = { vm.save(it, null); adding = false },
+            onDismiss = { adding = false },
+        )
+    }
+    editing?.let { habit ->
+        HabitEditorDialog(
+            initial = habit,
+            categories = ui.allCategories,
+            onSave = { vm.save(it, habit); editing = null },
+            onDismiss = { editing = null },
+        )
     }
 
     relapseFor?.let { habit ->
@@ -135,7 +183,7 @@ private fun HabitRules.cellIsRelapse(day: LocalDate): Boolean = cell(day).kind =
 // ---------------------------------------------------------------- top of the page
 
 @Composable
-private fun TopBar(compact: Boolean, onToggle: () -> Unit) {
+private fun TopBar(compact: Boolean, onToggle: () -> Unit, onNew: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -155,6 +203,49 @@ private fun TopBar(compact: Boolean, onToggle: () -> Unit) {
             description = if (compact) "Expand cards" else "Collapse cards",
             onClick = onToggle,
         )
+        Surface(
+            modifier = Modifier.height(40.dp).clickable(onClick = onNew),
+            shape = RoundedCornerShape(20.dp),
+            color = MaterialTheme.colorScheme.primary,
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(5.dp),
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_add),
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                )
+                Text("New", fontSize = 13.5.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ArchivedRow(habit: HabitEntity, onShow: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+    ) {
+        Row(
+            modifier = Modifier.padding(start = 14.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = habit.name,
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            TextButton(onClick = onShow) { Text("Show again") }
+        }
     }
 }
 
@@ -253,8 +344,8 @@ private fun EmptyCard() {
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
-                text = "Choose your Streak folder under Data sources (the gear on the Timeline). " +
-                    "Your habits come in when you next open the app, or tap Import now.",
+                text = "Tap New to add a habit. Or choose your Streak folder under Data sources (the gear on the Timeline); " +
+                    "your Streak habits come in when you next open the app, or tap Import now.",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -332,6 +423,7 @@ private fun HabitCardView(
     today: LocalDate,
     mode: HabitMode,
     compact: Boolean,
+    onOpen: () -> Unit,
     onToday: () -> Unit,
     onDay: (LocalDate) -> Unit,
     onClear: (LocalDate) -> Unit,
@@ -341,7 +433,7 @@ private fun HabitCardView(
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
 
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onOpen),
         shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
