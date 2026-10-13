@@ -39,7 +39,8 @@ object TripRules {
             if (seconds <= 0.0) continue
             val v = d / seconds
             if (v > MAX_SPEED_MS) continue
-            farthest = max(farthest, PlaceRules.distanceM(pts.first().lat, pts.first().lng, p.lat, p.lng))
+            // How far from where it began, less the reading's own error, the same way the live trip measures it.
+            farthest = max(farthest, PlaceRules.awayM(pts.first().lat, pts.first().lng, p.lat, p.lng, p.acc))
             distance += d
             speeds.add(v * 3.6)
             last = p

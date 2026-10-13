@@ -187,7 +187,7 @@ class PlaceEngineTest {
     fun aStopYouHidIsStillHiddenWhenYouComeBack() {
         val run = Run(places)
         for (m in 0..6) run.feed(fix(m, 28.7, 77.3))
-        run.feed(fix(7, 28.7012, 77.3))
+        run.feed(fix(7, 28.7012, 77.3, acc = 90f))
         val id = run.rows.values.first().id
         run.rows[id] = run.rows.getValue(id).copy(ignored = true)
         for (m in 12..18) run.feed(fix(m, 28.7, 77.3))

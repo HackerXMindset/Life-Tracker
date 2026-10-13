@@ -20,7 +20,7 @@ class TripRulesTest {
         assertEquals(1112.0, s.distanceM.toDouble(), 5.0)
         assertEquals(13, s.medianKmh)
         assertEquals(13, s.topKmh)
-        assertEquals(1112.0, s.farthestM.toDouble(), 5.0)
+        assertEquals(1102.0, s.farthestM.toDouble(), 5.0)
         assertEquals(300 * sec, s.durationMs)
         assertTrue(TripRules.isRealTrip(s))
     }
@@ -44,7 +44,7 @@ class TripRulesTest {
         pts[3] = pts[3].copy(lat = 29.1)
         val s = TripRules.stats(pts, t0, t0 + 180 * sec)
         assertEquals(667.0, s.distanceM.toDouble(), 8.0)
-        assertEquals(667.0, s.farthestM.toDouble(), 8.0)
+        assertEquals(657.0, s.farthestM.toDouble(), 8.0)
         assertTrue(s.topKmh < 30)
     }
 
