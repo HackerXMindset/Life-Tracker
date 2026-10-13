@@ -75,6 +75,8 @@ import com.lifetracker.app.data.SleepNightEntity
 import com.lifetracker.app.data.SleepStats
 import com.lifetracker.app.data.StepDayEntity
 import com.lifetracker.app.data.StepStats
+import com.lifetracker.app.data.TimelineEdits
+import com.lifetracker.app.data.TimelineEditEntity
 import com.lifetracker.app.data.TripEntity
 import com.lifetracker.app.data.TripModes
 import com.lifetracker.app.data.TripRules
@@ -115,6 +117,7 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
     val placeVisits by vm.placeVisits.collectAsState()
     val placeNames by vm.placeNames.collectAsState()
     val dayTrips by vm.trips.collectAsState()
+    val edits by vm.edits.collectAsState()
 
     // Read fresh each time the Timeline comes into view, so changes made on the Phone usage screen show up.
     val context = LocalContext.current
@@ -128,20 +131,73 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
     val dayStartMs = date.atStartOfDay(zone).toInstant().toEpochMilli()
     val dayEndMs = date.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
     val nowMs = System.currentTimeMillis()
-    val sleepShown = if (showHealth) sleepNight?.takeIf { it.source != SleepStats.SKIPPED } else null
     val usageAccess = UsageCollector.hasAccess(context)
+    val sleepShown = if (showHealth) {
+        sleepNight?.takeIf { it.source != SleepStats.SKIPPED && !TimelineEdits.isHidden(edits[TimelineEdits.key(TimelineEdits.SLEEP, it.date)]) }?.let {
+            val (s, en) = TimelineEdits.times(it.startMs, it.endMs, edits[TimelineEdits.key(TimelineEdits.SLEEP, it.date)])
+            it.copy(startMs = s, endMs = en)
+        }
+    } else {
+        null
+    }
     val showPhone = usageAccess && usageSettings.showOnTimeline
     val minBlockMs = usageSettings.minBlockMinutes * 60_000L
     val callsAccess = CallsCollector.hasAccess(context)
     val showCalls = callsAccess && callsSettings.showOnTimeline
     val minTalk = callsSettings.minTalkMinutes
-    val shownCalls = if (showCalls) calls.filter { CallStats.shownOnTimeline(it, minTalk) } else emptyList()
+
+    // What you changed is laid over the phone's own records: times, category, hidden. The records themselves are never touched.
+    fun editOf(kind: String, id: String) = edits[TimelineEdits.key(kind, id)]
+    fun typeOf(kind: String, id: String) = TimelineEdits.category(editOf(kind, id))?.let { types.byId(it) }
+    val shownCalls = if (showCalls) {
+        calls.filter { CallStats.shownOnTimeline(it, minTalk) }.mapNotNull { c ->
+            val e = editOf(TimelineEdits.CALL, c.id)
+            if (TimelineEdits.isHidden(e)) return@mapNotNull null
+            val (s, en) = TimelineEdits.times(c.startMs, c.startMs + c.durationSec * 1000L, e)
+            c.copy(startMs = s, durationSec = ((en - s) / 1000L).toInt())
+        }
+    } else {
+        emptyList()
+    }
+    val chargesEff = charges.mapNotNull { c ->
+        val e = editOf(TimelineEdits.CHARGE, c.id)
+        if (TimelineEdits.isHidden(e)) return@mapNotNull null
+        val (s, en) = TimelineEdits.times(c.startMs, c.endMs, e)
+        c.copy(startMs = s, endMs = en)
+    }
+    val mealsEff = meals.mapNotNull { m ->
+        val e = editOf(TimelineEdits.MEAL, m.id)
+        if (TimelineEdits.isHidden(e)) return@mapNotNull null
+        val origStart = dayStartMs + m.minuteOfDay * 60_000L
+        val (s, _) = TimelineEdits.times(origStart, origStart, e)
+        m.copy(minuteOfDay = TimelineEdits.minuteOf(s, dayStartMs))
+    }
+    val visitsEff = placeVisits.mapNotNull { v ->
+        val e = editOf(TimelineEdits.VISIT, v.id)
+        if (TimelineEdits.isHidden(e)) return@mapNotNull null
+        val (s, en) = TimelineEdits.times(v.startMs, v.endMs, e)
+        v.copy(startMs = s, endMs = en)
+    }
+    val tripsEff = dayTrips.mapNotNull { t ->
+        val e = editOf(TimelineEdits.TRIP, t.id)
+        if (TimelineEdits.isHidden(e)) return@mapNotNull null
+        val (s, en) = TimelineEdits.times(t.startMs, t.endMs, e)
+        t.copy(startMs = s, endMs = en)
+    }
+    val blocksEff = usageDay.blocks.mapNotNull { b ->
+        val e = editOf(TimelineEdits.APP, TimelineEdits.appRef(b.pkg, b.refStartMs))
+        if (TimelineEdits.isHidden(e)) return@mapNotNull null
+        val (s, en) = TimelineEdits.times(b.startMs, b.endMs, e)
+        b.copy(startMs = s, endMs = en, activityId = TimelineEdits.category(e) ?: b.activityId)
+    }
 
     var showLog by remember { mutableStateOf(false) }
     var toDelete by remember { mutableStateOf<EntryEntity?>(null) }
     var editEntry by remember { mutableStateOf<EntryEntity?>(null) }
     var editApp by remember { mutableStateOf<UsageAppEntity?>(null) }
     var fillIn by remember { mutableStateOf<Pair<Long, Long>?>(null) }
+    var editTarget by remember { mutableStateOf<EditTarget?>(null) }
+    var showHidden by remember { mutableStateOf(false) }
     val usageApps by vm.usageApps.collectAsState()
 
     // The three numbers at the top: steps, time on the phone, and time studying (what you logged plus apps linked to Study).
@@ -162,19 +218,19 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
         notes.filter { it.minutes != null }.forEach {
             add(DayLayout.Item("n" + it.id, DayLayout.Kind.NOTE, at(it.minutes!!), at(it.minutes!!), false, it))
         }
-        meals.forEach {
+        mealsEff.forEach {
             add(DayLayout.Item("m" + it.id, DayLayout.Kind.MEAL, at(it.minuteOfDay), at(it.minuteOfDay) + 15 * 60_000L, false, it))
         }
         shownCalls.forEach {
             add(DayLayout.Item("call" + it.id, DayLayout.Kind.CALL, it.startMs, it.startMs + it.durationSec * 1000L, it.durationSec > 0, it))
         }
-        if (showCharging) charges.forEach {
+        if (showCharging) chargesEff.forEach {
             add(DayLayout.Item("charge" + it.id, DayLayout.Kind.CHARGE, it.startMs, if (it.ongoing) maxOf(nowMs, it.startMs) else it.endMs, true, it))
         }
         sleepShown?.let {
             add(DayLayout.Item("sleep" + it.date, DayLayout.Kind.SLEEP, maxOf(it.startMs, dayStartMs), minOf(it.endMs, dayEndMs), true, it))
         }
-        if (showPhone) usageDay.blocks.filter { it.activeMs >= minBlockMs }.forEach {
+        if (showPhone) blocksEff.filter { it.activeMs >= minBlockMs }.forEach {
             add(DayLayout.Item("p" + it.pkg + it.startMs, DayLayout.Kind.PHONE, it.startMs, it.endMs, true, it))
         }
     }
@@ -187,14 +243,26 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
         DaySegments.Seg(at(it.startMinute), at(it.endMinute!!), t.displayColor().toArgb(), t.name, true)
     }
     val collectedSegs = buildList {
-        sleepShown?.let { add(DaySegments.Seg(it.startMs, it.endMs, sleepArgb, "Sleep", false)) }
-        meals.forEach { add(DaySegments.Seg(at(it.minuteOfDay), at(it.minuteOfDay) + 15 * 60_000L, foodArgb, "Food", false)) }
-        if (usageAccess) usageDay.blocks.forEach {
+        sleepShown?.let {
+            val t = typeOf(TimelineEdits.SLEEP, it.date)
+            add(DaySegments.Seg(it.startMs, it.endMs, t?.displayColor()?.toArgb() ?: sleepArgb, t?.name ?: "Sleep", false))
+        }
+        mealsEff.forEach {
+            val t = typeOf(TimelineEdits.MEAL, it.id)
+            add(DaySegments.Seg(at(it.minuteOfDay), at(it.minuteOfDay) + 15 * 60_000L, t?.displayColor()?.toArgb() ?: foodArgb, t?.name ?: "Food", false))
+        }
+        if (usageAccess) blocksEff.forEach {
             val t = it.activityId.takeIf { id -> id.isNotEmpty() }?.let { id -> types.byId(id) }
             add(DaySegments.Seg(it.startMs, it.endMs, t?.displayColor()?.toArgb() ?: 0xFF738078.toInt(), t?.name ?: "Phone", false))
         }
-        if (showTrips) dayTrips.forEach { add(DaySegments.Seg(it.startMs, it.endMs, 0xFF8E94E8.toInt(), "Travel", false)) }
-        shownCalls.forEach { add(DaySegments.Seg(it.startMs, it.startMs + it.durationSec * 1000L, callArgb, "Calls", false)) }
+        if (showTrips) tripsEff.forEach {
+            val t = typeOf(TimelineEdits.TRIP, it.id)
+            add(DaySegments.Seg(it.startMs, it.endMs, t?.displayColor()?.toArgb() ?: 0xFF8E94E8.toInt(), t?.name ?: "Travel", false))
+        }
+        shownCalls.forEach {
+            val t = typeOf(TimelineEdits.CALL, it.id)
+            add(DaySegments.Seg(it.startMs, it.startMs + it.durationSec * 1000L, t?.displayColor()?.toArgb() ?: callArgb, t?.name ?: "Calls", false))
+        }
     }
     val flatAll = DaySegments.flatten(loggedSegs + collectedSegs, dayStartMs, dayEndMs)
     val flatLogged = DaySegments.flatten(loggedSegs, dayStartMs, dayEndMs)
@@ -202,7 +270,18 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
     val nowMarker = if (nowMs in dayStartMs until dayEndMs) nowMs else null
     var pie by rememberSaveable { mutableStateOf(false) }
 
-    val rows = DayLayout.build(items, placeVisits, dayTrips, placeNames, dayStartMs, dayEndMs, nowMs, showPlaces, showTrips)
+    val rows = DayLayout.build(items, visitsEff, tripsEff, placeNames, dayStartMs, dayEndMs, nowMs, showPlaces, showTrips)
+    fun dayStartOf(ms: Long) = Instant.ofEpochMilli(ms).atZone(zone).toLocalDate().atStartOfDay(zone).toInstant().toEpochMilli()
+    fun target(
+        kind: String, ref: String, title: String, startMs: Long, endMs: Long?,
+        extraLabel: String? = null, onExtra: (() -> Unit)? = null, openLabel: String? = null, onOpen: (() -> Unit)? = null,
+    ): EditTarget {
+        val e = edits[TimelineEdits.key(kind, ref)]
+        return EditTarget(
+            kind, ref, title, startMs, endMs, TimelineEdits.category(e).orEmpty(), e != null && !e.hidden, dayStartOf(startMs),
+            extraLabel = extraLabel, onExtra = onExtra, openLabel = openLabel, onOpen = onOpen,
+        )
+    }
     val actions = DayActions(
         types = types,
         projectNames = projectNames,
@@ -218,7 +297,42 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
         onFillIn = { s, e -> fillIn = s to e },
         onTripMode = vm::setTripMode,
         onUnknownJourney = vm::setUnknownJourney,
+        edits = edits,
+        onEditItem = { item ->
+            when (item.kind) {
+                DayLayout.Kind.CALL -> (item.ref as CallEntity).let { c ->
+                    editTarget = target(TimelineEdits.CALL, c.id, CallStats.title(c), item.startMs, item.endMs, openLabel = "Open Calls", onOpen = onOpenCalls)
+                }
+                DayLayout.Kind.CHARGE -> (item.ref as ChargeSessionEntity).let { c ->
+                    editTarget = target(TimelineEdits.CHARGE, c.id, "Charging", item.startMs, item.endMs, openLabel = "Open Charging", onOpen = onOpenCharging)
+                }
+                DayLayout.Kind.SLEEP -> (item.ref as SleepNightEntity).let { n ->
+                    editTarget = target(TimelineEdits.SLEEP, n.date, "Sleep", n.startMs, n.endMs, openLabel = "Open Steps and sleep", onOpen = onOpenSteps)
+                }
+                DayLayout.Kind.MEAL -> (item.ref as MealEntity).let { m ->
+                    editTarget = target(TimelineEdits.MEAL, m.id, m.name, item.startMs, null, openLabel = "Open Food", onOpen = onOpenFood)
+                }
+                DayLayout.Kind.PHONE -> (item.ref as UsageDays.Block).let { b ->
+                    editTarget = target(
+                        TimelineEdits.APP, TimelineEdits.appRef(b.pkg, b.refStartMs), b.label, b.startMs, b.endMs,
+                        extraLabel = "Set this app's category on every day",
+                        onExtra = { editApp = usageApps[b.pkg] ?: UsageAppEntity(b.pkg, b.label, "", false) },
+                    )
+                }
+                else -> Unit
+            }
+        },
+        onEditPlace = { p ->
+            editTarget = target(
+                TimelineEdits.VISIT, p.visit.id, p.name, p.visit.startMs, if (p.visit.ongoing) null else p.visit.endMs,
+                openLabel = if (p.named) "Open Places" else "Name this spot in Places", onOpen = onOpenPlaces,
+            )
+        },
+        onEditTrip = { t ->
+            editTarget = target(TimelineEdits.TRIP, t.id, "Trip", t.startMs, t.endMs)
+        },
     )
+    val hiddenToday = edits.values.filter { it.hidden && it.startMs in dayStartMs until dayEndMs }
     val anyTimeTodos = todos.filter { it.minutes == null }
     val anyTimeNotes = notes.filter { it.minutes == null }
     val plannedMinutes = todos.filter { !it.done }.sumOf { it.estimate ?: 0 }
@@ -293,10 +407,15 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
                         NoteRow(note, habitNames[note.habitId])
                     }
                 }
-                if (entries.isNotEmpty()) {
+                if (hiddenToday.isNotEmpty()) {
+                    item(key = "hidden") {
+                        TextButton(onClick = { showHidden = true }) { Text("Hidden by you (${hiddenToday.size}), tap to bring back") }
+                    }
+                }
+                if (entries.isNotEmpty() || rows.isNotEmpty()) {
                     item {
                         Text(
-                            text = "Tap an entry or an app to change it. Tap a to-do to tick it off.",
+                            text = "Tap anything to change its time or category, or to hide it. Tap a to-do to tick it off.",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -361,6 +480,66 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
                 toDelete = entry
                 editEntry = null
             },
+        )
+    }
+
+    editTarget?.let { t ->
+        val key = TimelineEdits.key(t.kind, t.refId)
+        val now = System.currentTimeMillis()
+        EditItemDialog(
+            target = t,
+            types = types,
+            onSave = { startMs, endMs, activityId ->
+                val old = edits[key]
+                val timesChanged = startMs != t.startMs || (endMs ?: -1L) != (t.endMs ?: -1L)
+                vm.saveEdit(
+                    TimelineEdits.edit(
+                        t.kind, t.refId,
+                        startMs = if (timesChanged) startMs else old?.startMs ?: -1L,
+                        endMs = if (timesChanged) (endMs ?: -1L) else old?.endMs ?: -1L,
+                        activityId = activityId, hidden = false, now = now, label = t.title,
+                    ),
+                )
+            },
+            onHide = {
+                val old = edits[key]
+                vm.saveEdit(
+                    TimelineEdits.edit(
+                        t.kind, t.refId, startMs = t.startMs, endMs = old?.endMs ?: -1L,
+                        activityId = old?.activityId.orEmpty(), hidden = true, now = now, label = t.title,
+                    ),
+                )
+            },
+            onReset = { vm.resetEdit(t.kind, t.refId) },
+            onDismiss = { editTarget = null },
+        )
+    }
+
+    if (showHidden) {
+        val hidden = edits.values.filter { it.hidden && it.startMs in dayStartMs until dayEndMs }.sortedBy { it.startMs }
+        AlertDialog(
+            onDismissRequest = { showHidden = false },
+            title = { Text("Hidden by you") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (hidden.isEmpty()) Text("Nothing is hidden on this day.")
+                    hidden.forEach { e ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                formatMinute(TimelineEdits.minuteOf(e.startMs, dayStartMs)) + "  " + e.label.ifEmpty { e.kind },
+                                modifier = Modifier.weight(1f),
+                                fontSize = 14.sp,
+                            )
+                            TextButton(onClick = { vm.saveEdit(e.copy(hidden = false, updatedMs = System.currentTimeMillis())) }) { Text("Bring back") }
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showHidden = false }) { Text("Close") } },
         )
     }
 

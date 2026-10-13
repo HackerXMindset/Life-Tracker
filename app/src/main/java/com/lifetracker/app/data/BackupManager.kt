@@ -134,10 +134,11 @@ object BackupManager {
         trips = db.tripDao().allTrips(),
         tripPoints = db.tripDao().allPoints(),
         rawFixes = db.rawDao().all(),
+        timelineEdits = db.timelineEditDao().all(),
     )
 
     /**
-     * A version 14 backup replaces everything except the phone usage, call, charging, step, sleep, place, trip and position-reading history, which are only ever added to. Older backups never held some of
+     * A version 15 backup replaces everything except the phone usage, call, charging, step, sleep, place, trip and position-reading history and your Timeline edits, which are only ever added to. Older backups never held some of
      * the data (version 1: only Timeline entries; version 2: no food or water),
      * so they replace only what they hold and leave the rest alone; the import record is cleared so the next Streak import can
      * bring back any focus sessions the old backup did not have.
@@ -215,6 +216,10 @@ object BackupManager {
             if (data.version >= 12) {
                 // Every position reading is kept: restoring only adds the ones that are missing.
                 db.rawDao().insertMissing(data.rawFixes)
+            }
+            if (data.version >= 15) {
+                // Your Timeline edits are only added: one you already made on this phone is kept as it is.
+                db.timelineEditDao().insertMissing(data.timelineEdits)
             }
         }
     }

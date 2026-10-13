@@ -34,13 +34,14 @@ data class BackupData(
     val trips: List<TripEntity> = emptyList(),
     val tripPoints: List<TripPointEntity> = emptyList(),
     val rawFixes: List<RawFixEntity> = emptyList(),
+    val timelineEdits: List<TimelineEditEntity> = emptyList(),
 ) {
     val isEmpty: Boolean
         get() = entries.isEmpty() && habits.isEmpty() && completions.isEmpty() && categories.isEmpty() &&
             todoTags.isEmpty() && todos.isEmpty() && notes.isEmpty() && meals.isEmpty() && water.isEmpty() &&
             moneyItems.isEmpty() && moneyEntries.isEmpty() && usageSessions.isEmpty() && calls.isEmpty() &&
             chargeSessions.isEmpty() && stepDays.isEmpty() && sleepNights.isEmpty() && places.isEmpty() && placeVisits.isEmpty() &&
-            trips.isEmpty() && tripPoints.isEmpty() && rawFixes.isEmpty()
+            trips.isEmpty() && tripPoints.isEmpty() && rawFixes.isEmpty() && timelineEdits.isEmpty()
 }
 
 /**
@@ -48,12 +49,12 @@ data class BackupData(
  *
  * `version` lets later steps add more data without breaking old backups.
  * Version 1 held only Timeline entries; version 2 adds habits, to-dos, notes
- * and the record of what was imported; version 3 adds meals, food goals and water; version 4 adds your own activities and their goals; version 5 adds money (categories, saved items and entries); version 6 adds phone usage (sessions are stored compactly as [app, start, end]); version 7 adds phone calls (each stored as [number, name, type, start, seconds]); version 8 adds charging sessions (each stored as [start, end, startLevel, endLevel, plug, source, samples, currentSamples, sumMa, sumMv, ongoing]); version 9 adds steps (each day stored as [date, steps, source]) and sleep (each night stored as [date, start, end, source]); version 10 adds places (the ones you named) and place visits (each stored as [id, place, start, end, lat, lng, source, ongoing, ignored]); version 11 adds trips (each stored as [id, start, end, from, to, distance, medianKmh, topKmh, activity, mode, modeSource]) and the position readings of each trip (each stored as [trip, time, lat, lng, accuracy]); version 12 adds every position reading, stored compactly one day at a time (see rawFixesJson); version 13 adds the speed the phone measured to each reading; version 14 adds how sure the app is of each visit (a tenth value in each visit list). A file from a newer version of the app
+ * and the record of what was imported; version 3 adds meals, food goals and water; version 4 adds your own activities and their goals; version 5 adds money (categories, saved items and entries); version 6 adds phone usage (sessions are stored compactly as [app, start, end]); version 7 adds phone calls (each stored as [number, name, type, start, seconds]); version 8 adds charging sessions (each stored as [start, end, startLevel, endLevel, plug, source, samples, currentSamples, sumMa, sumMv, ongoing]); version 9 adds steps (each day stored as [date, steps, source]) and sleep (each night stored as [date, start, end, source]); version 10 adds places (the ones you named) and place visits (each stored as [id, place, start, end, lat, lng, source, ongoing, ignored]); version 11 adds trips (each stored as [id, start, end, from, to, distance, medianKmh, topKmh, activity, mode, modeSource]) and the position readings of each trip (each stored as [trip, time, lat, lng, accuracy]); version 12 adds every position reading, stored compactly one day at a time (see rawFixesJson); version 13 adds the speed the phone measured to each reading; version 14 adds how sure the app is of each visit (a tenth value in each visit list); version 15 adds what you changed on the Timeline (each stored as [kind, id, start, end, category, hidden, changedAt, label]). A file from a newer version of the app
  * is refused rather than half-read.
  */
 object BackupCodec {
     const val APP_NAME = "life-tracker"
-    const val FORMAT_VERSION = 14
+    const val FORMAT_VERSION = 15
 
     fun encode(data: BackupData): String =
         JSONObject()
@@ -86,6 +87,7 @@ object BackupCodec {
             .put("trips", tripsJson(data.trips))
             .put("tripPoints", tripPointsJson(data.tripPoints))
             .put("rawFixes", rawFixesJson(data.rawFixes))
+            .put("timelineEdits", editsJson(data.timelineEdits))
             .toString(2)
 
     /** Reads a backup. Throws [IllegalArgumentException] with a readable reason if it is not usable. */
@@ -126,6 +128,7 @@ object BackupCodec {
                 trips = trips(root),
                 tripPoints = tripPoints(root),
                 rawFixes = rawFixes(root),
+                timelineEdits = edits(root),
             )
         } catch (e: JSONException) {
             throw IllegalArgumentException("This file is damaged or is not a backup.")
@@ -514,6 +517,32 @@ object BackupCodec {
                 ongoing = r.getInt(7) == 1,
                 ignored = r.getInt(8) == 1,
                 confidence = if (r.length() > 9) r.getInt(9) else -1,
+            )
+        }
+    }
+
+    // Timeline edits are one short list each: [kind, id, start, end, category, hidden, changedAt, label].
+    private fun editsJson(list: List<TimelineEditEntity>): JSONArray {
+        val out = JSONArray()
+        for (e in list) {
+            out.put(JSONArray().put(e.kind).put(e.refId).put(e.startMs).put(e.endMs).put(e.activityId).put(if (e.hidden) 1 else 0).put(e.updatedMs).put(e.label))
+        }
+        return out
+    }
+
+    private fun edits(root: JSONObject): List<TimelineEditEntity> {
+        val array = root.optJSONArray("timelineEdits") ?: return emptyList()
+        return (0 until array.length()).map {
+            val r = array.getJSONArray(it)
+            TimelineEditEntity(
+                kind = r.getString(0),
+                refId = r.getString(1),
+                startMs = r.getLong(2),
+                endMs = r.getLong(3),
+                activityId = r.getString(4),
+                hidden = r.getInt(5) == 1,
+                updatedMs = r.getLong(6),
+                label = r.optString(7, ""),
             )
         }
     }

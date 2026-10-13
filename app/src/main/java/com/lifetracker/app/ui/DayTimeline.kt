@@ -62,6 +62,8 @@ import com.lifetracker.app.data.NoteEntity
 import com.lifetracker.app.data.PlaceRules
 import com.lifetracker.app.data.SleepNightEntity
 import com.lifetracker.app.data.SleepStats
+import com.lifetracker.app.data.TimelineEditEntity
+import com.lifetracker.app.data.TimelineEdits
 import com.lifetracker.app.data.TodoEntity
 import com.lifetracker.app.data.TripEntity
 import com.lifetracker.app.data.TripModes
@@ -86,6 +88,11 @@ class DayActions(
     val onFillIn: (startMs: Long, endMs: Long) -> Unit,
     val onTripMode: (TripEntity, String) -> Unit,
     val onUnknownJourney: (DayLayout.Travel, String) -> Unit,
+    /** What you changed about things on the Timeline, by [TimelineEdits.key]. */
+    val edits: Map<String, TimelineEditEntity>,
+    val onEditItem: (DayLayout.Item) -> Unit,
+    val onEditPlace: (DayLayout.Place) -> Unit,
+    val onEditTrip: (TripEntity) -> Unit,
 )
 
 private val RAIL_WIDTH = 26.dp
@@ -119,7 +126,8 @@ private fun Indented(content: @Composable () -> Unit) {
 
 @Composable
 private fun PlaceBlock(p: DayLayout.Place, a: DayActions) {
-    val color = PLACE_COLORS[Math.floorMod(p.name.hashCode(), PLACE_COLORS.size)]
+    val chosen = TimelineEdits.category(a.edits[TimelineEdits.key(TimelineEdits.VISIT, p.visit.id)])?.let { a.types.byId(it) }
+    val color = chosen?.displayColor() ?: PLACE_COLORS[Math.floorMod(p.name.hashCode(), PLACE_COLORS.size)]
     val shape = RoundedCornerShape(16.dp)
     Row(
         modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
@@ -161,7 +169,7 @@ private fun PlaceBlock(p: DayLayout.Place, a: DayActions) {
         ) {
             Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().clickable(onClick = a.onPlaces),
+                    modifier = Modifier.fillMaxWidth().clickable { a.onEditPlace(p) },
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -174,7 +182,8 @@ private fun PlaceBlock(p: DayLayout.Place, a: DayActions) {
                         )
                         Text(
                             text = clock(p.startMs) + " to " + (if (p.ongoing) "now" else clock(p.endMs)) +
-                                (if (!p.named) " · tap to name it" else ""),
+                                (if (chosen != null) " · " + chosen.name else "") +
+                                (if (!p.named) " · tap to edit or name it" else ""),
                             fontSize = 12.sp,
                             fontFamily = FontFamily.Monospace,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -223,6 +232,8 @@ private class Look(
 @Composable
 private fun describe(item: DayLayout.Item, a: DayActions): Look {
     val quiet = MaterialTheme.colorScheme.onSurfaceVariant
+    val edit = { id: String, kind: String -> a.edits[TimelineEdits.key(kind, id)] }
+    val chosen = { id: String, kind: String -> TimelineEdits.category(edit(id, kind))?.let { a.types.byId(it) } }
     val minutes = ((item.endMs - item.startMs) / 60_000L).toInt()
     return when (item.kind) {
         DayLayout.Kind.ENTRY -> {
@@ -244,41 +255,45 @@ private fun describe(item: DayLayout.Item, a: DayActions): Look {
                 lines = listOfNotNull(if (b.opens > 1) "opened ${b.opens} times" else null),
                 chip = type?.name ?: "no category, tap to set",
                 trailing = formatDuration(((b.activeMs + 30_000L) / 60_000L).toInt().coerceAtLeast(1)),
-                editable = true, onClick = { a.onApp(b) },
+                editable = true, onClick = { a.onEditItem(item) },
             )
         }
         DayLayout.Kind.MEAL -> {
             val m = item.ref as MealEntity
+            val over = chosen(m.id, TimelineEdits.MEAL)
             Look(
-                color = a.types.byId("Food").displayColor(), dashed = false, title = m.name,
+                color = (over ?: a.types.byId("Food")).displayColor(), dashed = false, title = m.name,
                 lines = listOf(mealTypeLabel(m.mealType) + " · " + Math.round(m.kcal) + " kcal · " + Math.round(m.grams) + " g"),
-                chip = "Food", trailing = null, editable = true, onClick = a.onFood,
+                chip = over?.name ?: "Food", trailing = null, editable = true, onClick = { a.onEditItem(item) },
             )
         }
         DayLayout.Kind.CALL -> {
             val c = item.ref as CallEntity
+            val over = chosen(c.id, TimelineEdits.CALL)
             Look(
-                color = MaterialTheme.colorScheme.primary, dashed = true, title = CallStats.title(c),
+                color = over?.displayColor() ?: MaterialTheme.colorScheme.primary, dashed = true, title = CallStats.title(c),
                 lines = listOf("Call · " + CallStats.detail(c)),
-                chip = "Calls and people",
+                chip = over?.name ?: "Calls and people",
                 trailing = if (c.durationSec > 0) CallStats.durationText(c.durationSec) else null,
-                editable = false, onClick = a.onCalls,
+                editable = true, onClick = { a.onEditItem(item) },
             )
         }
         DayLayout.Kind.CHARGE -> {
             val s = item.ref as ChargeSessionEntity
+            val over = chosen(s.id, TimelineEdits.CHARGE)
             Look(
-                color = MaterialTheme.colorScheme.tertiary, dashed = true, title = "Charging · " + ChargeStats.title(s),
+                color = over?.displayColor() ?: MaterialTheme.colorScheme.tertiary, dashed = true, title = "Charging · " + ChargeStats.title(s),
                 lines = listOf(ChargeStats.detail(s)),
-                chip = null, trailing = lengthText(item.endMs - item.startMs), editable = true, onClick = a.onCharging,
+                chip = over?.name, trailing = lengthText(item.endMs - item.startMs), editable = true, onClick = { a.onEditItem(item) },
             )
         }
         DayLayout.Kind.SLEEP -> {
             val n = item.ref as SleepNightEntity
+            val over = chosen(n.date, TimelineEdits.SLEEP)
             Look(
-                color = a.types.byId("Sleep").displayColor(), dashed = true, title = "Slept " + formatDuration(SleepStats.minutes(n)),
+                color = (over ?: a.types.byId("Sleep")).displayColor(), dashed = true, title = "Slept " + formatDuration(SleepStats.minutes(n)),
                 lines = listOf(clock(n.startMs) + " → " + clock(n.endMs) + " · " + SleepStats.label(n.source)),
-                chip = "Sleep", trailing = null, editable = true, onClick = a.onSleep,
+                chip = over?.name ?: "Sleep", trailing = null, editable = true, onClick = { a.onEditItem(item) },
             )
         }
         DayLayout.Kind.TODO -> {
@@ -585,6 +600,7 @@ private fun TravelCard(t: DayLayout.Travel, a: DayActions) {
                 }
             },
             confirmButton = { TextButton(onClick = { picking = false }) { Text("Close") } },
+            dismissButton = { TextButton(onClick = { picking = false; a.onEditTrip(trip) }) { Text("Edit time and category") } },
         )
     }
 }
