@@ -15,6 +15,7 @@ import com.lifetracker.app.data.HabitNotes
 import com.lifetracker.app.data.HabitPlan
 import com.lifetracker.app.data.HabitRules
 import com.lifetracker.app.data.HabitStats
+import com.lifetracker.app.data.HabitSyncState
 import com.lifetracker.app.data.HabitsSettings
 import com.lifetracker.app.data.NoteEntity
 import com.lifetracker.app.data.TodayProgress
@@ -69,6 +70,8 @@ class HabitsViewModel(app: Application) : AndroidViewModel(app) {
     private val dao = AppDatabase.get(app).habitDao()
     private val planDao = AppDatabase.get(app).planDao()
     private val settings = HabitsSettings(app)
+    /** Remembers what changed here, for sending to Streak later (H5b). */
+    private val sync = HabitSyncState(app)
 
     private val mode = MutableStateFlow(settings.mode)
     private val compact = MutableStateFlow(settings.compact)
@@ -109,14 +112,20 @@ class HabitsViewModel(app: Application) : AndroidViewModel(app) {
     /** Writes a new note on a habit and day. A blank text writes nothing. */
     fun addNote(habitId: String, date: LocalDate, text: String) {
         val note = HabitNotes.create(HabitEditor.newId(), habitId, date, text, LocalDateTime.now()) ?: return
-        viewModelScope.launch { planDao.upsertNote(note) }
+        viewModelScope.launch {
+            planDao.upsertNote(note)
+            sync.stamp(note.id)
+        }
     }
 
     /** Changes a note's text. A blank text changes nothing: notes are never removed here. */
     fun editNote(note: NoteEntity, text: String) {
         viewModelScope.launch {
             val current = planDao.note(note.id) ?: return@launch
-            HabitNotes.edited(current, text)?.let { planDao.upsertNote(it) }
+            HabitNotes.edited(current, text)?.let {
+                planDao.upsertNote(it)
+                sync.stamp(it.id)
+            }
         }
     }
 
@@ -151,6 +160,7 @@ class HabitsViewModel(app: Application) : AndroidViewModel(app) {
             } else {
                 dao.deleteCompletion(habit.id, key)
             }
+            sync.stamp(habit.id)
         }
     }
 
@@ -167,12 +177,16 @@ class HabitsViewModel(app: Application) : AndroidViewModel(app) {
                 )
             }
             dao.upsertHabit(habit)
+            sync.stamp(habit.id)
         }
     }
 
     /** Hides a habit, or shows it again. Everything it recorded stays. */
     fun setArchived(habit: HabitEntity, archived: Boolean) {
-        viewModelScope.launch { dao.upsertHabit(HabitEditor.withArchived(habit, archived, LocalDateTime.now())) }
+        viewModelScope.launch {
+            dao.upsertHabit(HabitEditor.withArchived(habit, archived, LocalDateTime.now()))
+            sync.stamp(habit.id)
+        }
     }
 
     /** Sets the exact amount for a day (counted habits). Zero or less clears the day. */
@@ -186,6 +200,7 @@ class HabitsViewModel(app: Application) : AndroidViewModel(app) {
                 val existing = dao.completion(habit.id, key)
                 dao.upsertCompletion(CompletionEntity(habit.id, key, amount, existing?.minuteOfDay))
             }
+            sync.stamp(habit.id)
         }
     }
 
@@ -194,12 +209,16 @@ class HabitsViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             val current = dao.habit(habit.id) ?: return@launch
             dao.upsertHabit(HabitEditor.withMissReason(current, date, reason))
+            sync.stamp(habit.id)
         }
     }
 
     /** Clears a day: the one way a day's record is removed. */
     fun clear(habit: HabitEntity, date: LocalDate) {
-        viewModelScope.launch { dao.deleteCompletion(habit.id, date.toString()) }
+        viewModelScope.launch {
+            dao.deleteCompletion(habit.id, date.toString())
+            sync.stamp(habit.id)
+        }
     }
 
     private fun build(src: Source, m: HabitMode, small: Boolean, picked: String, today: LocalDate): HabitsUi {
