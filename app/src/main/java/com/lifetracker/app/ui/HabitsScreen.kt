@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -448,6 +449,7 @@ private fun Chip(label: String, active: Boolean, onClick: () -> Unit) {
 private fun amount(value: Double): String =
     if (value == Math.floor(value)) value.toLong().toString() else String.format(Locale.getDefault(), "%.1f", value)
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun HabitCardView(
     row: HabitRow,
