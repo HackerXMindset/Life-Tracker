@@ -35,6 +35,10 @@ object StreakBackupWriter {
     fun isOurs(name: String, device: String): Boolean =
         name.startsWith("streak_backup_") && name.endsWith("_$device.json")
 
+    /** True for a Streak-style file (`.json` or `.zip`) that this device wrote. */
+    fun isFromDevice(name: String, device: String): Boolean =
+        name.startsWith("streak_backup_") && name.contains("_$device.")
+
     /** Streak writes days as "04-10-2026". */
     fun dayKey(day: LocalDate): String = "%02d-%02d-%04d".format(day.dayOfMonth, day.monthValue, day.year)
 

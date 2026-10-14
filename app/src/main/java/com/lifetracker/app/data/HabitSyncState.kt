@@ -50,6 +50,19 @@ class HabitSyncState(context: Context) {
                 ?: StreakBackupWriter.newDeviceId().also { id -> prefs.edit { putString("device", id) } }
         }
 
+    /** The device name if one was already made, without making one. */
+    val deviceIdOrNull: String?
+        get() = synchronized(LOCK) { prefs.getString("device", null)?.takeIf { it.isNotBlank() } }
+
+    /** A fingerprint of the last file sent (apart from its time), so the same content is not sent twice. */
+    var lastSentDigest: String?
+        get() = prefs.getString("last_digest", null)
+        set(value) = prefs.edit { putString("last_digest", value) }
+
+    var lastSentText: String?
+        get() = prefs.getString("last_sent", null)
+        set(value) = prefs.edit { putString("last_sent", value) }
+
     val changes: Map<String, Long>
         get() = synchronized(LOCK) { HabitChanges.parse(prefs.getString("changes", null)) }
 

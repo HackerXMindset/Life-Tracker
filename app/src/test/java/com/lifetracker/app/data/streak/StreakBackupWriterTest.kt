@@ -38,6 +38,10 @@ class StreakBackupWriterTest {
         assertTrue(StreakBackupWriter.isOurs(name, "ab12cd34"))
         assertFalse(StreakBackupWriter.isOurs(name, "ffffffff"))
         assertEquals("04-10-2026", StreakBackupWriter.dayKey(LocalDate.of(2026, 10, 4)))
+        // Streak's own files (another device) are not ours, whether .json or .zip.
+        assertFalse(StreakBackupWriter.isFromDevice("streak_backup_2026-10-14_21-30-05_ffffffff.json", "ab12cd34"))
+        assertTrue(StreakBackupWriter.isFromDevice("streak_backup_2026-10-14_21-30-05_ab12cd34.zip", "ab12cd34"))
+        assertFalse(StreakBackupWriter.isFromDevice("streak_backup_2026-10-14_21-30-05.json", "ab12cd34"))
     }
 
     @Test

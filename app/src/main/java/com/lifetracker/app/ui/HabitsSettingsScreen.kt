@@ -1,6 +1,8 @@
 package com.lifetracker.app.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -32,8 +34,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifetracker.app.data.DataSources
 import com.lifetracker.app.data.HabitSource
+import com.lifetracker.app.data.HabitSyncState
 import com.lifetracker.app.data.HabitsSettings
 import com.lifetracker.app.data.StreakLink
+import com.lifetracker.app.data.streak.StreakFolderWriter
 import com.lifetracker.app.data.streak.StreakImporter
 import kotlinx.coroutines.launch
 
@@ -50,7 +54,23 @@ fun HabitsSettingsScreen(onBack: () -> Unit) {
     BackHandler(onBack = onBack)
 
     val sources = remember { DataSources(context) }
-    val folder = sources.folder(DataSources.Slot.Streak)?.let { sources.folderName(it) }
+    var folderTick by remember { mutableStateOf(0) }
+    val folder = remember(folderTick) { sources.folder(DataSources.Slot.Streak)?.let { sources.folderName(it) } }
+    val canWrite = remember(folderTick) { StreakFolderWriter.canWrite(context) }
+    var sending by remember { mutableStateOf(false) }
+    var sendMessage by remember { mutableStateOf<String?>(null) }
+    val lastSent = remember(sendMessage) { HabitSyncState(context).lastSentText }
+    val pickFolder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        if (uri != null) {
+            sendMessage = try {
+                sources.setFolder(DataSources.Slot.Streak, uri)
+                "Folder saved."
+            } catch (e: Exception) {
+                e.message ?: "Android would not allow that folder."
+            }
+            folderTick++
+        }
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -92,6 +112,39 @@ fun HabitsSettingsScreen(onBack: () -> Unit) {
         }
         if (busy) item { SetupNote("Importing from Streak...") }
         message?.let { item { SetupNote(it) } }
+
+        item { MonoLabel("Send your changes to Streak") }
+        item {
+            SetupNote(
+                "Streak can take in changes from a shared folder. This app writes a Streak backup file there holding only " +
+                    "what you changed here (new habits, edits, ticks, notes). Streak reads it the next time it checks the folder.\n\n" +
+                    "Streak's folder: " + (folder ?: "not chosen yet") + "\n" +
+                    "Writing allowed: " + (if (canWrite) "yes" else "no, choose the folder again below") + "\n" +
+                    "Last sent: " + (lastSent ?: "never") + "\n\n" +
+                    "A day you un-tick here stays ticked in Streak, because Streak only ever adds days.",
+            )
+        }
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(onClick = { pickFolder.launch(null) }) { Text(if (canWrite) "Change folder" else "Choose the folder again") }
+                TextButton(
+                    enabled = canWrite && !sending,
+                    onClick = {
+                        sending = true
+                        sendMessage = null
+                        scope.launch {
+                            sendMessage = try {
+                                StreakFolderWriter.send(context).message
+                            } catch (e: Exception) {
+                                e.message ?: "Could not send to Streak."
+                            }
+                            sending = false
+                        }
+                    },
+                ) { Text(if (sending) "Sending..." else "Send to Streak now") }
+            }
+        }
+        sendMessage?.let { item { SetupNote(it) } }
     }
 
     if (confirm) {
