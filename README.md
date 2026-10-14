@@ -262,13 +262,16 @@ Files marked **(planned)** do not exist yet. They show where each upcoming step 
 life-tracker/
 │
 ├── README.md                          This document
+├── CHANGELOG.md                       What's new, in plain words; shown on each release page
 ├── settings.gradle.kts                Names the project and its one module
 ├── build.gradle.kts                   Versions of the build plugins
 ├── gradle.properties                  Build settings
 ├── .gitignore                         Files kept out of the repository
 │
 ├── .github/workflows/
-│   └── build.yml                      The cloud build: every push becomes an APK
+│   └── build.yml                      The cloud build: every push becomes an APK, and a release page
+├── .github/scripts/
+│   └── release-notes.sh               Writes the release page text from CHANGELOG.md
 │
 ├── keystore/
 │   └── lifetracker.p12                Fixed signing key, so updates keep your data
@@ -434,7 +437,7 @@ life-tracker/
 ## Installing on your phone
 
 1. Open this repository's **Releases** page on GitHub in your phone browser.
-2. Open the newest release and download `life-tracker.apk`.
+2. Open the release marked **Latest** (or a **Test build** at the top, if you were told to try one) and download `life-tracker.apk`.
 3. Tap the downloaded file. Android will ask once to allow installs from your browser or Files app. Allow it.
 4. Google Play Protect may warn that the app is from outside the Play Store. That is expected for your own app.
 
@@ -448,10 +451,12 @@ No computer is needed. GitHub builds the app in the cloud.
 
 1. A change is pushed to this repository.
 2. GitHub Actions runs `build.yml`, which runs the tests and then builds a signed release APK (a few minutes). If a test fails, no APK is published.
-3. The APK is published as a new release named `build-N`, where `N` is the run number.
+3. The APK is published as a release named `build-N`, where `N` is the run number. A build from `main` (a merged change) is called **Life Tracker build N** and carries the **Latest** label. A build from any other branch is a **pre-release** called **Test build N (branch)**, so the Latest label always points at the newest merged version.
 4. You download it from the Releases page and install it.
 
 The run number also becomes the app's internal version code, so every build counts as newer than the last.
+
+**The release page, like Streak's.** Each release has a big heading ("Life Tracker build N"), then **what's new** in plain words, then **Download**. The "what's new" text comes from `CHANGELOG.md`: every section with a `## ` heading that was added since the last full release is shown, newest first, with `### ✨ New features`, `### 🛠 Improvements` and `### 🐞 Fixed` inside. So each change adds one section at the top of `CHANGELOG.md`, and the release shows it. The page is written by `.github/scripts/release-notes.sh`. If the last release cannot be worked out, only the newest section is shown.
 
 **About the signing key.** `keystore/lifetracker.p12` is committed on purpose. It exists only so that updates install over older versions. The password is in `app/build.gradle.kts`. **Keep this repository private.** If it is ever made public, create a new key, then uninstall and reinstall the app once, after making a backup.
 
