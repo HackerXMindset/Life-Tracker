@@ -12,6 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-java@v4
         with:
@@ -42,10 +44,22 @@ jobs:
           name: life-tracker-apk
           path: life-tracker.apk
 
+      # The release page: what's new (from CHANGELOG.md, the sections added since the last full release) and how to download.
+      - name: Write the release page
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prev="$(gh api "repos/${{ github.repository }}/releases/latest" --jq .target_commitish 2>/dev/null || true)"
+          bash .github/scripts/release-notes.sh "${{ github.run_number }}" "${{ github.ref_name }}" "${{ github.sha }}" "${{ github.repository }}" "$prev" > release-notes.md
+          cat release-notes.md
+
       - name: Publish to Releases
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
-          name: Life Tracker build ${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          name: ${{ github.ref_name == 'main' && format('Life Tracker build {0}', github.run_number) || format('Test build {0} ({1})', github.run_number, github.ref_name) }}
+          body_path: release-notes.md
           files: life-tracker.apk
-          make_latest: "true"
+          prerelease: ${{ github.ref_name != 'main' }}
+          make_latest: ${{ github.ref_name == 'main' }}
