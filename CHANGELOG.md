@@ -2,6 +2,19 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🔌 Getting ready to send your habit edits to Streak
+
+This is groundwork. You will not see a change in the app yet.
+
+### 🛠 Improvements
+
+- **The Streak backup file** — the app can now build a backup file in Streak's own format that holds only the habits, days and notes you changed here, so Streak can take them in through its sync folder. Nothing is written to your phone or to Streak yet. That comes in the next steps.
+
+### ⚠️ Good to know
+
+- Streak's sync only ever adds days. When this is switched on, a day you tick here will appear in Streak, but a day you un-tick here will stay ticked in Streak.
+- Streak reads the folder only when it checks it, so changes arrive a little later, not instantly.
+
 ## 📝 Notes on habits
 
 Write notes on your habits, and read them all in one place.

@@ -229,7 +229,15 @@ Not part of Polish 4, and not built: **Step 13e** (fixing trips and visits by ha
   - **Who starts on which:** a new install starts on your own data. If you had already imported from Streak before this choice existed and have not chosen, you stay on Streak so your habits keep coming in.
   - **Import from Streak:** switching asks first, then imports Streak's newest backup straight away, and later backups as before. For now, a habit you changed here that also exists in Streak goes back to Streak's version at each import; days you ticked here are kept. H5 removes this limit.
   - **Tap a card:** with Streak chosen, tapping a habit opens Streak on that exact habit (Streak accepts a habit ID; if Streak is not installed or cannot be opened, a short message says so). With your own data chosen, tapping opens this app's habit page. In both cases pressing and holding the card opens this app's habit page (edit, archive). Ticking and long-pressing days work the same as before.
-- **H5 Your edits reach Streak. Planned.** Streak can read other devices' backups from a shared folder ("Keep devices in sync"). This app writes its own Streak-format backup file there under its own device name, with a "last changed" stamp on each habit you edit, and Streak merges it like a second phone. Streak's owner is adding an option to save its backup after every change, so changes from Streak will come back here faster. Changes reach Streak when it next checks the folder, not instantly. This needs the Streak folder picked in both apps and cannot be fully tested without a phone running Streak.
+- **H5 Your edits reach Streak (four small steps).** Streak can read other devices' backups from a shared folder ("Keep devices in sync"). This app writes its own Streak-format backup file there, under its own device name, and Streak merges it like a second phone. I read Streak's sync code (`folder_sync.dart`, `backup_service.dart`) to see exactly what it accepts. What it means for you:
+  - **Streak reads the file only when it checks the folder** (when Streak opens and on its own sync timer), so changes arrive in Streak a little later, not instantly.
+  - **What reaches Streak:** new habits, changes to a habit (name, colour, schedule, archive), new ticks and bigger amounts, and new notes. A habit changed in both places: the newer change wins, and the days from both are combined.
+  - **What does not reach Streak:** clearing a day or lowering an amount here. Streak's merge only ever adds days and keeps the bigger amount, so a day you un-tick here stays ticked in Streak. Reasons for a missed day: if Streak already has a reason for that day, Streak's stays.
+  - **Folder:** Streak keeps its sync folder as a normal folder path. This app needs to be allowed to write to the same folder, so you pick it again once in Settings with write permission (today it is read only).
+  - **H5a Writer. Built.** `StreakBackupWriter.kt` turns changed habits, their days, notes and categories into a Streak backup file (`streak_backup_<date>_<time>_<device>.json`), with a "last changed" stamp for each item. It only includes what you changed, so Streak's other habits are never overwritten. Tested with sample data; nothing is written to your phone yet.
+  - **H5b Remember what changed. Planned.** Every edit, tick, amount, miss reason, note and archive here notes "this changed at this time", so H5a knows what to send. This app's own copy of the device name is made once.
+  - **H5c Write into the folder. Planned.** The Streak folder can be picked with write permission. The file is written whole and then renamed, so Streak never sees half a file. This app keeps its latest three files there and no more.
+  - **H5d Settings and timing. Planned.** A switch in Settings, Habits ("Send my habit changes to Streak"), the file is rewritten shortly after a change and when the app opens, and a line shows when it last wrote. Streak's owner is adding "save the backup after every change" so changes from Streak come back here faster; no extra work is needed on this side.
 
 **Step 14: Life events, month and year views.** Mark moments that changed your life, then look back by month or year to see what you did and how much you studied around each one.
 
@@ -366,6 +374,7 @@ life-tracker/
         │   │   ├── streak/
         │   │   │   ├── StreakModels.kt   What a Streak backup contains
         │   │   │   ├── StreakParser.kt   Reads Streak's backup format
+        │   │   │   ├── StreakBackupWriter.kt  Builds a Streak-format backup file from your changes (H5a)
         │   │   │   ├── FocusConverter.kt Turns focus sessions into Timeline entries
         │   │   │   └── StreakImporter.kt Finds, reads and merges the newest backup
         │   │   ├── ont/
