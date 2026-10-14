@@ -15,7 +15,7 @@ class DataSources(context: Context) {
 
     enum class Slot(val key: String, val writable: Boolean) {
         Backup("backup_folder", writable = true),
-        Streak("streak_folder", writable = false),
+        Streak("streak_folder", writable = true),
         OpenNutriTracker("nutri_folder", writable = false),
     }
 

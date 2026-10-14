@@ -2,6 +2,26 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📤 Send your habit changes to Streak
+
+You can now send what you changed in Habits to Streak, by pressing a button.
+
+### ✨ New features
+
+- **Send to Streak now** — Settings, then Habits, then **Send your changes to Streak**. The app writes a Streak backup file in Streak's sync folder holding only the habits, days and notes you changed here. Streak takes it in the next time it checks that folder.
+- **Choose the folder again** — the Streak folder was chosen as read only before. Choose the same folder once more so Android allows writing to it. The screen shows whether writing is allowed.
+
+### 🛠 Improvements
+
+- **Safe writing** — the file is written whole and then renamed, so Streak never reads half a file. The app keeps its own three newest files there and never touches Streak's files.
+- **No loop** — the app ignores its own file when importing from Streak.
+
+### ⚠️ Good to know
+
+- Sending is by button for now. Sending automatically comes next.
+- Streak only adds days, so a day you un-tick here stays ticked in Streak.
+- This has only been tested with sample data. It has not been tried with the real Streak app on a phone yet. Tell me if Streak does not show your changes.
+
 ## 🕓 The app now remembers what you changed in Habits
 
 Groundwork again: you will not see a change on screen yet.

@@ -2,6 +2,7 @@ package com.lifetracker.app.data
 
 import android.content.Context
 import android.net.Uri
+import com.lifetracker.app.data.streak.StreakBackupWriter
 import androidx.documentfile.provider.DocumentFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -15,16 +16,19 @@ data class FoundFile(val name: String, val modified: Long, val uri: Uri)
  */
 object SourceScanner {
     /**
-     * Streak saves `streak_backup_<date>_<time>.json` and `.zip`. Every one found,
+     * Streak saves `streak_backup_<date>_<time>_<device>.json` and `.zip`. Every one found,
      * newest first (the name carries the time). Where a .json and a .zip share a
      * time, the .json comes first.
      */
     suspend fun streakCandidates(context: Context, folder: Uri): List<FoundFile> = withContext(Dispatchers.IO) {
         runCatching {
+            // Files this app wrote for Streak (Habits H5) are not Streak's, so they are never imported back.
+            val ours = HabitSyncState(context).deviceIdOrNull
             files(context, folder)
                 .filter {
                     it.name.startsWith("streak_backup_", ignoreCase = true) &&
-                        (it.name.endsWith(".json") || it.name.endsWith(".zip"))
+                        (it.name.endsWith(".json") || it.name.endsWith(".zip")) &&
+                        (ours == null || !StreakBackupWriter.isFromDevice(it.name, ours))
                 }
                 .sortedWith(
                     compareByDescending<FoundFile> { it.name.substringBeforeLast('.') }
