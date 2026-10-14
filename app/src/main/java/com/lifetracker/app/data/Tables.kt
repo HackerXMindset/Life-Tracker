@@ -130,8 +130,20 @@ interface HabitDao {
     @Query("SELECT * FROM categories")
     suspend fun allCategories(): List<CategoryEntity>
 
+    @Query("SELECT * FROM categories ORDER BY sortOrder, name")
+    fun observeCategories(): Flow<List<CategoryEntity>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertHabits(habits: List<HabitEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertHabit(habit: HabitEntity)
+
+    @Query("SELECT * FROM habits WHERE id = :id")
+    suspend fun habit(id: String): HabitEntity?
+
+    @Query("SELECT COALESCE(MAX(sortOrder), -1) FROM habits")
+    suspend fun maxHabitOrder(): Int
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertCompletion(completion: CompletionEntity)

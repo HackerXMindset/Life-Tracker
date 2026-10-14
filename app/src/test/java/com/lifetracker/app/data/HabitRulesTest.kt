@@ -256,4 +256,14 @@ class HabitRulesTest {
         assertEquals(62, HabitPlan(every = 2, unit = HabitPlan.UNIT_MONTHS).spanDays)
         assertEquals(2, HabitPlan(every = 2, unit = HabitPlan.UNIT_DAYS).spanDays)
     }
+
+    @Test
+    fun aReasonCanOnlyBeGivenForAPastDueDayThatWasNotDone() {
+        val r = rules(listOf(day(13)), HabitPlan(restDays = listOf(7)))
+        assertTrue(r.canMiss(day(12)))
+        assertFalse(r.canMiss(day(13)))
+        assertFalse(r.canMiss(day(14)))
+        assertFalse(r.canMiss(day(11)))
+        assertFalse(r.canMiss(LocalDate.of(2026, 9, 1)))
+    }
 }

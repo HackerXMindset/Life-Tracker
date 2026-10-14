@@ -123,6 +123,7 @@ fun LifeTrackerApp() {
                 when (current) {
                     Page.Backup -> DataSourcesScreen(onBack = back)
                     Page.Activities -> ActivitiesScreen(onBack = back)
+                    Page.Habits -> HabitsSettingsScreen(onBack = back)
                     Page.Phone -> PhoneUsageScreen(onBack = back, part = part)
                     Page.Calls -> CallsScreen(onBack = back, part = part)
                     Page.Charging -> ChargingScreen(onBack = back, part = part)

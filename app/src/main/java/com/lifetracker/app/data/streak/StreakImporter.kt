@@ -9,6 +9,8 @@ import com.lifetracker.app.data.CompletionEntity
 import com.lifetracker.app.data.DataSources
 import com.lifetracker.app.data.EntryEntity
 import com.lifetracker.app.data.HabitEntity
+import com.lifetracker.app.data.HabitSource
+import com.lifetracker.app.data.HabitsSettings
 import com.lifetracker.app.data.ImportedItemEntity
 import com.lifetracker.app.data.NoteEntity
 import com.lifetracker.app.data.SourceScanner
@@ -30,13 +32,17 @@ data class ImportResult(
     val todos: Int,
     val datedTodos: Int,
     val notes: Int,
+    /** True when habits, their days, categories and notes were left alone because the app uses its own habit data. */
+    val habitsSkipped: Boolean = false,
 ) {
     fun describe(): String = buildString {
-        append("Imported from $fileName: $habits habits")
-        append(", $completionsAdded new habit days")
+        append("Imported from $fileName: ")
+        if (habitsSkipped) append("habits left alone (using this app's own habit data)")
+        else append("$habits habits, $completionsAdded new habit days")
         append(", $focusAdded focus sessions added to the Timeline")
         append(", $todos to-dos ($datedTodos with a date, shown on the Timeline)")
-        append(", $notes notes.")
+        if (!habitsSkipped) append(", $notes notes")
+        append(".")
     }
 }
 
@@ -87,7 +93,8 @@ object StreakImporter {
             }
             if (data.isEmpty) return@withContext null
 
-            val result = apply(AppDatabase.get(context), data, used)
+            val importHabits = HabitsSettings(context).source == HabitSource.Streak
+            val result = apply(AppDatabase.get(context), data, used, importHabits)
             sources.streakSeenExportedAt = data.exportedAt
             sources.lastStreakImportText = LocalDateTime.now().toString()
             result
@@ -108,7 +115,7 @@ object StreakImporter {
         throw IOException("$name does not contain backup.json.")
     }
 
-    private suspend fun apply(db: AppDatabase, data: StreakData, fileName: String): ImportResult {
+    private suspend fun apply(db: AppDatabase, data: StreakData, fileName: String, importHabits: Boolean): ImportResult {
         val habitDao = db.habitDao()
         val planDao = db.planDao()
         val entryDao = db.entryDao()
@@ -118,14 +125,16 @@ object StreakImporter {
         var focusAdded = 0
 
         db.withTransaction {
-            habitDao.upsertCategories(
-                data.categories.map { CategoryEntity(it.id, it.name, it.color, it.order) },
-            )
+            if (importHabits) {
+                habitDao.upsertCategories(
+                    data.categories.map { CategoryEntity(it.id, it.name, it.color, it.order) },
+                )
+            }
 
             // Habits and their days. Where both sides have a day, the higher count wins.
             val existing = habitDao.allCompletions().associateBy { it.habitId to it.date }
             val completions = ArrayList<CompletionEntity>()
-            val habits = data.habits.map { h ->
+            val habits = (if (importHabits) data.habits else emptyList()).map { h ->
                 val first = h.completions.minOfOrNull { it.date }
                 val startedOn = listOfNotNull(h.createdOn, first).minOrNull() ?: LocalDate.now()
                 for (c in h.completions) {
@@ -183,11 +192,13 @@ object StreakImporter {
                 },
             )
 
-            planDao.upsertNotes(
-                data.notes.map {
-                    NoteEntity(it.id, it.habitId, it.date?.toString() ?: "", it.type, it.text, it.minutes, it.createdAt)
-                },
-            )
+            if (importHabits) {
+                planDao.upsertNotes(
+                    data.notes.map {
+                        NoteEntity(it.id, it.habitId, it.date?.toString() ?: "", it.type, it.text, it.minutes, it.createdAt)
+                    },
+                )
+            }
 
             // Focus sessions become Timeline entries, once each.
             val habitById = data.habits.associateBy { it.id }
@@ -218,12 +229,13 @@ object StreakImporter {
 
         return ImportResult(
             fileName = fileName,
-            habits = data.habits.size,
+            habits = if (importHabits) data.habits.size else 0,
             completionsAdded = completionsAdded,
             focusAdded = focusAdded,
             todos = data.todos.size,
             datedTodos = data.todos.count { it.date != null },
-            notes = data.notes.size,
+            notes = if (importHabits) data.notes.size else 0,
+            habitsSkipped = !importHabits,
         )
     }
 }

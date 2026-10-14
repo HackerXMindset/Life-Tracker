@@ -2,6 +2,31 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🌱 Habits like Streak, and your own habit tracker
+
+The Habits tab now looks and works like Streak's classic view, and you can track habits right here without Streak.
+
+### ✨ New features
+
+- **Streak's classic view** — a Today ring ("3 of 5 completed"), a **Week | Month | Year** switch, category chips, and one card per habit with its streak, a strength bar and a tick button. The calendar under each card is a row of seven days, a month grid, or a 53-week year grid.
+- **Small or big cards** — the up-down button at the top right makes every card small (a thin coloured bar instead of the calendar) or big again. The app remembers your choice, the calendar and the category.
+- **Add your own habits** — tap **New**. Pick a name, emoji, colour and category, and the type: yes/no, avoid (days without a relapse) or counted (goal, unit, amount per tap, or "any amount counts"). Choose how often: every day, some days of the week, so many days a week or month, or every X days, weeks or months.
+- **Habit page** — tap a card (or press and hold it) to see its streak, best streak, total and strength, and to edit or archive it. Archived habits are hidden, never deleted, and can be shown again.
+- **Press and hold a day** — mark it done or not done, set an exact amount, say why you missed it (Overslept, Busy, Traveling, Sick, Tired, Forgot, or your own words), or clear the day.
+- **Choose where your habits live** — Settings, then Habits: **This app's own data** (the default) or **Import from Streak**.
+- **Open in Streak** — with Streak chosen, tapping a habit opens Streak right on that habit.
+
+### 🛠 Improvements
+
+- **Streak's own maths** — streaks, best streaks and "done today" follow Streak's rules: rest days and holidays never break a streak, weekly and monthly goals count weeks and months, "every X days" habits done early are covered, and a week or month that already reached its goal shows its other days as covered, not missed.
+
+### ⚠️ Good to know
+
+- With **Import from Streak**, a habit you change here that also exists in Streak goes back to Streak's version at the next import. Days you tick here are kept. Sending your changes to Streak is a later step.
+- If you were already importing from Streak, you stay on **Import from Streak** until you choose otherwise in Settings.
+- Streak's named icons are not drawn yet. A habit with an emoji icon shows the emoji; the others show their first letter.
+- Notes on habits are not in the app yet.
+
 ## 🎁 Release pages now say what's new
 
 Every build now has a proper release page like Streak's: a heading, what's new in plain words, and how to download.
