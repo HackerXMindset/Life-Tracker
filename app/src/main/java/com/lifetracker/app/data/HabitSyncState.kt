@@ -41,7 +41,8 @@ object HabitChanges {
  * own device name for the backup files.
  */
 class HabitSyncState(context: Context) {
-    private val prefs = context.applicationContext.getSharedPreferences("habit_sync", Context.MODE_PRIVATE)
+    private val appContext = context.applicationContext
+    private val prefs = appContext.getSharedPreferences("habit_sync", Context.MODE_PRIVATE)
 
     /** Eight letters and digits like Streak's, made once and kept. */
     val deviceId: String
@@ -49,6 +50,16 @@ class HabitSyncState(context: Context) {
             prefs.getString("device", null)?.takeIf { it.isNotBlank() }
                 ?: StreakBackupWriter.newDeviceId().also { id -> prefs.edit { putString("device", id) } }
         }
+
+    /** Send changes to Streak's folder by themselves, shortly after a change and when the app opens. Off until chosen. */
+    var autoSend: Boolean
+        get() = prefs.getBoolean("auto_send", false)
+        set(value) = prefs.edit { putBoolean("auto_send", value) }
+
+    /** What the last automatic send did, in words, for the Settings screen. */
+    var lastSendNote: String?
+        get() = prefs.getString("last_note", null)
+        set(value) = prefs.edit { putString("last_note", value) }
 
     /** The device name if one was already made, without making one. */
     val deviceIdOrNull: String?
@@ -72,6 +83,7 @@ class HabitSyncState(context: Context) {
             val next = HabitChanges.stamp(HabitChanges.parse(prefs.getString("changes", null)), ids.toList(), now)
             prefs.edit { putString("changes", HabitChanges.toJson(next)) }
         }
+        if (autoSend) StreakSendWorker.schedule(appContext, delaySeconds = StreakSendWorker.QUIET_SECONDS)
     }
 
     private companion object {
