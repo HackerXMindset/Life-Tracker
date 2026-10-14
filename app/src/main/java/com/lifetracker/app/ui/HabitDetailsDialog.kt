@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -16,6 +18,8 @@ import androidx.compose.ui.unit.sp
 import com.lifetracker.app.data.HabitEditor
 import com.lifetracker.app.data.HabitPlan
 import com.lifetracker.app.data.HabitStats
+import com.lifetracker.app.data.NoteEntity
+import java.time.LocalDate
 import java.util.Locale
 
 private fun amount(value: Double): String =
@@ -25,6 +29,10 @@ private fun amount(value: Double): String =
 @Composable
 fun HabitDetailsDialog(
     row: HabitRow,
+    notes: List<NoteEntity>,
+    today: LocalDate,
+    onAddNote: () -> Unit,
+    onEditNote: (NoteEntity) -> Unit,
     onEdit: () -> Unit,
     onArchive: () -> Unit,
     onDismiss: () -> Unit,
@@ -49,7 +57,10 @@ fun HabitDetailsDialog(
         onDismissRequest = onDismiss,
         title = { Text(habit.name) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
                 Line("Current streak", "${row.rules.currentStreak()} $streakWord")
                 Line("Best streak", "${row.rules.longestStreak()} $streakWord")
                 Line(totalLabel, streaks.totalDays.toString())
@@ -62,6 +73,7 @@ fun HabitDetailsDialog(
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                HabitNotesList(notes, today, onEditNote, onAddNote)
             }
         },
         confirmButton = {

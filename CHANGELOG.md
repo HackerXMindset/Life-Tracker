@@ -2,6 +2,22 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📝 Notes on habits
+
+Write notes on your habits, and read them all in one place.
+
+### ✨ New features
+
+- **All notes** — the new notes icon at the top of Habits (next to the up-down button) opens every note, newest first, with the habit and the day. If you have notes on more than one habit, a row of chips narrows the list to one habit. Notes you already had from Streak show up here too.
+- **Write a note** — on a habit's page there is now a **Notes** list with an **Add note** button. Press and hold a day and choose **Add a note for this day** to write one for that day. On the All notes page, **New note** lets you pick the habit.
+- **Change a note** — tap any note to change its text.
+
+### ⚠️ Good to know
+
+- Notes are never deleted. There is no delete button, and a note cannot be saved empty, so one can't be wiped by accident.
+- With **Import from Streak**, a note that came from Streak goes back to Streak's text at the next import if you changed it here. Notes you write here are kept. Sending your changes to Streak is a later step.
+- A new note gets the day you pressed (today for **Add note** and **New note**). Changing a note's day is not possible yet.
+
 ## 🌱 Habits like Streak, and your own habit tracker
 
 The Habits tab now looks and works like Streak's classic view, and you can track habits right here without Streak.
@@ -25,7 +41,6 @@ The Habits tab now looks and works like Streak's classic view, and you can track
 - With **Import from Streak**, a habit you change here that also exists in Streak goes back to Streak's version at the next import. Days you tick here are kept. Sending your changes to Streak is a later step.
 - If you were already importing from Streak, you stay on **Import from Streak** until you choose otherwise in Settings.
 - Streak's named icons are not drawn yet. A habit with an emoji icon shows the emoji; the others show their first letter.
-- Notes on habits are not in the app yet.
 
 ## 🎁 Release pages now say what's new
 

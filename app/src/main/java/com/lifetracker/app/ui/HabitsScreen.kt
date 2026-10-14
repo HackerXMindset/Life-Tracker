@@ -69,6 +69,7 @@ import com.lifetracker.app.data.HabitCalendar
 import com.lifetracker.app.data.HabitCell
 import com.lifetracker.app.data.HabitEntity
 import com.lifetracker.app.data.HabitMode
+import com.lifetracker.app.data.HabitNotes
 import com.lifetracker.app.data.HabitRules
 import com.lifetracker.app.data.HabitSource
 import com.lifetracker.app.data.HabitStats
@@ -95,13 +96,31 @@ fun HabitsScreen(vm: HabitsViewModel = viewModel()) {
     var adding by remember { mutableStateOf(false) }
     var showArchived by remember { mutableStateOf(false) }
     var dayMenu by remember { mutableStateOf<Pair<String, LocalDate>?>(null) }
+    var showNotes by remember { mutableStateOf(false) }
+    var noteDraft by remember { mutableStateOf<NoteDraft?>(null) }
+    val notes by vm.notes.collectAsState()
+    val names by vm.habitNames.collectAsState()
 
-    LazyColumn(
+    if (showNotes) HabitNotesPage(
+        notes = notes,
+        names = names,
+        today = ui.today,
+        onEdit = { noteDraft = NoteDraft(it.habitId, ui.today, it) },
+        onNew = { noteDraft = NoteDraft(it, ui.today) },
+        onBack = { showNotes = false },
+    ) else LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item(key = "top") { TopBar(compact = ui.compact, onToggle = vm::toggleCompact, onNew = { adding = true }) }
+        item(key = "top") {
+            TopBar(
+                compact = ui.compact,
+                onToggle = vm::toggleCompact,
+                onNew = { adding = true },
+                onNotes = { showNotes = true },
+            )
+        }
         item(key = "today") { TodayCard(ui.today, ui.progress) }
         if (!ui.hasAny) {
             item(key = "empty") { EmptyCard() }
@@ -159,6 +178,10 @@ fun HabitsScreen(vm: HabitsViewModel = viewModel()) {
         if (row == null) detailsId = null
         else HabitDetailsDialog(
             row = row,
+            notes = HabitNotes.forHabit(notes, row.habit.id),
+            today = ui.today,
+            onAddNote = { noteDraft = NoteDraft(row.habit.id, ui.today) },
+            onEditNote = { noteDraft = NoteDraft(it.habitId, ui.today, it) },
             onEdit = { editing = row.habit; detailsId = null },
             onArchive = { vm.setArchived(row.habit, true); detailsId = null },
             onDismiss = { detailsId = null },
@@ -174,7 +197,23 @@ fun HabitsScreen(vm: HabitsViewModel = viewModel()) {
             onAmount = { vm.setAmount(row.habit, date, it) },
             onReason = { vm.setMissReason(row.habit, date, it) },
             onClear = { vm.clear(row.habit, date) },
+            onNote = { noteDraft = NoteDraft(row.habit.id, date) },
             onDismiss = { dayMenu = null },
+        )
+    }
+    noteDraft?.let { draft ->
+        val picking = draft.note == null && draft.habitId.isEmpty()
+        val choices = names.filterKeys { id -> ui.archived.none { it.id == id } }.toList()
+        NoteDialog(
+            draft = draft,
+            today = ui.today,
+            habitName = names[draft.habitId],
+            habits = if (picking) choices else null,
+            onSave = { habitId, text ->
+                if (draft.note != null) vm.editNote(draft.note, text) else vm.addNote(habitId, draft.date, text)
+                noteDraft = null
+            },
+            onDismiss = { noteDraft = null },
         )
     }
     if (adding) {
@@ -215,7 +254,7 @@ private fun HabitRules.cellIsRelapse(day: LocalDate): Boolean = cell(day).kind =
 // ---------------------------------------------------------------- top of the page
 
 @Composable
-private fun TopBar(compact: Boolean, onToggle: () -> Unit, onNew: () -> Unit) {
+private fun TopBar(compact: Boolean, onToggle: () -> Unit, onNew: () -> Unit, onNotes: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -229,6 +268,7 @@ private fun TopBar(compact: Boolean, onToggle: () -> Unit, onNew: () -> Unit) {
             fontWeight = FontWeight.ExtraBold,
             color = MaterialTheme.colorScheme.onBackground,
         )
+        RoundIconButton(icon = R.drawable.ic_notes, description = "All notes", onClick = onNotes)
         // The up-down button: small cards when they are big, big cards when they are small.
         RoundIconButton(
             icon = if (compact) R.drawable.ic_chevrons_updown else R.drawable.ic_chevrons_downup,
