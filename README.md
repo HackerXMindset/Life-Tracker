@@ -134,8 +134,8 @@ Each step is small enough to build, install and try before the next begins. The 
  DONE         Habits H3b Long-press a day: set an amount, miss reason, clear
  DONE         Habits H4 Settings: Streak or this app's own data; tap a habit to open it in Streak
  DONE         Habits H3c Notes on habits (notes icon, notes on a habit)
- NEXT  ──►    Habits H5 Your edits reach Streak (through Streak's backup folder)
-              Step 14 Life events, month and year views
+ DONE         Habits H5 Your edits reach Streak (through Streak's backup folder)
+ NEXT  ──►    Step 14 Life events, month and year views
               Step 15 Stats
               Step 16 Polish
 ```
@@ -211,7 +211,7 @@ The next steps were planned together after asking for more automatic tracking. T
 
 Not part of Polish 4, and not built: **Step 13e** (fixing trips and visits by hand: split and join), which you have not asked for yet.
 
-**Habits rework (H1 to H5, planned, in this order, one small step each).** The Habits tab was a plain list of cards. It becomes Streak's classic view, and the app gets its own habit tracker that works like Streak's. Only the core Streak features come first: the classic view, Week / Month / Year, notes, categories, counted habits and miss reasons. Focus timers, to-dos, reminders, widgets, cover images and the book and water special types are not part of this. The app already stores habits in its own tables (from the Streak import), so no new database version is expected unless a step says so.
+**Habits rework (H1 to H5, all built, one small step each).** The Habits tab was a plain list of cards. It becomes Streak's classic view, and the app gets its own habit tracker that works like Streak's. Only the core Streak features come first: the classic view, Week / Month / Year, notes, categories, counted habits and miss reasons. Focus timers, to-dos, reminders, widgets, cover images and the book and water special types are not part of this. The app already stores habits in its own tables (from the Streak import), so no new database version is expected unless a step says so.
 
 - **H1 Habit rules. Built.** Streak's schedules (every day, some days of the week, a number of times a week or month, every X days) and the streak, goal and "done today" maths as tested code with no screens (`HabitRules.kt`). Days off a schedule never break a streak.
 - **H2 Streak's classic view. Built.** The Today ring at the top ("3 of 5 completed"), the **Week | Month | Year** switch, category chips, and one card per habit: coloured tile, name, streak, category, a strength bar with a percent, a tick button on the right, and the calendar under it (a row of seven days, a month grid with day numbers, or a 53-week year grid that opens on the newest weeks). Tapping a day ticks it, pressing and holding clears it. The up-down button at the top right makes every card small (the calendar becomes a thin coloured bar) or big again. It remembers the mode, the card size and the category you picked. Day colours follow Streak: paused days blue, days covered by a weekly or monthly target faded, partial counted days lighter. Habit icons: Streak's named icons are not drawn yet; an emoji icon shows as is, otherwise the habit's first letter. The notes icon and **+ New** come with H3 (they have nothing to open yet), and Focus is not part of this rework.
@@ -237,7 +237,7 @@ Not part of Polish 4, and not built: **Step 13e** (fixing trips and visits by ha
   - **H5a Writer. Built.** `StreakBackupWriter.kt` turns changed habits, their days, notes and categories into a Streak backup file (`streak_backup_<date>_<time>_<device>.json`), with a "last changed" stamp for each item. It only includes what you changed, so Streak's other habits are never overwritten. Tested with sample data; nothing is written to your phone yet.
   - **H5b Remember what changed. Built.** Every new habit, edit, tick, amount, miss reason, archive and note written here notes "this changed at this time" (`HabitSyncState.kt`, kept in the app's own settings, no database change), so H5a knows what to send. The note only ever moves forward in time. Clearing a day also notes the habit as changed (harmless: Streak keeps its own copy of that day anyway). Things that come in from a Streak import are not noted, so Streak's own habits are never sent back. The app's own device name (eight letters and digits, like Streak's) is made once, the first time it is needed. Nothing is sent anywhere yet.
   - **H5c Write into the folder. Built.** `StreakFolderWriter.kt`. In **Settings, Habits** there is now a **Send your changes to Streak** part: the folder name, whether writing is allowed, when it was last sent, **Choose the folder again** (the same Streak folder; this time Android is asked for write permission, which is needed once because the folder was chosen read only before) and **Send to Streak now**. The file is written whole under a name Streak ignores (`....json.part`) and then renamed to `streak_backup_<date>_<time>_<device>.json`, and its size is checked. The app keeps its own newest three files and removes its older ones; Streak's files are never touched. Sending the same content twice is skipped ("Already sent"). The app's own importer now ignores files with this app's device name, so it can never read its own file back as Streak's. You send by pressing the button for now; the automatic sending is H5d.
-  - **H5d Settings and timing. Planned.** A switch in Settings, Habits ("Send my habit changes to Streak"), the file is rewritten shortly after a change and when the app opens, and a line shows when it last wrote. Streak's owner is adding "save the backup after every change" so changes from Streak come back here faster; no extra work is needed on this side.
+  - **H5d Send automatically. Built.** In **Settings, Habits**, under **Send your changes to Streak**, a **Send automatically** switch (off until you turn it on). When it is on, every change here asks for a send 15 seconds later (`StreakSendWorker.kt`, a background job that survives the app closing); a newer change restarts that wait, so ticking several days in a row writes one file. The app also sends when it opens, after it has read Streak's newest backup. If a send fails it tries again up to three times, then shows "Not sent" with the reason. The screen shows the result of the last automatic send. Turning the switch on sends straight away. Sending the same content twice is skipped. Streak's owner is adding "save the backup after every change" in Streak, so changes made in Streak come back here faster; nothing more is needed on this side.
 
 **Step 14: Life events, month and year views.** Mark moments that changed your life, then look back by month or year to see what you did and how much you studied around each one.
 
@@ -321,7 +321,8 @@ life-tracker/
         │   │   ├── HabitsSettings.kt  Which calendar, card size, category
         │   │   ├── HabitEditor.kt     Makes and changes habits in Streak's record format (H3a)
         │   │   ├── StreakLink.kt      Opens the Streak app on a habit (H4)
-        │   │   ├── HabitSyncState.kt  Remembers which habits and notes changed here, and this app's device name (H5b)
+        │   │   ├── HabitSyncState.kt  Remembers which habits and notes changed here, this app's device name, the automatic-send switch (H5b, H5d)
+        │   │   ├── StreakSendWorker.kt  Sends the changes to Streak's folder in the background (H5d)
         │   │   ├── HabitNotes.kt      Notes on habits: sorting, filtering, new and edited notes (H3c)
         │   │   ├── ActivityTypes.kt   Your activities (names, colours, goals) and the built-in ones
         │   │   ├── ActivityStats.kt   Time per activity and goal progress
@@ -376,6 +377,7 @@ life-tracker/
         │   │   │   ├── StreakModels.kt   What a Streak backup contains
         │   │   │   ├── StreakParser.kt   Reads Streak's backup format
         │   │   │   ├── StreakBackupWriter.kt  Builds a Streak-format backup file from your changes (H5a)
+        │   │   │   ├── StreakFolderWriter.kt  Writes that file into Streak's folder, keeps the newest three (H5c)
         │   │   │   ├── FocusConverter.kt Turns focus sessions into Timeline entries
         │   │   │   └── StreakImporter.kt Finds, reads and merges the newest backup
         │   │   ├── ont/

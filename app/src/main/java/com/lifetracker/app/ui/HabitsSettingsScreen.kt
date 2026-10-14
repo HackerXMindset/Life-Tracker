@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -37,6 +38,7 @@ import com.lifetracker.app.data.HabitSource
 import com.lifetracker.app.data.HabitSyncState
 import com.lifetracker.app.data.HabitsSettings
 import com.lifetracker.app.data.StreakLink
+import com.lifetracker.app.data.StreakSendWorker
 import com.lifetracker.app.data.streak.StreakFolderWriter
 import com.lifetracker.app.data.streak.StreakImporter
 import kotlinx.coroutines.launch
@@ -59,7 +61,10 @@ fun HabitsSettingsScreen(onBack: () -> Unit) {
     val canWrite = remember(folderTick) { StreakFolderWriter.canWrite(context) }
     var sending by remember { mutableStateOf(false) }
     var sendMessage by remember { mutableStateOf<String?>(null) }
-    val lastSent = remember(sendMessage) { HabitSyncState(context).lastSentText }
+    val syncState = remember { HabitSyncState(context) }
+    var auto by remember { mutableStateOf(syncState.autoSend) }
+    val lastSent = remember(sendMessage) { syncState.lastSentText }
+    val autoNote = remember(sendMessage, auto) { syncState.lastSendNote }
     val pickFolder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) {
             sendMessage = try {
@@ -106,7 +111,7 @@ fun HabitsSettingsScreen(onBack: () -> Unit) {
                     "Streak app: " + (if (StreakLink.isInstalled(context)) "installed" else "not found on this phone") + "\n" +
                         "Streak backup folder: " + (folder ?: "not chosen yet (set it under Backup and import)") + "\n\n" +
                         "For now, a habit you change here that also exists in Streak goes back to Streak's version each time a " +
-                        "Streak backup is imported. Days you tick here are kept. Sending your changes to Streak comes in a later step.",
+                        "Streak backup is imported, unless the change has already been sent to Streak (see below). Days you tick here are kept.",
                 )
             }
         }
@@ -124,6 +129,38 @@ fun HabitsSettingsScreen(onBack: () -> Unit) {
                     "A day you un-tick here stays ticked in Streak, because Streak only ever adds days.",
             )
         }
+        item {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+            ) {
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Send automatically", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                        Text(
+                            "A few seconds after a change, and each time the app opens. Needs the folder to allow writing.",
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = auto,
+                        onCheckedChange = {
+                            auto = it
+                            syncState.autoSend = it
+                            if (it) StreakSendWorker.schedule(context, delaySeconds = 0)
+                        },
+                    )
+                }
+            }
+        }
+        autoNote?.let { note -> item { SetupNote(note) } }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(onClick = { pickFolder.launch(null) }) { Text(if (canWrite) "Change folder" else "Choose the folder again") }

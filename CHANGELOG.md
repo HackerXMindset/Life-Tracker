@@ -2,6 +2,21 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🔁 Habit changes reach Streak by themselves
+
+Turn on one switch and your Habits changes go to Streak without pressing anything.
+
+### ✨ New features
+
+- **Send automatically** — Settings, then Habits, then **Send your changes to Streak**. When it is on, a change you make is sent 15 seconds later, and anything not yet sent goes out each time the app opens. Ticking several days in a row is sent as one file.
+- **Last send** — the screen shows what the last automatic send did, or why it could not send.
+
+### ⚠️ Good to know
+
+- The switch starts off. Choose the Streak folder again first (it needs permission to write), then turn it on.
+- Streak takes changes in when it checks the folder, so they show up in Streak a little later, not instantly.
+- A day you un-tick here stays ticked in Streak.
+
 ## 📤 Send your habit changes to Streak
 
 You can now send what you changed in Habits to Streak, by pressing a button.

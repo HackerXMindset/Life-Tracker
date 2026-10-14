@@ -44,6 +44,8 @@ import com.lifetracker.app.data.PlacesTracker
 import com.lifetracker.app.data.PlacesWorker
 import com.lifetracker.app.data.UsageCollector
 import com.lifetracker.app.data.UsageSyncWorker
+import com.lifetracker.app.data.HabitSyncState
+import com.lifetracker.app.data.StreakSendWorker
 import com.lifetracker.app.data.ont.OntImporter
 import com.lifetracker.app.data.streak.StreakImporter
 
@@ -78,6 +80,8 @@ fun LifeTrackerApp() {
         runCatching {
             if (DataSources(context).folder(DataSources.Slot.OpenNutriTracker) != null) OntImporter.importIfNew(context)
         }
+        // Then send anything changed here to Streak's folder, if that is switched on (after the import, so Streak's news comes first).
+        runCatching { if (HabitSyncState(context).autoSend) StreakSendWorker.schedule(context, delaySeconds = 0) }
         // Add the monthly items (rent, subscriptions, salary) whose day has come.
         runCatching { MoneyPoster.postDue(context) }
         // Copy the latest app usage history, and keep copying it every few hours in the background.
