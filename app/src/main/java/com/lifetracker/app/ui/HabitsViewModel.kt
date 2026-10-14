@@ -11,10 +11,12 @@ import com.lifetracker.app.data.HabitEditor
 import com.lifetracker.app.data.HabitEntity
 import com.lifetracker.app.data.HabitForm
 import com.lifetracker.app.data.HabitMode
+import com.lifetracker.app.data.HabitNotes
 import com.lifetracker.app.data.HabitPlan
 import com.lifetracker.app.data.HabitRules
 import com.lifetracker.app.data.HabitStats
 import com.lifetracker.app.data.HabitsSettings
+import com.lifetracker.app.data.NoteEntity
 import com.lifetracker.app.data.TodayProgress
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -24,6 +26,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -64,6 +67,7 @@ private class Source(
 
 class HabitsViewModel(app: Application) : AndroidViewModel(app) {
     private val dao = AppDatabase.get(app).habitDao()
+    private val planDao = AppDatabase.get(app).planDao()
     private val settings = HabitsSettings(app)
 
     private val mode = MutableStateFlow(settings.mode)
@@ -87,6 +91,34 @@ class HabitsViewModel(app: Application) : AndroidViewModel(app) {
                     settings.mode, settings.compact,
                 ),
             )
+
+    /** Every note, newest first. */
+    val notes: StateFlow<List<NoteEntity>> =
+        planDao.observeNotes()
+            .map { HabitNotes.sorted(it) }
+            .flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Habit names by id, archived habits included, for labelling notes. */
+    val habitNames: StateFlow<Map<String, String>> =
+        dao.observeHabits()
+            .map { list -> list.associate { it.id to it.name } }
+            .flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
+    /** Writes a new note on a habit and day. A blank text writes nothing. */
+    fun addNote(habitId: String, date: LocalDate, text: String) {
+        val note = HabitNotes.create(HabitEditor.newId(), habitId, date, text, LocalDateTime.now()) ?: return
+        viewModelScope.launch { planDao.upsertNote(note) }
+    }
+
+    /** Changes a note's text. A blank text changes nothing: notes are never removed here. */
+    fun editNote(note: NoteEntity, text: String) {
+        viewModelScope.launch {
+            val current = planDao.note(note.id) ?: return@launch
+            HabitNotes.edited(current, text)?.let { planDao.upsertNote(it) }
+        }
+    }
 
     fun setMode(value: HabitMode) {
         settings.mode = value

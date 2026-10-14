@@ -133,8 +133,8 @@ Each step is small enough to build, install and try before the next begins. The 
  DONE         Habits H3a Add, edit and archive a habit here (+ New, tap a card)
  DONE         Habits H3b Long-press a day: set an amount, miss reason, clear
  DONE         Habits H4 Settings: Streak or this app's own data; tap a habit to open it in Streak
- NEXT  ──►    Habits H3c Notes on habits (notes icon, notes on a habit)
-              Habits H5 Your edits reach Streak (through Streak's backup folder)
+ DONE         Habits H3c Notes on habits (notes icon, notes on a habit)
+ NEXT  ──►    Habits H5 Your edits reach Streak (through Streak's backup folder)
               Step 14 Life events, month and year views
               Step 15 Stats
               Step 16 Polish
@@ -218,7 +218,12 @@ Not part of Polish 4, and not built: **Step 13e** (fixing trips and visits by ha
 - **H3 Add, edit and note habits here (three small steps).** Everything a habit has is kept in Streak's own record format (the `raw` copy every habit already carries), so a habit made here can be sent to Streak in H5 without conversion. A habit imported from Streak keeps the Streak fields this app does not edit.
   - **H3a Add, edit and archive. Built.** A **+ New** button next to the up-down button and a habit page when you tap a card (streak, best, total, strength, schedule, and buttons **Edit** and **Archive**). The form has name, icon (emoji), colour, category (pick one or type a new one), type (yes or no, avoid, counted), and for counted habits the goal per day, the unit, the step and "any amount counts"; and the schedule (every day, some days of the week, so many times a week, so many times a month, every X days, weeks or months, with a start day). Archive hides a habit and **Show again** brings it back; nothing is deleted. A habit imported from Streak that you edit here would be put back to Streak's version by the next import until H4 adds the "use this app's data" switch, so H4 follows straight after H3.
   - **H3b Long-press a day. Built.** Long-press (it used to clear the day) opens a small menu for that day: mark done or not done, set an exact amount (counted habits), say why you missed it (Overslept, Busy, Traveling, Sick, Tired, Forgot, or your own words), and **Clear this day** (the only way a day record is removed).
-  - **H3c Notes. Planned.** The notes icon opens all your notes, newest first, with the habit and day. You can write a note on any habit and day, and change a note's text later. Notes are never deleted from the app.
+  - **H3c Notes. Built.** Notes use the same `notes` table the Streak import already fills, so imported notes show up too.
+    - **The notes icon** (top right, next to the up-down button) opens **All notes**: newest first, each with the habit name, the day and the text. Notes with no day go last. Tap a note to change its text. A filter row narrows the list to one habit.
+    - **Write a note:** the habit page has a **Notes** list for that habit and an **Add note** button (today's date). Long-pressing a day now also has **Add a note for this day**.
+    - **Never deleted:** there is no delete button. Saving an empty text is refused, so a note cannot be wiped by accident. Notes on archived habits stay and still show.
+    - **Streak source:** while you use Import from Streak, a note you change that came from Streak is put back to Streak's text by the next import (the same limit as habit edits, removed in H5). Notes you write here are new and are kept.
+    - `HabitNotes.kt` holds the rules (sorting, filtering, new and edited notes) and is unit tested.
 - **H4 Settings and tap to open. Built.** A **Habits** row in Settings (under "Your data") with the choice **This app's own data** (the default) or **Import from Streak**.
   - **This app's own data:** the app no longer imports Streak's habits, their days, categories or habit notes, so nothing you edit here is put back. Habits you already have stay as they are. Streak's to-dos and focus sessions are still imported as before. You do not need Streak installed.
   - **Who starts on which:** a new install starts on your own data. If you had already imported from Streak before this choice existed and have not chosen, you stay on Streak so your habits keep coming in.
@@ -308,6 +313,7 @@ life-tracker/
         │   │   ├── HabitsSettings.kt  Which calendar, card size, category
         │   │   ├── HabitEditor.kt     Makes and changes habits in Streak's record format (H3a)
         │   │   ├── StreakLink.kt      Opens the Streak app on a habit (H4)
+        │   │   ├── HabitNotes.kt      Notes on habits: sorting, filtering, new and edited notes (H3c)
         │   │   ├── ActivityTypes.kt   Your activities (names, colours, goals) and the built-in ones
         │   │   ├── ActivityStats.kt   Time per activity and goal progress
         │   │   ├── UsageTables.kt     App sessions and what you told the app about each app

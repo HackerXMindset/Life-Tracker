@@ -44,6 +44,7 @@ fun HabitDayDialog(
     onAmount: (Double) -> Unit,
     onReason: (String?) -> Unit,
     onClear: () -> Unit,
+    onNote: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val habit = row.habit
@@ -105,6 +106,8 @@ fun HabitDayDialog(
                         Text(if (done) "Mark not done" else "Mark done")
                     }
                 }
+
+                TextButton(onClick = { onNote(); onDismiss() }) { Text("Add a note for this day") }
 
                 if (rules.canMiss(date) && !relapse) {
                     MonoLabel("Why was it missed?")

@@ -196,6 +196,15 @@ interface PlanDao {
     @Query("SELECT * FROM notes")
     suspend fun allNotes(): List<NoteEntity>
 
+    @Query("SELECT * FROM notes")
+    fun observeNotes(): Flow<List<NoteEntity>>
+
+    @Query("SELECT * FROM notes WHERE id = :id")
+    suspend fun note(id: String): NoteEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertNote(note: NoteEntity)
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertTodos(todos: List<TodoEntity>)
 
