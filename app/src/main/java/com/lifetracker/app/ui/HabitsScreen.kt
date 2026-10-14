@@ -5,8 +5,10 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -51,6 +53,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -66,7 +69,10 @@ import com.lifetracker.app.data.HabitCell
 import com.lifetracker.app.data.HabitEntity
 import com.lifetracker.app.data.HabitMode
 import com.lifetracker.app.data.HabitRules
+import com.lifetracker.app.data.HabitSource
 import com.lifetracker.app.data.HabitStats
+import com.lifetracker.app.data.HabitsSettings
+import com.lifetracker.app.data.StreakLink
 import com.lifetracker.app.data.TodayProgress
 import java.time.LocalDate
 import java.time.Month
@@ -80,6 +86,8 @@ private val PAUSED_BLUE = Color(0xFF4A90D9)
 @Composable
 fun HabitsScreen(vm: HabitsViewModel = viewModel()) {
     val ui by vm.state.collectAsState()
+    val context = LocalContext.current
+    val source = remember { HabitsSettings(context).source }
     var relapseFor by remember { mutableStateOf<HabitEntity?>(null) }
     var detailsId by remember { mutableStateOf<String?>(null) }
     var editing by remember { mutableStateOf<HabitEntity?>(null) }
@@ -108,7 +116,16 @@ fun HabitsScreen(vm: HabitsViewModel = viewModel()) {
                 today = ui.today,
                 mode = ui.mode,
                 compact = ui.compact,
-                onOpen = { detailsId = row.habit.id },
+                onOpen = {
+                    if (source == HabitSource.Streak) {
+                        if (!StreakLink.openHabit(context, row.habit.id)) {
+                            Toast.makeText(context, "Streak is not installed, or could not be opened.", Toast.LENGTH_SHORT).show()
+                        }
+                    } else {
+                        detailsId = row.habit.id
+                    }
+                },
+                onHold = { detailsId = row.habit.id },
                 onToday = {
                     val relapse = row.habit.kind == HabitStats.KIND_RELAPSE
                     if (relapse && !row.rules.cellIsRelapse(ui.today)) relapseFor = row.habit
@@ -438,6 +455,7 @@ private fun HabitCardView(
     mode: HabitMode,
     compact: Boolean,
     onOpen: () -> Unit,
+    onHold: () -> Unit,
     onToday: () -> Unit,
     onDay: (LocalDate) -> Unit,
     onMenu: (LocalDate) -> Unit,
@@ -447,7 +465,7 @@ private fun HabitCardView(
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
 
     Surface(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onOpen),
+        modifier = Modifier.fillMaxWidth().combinedClickable(onClick = onOpen, onLongClick = onHold),
         shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),

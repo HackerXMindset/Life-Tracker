@@ -132,8 +132,8 @@ Each step is small enough to build, install and try before the next begins. The 
  DONE         Habits H2 Streak's classic view, Week / Month / Year, expand button
  DONE         Habits H3a Add, edit and archive a habit here (+ New, tap a card)
  DONE         Habits H3b Long-press a day: set an amount, miss reason, clear
+ DONE         Habits H4 Settings: Streak or this app's own data; tap a habit to open it in Streak
  NEXT  ──►    Habits H3c Notes on habits (notes icon, notes on a habit)
-              Habits H4 Settings: Streak or this app's own data; tap a habit to open it in Streak
               Habits H5 Your edits reach Streak (through Streak's backup folder)
               Step 14 Life events, month and year views
               Step 15 Stats
@@ -219,7 +219,11 @@ Not part of Polish 4, and not built: **Step 13e** (fixing trips and visits by ha
   - **H3a Add, edit and archive. Built.** A **+ New** button next to the up-down button and a habit page when you tap a card (streak, best, total, strength, schedule, and buttons **Edit** and **Archive**). The form has name, icon (emoji), colour, category (pick one or type a new one), type (yes or no, avoid, counted), and for counted habits the goal per day, the unit, the step and "any amount counts"; and the schedule (every day, some days of the week, so many times a week, so many times a month, every X days, weeks or months, with a start day). Archive hides a habit and **Show again** brings it back; nothing is deleted. A habit imported from Streak that you edit here would be put back to Streak's version by the next import until H4 adds the "use this app's data" switch, so H4 follows straight after H3.
   - **H3b Long-press a day. Built.** Long-press (it used to clear the day) opens a small menu for that day: mark done or not done, set an exact amount (counted habits), say why you missed it (Overslept, Busy, Traveling, Sick, Tired, Forgot, or your own words), and **Clear this day** (the only way a day record is removed).
   - **H3c Notes. Planned.** The notes icon opens all your notes, newest first, with the habit and day. You can write a note on any habit and day, and change a note's text later. Notes are never deleted from the app.
-- **H4 Settings and tap to open. Planned.** A **Habits** page in Settings with the choice **This app's own data** (the default) or **Import from Streak**. With Streak chosen, the app reads Streak's newest backup as today. Tapping a habit's name opens Streak on that exact habit (Streak accepts a habit ID; if Streak is not installed, a short message says so). Ticking and editing stay in this app.
+- **H4 Settings and tap to open. Built.** A **Habits** row in Settings (under "Your data") with the choice **This app's own data** (the default) or **Import from Streak**.
+  - **This app's own data:** the app no longer imports Streak's habits, their days, categories or habit notes, so nothing you edit here is put back. Habits you already have stay as they are. Streak's to-dos and focus sessions are still imported as before. You do not need Streak installed.
+  - **Who starts on which:** a new install starts on your own data. If you had already imported from Streak before this choice existed and have not chosen, you stay on Streak so your habits keep coming in.
+  - **Import from Streak:** switching asks first, then imports Streak's newest backup straight away, and later backups as before. For now, a habit you changed here that also exists in Streak goes back to Streak's version at each import; days you ticked here are kept. H5 removes this limit.
+  - **Tap a card:** with Streak chosen, tapping a habit opens Streak on that exact habit (Streak accepts a habit ID; if Streak is not installed or cannot be opened, a short message says so). With your own data chosen, tapping opens this app's habit page. In both cases pressing and holding the card opens this app's habit page (edit, archive). Ticking and long-pressing days work the same as before.
 - **H5 Your edits reach Streak. Planned.** Streak can read other devices' backups from a shared folder ("Keep devices in sync"). This app writes its own Streak-format backup file there under its own device name, with a "last changed" stamp on each habit you edit, and Streak merges it like a second phone. Streak's owner is adding an option to save its backup after every change, so changes from Streak will come back here faster. Changes reach Streak when it next checks the folder, not instantly. This needs the Streak folder picked in both apps and cannot be fully tested without a phone running Streak.
 
 **Step 14: Life events, month and year views.** Mark moments that changed your life, then look back by month or year to see what you did and how much you studied around each one.
@@ -300,6 +304,7 @@ life-tracker/
         │   │   ├── HabitCalendar.kt   Week, month and year grids, Today ring maths (H2)
         │   │   ├── HabitsSettings.kt  Which calendar, card size, category
         │   │   ├── HabitEditor.kt     Makes and changes habits in Streak's record format (H3a)
+        │   │   ├── StreakLink.kt      Opens the Streak app on a habit (H4)
         │   │   ├── ActivityTypes.kt   Your activities (names, colours, goals) and the built-in ones
         │   │   ├── ActivityStats.kt   Time per activity and goal progress
         │   │   ├── UsageTables.kt     App sessions and what you told the app about each app
@@ -392,6 +397,7 @@ life-tracker/
         │       │   └── Theme.kt       Light and dark colours
         │       ├── HabitsScreen.kt    Habits tab: cards, streaks, 14-day rows
         │       ├── HabitsViewModel.kt Works out each habit's streaks and ticking
+        │       ├── HabitsSettingsScreen.kt  Settings: own data or import from Streak (H4)
         │       ├── FoodScreen.kt      Food tab: calories, macros, water, meals
         │       ├── FoodViewModel.kt   Selected day, adding meals and water
         │       ├── AddMealSheet.kt    The "Add meal" pop-up with Eat again chips

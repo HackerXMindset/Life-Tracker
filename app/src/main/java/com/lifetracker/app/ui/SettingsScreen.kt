@@ -24,11 +24,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifetracker.app.data.CallsCollector
 import com.lifetracker.app.data.ChargeSettings
+import com.lifetracker.app.data.HabitSource
+import com.lifetracker.app.data.HabitsSettings
 import com.lifetracker.app.data.PlacesSettings
 import com.lifetracker.app.data.UsageCollector
 
 /** Everything that can be opened from the Settings tab. The numbers for each live under Stats. */
-enum class Page { Phone, Steps, Places, Calls, Charging, Activities, Backup }
+enum class Page { Phone, Steps, Places, Calls, Charging, Activities, Habits, Backup }
 
 /**
  * The Settings tab: one place for every permission and switch. Each row opens the settings half of that part of the app
@@ -103,6 +105,16 @@ fun SettingsScreen(onOpen: (Page) -> Unit) {
         }
 
         item { MonoLabel("Your data") }
+        item {
+            val fromStreak = HabitsSettings(context).source == HabitSource.Streak
+            SettingsRow(
+                title = "Habits",
+                status = if (fromStreak) "From Streak" else "Own data",
+                good = true,
+                hint = "Track habits in this app, or import them from Streak",
+                onClick = { onOpen(Page.Habits) },
+            )
+        }
         item {
             SettingsRow(
                 title = "Activities",
