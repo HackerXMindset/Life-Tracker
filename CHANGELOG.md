@@ -2,6 +2,18 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🕓 The app now remembers what you changed in Habits
+
+Groundwork again: you will not see a change on screen yet.
+
+### 🛠 Improvements
+
+- **A list of what changed here** — every new habit, edit, tick, amount, missed-day reason, archive and note now records when it was changed. The next step uses this list to send only your changes to Streak. Things that come in from Streak are not on the list, so they are never sent back.
+
+### ⚠️ Good to know
+
+- Nothing is sent to Streak yet, and no folder is written to.
+
 ## 🔌 Getting ready to send your habit edits to Streak
 
 This is groundwork. You will not see a change in the app yet.

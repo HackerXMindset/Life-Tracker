@@ -235,7 +235,7 @@ Not part of Polish 4, and not built: **Step 13e** (fixing trips and visits by ha
   - **What does not reach Streak:** clearing a day or lowering an amount here. Streak's merge only ever adds days and keeps the bigger amount, so a day you un-tick here stays ticked in Streak. Reasons for a missed day: if Streak already has a reason for that day, Streak's stays.
   - **Folder:** Streak keeps its sync folder as a normal folder path. This app needs to be allowed to write to the same folder, so you pick it again once in Settings with write permission (today it is read only).
   - **H5a Writer. Built.** `StreakBackupWriter.kt` turns changed habits, their days, notes and categories into a Streak backup file (`streak_backup_<date>_<time>_<device>.json`), with a "last changed" stamp for each item. It only includes what you changed, so Streak's other habits are never overwritten. Tested with sample data; nothing is written to your phone yet.
-  - **H5b Remember what changed. Planned.** Every edit, tick, amount, miss reason, note and archive here notes "this changed at this time", so H5a knows what to send. This app's own copy of the device name is made once.
+  - **H5b Remember what changed. Built.** Every new habit, edit, tick, amount, miss reason, archive and note written here notes "this changed at this time" (`HabitSyncState.kt`, kept in the app's own settings, no database change), so H5a knows what to send. The note only ever moves forward in time. Clearing a day also notes the habit as changed (harmless: Streak keeps its own copy of that day anyway). Things that come in from a Streak import are not noted, so Streak's own habits are never sent back. The app's own device name (eight letters and digits, like Streak's) is made once, the first time it is needed. Nothing is sent anywhere yet.
   - **H5c Write into the folder. Planned.** The Streak folder can be picked with write permission. The file is written whole and then renamed, so Streak never sees half a file. This app keeps its latest three files there and no more.
   - **H5d Settings and timing. Planned.** A switch in Settings, Habits ("Send my habit changes to Streak"), the file is rewritten shortly after a change and when the app opens, and a line shows when it last wrote. Streak's owner is adding "save the backup after every change" so changes from Streak come back here faster; no extra work is needed on this side.
 
@@ -321,6 +321,7 @@ life-tracker/
         │   │   ├── HabitsSettings.kt  Which calendar, card size, category
         │   │   ├── HabitEditor.kt     Makes and changes habits in Streak's record format (H3a)
         │   │   ├── StreakLink.kt      Opens the Streak app on a habit (H4)
+        │   │   ├── HabitSyncState.kt  Remembers which habits and notes changed here, and this app's device name (H5b)
         │   │   ├── HabitNotes.kt      Notes on habits: sorting, filtering, new and edited notes (H3c)
         │   │   ├── ActivityTypes.kt   Your activities (names, colours, goals) and the built-in ones
         │   │   ├── ActivityStats.kt   Time per activity and goal progress
