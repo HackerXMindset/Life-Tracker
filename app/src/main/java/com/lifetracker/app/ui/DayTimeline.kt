@@ -1,6 +1,6 @@
 package com.lifetracker.app.ui
 
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -17,14 +17,12 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -36,17 +34,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifetracker.app.R
@@ -69,6 +69,10 @@ import com.lifetracker.app.data.TripEntity
 import com.lifetracker.app.data.TripModes
 import com.lifetracker.app.data.TripRules
 import com.lifetracker.app.data.UsageDays
+import com.lifetracker.app.ui.theme.LocalPaper
+import com.lifetracker.app.ui.theme.PaperPill
+import com.lifetracker.app.ui.theme.Wobble
+import com.lifetracker.app.ui.theme.pencilShadow
 import java.time.Instant
 import java.time.ZoneId
 
@@ -95,10 +99,9 @@ class DayActions(
     val onEditTrip: (TripEntity) -> Unit,
 )
 
-private val RAIL_WIDTH = 26.dp
-private val GAP = 8.dp
+private val RAIL_WIDTH = 12.dp
+private val GAP = 10.dp
 private val TIME_WIDTH = 58.dp
-private val UNKNOWN_GOLD = Color(0xFFD9A441)
 private val PLACE_COLORS = listOf(
     Color(0xFF8E94E8), Color(0xFF4FB38A), Color(0xFFE0A84A), Color(0xFFE08A5F), Color(0xFFD27BA8), Color(0xFF62A9D6),
 )
@@ -116,7 +119,7 @@ private fun lengthText(ms: Long): String = formatDuration(((ms + 30_000L) / 60_0
 fun DayRow(row: DayLayout.Row, a: DayActions) {
     when (row) {
         is DayLayout.Place -> PlaceBlock(row, a)
-        is DayLayout.Travel -> Indented { TravelCard(row, a) }
+        is DayLayout.Travel -> TravelCard(row, a)
         is DayLayout.Thing -> Indented { ThingRow(row.item, a) }
         is DayLayout.Gap -> Indented { GapRow(row, a) }
     }
@@ -127,94 +130,95 @@ private fun Indented(content: @Composable () -> Unit) {
     Box(modifier = Modifier.fillMaxWidth().padding(start = RAIL_WIDTH + GAP)) { content() }
 }
 
+/** A hand-drawn outline in pen: solid, or dashed for what the phone collected on its own. */
+private fun Modifier.penOutline(shape: Shape, color: Color, dashed: Boolean = false, width: Dp = 1.25.dp): Modifier = drawBehind {
+    val outline = shape.createOutline(size, layoutDirection, this)
+    val stroke = Stroke(
+        width = width.toPx(),
+        pathEffect = if (dashed) PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 4.dp.toPx())) else null,
+    )
+    drawOutline(outline, color, style = stroke)
+}
+
 @Composable
 private fun PlaceBlock(p: DayLayout.Place, a: DayActions) {
+    val paper = LocalPaper.current
     val chosen = TimelineEdits.category(a.edits[TimelineEdits.key(TimelineEdits.VISIT, p.visit.id)])?.let { a.types.byId(it) }
     val color = chosen?.displayColor() ?: placeColorOf(p.name)
-    val shape = RoundedCornerShape(16.dp)
+    val shape = Wobble.Small
     Row(
         modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
         horizontalArrangement = Arrangement.spacedBy(GAP),
     ) {
-        // A tall bar the length of the stay, with the place's name running up it.
+        // A tall bar the length of the stay.
         Box(
             modifier = Modifier
                 .width(RAIL_WIDTH)
                 .fillMaxHeight()
-                .clip(RoundedCornerShape(RAIL_WIDTH / 2))
-                .background(color),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = p.name.uppercase(),
-                modifier = Modifier.wrapContentWidth(unbounded = true).rotate(-90f),
-                maxLines = 1,
-                softWrap = false,
-                fontSize = 11.sp,
-                fontFamily = FontFamily.Monospace,
-                letterSpacing = 1.sp,
-                color = Color(0xFF101414),
-            )
-        }
-        Box(
+                .pencilShadow(shape, paper.pencil, 1.dp, 2.dp)
+                .background(color, shape),
+        )
+        Column(
             modifier = Modifier
                 .weight(1f)
-                .heightIn(min = 96.dp)
-                .clip(shape)
-                .background(MaterialTheme.colorScheme.surface)
-                .drawBehind {
-                    drawRoundRect(
-                        color = color.copy(alpha = 0.55f),
-                        cornerRadius = CornerRadius(16.dp.toPx()),
-                        style = Stroke(width = 1.dp.toPx()),
-                    )
-                },
+                .heightIn(min = 64.dp)
+                .background(paper.surface.copy(alpha = 0.55f), shape)
+                .penOutline(shape, paper.line)
+                .padding(start = 10.dp, end = 10.dp, top = 4.dp, bottom = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().clickable { a.onEditPlace(p) },
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = p.name,
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        Text(
-                            text = clock(p.startMs) + " to " + (if (p.ongoing) "now" else clock(p.endMs)) +
-                                (if (chosen != null) " · " + chosen.name else "") +
-                                (if (!p.named) " · tap to edit or name it" else ""),
-                            fontSize = 12.sp,
-                            fontFamily = FontFamily.Monospace,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+            Row(
+                modifier = Modifier.fillMaxWidth().clickable { a.onEditPlace(p) }.padding(top = 5.dp, bottom = 2.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = p.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = paper.ink)
                     Text(
-                        text = PlaceRules.durationText(p.endMs - p.startMs),
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        fontFamily = FontFamily.Monospace,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        text = clock(p.startMs) + " to " + (if (p.ongoing) "now" else clock(p.endMs)) +
+                            (if (chosen != null) " · " + chosen.name else "") +
+                            (if (!p.named) " · tap to edit or name it" else ""),
+                        fontSize = 11.sp,
+                        color = paper.ink2,
                     )
                 }
-                if (p.children.isEmpty()) {
-                    Text(
-                        text = "Nothing else recorded here.",
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                p.children.forEach { child ->
-                    when (child) {
-                        is DayLayout.Thing -> ThingRow(child.item, a)
-                        is DayLayout.Gap -> GapRow(child, a)
-                        else -> Unit
-                    }
+                Text(
+                    text = PlaceRules.durationText(p.endMs - p.startMs),
+                    modifier = Modifier.padding(start = 8.dp),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = paper.ink,
+                )
+            }
+            if (p.children.isEmpty()) {
+                Text(text = "Nothing else recorded here.", fontSize = 12.sp, color = paper.ink2, modifier = Modifier.padding(vertical = 6.dp))
+            }
+            p.children.forEach { child ->
+                when (child) {
+                    is DayLayout.Thing -> ThingRow(child.item, a)
+                    is DayLayout.Gap -> GapRow(child, a)
+                    else -> Unit
                 }
             }
+            if (p.ongoing) NowRow()
+        }
+    }
+}
+
+/** A dashed orange line with the time, at the bottom of a stay that is still going. */
+@Composable
+private fun NowRow() {
+    val paper = LocalPaper.current
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(text = clock(System.currentTimeMillis()) + " now", fontSize = 11.sp, color = paper.ink2)
+        Canvas(modifier = Modifier.weight(1f).height(4.dp)) {
+            drawLine(
+                color = paper.sun,
+                start = Offset(0f, size.height / 2),
+                end = Offset(size.width, size.height / 2),
+                strokeWidth = 2.5.dp.toPx(),
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 4.dp.toPx())),
+            )
         }
     }
 }
@@ -327,20 +331,11 @@ private fun describe(item: DayLayout.Item, a: DayActions): Look {
 
 @Composable
 private fun TimeColumn(startMs: Long, endMs: Long?) {
+    val paper = LocalPaper.current
     Column(modifier = Modifier.width(TIME_WIDTH).padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text(
-            text = clock(startMs),
-            fontSize = 12.sp,
-            fontFamily = FontFamily.Monospace,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
+        Text(text = clock(startMs), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = paper.ink, maxLines = 1)
         if (endMs != null) {
-            Text(
-                text = clock(endMs),
-                fontSize = 11.sp,
-                fontFamily = FontFamily.Monospace,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Text(text = clock(endMs), fontSize = 10.5.sp, color = paper.ink2, maxLines = 1)
         }
     }
 }
@@ -350,8 +345,9 @@ private fun TimeColumn(startMs: Long, endMs: Long?) {
 private fun SegmentLine(color: Color, dashed: Boolean) {
     Box(
         modifier = Modifier
-            .width(5.dp)
+            .width(8.dp)
             .fillMaxHeight()
+            .padding(top = 8.dp, bottom = 4.dp)
             .drawBehind {
                 if (dashed) {
                     drawLine(
@@ -363,83 +359,74 @@ private fun SegmentLine(color: Color, dashed: Boolean) {
                         pathEffect = PathEffect.dashPathEffect(floatArrayOf(7.dp.toPx(), 4.dp.toPx())),
                     )
                 } else {
-                    drawRoundRect(color = color, cornerRadius = CornerRadius(size.width / 2))
+                    drawRoundRect(color = color, cornerRadius = CornerRadius(4.dp.toPx()))
                 }
             },
     )
 }
 
-private fun Modifier.outline(color: Color, dashed: Boolean, radius: Float = 14f): Modifier = drawBehind {
-    drawRoundRect(
-        color = color,
-        cornerRadius = CornerRadius(radius.dp.toPx()),
-        style = Stroke(
-            width = 1.dp.toPx(),
-            pathEffect = if (dashed) PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 4.dp.toPx())) else null,
-        ),
-    )
-}
-
 @Composable
 private fun ThingRow(item: DayLayout.Item, a: DayActions) {
+    val paper = LocalPaper.current
     val look = describe(item, a)
+    val shape = Wobble.Small
+    // The taller the stretch, the taller its row (half a dp per minute, between 46 and 150).
+    val minutes = ((item.endMs - item.startMs) / 60_000L).toInt()
+    val minHeight = (minutes * 0.5f).coerceIn(46f, 150f).dp
     Row(
-        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
-        horizontalArrangement = Arrangement.spacedBy(GAP),
+        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min).heightIn(min = minHeight),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         TimeColumn(item.startMs, if (item.showEnd) item.endMs else null)
         SegmentLine(look.color, look.dashed)
         Box(
             modifier = Modifier
                 .weight(1f)
-                .clip(RoundedCornerShape(14.dp))
-                .outline(MaterialTheme.colorScheme.outline, look.dashed)
+                .fillMaxHeight()
+                .padding(vertical = 4.dp)
+                .then(if (look.dashed) Modifier else Modifier.background(paper.surface, shape))
+                .penOutline(shape, paper.line, dashed = look.dashed)
+                .clip(shape)
                 .then(if (look.onClick != null) Modifier.clickable { look.onClick.invoke() } else Modifier),
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 9.dp, vertical = 7.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.Top,
             ) {
-                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
                         text = look.title,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
                         textDecoration = if (look.struck) TextDecoration.LineThrough else null,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = if (look.struck) paper.ink2 else paper.ink,
                     )
                     look.lines.filter { it.isNotBlank() }.forEach {
-                        Text(text = it, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(text = it, fontSize = 11.sp, color = paper.ink2)
                     }
                     if (look.chip != null) {
                         Text(
                             text = look.chip,
                             modifier = Modifier
-                                .clip(RoundedCornerShape(50))
-                                .background(look.color.copy(alpha = 0.22f))
-                                .padding(horizontal = 10.dp, vertical = 3.dp),
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurface,
+                                .padding(top = 3.dp)
+                                .background(look.color.copy(alpha = 0.18f), RoundedCornerShape(50))
+                                .padding(horizontal = 7.dp, vertical = 1.dp),
+                            fontSize = 10.5.sp,
+                            color = paper.ink,
                         )
                     }
                 }
                 Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     if (look.trailing != null) {
-                        Text(
-                            text = look.trailing,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            fontFamily = FontFamily.Monospace,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
+                        Text(text = look.trailing, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = paper.ink2)
                     }
                     if (look.editable) {
                         Icon(
                             painter = painterResource(R.drawable.ic_edit),
                             contentDescription = "Edit",
-                            modifier = Modifier.size(16.dp),
-                            tint = look.color,
+                            modifier = Modifier.size(14.dp),
+                            tint = paper.ink2,
                         )
                     }
                 }
@@ -450,48 +437,43 @@ private fun ThingRow(item: DayLayout.Item, a: DayActions) {
 
 @Composable
 private fun GapRow(gap: DayLayout.Gap, a: DayActions) {
-    val line = MaterialTheme.colorScheme.outline
+    val paper = LocalPaper.current
+    val shape = Wobble.Small
+    val hatch = paper.ink2.copy(alpha = 0.14f)
     Row(
         modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
-        horizontalArrangement = Arrangement.spacedBy(GAP),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         TimeColumn(gap.startMs, gap.endMs)
-        Spacer(Modifier.width(5.dp))
+        Spacer(Modifier.width(8.dp))
         Box(
             modifier = Modifier
                 .weight(1f)
-                .clip(RoundedCornerShape(14.dp))
+                .padding(vertical = 4.dp)
+                .penOutline(shape, paper.line, dashed = true)
+                .clip(shape)
                 .drawBehind {
-                    val step = 10.dp.toPx()
+                    // Faint slanted pencil lines, the way the demo marks "no data".
+                    val step = 7.dp.toPx()
                     var x = -size.height
                     while (x < size.width) {
-                        drawLine(line.copy(alpha = 0.45f), Offset(x, size.height), Offset(x + size.height, 0f), 1.dp.toPx())
+                        drawLine(hatch, Offset(x, size.height), Offset(x + size.height, 0f), 1.dp.toPx())
                         x += step
                     }
                 }
-                .outline(line, true),
+                .clickable { a.onFillIn(gap.startMs, gap.endMs) },
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 40.dp).padding(horizontal = 9.dp, vertical = 6.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "No data",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    Text(text = gap.note, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(text = "No data", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = paper.ink)
+                    Text(text = gap.note, fontSize = 11.sp, color = paper.ink2)
                 }
-                Text(
-                    text = lengthText(gap.endMs - gap.startMs),
-                    fontSize = 13.sp,
-                    fontFamily = FontFamily.Monospace,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                OutlinedButton(onClick = { a.onFillIn(gap.startMs, gap.endMs) }) { Text("+ Fill in", fontSize = 13.sp) }
+                Text(text = lengthText(gap.endMs - gap.startMs), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = paper.ink2)
+                PaperPill("+ Fill in", false, { a.onFillIn(gap.startMs, gap.endMs) })
             }
         }
     }
@@ -505,6 +487,7 @@ internal val QUICK_MODES = listOf(
 
 @Composable
 private fun TravelCard(t: DayLayout.Travel, a: DayActions) {
+    val paper = LocalPaper.current
     val trip = t.trip
     val unknown = trip == null || (trip.mode == "vehicle" && trip.modeSource != "you")
     var picking by remember { mutableStateOf(false) }
@@ -514,72 +497,82 @@ private fun TravelCard(t: DayLayout.Travel, a: DayActions) {
         unknown -> "Unknown way of travel · $length · " + TripRules.distanceText(trip.distanceM)
         else -> TripModes.label(trip.mode) + (if (trip.modeSource == "you") "" else " (guess)") + " · $length · " + TripRules.distanceText(trip.distanceM)
     }
-    val accent = if (unknown) UNKNOWN_GOLD else MaterialTheme.colorScheme.onSurfaceVariant
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    val shape = Wobble.Small
+    val lineColor = if (unknown) paper.sun else paper.ink2
+    Row(
+        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+        horizontalArrangement = Arrangement.spacedBy(GAP),
+    ) {
+        // A dashed line under the place bars: the way from one place to the next.
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(14.dp))
-                .background(if (unknown) UNKNOWN_GOLD.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surface)
-                .outline(if (unknown) UNKNOWN_GOLD else MaterialTheme.colorScheme.outline, unknown)
-                .then(if (trip != null) Modifier.clickable { picking = true } else Modifier),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.Top,
+                .width(RAIL_WIDTH)
+                .fillMaxHeight()
+                .heightIn(min = 46.dp)
+                .drawBehind {
+                    drawLine(
+                        color = lineColor,
+                        start = Offset(size.width / 2, 0f),
+                        end = Offset(size.width / 2, size.height),
+                        strokeWidth = 2.5.dp.toPx(),
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 4.dp.toPx())),
+                    )
+                },
+        )
+        Column(modifier = Modifier.weight(1f).padding(vertical = 3.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(if (unknown) paper.sun.copy(alpha = 0.14f).compositeOver(paper.surface) else paper.surface, shape)
+                    .penOutline(shape, if (unknown) paper.sun else paper.line, dashed = unknown, width = if (unknown) 1.5.dp else 1.25.dp)
+                    .clip(shape)
+                    .then(if (trip != null) Modifier.clickable { picking = true } else Modifier),
             ) {
-                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text(
-                        text = title,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    Text(
-                        text = clock(t.startMs) + " to " + clock(t.endMs) + " · " + tripEnd(t.fromName) + " to " + tripEnd(t.toName),
-                        fontSize = 12.sp,
-                        fontFamily = FontFamily.Monospace,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                if (trip != null) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_edit),
-                        contentDescription = "Change how you travelled",
-                        modifier = Modifier.size(16.dp),
-                        tint = accent,
-                    )
-                }
-            }
-        }
-        if (trip == null && t.from != null && t.to != null) {
-            Text(
-                text = "How did you go? The phone has no record of the way, so the distance is a straight line.",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                QUICK_MODES.forEach { (label, mode) ->
-                    FilterChip(selected = false, onClick = { a.onUnknownJourney(t, mode) }, label = { Text(label) })
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 7.dp),
+                    horizontalArrangement = Arrangement.spacedBy(9.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(text = title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = paper.ink)
+                        Text(
+                            text = clock(t.startMs) + " to " + clock(t.endMs) + " · " + tripEnd(t.fromName) + " to " + tripEnd(t.toName),
+                            fontSize = 11.sp,
+                            color = paper.ink2,
+                        )
+                    }
+                    if (trip != null) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_edit),
+                            contentDescription = "Change how you travelled",
+                            modifier = Modifier.size(14.dp),
+                            tint = paper.ink2,
+                        )
+                    }
                 }
             }
-        }
-        if (trip != null && unknown) {
-            Text(
-                text = "How did you go? Distance is worked out from the position readings.",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                QUICK_MODES.forEach { (label, mode) ->
-                    FilterChip(selected = false, onClick = { a.onTripMode(trip, mode) }, label = { Text(label) })
+            if (trip == null && t.from != null && t.to != null) {
+                Text(
+                    text = "How did you go? The phone has no record of the way, so the distance is a straight line.",
+                    fontSize = 11.sp,
+                    color = paper.ink2,
+                )
+                Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    QUICK_MODES.forEach { (label, mode) ->
+                        PaperPill(label, false, { a.onUnknownJourney(t, mode) })
+                    }
+                }
+            }
+            if (trip != null && unknown) {
+                Text(
+                    text = "How did you go? Distance is worked out from the position readings.",
+                    fontSize = 11.sp,
+                    color = paper.ink2,
+                )
+                Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    QUICK_MODES.forEach { (label, mode) ->
+                        PaperPill(label, false, { a.onTripMode(trip, mode) })
+                    }
                 }
             }
         }

@@ -228,7 +228,6 @@ private fun Macro(label: String, value: Double, goal: Double?) {
             Text(
                 text = if (goal != null) "${n(value)} / ${n(goal)} g" else "${n(value)} g",
                 fontSize = 12.sp,
-                fontFamily = FontFamily.Monospace,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -245,7 +244,6 @@ private fun WaterCard(ml: Int, onAdd: (Int) -> Unit) {
             Text(
                 text = "$ml / $goal ml",
                 fontSize = 12.sp,
-                fontFamily = FontFamily.Monospace,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -272,7 +270,6 @@ private fun MealRow(meal: MealEntity, onClick: () -> Unit) {
                 .width(68.dp)
                 .padding(top = 3.dp),
             fontSize = 12.sp,
-            fontFamily = FontFamily.Monospace,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -290,7 +287,6 @@ private fun MealRow(meal: MealEntity, onClick: () -> Unit) {
             Text(
                 text = "C ${n(meal.carbs)} · F ${n(meal.fat)} · P ${n(meal.protein)} g",
                 fontSize = 12.sp,
-                fontFamily = FontFamily.Monospace,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }

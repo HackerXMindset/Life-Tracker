@@ -277,7 +277,6 @@ private fun ChargeStat(label: String, value: String, modifier: Modifier = Modifi
         Text(
             text = value,
             fontSize = 17.sp,
-            fontFamily = FontFamily.Monospace,
             color = MaterialTheme.colorScheme.onBackground,
         )
     }

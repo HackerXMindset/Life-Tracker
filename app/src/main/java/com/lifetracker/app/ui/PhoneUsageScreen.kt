@@ -154,7 +154,6 @@ fun PhoneUsageScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PhoneUsageV
                         Text(
                             text = if (lastSync.isEmpty()) "Not yet" else lastSync,
                             color = MaterialTheme.colorScheme.onBackground,
-                            fontFamily = FontFamily.Monospace,
                             fontSize = 13.sp,
                         )
                     }
@@ -211,7 +210,6 @@ fun PhoneUsageScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PhoneUsageV
                         }
                         Text(
                             formatDuration(msToMinutes(ms)),
-                            fontFamily = FontFamily.Monospace,
                             fontSize = 14.sp,
                             color = MaterialTheme.colorScheme.onBackground,
                         )

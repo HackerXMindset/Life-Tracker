@@ -173,7 +173,6 @@ private fun SettingsRow(title: String, status: String?, good: Boolean, hint: Str
                     Text(
                         text = status,
                         fontSize = 12.sp,
-                        fontFamily = FontFamily.Monospace,
                         color = if (good) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error,
                     )
                 }

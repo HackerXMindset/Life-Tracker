@@ -162,7 +162,7 @@ fun AddMealSheet(
                             TimePickerDialog(context, { _, h, m -> minute = h * 60 + m }, minute / 60, minute % 60, false).show()
                         },
                         modifier = Modifier.fillMaxWidth(),
-                    ) { Text(formatMinute(minute), fontFamily = FontFamily.Monospace) }
+                    ) { Text(formatMinute(minute)) }
                 }
             }
 
@@ -204,7 +204,6 @@ fun AddMealSheet(
             Text(
                 text = preview,
                 fontSize = 13.sp,
-                fontFamily = FontFamily.Monospace,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 

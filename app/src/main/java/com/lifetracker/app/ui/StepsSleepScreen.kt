@@ -229,7 +229,6 @@ fun StepsSleepScreen(onBack: () -> Unit, part: Part = Part.Data, vm: StepsSleepV
                         Text(
                             text = if (lastSync.isEmpty()) "Not yet" else lastSync,
                             color = MaterialTheme.colorScheme.onBackground,
-                            fontFamily = FontFamily.Monospace,
                             fontSize = 13.sp,
                         )
                     }
@@ -274,7 +273,6 @@ fun StepsSleepScreen(onBack: () -> Unit, part: Part = Part.Data, vm: StepsSleepV
                         )
                         Text(
                             formatDuration(SleepStats.minutes(night)),
-                            fontFamily = FontFamily.Monospace,
                             fontSize = 14.sp,
                             color = MaterialTheme.colorScheme.onBackground,
                         )
@@ -302,7 +300,6 @@ fun StepsSleepScreen(onBack: () -> Unit, part: Part = Part.Data, vm: StepsSleepV
                     Text(dayText(day.date), color = MaterialTheme.colorScheme.onBackground)
                     Text(
                         StepStats.text(day.steps),
-                        fontFamily = FontFamily.Monospace,
                         fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.onBackground,
                     )
@@ -408,7 +405,6 @@ private fun HealthStat(label: String, value: String, modifier: Modifier = Modifi
         Text(
             text = value,
             fontSize = 17.sp,
-            fontFamily = FontFamily.Monospace,
             color = MaterialTheme.colorScheme.onBackground,
         )
     }

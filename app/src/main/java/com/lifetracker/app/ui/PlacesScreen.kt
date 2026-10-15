@@ -177,7 +177,6 @@ fun PlacesScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PlacesViewModel
                     Text(
                         "At places " + PlaceRules.durationText(stayMs),
                         fontSize = 17.sp,
-                        fontFamily = FontFamily.Monospace,
                         color = MaterialTheme.colorScheme.onBackground,
                     )
                     Text(
@@ -185,7 +184,6 @@ fun PlacesScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PlacesViewModel
                             PlaceRules.durationText(real.sumOf { it.endMs - it.startMs }) +
                             " · ${journeys.size} journey${if (journeys.size == 1) "" else "s"}",
                         fontSize = 14.sp,
-                        fontFamily = FontFamily.Monospace,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }

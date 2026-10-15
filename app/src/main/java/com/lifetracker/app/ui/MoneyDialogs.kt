@@ -258,7 +258,7 @@ fun MoneyEntryDialog(
                 )
                 MonoLabel("Date")
                 OutlinedButton(onClick = { pickDate(date) { date = it } }, modifier = Modifier.fillMaxWidth()) {
-                    Text(date.format(DATE_LABEL), fontFamily = FontFamily.Monospace)
+                    Text(date.format(DATE_LABEL))
                 }
                 CategoryPicker(kind, categories, effective, onSelect = { categoryId = it }, onNew = onNewCategory)
                 OutlinedTextField(
@@ -377,7 +377,7 @@ fun MoneyItemDialog(
                     )
                     MonoLabel("Starts")
                     OutlinedButton(onClick = { pickDate(start) { start = it } }, modifier = Modifier.fillMaxWidth()) {
-                        Text(start.format(DATE_LABEL), fontFamily = FontFamily.Monospace)
+                        Text(start.format(DATE_LABEL))
                     }
                     MonoLabel("Ends (optional)")
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -385,7 +385,7 @@ fun MoneyItemDialog(
                             onClick = { pickDate(end ?: start.plusMonths(12)) { end = it } },
                             modifier = Modifier.weight(1f),
                         ) {
-                            Text(end?.format(DATE_LABEL) ?: "No end date", fontFamily = FontFamily.Monospace)
+                            Text(end?.format(DATE_LABEL) ?: "No end date")
                         }
                         if (end != null) TextButton(onClick = { end = null }) { Text("Clear") }
                     }
