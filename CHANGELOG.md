@@ -2,6 +2,21 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📜 Timeline in the paper style (part 2 of 7, the pie and the pop-ups)
+
+The Timeline is finished: the Pie, the Log button, the Log sheet and the pop-ups all have the paper look.
+
+### ✨ New features
+
+- **New Pie** — like your demo: what you did is the inner pie and where you were is the outer ring, sized by how much of the recorded time each took. Tap a slice or a row to see its share and what it overlapped (for example "at Home 2h 10m"); the rest fades. Under it are the Tasks list, the Places list and **How you got around**.
+- **Paper Log button** — ink-black with hand-drawn corners and a pencil shadow.
+- **Paper Log sheet and pop-ups** — a lighter sheet with a hand-drawn top edge, pill choices for the activity, labelled boxes, paper buttons. The same goes for the edit, hidden, delete and "How did you travel?" pop-ups.
+
+### ⚠️ Good to know
+
+- The old Pie had two rings ("you logged" and "collected for you") laid out by the clock. The new one follows your demo instead; the 24-hour strip is the clock view, and the solid and dashed lines in the list still show what you logged versus what the phone collected.
+- Pop-ups on the other tabs keep their old look until their own parts.
+
 ## 📜 Timeline in the paper style (part 2 of 7, the list)
 
 The "In order" list now looks like your demo, and the whole app now really uses Space Mono.
