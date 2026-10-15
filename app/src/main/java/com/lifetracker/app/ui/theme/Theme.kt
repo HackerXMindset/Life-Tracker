@@ -2,6 +2,7 @@ package com.lifetracker.app.ui.theme
 
 import android.app.Activity
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
@@ -12,6 +13,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 
 /**
@@ -46,12 +48,14 @@ private fun scheme(p: PaperColors) = if (p.dark) {
     )
 }
 
+// Material's own parts (dialogs, menus) can only take evenly rounded corners, so they get the average of the wobbly ones.
+// The wobbly shapes themselves are used by the paper parts (PaperCard, PaperButton and so on).
 private val PaperShapes = Shapes(
-    extraSmall = Wobble.Small,
-    small = Wobble.Small,
-    medium = Wobble.Small,
-    large = Wobble.Card,
-    extraLarge = Wobble.Card,
+    extraSmall = RoundedCornerShape(12.dp),
+    small = RoundedCornerShape(12.dp),
+    medium = RoundedCornerShape(12.dp),
+    large = RoundedCornerShape(20.dp),
+    extraLarge = RoundedCornerShape(20.dp),
 )
 
 @Composable
