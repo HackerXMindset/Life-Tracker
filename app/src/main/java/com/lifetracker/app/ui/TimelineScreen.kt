@@ -40,6 +40,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.runtime.setValue
+import com.lifetracker.app.ui.theme.PaperSegmented
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -89,9 +90,6 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-
-private const val DAYS_BACK = 60
-private const val DAYS_AHEAD = 30
 
 /** The id of the built-in Study activity. */
 private const val STUDY_ID = "Study"
@@ -204,7 +202,6 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
     val stepCount = steps?.steps ?: 0
     val phoneMinutes = (usageDay.totalMs / 60_000L).toInt()
     val studyMinutes = (ActivityStats.minutesByActivity(entries)[STUDY_ID] ?: 0) + (usageDay.minutesByActivity[STUDY_ID] ?: 0)
-    val title = remember(date) { date.format(DateTimeFormatter.ofPattern("EEEE d MMMM")) }
 
     // Everything that has a time, as items the day layout can place: inside a place block, between places, or on its own.
     fun at(minute: Int) = dayStartMs + minute * 60_000L
@@ -341,26 +338,22 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 96.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            item {
-                ScreenHeader(
-                    label = "Timeline",
-                    badge = "Saved on this phone",
-                    title = title,
-                )
+            item(key = "header") { TimelineHeader(date) }
+            item(key = "week") {
+                PaperWeekStrip(selected = date, datesWithEntries = datesWithEntries, onSelect = vm::selectDate)
             }
-            item {
-                DayStrip(selected = date, datesWithEntries = datesWithEntries, onSelect = vm::selectDate)
+            item(key = "view-switch") {
+                PaperSegmented(listOf("Timeline", "Pie"), if (pie) 1 else 0, { pie = it == 1 })
             }
             item(key = "day-numbers") {
-                DayNumbers(
+                PaperTrio(
                     steps = if (stepCount > 0) StepStats.text(stepCount) else "–",
                     phone = if (phoneMinutes > 0) formatDuration(phoneMinutes) else "–",
                     study = if (studyMinutes > 0) formatDuration(studyMinutes) else "–",
                 )
             }
-            item(key = "view-switch") { ViewSwitch(pie = pie, onChange = { pie = it }) }
             if (pie) {
                 item(key = "pie") { DayPie(flatLogged, flatCollected, flatAll, dayStartMs, nowMarker) }
             } else {
@@ -572,67 +565,6 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
 }
 
 @Composable
-private fun DayStrip(selected: LocalDate, datesWithEntries: Set<String>, onSelect: (LocalDate) -> Unit) {
-    val today = remember { LocalDate.now() }
-    // Oldest on the left; the coming month is on the right, so planned to-dos can be seen ahead of time.
-    val days = remember { (-DAYS_BACK..DAYS_AHEAD).map { today.plusDays(it.toLong()) } }
-    val listState = rememberLazyListState()
-    // Bring today into view near the right edge, with a few coming days visible after it.
-    LaunchedEffect(Unit) { listState.scrollToItem((DAYS_BACK - 3).coerceAtLeast(0)) }
-
-    LazyRow(
-        state = listState,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        items(days, key = { it.toString() }) { day ->
-            val isSelected = day == selected
-            val hasEntries = day.toString() in datesWithEntries
-            val primary = MaterialTheme.colorScheme.primary
-            Column(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(if (isSelected) primary else MaterialTheme.colorScheme.surface)
-                    .clickable { onSelect(day) }
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
-                    .width(30.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                val textColor =
-                    if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
-                Text(
-                    text = day.format(DateTimeFormatter.ofPattern("EEE")).uppercase(),
-                    fontSize = 10.sp,
-                    fontFamily = FontFamily.Monospace,
-                    color = textColor,
-                )
-                Text(
-                    text = day.dayOfMonth.toString(),
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = textColor,
-                )
-                Box(
-                    modifier = Modifier
-                        .size(5.dp)
-                        .clip(CircleShape)
-                        .background(
-                            when {
-                                !hasEntries -> androidx.compose.ui.graphics.Color.Transparent
-                                isSelected -> MaterialTheme.colorScheme.onPrimary
-                                else -> primary
-                            },
-                        ),
-                )
-            }
-        }
-    }
-}
-
-
-
-
-@Composable
 private fun TodoRow(todo: TodoEntity, projectName: String?, onToggle: () -> Unit) {
     val color = MaterialTheme.colorScheme.primary
     val lines = todo.text.trim().split('\n')
@@ -732,63 +664,5 @@ private fun NoteRow(note: NoteEntity, habitName: String?) {
                 Text(text = body, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-    }
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-@Composable
-private fun DayNumbers(steps: String, phone: String, study: String) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-    ) {
-        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-            DayNumber(R.drawable.ic_stat_steps, "steps", steps, Modifier.weight(1f))
-            Box(modifier = Modifier.width(1.dp).height(40.dp).background(MaterialTheme.colorScheme.outline))
-            DayNumber(R.drawable.ic_stat_phone, "phone", phone, Modifier.weight(1f))
-            Box(modifier = Modifier.width(1.dp).height(40.dp).background(MaterialTheme.colorScheme.outline))
-            DayNumber(R.drawable.ic_stat_study, "studied", study, Modifier.weight(1f))
-        }
-    }
-}
-
-@Composable
-private fun DayNumber(icon: Int, label: String, value: String, modifier: Modifier = Modifier) {
-    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            Icon(
-                painter = painterResource(icon),
-                contentDescription = null,
-                modifier = Modifier.size(13.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = label,
-                fontSize = 12.sp,
-                fontFamily = FontFamily.Monospace,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Text(
-            text = value,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.SemiBold,
-            fontFamily = FontFamily.Monospace,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
     }
 }
