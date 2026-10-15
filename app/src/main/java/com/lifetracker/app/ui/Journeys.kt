@@ -60,7 +60,6 @@ fun StayCard(stay: PlaceTrail.Stay, nowMs: Long) {
                     " · " + PlaceRules.durationText(stay.endMs - stay.startMs) +
                     (if (StayConfidence.isUnsure(stay.visit.confidence)) " · unsure" else ""),
                 fontSize = 12.sp,
-                fontFamily = FontFamily.Monospace,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -99,7 +98,6 @@ fun JourneyCard(journey: PlaceTrail.Journey, onMode: (PlaceTrail.Journey, String
             Text(
                 clockOf(journey.startMs) + " to " + clockOf(journey.endMs) + " · " + tripEnd(journey.fromName) + " to " + tripEnd(journey.toName),
                 fontSize = 12.sp,
-                fontFamily = FontFamily.Monospace,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             if (unknown) {

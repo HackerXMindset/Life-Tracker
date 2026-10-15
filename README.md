@@ -138,8 +138,8 @@ Each step is small enough to build, install and try before the next begins. The 
  DONE         Paper P1 New look: colours, font, paper, menu bar, buttons, cards
  DONE         Paper P2a New look, Timeline: top of the page
  DONE         Paper P2b New look, Timeline: the whole-day strip
- NEXT  ──►    Paper P2c New look, Timeline: the In order list
-              Paper P2d New look, Timeline: Pie, Log button and Log sheet
+ DONE         Paper P2c New look, Timeline: the In order list
+ NEXT  ──►    Paper P2d New look, Timeline: Pie, Log button and Log sheet
               Paper P3 New look: Habits
               Paper P4 New look: Food
               Paper P5 New look: Money
@@ -262,7 +262,7 @@ Not part of Polish 4, and not built: **Step 13e** (fixing trips and visits by ha
 - **P2 Timeline (four small steps).** Same data and same taps as now; only the look changes. Nothing the Timeline can do today is removed.
   - **P2a Top of the page. Built.** A big title (Today, Yesterday, Tomorrow, or the weekday) with the full date under it; on today, the sun arc with "5h 36m left today"; the week strip as paper tiles (today has a pen ring, a day with entries has an orange dot, the chosen day is inked black); the Timeline / Pie switch; and the Steps / Phone / Studied card with dashed dividers. The old "Saved on this phone" badge goes (the demo has none; Settings still says it).
   - **P2b The whole day. Built.** A card holding the 24-hour strip in two rows: **Where** (places and trips) and **What** (what you logged and what the phone collected), an hour axis, an orange "now" mark, and hatching for the part of today still to come. Tap a stretch to see it named under the strip. Below it, a scrolling row of activity pills with the time spent on each ("Sleep 6h 30m"). The headings ("The whole day", "In order") get the orange highlighter swipe.
-  - **P2c The In order list. Planned.** Place blocks (coloured side bar with the place name, wobbly body), rows with the coloured line (solid = you logged it, dashed = the phone collected it), "No data" gaps with Fill in, trips with the "How did you go?" chips, to-dos and notes. All taps stay: edit, tick a to-do, fill a gap, pick how you travelled.
+  - **P2c The In order list. Built.** Place blocks (coloured side bar with the place name, wobbly body), rows with the coloured line (solid = you logged it, dashed = the phone collected it), "No data" gaps with Fill in, trips with the "How did you go?" chips, to-dos and notes. All taps stay: edit, tick a to-do, fill a gap, pick how you travelled.
   - **P2d Pie, Log button, Log sheet. Planned.** The pie with tasks inside and places in the outer ring (what the app already shows), the Tasks and Places lists under it, the paper Log button, and the Log sheet and the Timeline's pop-ups in paper style.
 - **P3 Habits. Planned.** Cards, Week / Month / Year, the habit page, notes, the editor, and the Streak strip ("Shared with Streak, backup written 18:02, Write now") showing the real send status.
 - **P4 Food. Planned.** The diary and its sheets.

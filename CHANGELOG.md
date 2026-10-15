@@ -2,6 +2,26 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📜 Timeline in the paper style (part 2 of 7, the list)
+
+The "In order" list now looks like your demo, and the whole app now really uses Space Mono.
+
+### ✨ New features
+
+- **Place blocks** — a slim coloured bar with a pencil shadow beside a wobbly paper body holding the place name, the times and the length of the stay. A stay that is still going ends in a dashed orange line with the time and "now".
+- **Rows** — each thing inside a stay has its time, a coloured line (solid = you logged it, dashed = the phone collected it) and a small paper card. The taller the stretch, the taller its row.
+- **No data** — pencil-hatched dashed boxes with a **+ Fill in** button.
+- **Trips** — a dashed line under the place bars, a paper card, and the "How did you go?" choices as paper pills. A trip with no known way of travel is orange.
+- **To-dos, notes, empty day** — the same paper look, with highlighted headings.
+
+### 🛠 Fixed
+
+- Several screens forced the phone's own monospace font, so Space Mono did not show there. They all use Space Mono now.
+
+### ⚠️ Good to know
+
+- Pop-ups (Log sheet, edit boxes, the Pie) still have the old look until P2d.
+
 ## 📜 Timeline in the paper style (part 2 of 7, first half)
 
 The top of the Timeline now looks like your demo.

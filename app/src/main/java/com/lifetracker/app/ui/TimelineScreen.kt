@@ -41,7 +41,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.runtime.setValue
+import com.lifetracker.app.ui.theme.LocalPaper
+import com.lifetracker.app.ui.theme.PaperButton
+import com.lifetracker.app.ui.theme.PaperButtonStyle
 import com.lifetracker.app.ui.theme.PaperSegmented
+import com.lifetracker.app.ui.theme.Wobble
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -389,55 +393,48 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
             if (pie) {
                 // Only the pie is shown.
             } else if (rows.isEmpty() && anyTimeTodos.isEmpty() && anyTimeNotes.isEmpty()) {
-                item {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp),
-                        color = MaterialTheme.colorScheme.surface,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                item(key = "empty") {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 28.dp, horizontal = 12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
-                        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(
-                                text = "Nothing on this day",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Text(
-                                text = "Tap Log to add what you did and for how long.",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
+                        Text("Nothing on this day", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = LocalPaper.current.ink)
+                        Text("Tap Log to add what you did and for how long.", color = LocalPaper.current.ink2, fontSize = 13.sp)
                     }
                 }
             } else {
                 items(rows, key = { it.key }) { row -> DayRow(row, actions) }
                 if (anyTimeTodos.isNotEmpty()) {
                     item(key = "todos-header") {
-                        val estimate = if (plannedMinutes > 0) " · ${formatDuration(plannedMinutes)} planned" else ""
-                        MonoLabel("To do on this day$estimate")
+                        PaperSection("To do on this day", if (plannedMinutes > 0) "${formatDuration(plannedMinutes)} planned" else null)
                     }
                     items(anyTimeTodos, key = { "t" + it.id }) { todo ->
                         TodoRow(todo, projectNames[todo.project], onToggle = { vm.toggleTodo(todo) })
                     }
                 }
                 if (anyTimeNotes.isNotEmpty()) {
-                    item(key = "notes-header") { MonoLabel("Notes") }
+                    item(key = "notes-header") { PaperSection("Notes") }
                     items(anyTimeNotes, key = { "n" + it.id }) { note ->
                         NoteRow(note, habitNames[note.habitId])
                     }
                 }
                 if (hiddenToday.isNotEmpty()) {
                     item(key = "hidden") {
-                        TextButton(onClick = { showHidden = true }) { Text("Hidden by you (${hiddenToday.size}), tap to bring back") }
+                        PaperButton(
+                            text = "Hidden by you (${hiddenToday.size}), tap to bring back",
+                            onClick = { showHidden = true },
+                            style = PaperButtonStyle.Ghost,
+                            small = true,
+                        )
                     }
                 }
                 if (entries.isNotEmpty() || rows.isNotEmpty()) {
                     item {
                         Text(
                             text = "Tap anything to change its time or category, or to hide it. Tap a to-do to tick it off.",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 11.5.sp,
+                            color = LocalPaper.current.ink2,
                         )
                     }
                 }
@@ -593,103 +590,93 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
 
 @Composable
 private fun TodoRow(todo: TodoEntity, projectName: String?, onToggle: () -> Unit) {
-    val color = MaterialTheme.colorScheme.primary
+    val paper = LocalPaper.current
     val lines = todo.text.trim().split('\n')
     val title = lines.first().ifBlank { "To-do" }
     val body = lines.drop(1).joinToString("\n").trim()
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .defaultMinSize(minHeight = 44.dp)
-            .clickable(onClick = onToggle),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Text(
-            text = todo.minutes?.let { formatMinute(it) } ?: "Any time",
-            modifier = Modifier
-                .width(68.dp)
-                .padding(top = 3.dp),
-            fontSize = 12.sp,
-            fontFamily = FontFamily.Monospace,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Box(modifier = Modifier.width(10.dp), contentAlignment = Alignment.TopCenter) {
+    val detail = listOfNotNull(
+        "To do",
+        projectName?.takeIf { it.isNotBlank() },
+        todo.estimate?.takeIf { it > 0 }?.let { formatDuration(it) },
+    ).joinToString(" · ")
+    PaperListRow(
+        time = todo.minutes?.let { formatMinute(it) } ?: "Any time",
+        onClick = onToggle,
+        marker = {
             Box(
                 modifier = Modifier
-                    .padding(top = 5.dp)
-                    .size(10.dp)
+                    .size(12.dp)
                     .clip(CircleShape)
-                    .then(if (todo.done) Modifier.background(color) else Modifier.border(2.dp, color, CircleShape)),
+                    .then(if (todo.done) Modifier.background(paper.ink) else Modifier.border(2.dp, paper.ink, CircleShape)),
             )
-        }
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                text = title,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                textDecoration = if (todo.done) TextDecoration.LineThrough else null,
-                color = if (todo.done) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onBackground,
-            )
-            val detail = listOfNotNull(
-                "To do",
-                projectName?.takeIf { it.isNotBlank() },
-                todo.estimate?.takeIf { it > 0 }?.let { formatDuration(it) },
-            ).joinToString(" · ")
-            Text(text = detail, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            if (body.isNotEmpty()) {
-                Text(text = body, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
+        },
+    ) {
+        Text(
+            text = title,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+            textDecoration = if (todo.done) TextDecoration.LineThrough else null,
+            color = if (todo.done) paper.ink2 else paper.ink,
+        )
+        Text(text = detail, fontSize = 11.sp, color = paper.ink2)
+        if (body.isNotEmpty()) Text(text = body, fontSize = 11.sp, color = paper.ink2)
     }
 }
 
 @Composable
 private fun NoteRow(note: NoteEntity, habitName: String?) {
+    val paper = LocalPaper.current
     val lines = note.text.trim().split('\n')
     val title = lines.first().ifBlank { "Note" }
     val body = lines.drop(1).joinToString("\n").trim()
     val kind = listOf("Note", "Planned", "Completed").getOrElse(note.type) { "Note" }
+    PaperListRow(
+        time = note.minutes?.let { formatMinute(it) } ?: "",
+        onClick = null,
+        marker = { Box(Modifier.size(10.dp).background(paper.ink2, RoundedCornerShape(2.dp))) },
+    ) {
+        Text(text = title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = paper.ink)
+        Text(
+            text = listOfNotNull(kind, habitName?.takeIf { it.isNotBlank() }).joinToString(" · "),
+            fontSize = 11.sp,
+            color = paper.ink2,
+        )
+        if (body.isNotEmpty()) Text(text = body, fontSize = 11.sp, color = paper.ink2)
+    }
+}
 
+/** A to-do or note under the day's list: its time, a marker, and a small paper card holding the words. */
+@Composable
+private fun PaperListRow(
+    time: String,
+    onClick: (() -> Unit)?,
+    marker: @Composable () -> Unit,
+    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
+) {
+    val paper = LocalPaper.current
+    val shape = Wobble.Small
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .defaultMinSize(minHeight = 44.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 46.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
-            text = note.minutes?.let { formatMinute(it) } ?: "",
-            modifier = Modifier
-                .width(68.dp)
-                .padding(top = 3.dp),
-            fontSize = 12.sp,
-            fontFamily = FontFamily.Monospace,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            text = time,
+            modifier = Modifier.width(58.dp).padding(top = 12.dp),
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            color = paper.ink,
         )
-        Box(modifier = Modifier.width(10.dp), contentAlignment = Alignment.TopCenter) {
-            Box(
-                modifier = Modifier
-                    .padding(top = 6.dp)
-                    .size(8.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(MaterialTheme.colorScheme.onSurfaceVariant),
-            )
-        }
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                text = title,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-            Text(
-                text = listOfNotNull(kind, habitName?.takeIf { it.isNotBlank() }).joinToString(" · "),
-                fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            if (body.isNotEmpty()) {
-                Text(text = body, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
+        Box(modifier = Modifier.width(12.dp).padding(top = 11.dp), contentAlignment = Alignment.TopCenter) { marker() }
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .background(paper.surface, shape)
+                .border(1.25.dp, paper.line, shape)
+                .clip(shape)
+                .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+                .padding(horizontal = 9.dp, vertical = 7.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+            content = content,
+        )
     }
 }

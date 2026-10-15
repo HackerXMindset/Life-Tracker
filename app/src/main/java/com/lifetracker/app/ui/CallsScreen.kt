@@ -141,7 +141,6 @@ fun CallsScreen(onBack: () -> Unit, part: Part = Part.Data, vm: CallsViewModel =
                         Text(
                             text = if (lastSync.isEmpty()) "Not yet" else lastSync,
                             color = MaterialTheme.colorScheme.onBackground,
-                            fontFamily = FontFamily.Monospace,
                             fontSize = 13.sp,
                         )
                     }
@@ -187,7 +186,6 @@ fun CallsScreen(onBack: () -> Unit, part: Part = Part.Data, vm: CallsViewModel =
                         }
                         Text(
                             CallStats.durationText(person.talkSec),
-                            fontFamily = FontFamily.Monospace,
                             fontSize = 14.sp,
                             color = MaterialTheme.colorScheme.onBackground,
                         )
@@ -270,7 +268,6 @@ private fun CallStat(label: String, value: String, modifier: Modifier = Modifier
         Text(
             text = value,
             fontSize = 17.sp,
-            fontFamily = FontFamily.Monospace,
             color = MaterialTheme.colorScheme.onBackground,
         )
     }

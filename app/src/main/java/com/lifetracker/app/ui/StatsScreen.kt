@@ -105,7 +105,6 @@ internal fun ChargingSummary(sessions: List<ChargeSessionEntity>, onClick: () ->
                 Text(
                     text = if (totals.sessions == 0) "–" else "${totals.sessions} · " + ChargeStats.durationText(totals.chargingMs),
                     fontSize = 14.sp,
-                    fontFamily = FontFamily.Monospace,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
             }
@@ -133,7 +132,6 @@ internal fun PhoneSummary(day: UsageDays.Day, onClick: () -> Unit) {
                 Text(
                     text = formatDuration((day.totalMs / 60_000L).toInt()),
                     fontSize = 14.sp,
-                    fontFamily = FontFamily.Monospace,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
             }
@@ -144,7 +142,6 @@ internal fun PhoneSummary(day: UsageDays.Day, onClick: () -> Unit) {
                     Text(
                         text = formatDuration((ms / 60_000L).toInt()),
                         fontSize = 12.sp,
-                        fontFamily = FontFamily.Monospace,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -173,7 +170,6 @@ internal fun CallsSummary(calls: List<CallEntity>, onClick: () -> Unit) {
                 Text(
                     text = "${totals.calls} · " + CallStats.durationText(totals.talkSec),
                     fontSize = 14.sp,
-                    fontFamily = FontFamily.Monospace,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
             }
@@ -212,7 +208,6 @@ internal fun HealthSummary(steps: StepDayEntity?, sleep: SleepNightEntity?, onCl
                         if (sleepMinutes > 0) "slept " + formatDuration(sleepMinutes) else null,
                     ).joinToString(" · ").ifEmpty { "–" },
                     fontSize = 14.sp,
-                    fontFamily = FontFamily.Monospace,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
             }
@@ -240,7 +235,6 @@ internal fun PlacesSummary(totals: List<PlaceRules.PlaceTotal>, names: Map<Strin
                 Text(
                     text = text.ifEmpty { "–" },
                     fontSize = 14.sp,
-                    fontFamily = FontFamily.Monospace,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
             }
@@ -249,7 +243,6 @@ internal fun PlacesSummary(totals: List<PlaceRules.PlaceTotal>, names: Map<Strin
                     TripRules.distanceText(trips.sumOf { it.distanceM.toLong() }.toInt()) + " · " +
                     PlaceRules.durationText(trips.sumOf { it.endMs - it.startMs }),
                 fontSize = 13.sp,
-                fontFamily = FontFamily.Monospace,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(

@@ -109,7 +109,6 @@ fun DayPie(logged: List<DaySegments.Seg>, collected: List<DaySegments.Seg>, all:
                             modifier = Modifier.align(where),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Monospace,
                             color = quiet,
                         )
                     }
@@ -155,7 +154,6 @@ fun DayPie(logged: List<DaySegments.Seg>, collected: List<DaySegments.Seg>, all:
                     Text(
                         text = durationOf(ms),
                         fontSize = 14.sp,
-                        fontFamily = FontFamily.Monospace,
                         color = MaterialTheme.colorScheme.onBackground,
                     )
                 }

@@ -158,7 +158,7 @@ fun LogSheet(
                         onClick = { pickTime(start) { start = it; error = null } },
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text(formatMinute(start), fontFamily = FontFamily.Monospace)
+                        Text(formatMinute(start))
                     }
                 }
                 if (!moment) {
@@ -168,7 +168,7 @@ fun LogSheet(
                             onClick = { pickTime(end) { end = it; error = null } },
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Text(formatMinute(end), fontFamily = FontFamily.Monospace)
+                            Text(formatMinute(end))
                         }
                     }
                 }

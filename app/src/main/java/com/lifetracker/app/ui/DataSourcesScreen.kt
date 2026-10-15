@@ -179,7 +179,6 @@ fun DataSourcesScreen(onBack: () -> Unit, vm: DataSourcesViewModel = viewModel()
                                     Text(
                                         text = formatDateTime(file.modified),
                                         fontSize = 12.sp,
-                                        fontFamily = FontFamily.Monospace,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
@@ -253,7 +252,6 @@ private fun SourceCard(
         MonoLabel("Folder")
         Text(
             text = folderName ?: "Not chosen yet",
-            fontFamily = FontFamily.Monospace,
             color = MaterialTheme.colorScheme.onSurface,
         )
         OutlinedButton(onClick = onChoose) {
@@ -274,7 +272,7 @@ private fun NewestFile(file: FoundFile?, emptyText: String) {
         Detail(emptyText)
     } else {
         MonoLabel("Newest file found")
-        Text(text = file.name, fontFamily = FontFamily.Monospace, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
+        Text(text = file.name, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
         Detail("Modified ${formatDateTime(file.modified)}")
     }
 }

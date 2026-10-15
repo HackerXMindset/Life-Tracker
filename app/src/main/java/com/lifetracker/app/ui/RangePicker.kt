@@ -80,7 +80,6 @@ fun RangePicker(choice: RangeChoice, onChange: (RangeChoice) -> Unit) {
         }
         Text(
             text = choice.span.label(today) + if (choice.span.isSingleDay) "" else " · ${choice.span.dayCount} days",
-            fontFamily = FontFamily.Monospace,
             fontSize = 12.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

@@ -375,7 +375,6 @@ private fun androidx.compose.foundation.lazy.LazyListScope.spendingBlock(
                 Text(
                     format(total),
                     fontSize = 13.sp,
-                    fontFamily = FontFamily.Monospace,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -405,7 +404,6 @@ private fun MoneyStat(label: String, value: String, modifier: Modifier = Modifie
         Text(
             text = value,
             fontSize = 16.sp,
-            fontFamily = FontFamily.Monospace,
             color = MaterialTheme.colorScheme.onBackground,
         )
     }
@@ -445,7 +443,6 @@ private fun EntryRow(
         Text(
             text = (if (income) "+" else "-") + format(entry.amount),
             fontSize = 15.sp,
-            fontFamily = FontFamily.Monospace,
             color = if (income) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
         )
     }
@@ -493,7 +490,6 @@ private fun SavedItemRow(
             Text(
                 text = format(item.amount),
                 fontSize = 15.sp,
-                fontFamily = FontFamily.Monospace,
                 color = MaterialTheme.colorScheme.onSurface,
             )
         }
