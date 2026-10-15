@@ -22,6 +22,9 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lifetracker.app.ui.theme.AppTheme
+import com.lifetracker.app.ui.theme.PaperSegmented
+import com.lifetracker.app.ui.theme.ThemeMode
 import com.lifetracker.app.data.CallsCollector
 import com.lifetracker.app.data.ChargeSettings
 import com.lifetracker.app.data.HabitSource
@@ -54,6 +57,16 @@ fun SettingsScreen(onOpen: (Page) -> Unit) {
             Text(
                 text = "Allow what the phone can record, choose what shows on the Timeline, and look after your data. Everything stays on this phone.",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        item { MonoLabel("Look") }
+        item {
+            val mode = AppTheme.mode
+            PaperSegmented(
+                options = ThemeMode.entries.map { it.label },
+                selected = ThemeMode.entries.indexOf(mode),
+                onSelect = { AppTheme.set(context, ThemeMode.entries[it]) },
             )
         }
 
@@ -161,7 +174,7 @@ private fun SettingsRow(title: String, status: String?, good: Boolean, hint: Str
                         text = status,
                         fontSize = 12.sp,
                         fontFamily = FontFamily.Monospace,
-                        color = if (good) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                        color = if (good) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error,
                     )
                 }
             }

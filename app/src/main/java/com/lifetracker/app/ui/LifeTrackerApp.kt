@@ -13,8 +13,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -25,6 +23,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -105,20 +104,9 @@ fun LifeTrackerApp() {
     }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        bottomBar = {
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
-                Tab.entries.forEach { item ->
-                    NavigationBarItem(
-                        selected = tab == item,
-                        onClick = { tab = item; page = null },
-                        icon = { Icon(painter = painterResource(item.icon), contentDescription = null) },
-                        // Six tabs share the width, so the names stay on one line and a little smaller.
-                        label = { Text(item.title, fontSize = 11.sp, maxLines = 1, softWrap = false) },
-                    )
-                }
-            }
-        },
+        // The paper behind the whole app shows through; the menu bar floats on it.
+        containerColor = Color.Transparent,
+        bottomBar = { PaperNavBar(selected = tab, onSelect = { tab = it; page = null }) },
     ) { padding ->
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
             val current = page

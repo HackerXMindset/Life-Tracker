@@ -2,6 +2,22 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📜 A new look: the paper (part 1 of 7)
+
+The app starts taking on the look of your paper design: cream paper, ink-black buttons, a floating menu bar and a dark version.
+
+### ✨ New features
+
+- **Paper everywhere** — every screen now sits on cream paper with a faint grain, fibres, two fold lines and darker edges. Dark mode has its own dark paper.
+- **Floating menu bar** — the bottom menu is now a paper strip with a pen outline and a pencil shadow. The tab you are on is inked black.
+- **Light, Dark or System** — Settings, then **Look**. Your choice is remembered, and the whole app changes at once.
+- **New building blocks** — wobbly hand-drawn cards, buttons, pills, switches, headings with an orange highlighter swipe, and progress bars made of tally strokes. Screens start using them in the next parts.
+
+### ⚠️ Good to know
+
+- This is part 1 of 7. The screens keep their old layouts for now, so the app looks half new: new colours, paper and menu bar everywhere, and new layouts one screen at a time (Timeline next).
+- The font is still the phone's own monospace. Space Mono will replace it once its two font files are added to the app.
+
 ## 🔁 Habit changes reach Streak by themselves
 
 Turn on one switch and your Habits changes go to Streak without pressing anything.

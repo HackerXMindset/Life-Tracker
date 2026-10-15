@@ -1,3 +1,4 @@
 <resources>
     <color name="ic_launcher_background">#17785A</color>
+    <color name="paper_bg">#F2E4C5</color>
 </resources>

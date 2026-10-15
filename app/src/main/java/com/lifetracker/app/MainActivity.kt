@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.lifetracker.app.ui.LifeTrackerApp
+import com.lifetracker.app.ui.theme.PaperBackground
 import com.lifetracker.app.ui.theme.LifeTrackerTheme
 
 class MainActivity : ComponentActivity() {
@@ -13,7 +14,9 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             LifeTrackerTheme {
-                LifeTrackerApp()
+                PaperBackground {
+                    LifeTrackerApp()
+                }
             }
         }
     }

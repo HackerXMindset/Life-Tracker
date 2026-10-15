@@ -135,7 +135,14 @@ Each step is small enough to build, install and try before the next begins. The 
  DONE         Habits H4 Settings: Streak or this app's own data; tap a habit to open it in Streak
  DONE         Habits H3c Notes on habits (notes icon, notes on a habit)
  DONE         Habits H5 Your edits reach Streak (through Streak's backup folder)
- NEXT  ──►    Step 14 Life events, month and year views
+ NEXT  ──►    Paper P1 New look: colours, font, paper, menu bar, buttons, cards
+              Paper P2 New look: Timeline
+              Paper P3 New look: Habits
+              Paper P4 New look: Food
+              Paper P5 New look: Money
+              Paper P6 New look: Stats
+              Paper P7 New look: Settings and every other page
+              Step 14 Life events, month and year views
               Step 15 Stats
               Step 16 Polish
 ```
@@ -238,6 +245,23 @@ Not part of Polish 4, and not built: **Step 13e** (fixing trips and visits by ha
   - **H5b Remember what changed. Built.** Every new habit, edit, tick, amount, miss reason, archive and note written here notes "this changed at this time" (`HabitSyncState.kt`, kept in the app's own settings, no database change), so H5a knows what to send. The note only ever moves forward in time. Clearing a day also notes the habit as changed (harmless: Streak keeps its own copy of that day anyway). Things that come in from a Streak import are not noted, so Streak's own habits are never sent back. The app's own device name (eight letters and digits, like Streak's) is made once, the first time it is needed. Nothing is sent anywhere yet.
   - **H5c Write into the folder. Built.** `StreakFolderWriter.kt`. In **Settings, Habits** there is now a **Send your changes to Streak** part: the folder name, whether writing is allowed, when it was last sent, **Choose the folder again** (the same Streak folder; this time Android is asked for write permission, which is needed once because the folder was chosen read only before) and **Send to Streak now**. The file is written whole under a name Streak ignores (`....json.part`) and then renamed to `streak_backup_<date>_<time>_<device>.json`, and its size is checked. The app keeps its own newest three files and removes its older ones; Streak's files are never touched. Sending the same content twice is skipped ("Already sent"). The app's own importer now ignores files with this app's device name, so it can never read its own file back as Streak's. You send by pressing the button for now; the automatic sending is H5d.
   - **H5d Send automatically. Built.** In **Settings, Habits**, under **Send your changes to Streak**, a **Send automatically** switch (off until you turn it on). When it is on, every change here asks for a send 15 seconds later (`StreakSendWorker.kt`, a background job that survives the app closing); a newer change restarts that wait, so ticking several days in a row writes one file. The app also sends when it opens, after it has read Streak's newest backup. If a send fails it tries again up to three times, then shows "Not sent" with the reason. The screen shows the result of the last automatic send. Turning the switch on sends straight away. Sending the same content twice is skipped. Streak's owner is adding "save the backup after every change" in Streak, so changes made in Streak come back here faster; nothing more is needed on this side.
+
+**Paper redesign (P1 to P7, one part at a time).** The whole app takes on the look of your paper demo (`Life-Tracker-paper.html`): cream paper, ink-black buttons, green only for "good", orange highlighter swipes under headings, hand-drawn wobbly card borders with a hard pencil shadow, tally strokes for progress bars, dashed lines for what the phone collected on its own, a floating menu bar, and a dark version. This is looks only: the app keeps exactly the features it has, and the demo's made-up numbers are replaced by your real data. Features that only exist in the demo (Money's "Deduct it from" choice and imported shopping orders, the built-in food tracker) are not part of it. Habits keeps everything built so far (editing Streak habits, sending changes to Streak) in the demo's style. I cannot run the app here, so after each part you send a screenshot and I fix what differs from the demo.
+- **The paper is a wallpaper tile, not drawn live.** The demo makes its paper from code every frame. On a phone that would drain the battery and stutter while scrolling, so the same texture is rendered once as a small picture (`paper_tooth.webp`, the grain and loose fibres; `paper_stain.webp`, the age blotches) and the app repeats it, like wallpaper. It looks the same and costs almost nothing.
+- **P1 Foundation. Built.**
+  - **Colours:** the demo's light and dark colours (`PaperColors`), mapped onto the app's Material colours so every existing screen already picks them up. Primary buttons are ink-black, like the demo.
+  - **Font:** Space Mono (regular and bold). The app looks for it in `app/src/main/assets/fonts/` (`SpaceMono-Regular.ttf`, `SpaceMono-Bold.ttf`) and uses the phone's own monospace font until those two files are added.
+  - **Paper:** `PaperBackground` draws the cream sheet, the two fold lines, the blotches and the dark edge shading, then lays the grain over everything (multiplied, like the demo). Dark mode has no blotches or folds, as in the demo.
+  - **Shapes and parts:** wobbly corners (`WobbleShape`), `PaperCard`, `PaperButton` (dark, ghost, danger), `PaperPill`, `PaperSegmented`, `PaperToggle`, `PaperIconButton`, `HighlightedHeading` (the orange swipe), `TallyBar` (progress in tally strokes).
+  - **Menu bar:** the bottom bar becomes the floating paper pill with the six tabs.
+  - **Theme switch:** Settings, **Look**: Light, Dark or System (`ThemeMode.kt`, tested).
+  - **Not in P1:** the screens themselves keep their old layouts until their own part, so the app looks half new in between: new colours, font, paper and menu bar everywhere, new layouts one screen at a time.
+- **P2 Timeline. Planned.** Header with the sun arc, the week strip, the Steps / Phone / Studied card, the 24-hour "where / what" strip, the activity chips, the In order list, the Log button and Log sheet, and the Pie view.
+- **P3 Habits. Planned.** Cards, Week / Month / Year, the habit page, notes, the editor, and the Streak strip ("Shared with Streak, backup written 18:02, Write now") showing the real send status.
+- **P4 Food. Planned.** The diary and its sheets.
+- **P5 Money. Planned.** The month card, sorting, the entry sheets.
+- **P6 Stats. Planned.** The charts, the 20-week heatmap, and every tab.
+- **P7 Settings and every other page. Planned.** Settings and its pages, backup and import, activities, places and trips, calls, charging, steps and sleep.
 
 **Step 14: Life events, month and year views.** Mark moments that changed your life, then look back by month or year to see what you did and how much you studied around each one.
 
