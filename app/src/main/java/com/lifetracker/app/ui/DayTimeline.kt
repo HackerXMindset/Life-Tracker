@@ -103,6 +103,9 @@ private val PLACE_COLORS = listOf(
     Color(0xFF8E94E8), Color(0xFF4FB38A), Color(0xFFE0A84A), Color(0xFFE08A5F), Color(0xFFD27BA8), Color(0xFF62A9D6),
 )
 
+/** The colour a place gets when you have not given its stay a category: the same name always gets the same colour. */
+internal fun placeColorOf(name: String): Color = PLACE_COLORS[Math.floorMod(name.hashCode(), PLACE_COLORS.size)]
+
 private fun clock(ms: Long): String =
     Instant.ofEpochMilli(ms).atZone(ZoneId.systemDefault()).let { formatMinute(it.hour * 60 + it.minute) }
 
@@ -127,7 +130,7 @@ private fun Indented(content: @Composable () -> Unit) {
 @Composable
 private fun PlaceBlock(p: DayLayout.Place, a: DayActions) {
     val chosen = TimelineEdits.category(a.edits[TimelineEdits.key(TimelineEdits.VISIT, p.visit.id)])?.let { a.types.byId(it) }
-    val color = chosen?.displayColor() ?: PLACE_COLORS[Math.floorMod(p.name.hashCode(), PLACE_COLORS.size)]
+    val color = chosen?.displayColor() ?: placeColorOf(p.name)
     val shape = RoundedCornerShape(16.dp)
     Row(
         modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),

@@ -2,6 +2,23 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📜 Timeline in the paper style (part 2 of 7, first half)
+
+The top of the Timeline now looks like your demo.
+
+### ✨ New features
+
+- **New top** — a big "Today" (or Yesterday, Tomorrow, or the weekday), the full date under it, and on today a sun arc with "5h 36m left today". The "Saved on this phone" badge is gone from this screen.
+- **Paper week strip** — day tiles with an orange dot on days that have entries, a pen ring on today, and the chosen day inked black.
+- **Steps, Phone, Studied** — one card with dashed dividers.
+- **The whole day** — a card with two lines: **Where** (places and trips) and **What** (what you logged and what the phone collected), an hour axis, an orange "now" mark and pencil hatching over the part of today still to come. Tap a stretch to see its name, times and length under the line.
+- **Activity pills** — a row you can slide sideways showing the time spent on each kind of thing ("Sleep 6h 30m").
+
+### ⚠️ Good to know
+
+- The "In order" list, the Pie and the Log sheet still have the old layouts; they follow in the next steps (P2c and P2d).
+- The line's readout shows the stretch but has no Edit button yet; tap the row in the list to edit it, as before.
+
 ## 🔤 Space Mono, the demo's font
 
 The whole app now uses the same typewriter-style font as your paper design.
