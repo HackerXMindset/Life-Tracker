@@ -38,6 +38,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.runtime.setValue
 import com.lifetracker.app.ui.theme.PaperSegmented
@@ -266,8 +267,29 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
     val flatCollected = DaySegments.flatten(collectedSegs, dayStartMs, dayEndMs)
     val nowMarker = if (nowMs in dayStartMs until dayEndMs) nowMs else null
     var pie by rememberSaveable { mutableStateOf(false) }
+    var pick by remember(date) { mutableStateOf<StripSeg?>(null) }
 
     val rows = DayLayout.build(items, visitsEff, tripsEff, placeNames, dayStartMs, dayEndMs, nowMs, showPlaces, showTrips)
+
+    // The "Where" line: each stay at a place, and each journey between places.
+    val whereSegs = rows.mapNotNull { r ->
+        when (r) {
+            is DayLayout.Place -> StripSeg(
+                r.startMs, r.endMs,
+                typeOf(TimelineEdits.VISIT, r.visit.id)?.displayColor() ?: placeColorOf(r.name), r.name,
+            )
+            is DayLayout.Travel -> {
+                val unknown = r.trip == null || (r.trip.mode == "vehicle" && r.trip.modeSource != "you")
+                StripSeg(
+                    r.startMs, r.endMs, Color(0xFF4A5568),
+                    if (unknown) "Unknown way of travel" else TripModes.label(r.trip!!.mode),
+                    hatch = true, unknown = unknown,
+                )
+            }
+            else -> null
+        }
+    }
+    val whatSegs = flatAll.map { it.toStrip() }
     fun dayStartOf(ms: Long) = Instant.ofEpochMilli(ms).atZone(zone).toLocalDate().atStartOfDay(zone).toInstant().toEpochMilli()
     fun target(
         kind: String, ref: String, title: String, startMs: Long, endMs: Long?,
@@ -357,7 +379,12 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
             if (pie) {
                 item(key = "pie") { DayPie(flatLogged, flatCollected, flatAll, dayStartMs, nowMarker) }
             } else {
-                item(key = "hours-bar") { HoursBar(flatAll, dayStartMs, nowMarker) }
+                item(key = "whole-day-heading") { PaperSection("The whole day", "24 hours, left to right") }
+                item(key = "whole-day") {
+                    WholeDayCard(whereSegs, whatSegs, dayStartMs, dayEndMs, nowMarker, pick) { pick = it }
+                }
+                item(key = "activity-pills") { ActivityPills(DaySegments.byLabel(flatAll)) }
+                if (rows.isNotEmpty()) item(key = "in-order-heading") { PaperSection("In order", "tap a row to edit it") }
             }
             if (pie) {
                 // Only the pie is shown.
