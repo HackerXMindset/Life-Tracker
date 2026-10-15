@@ -2,6 +2,14 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🔤 Space Mono, the demo's font
+
+The whole app now uses the same typewriter-style font as your paper design.
+
+### ✨ New features
+
+- **Space Mono everywhere** — regular and bold, on every screen, instead of the phone's own monospace font.
+
 ## 📜 A new look: the paper (part 1 of 7)
 
 The app starts taking on the look of your paper design: cream paper, ink-black buttons, a floating menu bar and a dark version.
@@ -16,7 +24,6 @@ The app starts taking on the look of your paper design: cream paper, ink-black b
 ### ⚠️ Good to know
 
 - This is part 1 of 7. The screens keep their old layouts for now, so the app looks half new: new colours, paper and menu bar everywhere, and new layouts one screen at a time (Timeline next).
-- The font is still the phone's own monospace. Space Mono will replace it once its two font files are added to the app.
 
 ## 🔁 Habit changes reach Streak by themselves
 

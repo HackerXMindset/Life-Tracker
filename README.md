@@ -250,7 +250,7 @@ Not part of Polish 4, and not built: **Step 13e** (fixing trips and visits by ha
 - **The paper is a wallpaper tile, not drawn live.** The demo makes its paper from code every frame. On a phone that would drain the battery and stutter while scrolling, so the same texture is rendered once as a small picture (`paper_tooth.webp`, the grain and loose fibres; `paper_stain.webp`, the age blotches) and the app repeats it, like wallpaper. It looks the same and costs almost nothing.
 - **P1 Foundation. Built.**
   - **Colours:** the demo's light and dark colours (`PaperColors`), mapped onto the app's Material colours so every existing screen already picks them up. Primary buttons are ink-black, like the demo.
-  - **Font:** Space Mono (regular and bold). The app looks for it in `app/src/main/assets/fonts/` (`SpaceMono-Regular.ttf`, `SpaceMono-Bold.ttf`) and uses the phone's own monospace font until those two files are added.
+  - **Font:** Space Mono (regular and bold). The app looks for it in `app/src/main/assets/fonts/` (`SpaceMono-Regular.ttf`, `SpaceMono-Bold.ttf`) and falls back to the phone's own monospace font if they are ever missing. Both files are now in the app.
   - **Paper:** `PaperBackground` draws the cream sheet, the two fold lines, the blotches and the dark edge shading, then lays the grain over everything (multiplied, like the demo). Dark mode has no blotches or folds, as in the demo.
   - **Shapes and parts:** wobbly corners (`WobbleShape`), `PaperCard`, `PaperButton` (dark, ghost, danger), `PaperPill`, `PaperSegmented`, `PaperToggle`, `PaperIconButton`, `HighlightedHeading` (the orange swipe), `TallyBar` (progress in tally strokes).
   - **Menu bar:** the bottom bar becomes the floating paper pill with the six tabs.
