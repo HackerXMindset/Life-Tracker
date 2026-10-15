@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -19,6 +18,9 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lifetracker.app.ui.theme.LocalPaper
+import com.lifetracker.app.ui.theme.PaperToggle
+import com.lifetracker.app.ui.theme.Wobble
 
 @Composable
 fun MonoLabel(text: String, modifier: Modifier = Modifier) {
@@ -26,7 +28,6 @@ fun MonoLabel(text: String, modifier: Modifier = Modifier) {
         text = text.uppercase(),
         modifier = modifier,
         fontSize = 11.sp,
-        fontFamily = FontFamily.Monospace,
         letterSpacing = 1.2.sp,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -48,15 +49,14 @@ fun ScreenHeader(
             MonoLabel(label)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 Surface(
-                    shape = RoundedCornerShape(50),
+                    shape = Wobble.Pill,
                     color = Color.Transparent,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    border = BorderStroke(1.25.dp, LocalPaper.current.pen),
                 ) {
                     Text(
                         text = badge,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
                         fontSize = 11.sp,
-                        fontFamily = FontFamily.Monospace,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -65,9 +65,9 @@ fun ScreenHeader(
         }
         Text(
             text = title,
-            fontSize = 30.sp,
-            lineHeight = 33.sp,
-            fontWeight = FontWeight.ExtraBold,
+            fontSize = 36.sp,
+            lineHeight = 36.sp,
+            fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground,
         )
     }
@@ -84,9 +84,9 @@ enum class Part { Data, Settings }
 fun SetupNote(text: String) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
+        shape = Wobble.Small,
         color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        border = BorderStroke(1.25.dp, LocalPaper.current.line),
     ) {
         Text(
             text = text,
@@ -105,6 +105,6 @@ fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(label, modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.onBackground)
-        Switch(checked = checked, onCheckedChange = onChange)
+        PaperToggle(checked = checked, onChange = onChange)
     }
 }

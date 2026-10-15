@@ -1,3 +1,5 @@
 <resources>
-    <style name="Theme.LifeTracker" parent="android:Theme.Material.NoActionBar" />
+    <style name="Theme.LifeTracker" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/paper_bg</item>
+    </style>
 </resources>
