@@ -40,6 +40,12 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lifetracker.app.ui.theme.LocalPaper
+import com.lifetracker.app.ui.theme.PaperButton
+import com.lifetracker.app.ui.theme.PaperButtonStyle
+import com.lifetracker.app.ui.theme.PaperField
+import com.lifetracker.app.ui.theme.PaperPill
+import com.lifetracker.app.ui.theme.PaperSheet
 import com.lifetracker.app.data.ActivityTypeEntity
 import com.lifetracker.app.data.EntryEntity
 import java.time.LocalDate
@@ -102,7 +108,8 @@ fun LogSheet(
         ).show()
     }
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    val paper = LocalPaper.current
+    PaperSheet(onDismiss = onDismiss) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -113,38 +120,27 @@ fun LogSheet(
         ) {
             Text(
                 text = if (initial == null) "Log something" else "Edit entry",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = MaterialTheme.colorScheme.onBackground,
+                fontSize = 26.sp,
+                fontWeight = FontWeight.Bold,
+                color = paper.ink,
             )
 
+            Text("What did you do?", fontSize = 12.sp, color = paper.ink2)
             Row(
                 modifier = Modifier.horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 choices.forEach { c ->
-                    FilterChip(
-                        selected = category?.id == c.id,
-                        onClick = { chosenId = c.id },
-                        label = { Text(c.name) },
-                        leadingIcon = {
-                            Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(c.displayColor()))
-                        },
-                    )
+                    PaperPill(c.name, category?.id == c.id, { chosenId = c.id }, dot = c.displayColor())
                 }
-                FilterChip(
-                    selected = false,
-                    onClick = { showNewType = true },
-                    label = { Text("+ New") },
-                )
+                PaperPill("+ New", false, { showNewType = true })
             }
 
-            OutlinedTextField(
+            PaperField(
                 value = title,
                 onValueChange = { title = it; error = null },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("What did you do?") },
-                placeholder = { Text("e.g. Polity revision") },
+                label = "Name",
+                placeholder = "e.g. Polity revision",
                 singleLine = true,
             )
 
@@ -153,74 +149,66 @@ fun LogSheet(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    MonoLabel("Start")
-                    OutlinedButton(
+                    Text("Start", fontSize = 12.sp, color = paper.ink2)
+                    PaperButton(
+                        text = formatMinute(start),
                         onClick = { pickTime(start) { start = it; error = null } },
                         modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(formatMinute(start))
-                    }
+                        style = PaperButtonStyle.Ghost,
+                    )
                 }
                 if (!moment) {
                     Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        MonoLabel("End")
-                        OutlinedButton(
+                        Text("End", fontSize = 12.sp, color = paper.ink2)
+                        PaperButton(
+                            text = formatMinute(end),
                             onClick = { pickTime(end) { end = it; error = null } },
                             modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text(formatMinute(end))
-                        }
+                            style = PaperButtonStyle.Ghost,
+                        )
                     }
                 }
             }
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(checked = moment, onCheckedChange = { moment = it; error = null })
-                Text(
-                    text = "Just a moment, no end time",
-                    color = MaterialTheme.colorScheme.onBackground,
-                )
-            }
+            SwitchRow("Just a moment, no end time", moment) { moment = it; error = null }
 
-            OutlinedTextField(
-                value = note,
-                onValueChange = { note = it },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Note (optional)") },
-            )
+            PaperField(value = note, onValueChange = { note = it }, label = "Note (optional)", minLines = 3)
 
             error?.let {
-                Text(text = it, color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
+                Text(text = it, color = paper.bad, fontSize = 13.sp)
             }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (initial != null && onDelete != null) {
-                    TextButton(onClick = onDelete) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                    PaperButton("Delete", onDelete, modifier = Modifier.weight(1f), style = PaperButtonStyle.Danger)
                 }
-                TextButton(onClick = onDismiss) { Text("Cancel") }
-                Spacer(Modifier.padding(horizontal = 4.dp))
-                Button(onClick = {
-                    when {
-                        category == null -> error = "Pick an activity first."
-                        title.isBlank() -> error = "Give it a short name."
-                        !moment && end <= start -> error = "End time must be after the start time."
-                        else -> onSave(
-                            EntryEntity(
-                                id = initial?.id ?: 0,
-                                date = initial?.date ?: date.toString(),
-                                startMinute = start,
-                                endMinute = if (moment) null else end,
-                                category = category!!.id,
-                                title = title.trim(),
-                                note = note.trim(),
-                            ),
-                        )
-                    }
-                }) { Text(if (initial == null) "Add to timeline" else "Save") }
+                PaperButton("Cancel", onDismiss, modifier = Modifier.weight(1f), style = PaperButtonStyle.Ghost)
+                PaperButton(
+                    text = if (initial == null) "Add to timeline" else "Save",
+                    onClick = {
+                        when {
+                            category == null -> error = "Pick an activity first."
+                            title.isBlank() -> error = "Give it a short name."
+                            !moment && end <= start -> error = "End time must be after the start time."
+                            else -> onSave(
+                                EntryEntity(
+                                    id = initial?.id ?: 0,
+                                    date = initial?.date ?: date.toString(),
+                                    startMinute = start,
+                                    endMinute = if (moment) null else end,
+                                    category = category!!.id,
+                                    title = title.trim(),
+                                    note = note.trim(),
+                                ),
+                            )
+                        }
+                    },
+                    modifier = Modifier.weight(if (initial != null && onDelete != null) 1.4f else 1f),
+                )
             }
             Spacer(Modifier.height(12.dp))
         }

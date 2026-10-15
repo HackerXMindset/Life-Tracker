@@ -70,6 +70,7 @@ import com.lifetracker.app.data.TripModes
 import com.lifetracker.app.data.TripRules
 import com.lifetracker.app.data.UsageDays
 import com.lifetracker.app.ui.theme.LocalPaper
+import com.lifetracker.app.ui.theme.PaperDialog
 import com.lifetracker.app.ui.theme.PaperPill
 import com.lifetracker.app.ui.theme.Wobble
 import com.lifetracker.app.ui.theme.pencilShadow
@@ -578,25 +579,22 @@ private fun TravelCard(t: DayLayout.Travel, a: DayActions) {
         }
     }
     if (picking && trip != null) {
-        AlertDialog(
-            onDismissRequest = { picking = false },
-            title = { Text("How did you travel?") },
-            text = {
-                Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    TripModes.list.filter { it.id != "vehicle" }.forEach { m ->
-                        FilterChip(
-                            selected = trip.mode == m.id && trip.modeSource == "you",
-                            onClick = { a.onTripMode(trip, m.id); picking = false },
-                            label = { Text(m.label) },
-                        )
-                    }
+        PaperDialog(
+            title = "How did you travel?",
+            onDismiss = { picking = false },
+            confirmText = "Edit time and category",
+            onConfirm = { picking = false; a.onEditTrip(trip) },
+            dismissText = "Close",
+        ) {
+            Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                TripModes.list.filter { it.id != "vehicle" }.forEach { m ->
+                    PaperPill(
+                        m.label,
+                        trip.mode == m.id && trip.modeSource == "you",
+                        { a.onTripMode(trip, m.id); picking = false },
+                    )
                 }
-            },
-            confirmButton = { TextButton(onClick = { picking = false }) { Text("Close") } },
-            dismissButton = { TextButton(onClick = { picking = false; a.onEditTrip(trip) }) { Text("Edit time and category") } },
-        )
+            }
+        }
     }
 }
