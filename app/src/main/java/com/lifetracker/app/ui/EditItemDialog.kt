@@ -23,6 +23,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lifetracker.app.ui.theme.LocalPaper
+import com.lifetracker.app.ui.theme.PaperButton
+import com.lifetracker.app.ui.theme.PaperButtonStyle
+import com.lifetracker.app.ui.theme.PaperDialog
+import com.lifetracker.app.ui.theme.PaperPill
 import com.lifetracker.app.data.ActivityTypeEntity
 import com.lifetracker.app.data.TimelineEdits
 
@@ -68,58 +73,56 @@ fun EditItemDialog(
         TimePickerDialog(context, { _, h, m -> onPicked(h * 60 + m) }, initial / 60, initial % 60, false).show()
     }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(target.title, maxLines = 2) },
-        text = {
-            Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { pick(startMinute) { startMinute = it } }) { Text("Started  " + formatMinute(startMinute)) }
-                    if (target.endMs != null) {
-                        OutlinedButton(onClick = { pick(endMinute) { endMinute = it } }) { Text("Ended  " + formatMinute(endMinute)) }
-                    }
-                }
-                if (target.canChangeCategory) {
-                    MonoLabel("Category")
-                    Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(selected = activityId.isEmpty(), onClick = { activityId = "" }, label = { Text("As recorded") })
-                        types.filter { !it.archived }.forEach { t ->
-                            FilterChip(selected = activityId == t.id, onClick = { activityId = t.id }, label = { Text(t.name) })
-                        }
-                    }
-                }
-                Text(
-                    "The phone's own record is never changed. Your change sits on top of it, and \"Back to as recorded\" removes it.",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                if (target.extraLabel != null && target.onExtra != null) {
-                    TextButton(onClick = { target.onExtra.invoke(); onDismiss() }) { Text(target.extraLabel) }
-                }
-                if (target.openLabel != null && target.onOpen != null) {
-                    TextButton(onClick = { target.onOpen.invoke(); onDismiss() }) { Text(target.openLabel) }
-                }
-                if (target.edited) {
-                    TextButton(onClick = { onReset(); onDismiss() }) { Text("Back to as recorded") }
-                }
-                TextButton(onClick = { onHide(); onDismiss() }) { Text("Hide from the Timeline") }
+    val paper = LocalPaper.current
+    PaperDialog(
+        title = target.title,
+        onDismiss = onDismiss,
+        confirmText = "Save",
+        onConfirm = {
+            val end = target.endMs
+            if (end == null) {
+                onSave(target.baseDayStartMs + startMinute * 60_000L, null, activityId)
+            } else {
+                val (s, e) = TimelineEdits.pickTimes(target.baseDayStartMs, startMinute, endMinute)
+                // Untouched times stay exactly as they were (including a few seconds the clock does not show).
+                val same = TimelineEdits.minuteOf(target.startMs, target.baseDayStartMs) == startMinute &&
+                    TimelineEdits.minuteOf(end, target.baseDayStartMs) == endMinute
+                onSave(if (same) target.startMs else s, if (same) end else e, activityId)
             }
+            onDismiss()
         },
-        confirmButton = {
-            TextButton(onClick = {
-                val end = target.endMs
-                if (end == null) {
-                    onSave(target.baseDayStartMs + startMinute * 60_000L, null, activityId)
-                } else {
-                    val (s, e) = TimelineEdits.pickTimes(target.baseDayStartMs, startMinute, endMinute)
-                    // Untouched times stay exactly as they were (including a few seconds the clock does not show).
-                    val same = TimelineEdits.minuteOf(target.startMs, target.baseDayStartMs) == startMinute &&
-                        TimelineEdits.minuteOf(end, target.baseDayStartMs) == endMinute
-                    onSave(if (same) target.startMs else s, if (same) end else e, activityId)
+    ) {
+        Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PaperButton("Started  " + formatMinute(startMinute), { pick(startMinute) { startMinute = it } }, style = PaperButtonStyle.Ghost, small = true)
+                if (target.endMs != null) {
+                    PaperButton("Ended  " + formatMinute(endMinute), { pick(endMinute) { endMinute = it } }, style = PaperButtonStyle.Ghost, small = true)
                 }
-                onDismiss()
-            }) { Text("Save") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-    )
+            }
+            if (target.canChangeCategory) {
+                Text("Category", fontSize = 12.sp, color = paper.ink2)
+                Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    PaperPill("As recorded", activityId.isEmpty(), { activityId = "" })
+                    types.filter { !it.archived }.forEach { t ->
+                        PaperPill(t.name, activityId == t.id, { activityId = t.id }, dot = t.displayColor())
+                    }
+                }
+            }
+            Text(
+                "The phone's own record is never changed. Your change sits on top of it, and \"Back to as recorded\" removes it.",
+                fontSize = 11.5.sp,
+                color = paper.ink2,
+            )
+            if (target.extraLabel != null && target.onExtra != null) {
+                PaperButton(target.extraLabel, { target.onExtra.invoke(); onDismiss() }, style = PaperButtonStyle.Ghost, small = true)
+            }
+            if (target.openLabel != null && target.onOpen != null) {
+                PaperButton(target.openLabel, { target.onOpen.invoke(); onDismiss() }, style = PaperButtonStyle.Ghost, small = true)
+            }
+            if (target.edited) {
+                PaperButton("Back to as recorded", { onReset(); onDismiss() }, style = PaperButtonStyle.Ghost, small = true)
+            }
+            PaperButton("Hide from the Timeline", { onHide(); onDismiss() }, style = PaperButtonStyle.Ghost, small = true)
+        }
+    }
 }

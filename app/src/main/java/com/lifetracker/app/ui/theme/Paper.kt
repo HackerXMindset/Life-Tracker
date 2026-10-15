@@ -17,7 +17,12 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -286,4 +291,108 @@ fun TallyBar(
         }
         for (i in 0 until count) line(i, if (i < done) filledColor else p.line)
     }
+}
+
+/** The floating Log button: ink-black, hand-drawn corners, a hard pencil shadow. */
+@Composable
+fun PaperFab(text: String, @DrawableRes icon: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val p = LocalPaper.current
+    val shape = Wobble.Fab
+    Row(
+        modifier = modifier
+            .height(52.dp)
+            .pencilShadow(shape, p.pencil, 3.dp, 4.dp)
+            .background(p.ink, shape)
+            .clip(shape)
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(start = 16.dp, end = 20.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(painterResource(icon), contentDescription = null, tint = p.bg, modifier = Modifier.size(22.dp))
+        Text(text, color = p.bg, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1)
+    }
+}
+
+/** A sheet that slides up from the bottom: lighter paper, a hand-drawn top edge and a pencil grip. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PaperSheet(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+    val p = LocalPaper.current
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        shape = Wobble.Sheet,
+        containerColor = p.surface,
+        contentColor = p.ink,
+        dragHandle = {
+            Box(Modifier.padding(vertical = 10.dp).size(width = 44.dp, height = 5.dp).background(p.line, CircleShape))
+        },
+        content = content,
+    )
+}
+
+/** A small label above a text box with a pen outline. */
+@Composable
+fun PaperField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    placeholder: String? = null,
+    singleLine: Boolean = false,
+    minLines: Int = 1,
+) {
+    val p = LocalPaper.current
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(label, fontSize = 12.sp, color = p.ink2)
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = if (placeholder != null) {
+                { Text(placeholder, color = p.ink2.copy(alpha = 0.6f)) }
+            } else {
+                null
+            },
+            singleLine = singleLine,
+            minLines = minLines,
+            shape = Wobble.Small,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = p.ink,
+                unfocusedBorderColor = p.pen,
+                focusedTextColor = p.ink,
+                unfocusedTextColor = p.ink,
+                cursorColor = p.ink,
+                focusedContainerColor = p.surface,
+                unfocusedContainerColor = p.surface,
+            ),
+        )
+    }
+}
+
+/** A pop-up question or form on a sheet of paper, with paper buttons. [confirmText] null leaves out the main button. */
+@Composable
+fun PaperDialog(
+    title: String,
+    onDismiss: () -> Unit,
+    confirmText: String? = null,
+    onConfirm: (() -> Unit)? = null,
+    dismissText: String = "Cancel",
+    confirmStyle: PaperButtonStyle = PaperButtonStyle.Dark,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val p = LocalPaper.current
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = Wobble.Card,
+        containerColor = p.surface,
+        titleContentColor = p.ink,
+        textContentColor = p.ink,
+        title = { Text(title, fontWeight = FontWeight.Bold, fontSize = 18.sp, maxLines = 2) },
+        text = { Column(verticalArrangement = Arrangement.spacedBy(10.dp), content = content) },
+        confirmButton = {
+            if (confirmText != null && onConfirm != null) PaperButton(confirmText, onConfirm, style = confirmStyle, small = true)
+        },
+        dismissButton = { PaperButton(dismissText, onDismiss, style = PaperButtonStyle.Ghost, small = true) },
+    )
 }

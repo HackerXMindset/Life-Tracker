@@ -44,6 +44,8 @@ import androidx.compose.runtime.setValue
 import com.lifetracker.app.ui.theme.LocalPaper
 import com.lifetracker.app.ui.theme.PaperButton
 import com.lifetracker.app.ui.theme.PaperButtonStyle
+import com.lifetracker.app.ui.theme.PaperDialog
+import com.lifetracker.app.ui.theme.PaperFab
 import com.lifetracker.app.ui.theme.PaperSegmented
 import com.lifetracker.app.ui.theme.Wobble
 import androidx.compose.ui.Alignment
@@ -267,8 +269,6 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
         }
     }
     val flatAll = DaySegments.flatten(loggedSegs + collectedSegs, dayStartMs, dayEndMs)
-    val flatLogged = DaySegments.flatten(loggedSegs, dayStartMs, dayEndMs)
-    val flatCollected = DaySegments.flatten(collectedSegs, dayStartMs, dayEndMs)
     val nowMarker = if (nowMs in dayStartMs until dayEndMs) nowMs else null
     var pie by rememberSaveable { mutableStateOf(false) }
     var pick by remember(date) { mutableStateOf<StripSeg?>(null) }
@@ -381,7 +381,7 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
                 )
             }
             if (pie) {
-                item(key = "pie") { DayPie(flatLogged, flatCollected, flatAll, dayStartMs, nowMarker) }
+                item(key = "pie") { DayPieView(whatSegs, whereSegs, if (showTrips) tripsEff else emptyList()) }
             } else {
                 item(key = "whole-day-heading") { PaperSection("The whole day", "24 hours, left to right") }
                 item(key = "whole-day") {
@@ -441,13 +441,13 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
             }
         }
 
-        ExtendedFloatingActionButton(
+        PaperFab(
+            text = "Log",
+            icon = R.drawable.ic_add,
             onClick = { showLog = true },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(16.dp),
-            icon = { Icon(painterResource(R.drawable.ic_add), contentDescription = null) },
-            text = { Text("Log") },
         )
     }
 
@@ -534,30 +534,29 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
 
     if (showHidden) {
         val hidden = edits.values.filter { it.hidden && it.startMs in dayStartMs until dayEndMs }.sortedBy { it.startMs }
-        AlertDialog(
-            onDismissRequest = { showHidden = false },
-            title = { Text("Hidden by you") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (hidden.isEmpty()) Text("Nothing is hidden on this day.")
-                    hidden.forEach { e ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                formatMinute(TimelineEdits.minuteOf(e.startMs, dayStartMs)) + "  " + e.label.ifEmpty { e.kind },
-                                modifier = Modifier.weight(1f),
-                                fontSize = 14.sp,
-                            )
-                            TextButton(onClick = { vm.saveEdit(e.copy(hidden = false, updatedMs = System.currentTimeMillis())) }) { Text("Bring back") }
-                        }
-                    }
+        PaperDialog(title = "Hidden by you", onDismiss = { showHidden = false }, dismissText = "Close") {
+            if (hidden.isEmpty()) Text("Nothing is hidden on this day.", color = LocalPaper.current.ink2)
+            hidden.forEach { e ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        formatMinute(TimelineEdits.minuteOf(e.startMs, dayStartMs)) + "  " + e.label.ifEmpty { e.kind },
+                        modifier = Modifier.weight(1f),
+                        fontSize = 13.sp,
+                        color = LocalPaper.current.ink,
+                    )
+                    PaperButton(
+                        "Bring back",
+                        { vm.saveEdit(e.copy(hidden = false, updatedMs = System.currentTimeMillis())) },
+                        style = PaperButtonStyle.Ghost,
+                        small = true,
+                    )
                 }
-            },
-            confirmButton = { TextButton(onClick = { showHidden = false }) { Text("Close") } },
-        )
+            }
+        }
     }
 
     editApp?.let { app ->
@@ -571,20 +570,19 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
     }
 
     toDelete?.let { entry ->
-        AlertDialog(
-            onDismissRequest = { toDelete = null },
-            title = { Text("Delete this entry?") },
-            text = { Text(entry.title) },
-            confirmButton = {
-                TextButton(onClick = {
-                    vm.delete(entry)
-                    toDelete = null
-                }) { Text("Delete") }
+        PaperDialog(
+            title = "Delete this entry?",
+            onDismiss = { toDelete = null },
+            confirmText = "Delete",
+            confirmStyle = PaperButtonStyle.Danger,
+            dismissText = "Keep",
+            onConfirm = {
+                vm.delete(entry)
+                toDelete = null
             },
-            dismissButton = {
-                TextButton(onClick = { toDelete = null }) { Text("Keep") }
-            },
-        )
+        ) {
+            Text(entry.title, color = LocalPaper.current.ink)
+        }
     }
 }
 
