@@ -1,7 +1,8 @@
 package com.lifetracker.app.ui
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -9,22 +10,25 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifetracker.app.ui.theme.AppTheme
+import com.lifetracker.app.ui.theme.LocalPaper
+import com.lifetracker.app.ui.theme.PaperCard
 import com.lifetracker.app.ui.theme.PaperSegmented
 import com.lifetracker.app.ui.theme.ThemeMode
+import com.lifetracker.app.ui.theme.Wobble
 import com.lifetracker.app.data.CallsCollector
 import com.lifetracker.app.data.ChargeSettings
 import com.lifetracker.app.data.HabitSource
@@ -38,10 +42,12 @@ enum class Page { Phone, Steps, Places, Calls, Charging, Activities, Habits, Bac
 /**
  * The Settings tab: one place for every permission and switch. Each row opens the settings half of that part of the app
  * (what to allow, what to show on the Timeline, how closely to watch) and says whether it is switched on.
+ * Paper look: a big title, orange-swipe headings, and one paper card per row with its state as a small chip.
  */
 @Composable
 fun SettingsScreen(onOpen: (Page) -> Unit) {
     val context = LocalContext.current
+    val paper = LocalPaper.current
     val places = PlacesSettings(context)
     val usageOn = UsageCollector.hasAccess(context)
     val callsOn = CallsCollector.hasAccess(context)
@@ -52,15 +58,25 @@ fun SettingsScreen(onOpen: (Page) -> Unit) {
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item { ScreenHeader(label = "Settings", badge = "On this phone", title = "Settings") }
         item {
-            Text(
-                text = "Allow what the phone can record, choose what shows on the Timeline, and look after your data. Everything stays on this phone.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = "Settings",
+                    fontSize = 38.sp,
+                    lineHeight = 40.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = paper.ink,
+                    maxLines = 1,
+                )
+                Text(
+                    text = "Allow what the phone can record and look after your data. Everything stays on this phone.",
+                    fontSize = 12.sp,
+                    color = paper.ink2,
+                )
+            }
         }
 
-        item { MonoLabel("Look") }
+        item { PaperSection("Look") }
         item {
             val mode = AppTheme.mode
             PaperSegmented(
@@ -70,7 +86,7 @@ fun SettingsScreen(onOpen: (Page) -> Unit) {
             )
         }
 
-        item { MonoLabel("What the phone records") }
+        item { PaperSection("What the phone records") }
         item {
             SettingsRow(
                 title = "Phone usage",
@@ -117,7 +133,7 @@ fun SettingsScreen(onOpen: (Page) -> Unit) {
             )
         }
 
-        item { MonoLabel("Your data") }
+        item { PaperSection("Your data") }
         item {
             val fromStreak = HabitsSettings(context).source == HabitSource.Streak
             SettingsRow(
@@ -149,35 +165,49 @@ fun SettingsScreen(onOpen: (Page) -> Unit) {
     }
 }
 
+/** One paper card: the name and a quiet line on the left, the real state as a small chip, and a chevron. */
 @Composable
 private fun SettingsRow(title: String, status: String?, good: Boolean, hint: String, onClick: () -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-    ) {
-        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = title,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                if (status != null) {
-                    Text(
-                        text = status,
-                        fontSize = 12.sp,
-                        color = if (good) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error,
-                    )
-                }
+    val paper = LocalPaper.current
+    PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false, onClick = onClick) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(text = title, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = paper.ink)
+                Text(text = hint, fontSize = 12.sp, color = paper.ink2)
             }
-            Text(text = hint, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (status != null) StateChip(status, good)
+            Chevron(paper.ink2)
         }
+    }
+}
+
+/** "Allowed" in green, "Not allowed yet" in red: the same words as before, now as a small paper chip. */
+@Composable
+private fun StateChip(text: String, good: Boolean) {
+    val paper = LocalPaper.current
+    val color = if (good) paper.accent else paper.bad
+    Text(
+        text = text,
+        modifier = Modifier
+            .background(color.copy(alpha = 0.14f), Wobble.Pill)
+            .border(1.25.dp, color.copy(alpha = 0.6f), Wobble.Pill)
+            .padding(horizontal = 9.dp, vertical = 3.dp),
+        fontSize = 11.sp,
+        fontWeight = FontWeight.Bold,
+        color = color,
+        maxLines = 1,
+    )
+}
+
+@Composable
+private fun Chevron(color: Color) {
+    Canvas(modifier = Modifier.size(width = 8.dp, height = 14.dp)) {
+        val w = 1.75.dp.toPx()
+        drawLine(color, Offset(1.dp.toPx(), 1.dp.toPx()), Offset(size.width - 1.dp.toPx(), size.height / 2), w, StrokeCap.Round)
+        drawLine(color, Offset(size.width - 1.dp.toPx(), size.height / 2), Offset(1.dp.toPx(), size.height - 1.dp.toPx()), w, StrokeCap.Round)
     }
 }

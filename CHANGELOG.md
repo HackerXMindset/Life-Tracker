@@ -2,6 +2,19 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📜 Settings in the paper style (part 7a, the Settings tab)
+
+Settings comes first in the paper redesign, at your request. This step is the Settings tab itself; the pages it opens follow.
+
+### ✨ New features
+
+- **Paper Settings tab** — a big "Settings" title, orange-swipe headings, and one paper card per row with its name, a quiet line, a chevron and the real state as a small chip (green for Allowed, Watching, Recording; red for Not allowed yet or Switched off).
+- The Look choice (System / Light / Dark) stays on this tab as a paper switch.
+
+### ⚠️ Good to know
+
+- The pages the rows open keep their old look until P7b to P7g. Nothing about what they do has changed.
+
 ## 📜 Habits in the paper style (part 3 of 7)
 
 The Habits tab, the habit page and all its pop-ups now have the paper look. The layout is exactly the one you already have; only the skin changed.
