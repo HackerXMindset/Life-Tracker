@@ -2,6 +2,16 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📜 Settings in the paper style (part 7d, Places and trips)
+
+### ✨ New features
+
+- **Places and trips** — your places, the spots waiting to be named, the readings box and the export/import box are paper cards. The switches, choices (how closely to watch, how often to record) and buttons use the paper look from part 7b.
+
+### ⚠️ Good to know
+
+- Only the look changed. Nothing is deleted or recorded differently.
+
 ## 📜 Settings in the paper style (part 7c, Phone usage, Steps and sleep)
 
 ### ✨ New features

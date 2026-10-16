@@ -22,7 +22,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import com.lifetracker.app.ui.theme.PaperCard
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -249,14 +249,16 @@ fun PlacesScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PlacesViewModel
                 }
             } else {
                 items(data.rows, key = { it.place.id }) { row ->
-                    Column(
-                        modifier = Modifier.fillMaxWidth().clickable { editing = row.place },
-                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    PaperCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        padding = 12.dp,
+                        shadow = false,
+                        onClick = { editing = row.place },
                     ) {
                         Text(
                             row.place.name + if (row.place.archived) "  (not watched)" else "",
                             fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold,
+                            fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onBackground,
                         )
                         Text(
@@ -548,14 +550,9 @@ private fun PlaceDialog(
 
 @Composable
 private fun PlacesCard(title: String, text: String, actions: @Composable () -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-    ) {
-        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(title, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+    PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
             Text(text, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             actions()
         }
