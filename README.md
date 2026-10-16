@@ -1,5 +1,7 @@
 # Life Tracker
 
+<img alt="Downloads" src="https://img.shields.io/github/downloads/HackerXMindset/Life-Tracker/total?style=flat&logo=github&logoColor=white&label=Downloads&color=7C3AED" />
+
 **One private app for your whole day: what you did, what you ate, which habits you kept, where your money went, and what it all adds up to.**
 
 Life Tracker is an Android app built for a single person: its owner. It replaces a pile of separate apps with one place, and it keeps every byte of your data on your own phone. There is no account, no server and no subscription.
