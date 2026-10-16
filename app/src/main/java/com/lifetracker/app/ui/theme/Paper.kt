@@ -396,3 +396,20 @@ fun PaperDialog(
         dismissButton = { PaperButton(dismissText, onDismiss, style = PaperButtonStyle.Ghost, small = true) },
     )
 }
+
+/** A small orange-pencil label that says where something comes from ("Shared with Streak"). */
+@Composable
+fun PaperChip(text: String, modifier: Modifier = Modifier) {
+    val p = LocalPaper.current
+    Text(
+        text = text,
+        modifier = modifier
+            .background(p.sun.copy(alpha = 0.22f), Wobble.Pill)
+            .border(1.25.dp, p.sun, Wobble.Pill)
+            .padding(horizontal = 10.dp, vertical = 3.dp),
+        fontSize = 11.sp,
+        fontWeight = FontWeight.Bold,
+        color = p.ink,
+        maxLines = 1,
+    )
+}
