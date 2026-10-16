@@ -17,6 +17,13 @@ The Habits tab, the habit page and all its pop-ups now have the paper look. The 
 - Your own Habits layout was kept on purpose; the demo's Habits layout was not copied.
 - Nothing about ticking, notes, relapses or the Streak sending changed.
 
+## 🧹 Timeline: the whole-day strip is gone
+
+### 🛠 Changed
+
+- **"The whole day" card removed** — the 24-hour Where / What strip, its hour axis and its readout are taken out of the Timeline, as you asked. The activity pills and the "In order" list stay.
+- Section hints (like "tap a row to edit it") no longer squeeze onto two lines.
+
 ## 📜 Timeline in the paper style (part 2 of 7, the pie and the pop-ups)
 
 The Timeline is finished: the Pie, the Log button, the Log sheet and the pop-ups all have the paper look.

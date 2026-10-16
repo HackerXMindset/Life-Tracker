@@ -271,7 +271,6 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
     val flatAll = DaySegments.flatten(loggedSegs + collectedSegs, dayStartMs, dayEndMs)
     val nowMarker = if (nowMs in dayStartMs until dayEndMs) nowMs else null
     var pie by rememberSaveable { mutableStateOf(false) }
-    var pick by remember(date) { mutableStateOf<StripSeg?>(null) }
 
     val rows = DayLayout.build(items, visitsEff, tripsEff, placeNames, dayStartMs, dayEndMs, nowMs, showPlaces, showTrips)
 
@@ -383,10 +382,6 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
             if (pie) {
                 item(key = "pie") { DayPieView(whatSegs, whereSegs, if (showTrips) tripsEff else emptyList()) }
             } else {
-                item(key = "whole-day-heading") { PaperSection("The whole day", "24 hours, left to right") }
-                item(key = "whole-day") {
-                    WholeDayCard(whereSegs, whatSegs, dayStartMs, dayEndMs, nowMarker, pick) { pick = it }
-                }
                 item(key = "activity-pills") { ActivityPills(DaySegments.byLabel(flatAll)) }
                 if (rows.isNotEmpty()) item(key = "in-order-heading") { PaperSection("In order", "tap a row to edit it") }
             }
