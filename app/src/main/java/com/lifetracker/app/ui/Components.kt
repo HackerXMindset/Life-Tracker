@@ -1,20 +1,16 @@
 package com.lifetracker.app.ui
 
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -29,10 +25,14 @@ fun MonoLabel(text: String, modifier: Modifier = Modifier) {
         modifier = modifier,
         fontSize = 11.sp,
         letterSpacing = 1.2.sp,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = LocalPaper.current.ink2,
     )
 }
 
+/**
+ * The top of a page: a big title with a quiet line under it (where you are, and that the data stays on the phone).
+ * [trailing] is for a small control at the right of the title.
+ */
 @Composable
 fun ScreenHeader(
     label: String,
@@ -40,35 +40,28 @@ fun ScreenHeader(
     title: String,
     trailing: (@Composable () -> Unit)? = null,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    val paper = LocalPaper.current
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            MonoLabel(label)
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                Surface(
-                    shape = Wobble.Pill,
-                    color = Color.Transparent,
-                    border = BorderStroke(1.25.dp, LocalPaper.current.pen),
-                ) {
-                    Text(
-                        text = badge,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                trailing?.invoke()
-            }
+            Text(
+                text = title,
+                modifier = Modifier.weight(1f),
+                fontSize = 38.sp,
+                lineHeight = 40.sp,
+                fontWeight = FontWeight.Bold,
+                color = paper.ink,
+                maxLines = 2,
+            )
+            trailing?.invoke()
         }
         Text(
-            text = title,
-            fontSize = 36.sp,
-            lineHeight = 36.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground,
+            text = if (label.equals(title, ignoreCase = true)) badge else "$label  ·  $badge",
+            fontSize = 12.sp,
+            color = paper.ink2,
         )
     }
 }
@@ -79,21 +72,20 @@ fun ScreenHeader(
  */
 enum class Part { Data, Settings }
 
-/** A small card telling you a source still needs switching on in Settings. */
+/** A small worn-paper note telling you a source still needs switching on in Settings. */
 @Composable
 fun SetupNote(text: String) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = Wobble.Small,
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.25.dp, LocalPaper.current.line),
-    ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(14.dp),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
+    val paper = LocalPaper.current
+    Text(
+        text = text,
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(paper.surface2, Wobble.Small)
+            .border(1.25.dp, paper.line, Wobble.Small)
+            .padding(14.dp),
+        fontSize = 13.sp,
+        color = paper.ink2,
+    )
 }
 
 /** A label with a switch. The label wraps onto more lines instead of pushing the switch off the screen. */
@@ -104,7 +96,7 @@ fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.onBackground)
+        Text(label, modifier = Modifier.weight(1f), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = LocalPaper.current.ink)
         PaperToggle(checked = checked, onChange = onChange)
     }
 }

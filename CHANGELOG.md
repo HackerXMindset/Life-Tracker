@@ -2,6 +2,23 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📜 Settings in the paper style (part 7b, shared parts)
+
+Every Settings page now uses the same paper buttons, switches, pills, pop-ups and text boxes, so they all start to look alike before each page is tidied.
+
+### ✨ New features
+
+- **Paper buttons** — ink-black for the main action, outlined for the rest, with hand-drawn corners.
+- **Paper switches and pills** — the pen-drawn on/off switch and the pick-one pills (for example "1 min / 2 min / 5 min").
+- **Paper pop-ups and text boxes** — on a sheet of paper with a pen outline.
+- **New page header** — a big title with a quiet line under it, and orange-swipe section headings, on Phone usage, Steps and sleep, Places and trips, Calls, Charging, Activities, Habits and Backup and import.
+
+### ⚠️ Good to know
+
+- Nothing about what the buttons and switches do has changed.
+- The Stats pages that share these pages, and the Food and Money titles, get the new header too. The rest of those tabs keeps its old look until its own part.
+- Cards and lists inside the Settings pages are still the old look; P7c to P7g do those one page at a time.
+
 ## 📜 Settings in the paper style (part 7a, the Settings tab)
 
 Settings comes first in the paper redesign, at your request. This step is the Settings tab itself; the pages it opens follow.

@@ -14,13 +14,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -84,7 +81,7 @@ fun HabitsSettingsScreen(onBack: () -> Unit) {
     ) {
         item { TextButton(onClick = onBack) { Text("Back") } }
         item { ScreenHeader(label = "Settings", badge = "On this phone", title = "Habits") }
-        item { MonoLabel("Where your habits live") }
+        item { PaperSection("Where your habits live") }
         item {
             SourceCard(
                 selected = source == HabitSource.Own,
@@ -118,7 +115,7 @@ fun HabitsSettingsScreen(onBack: () -> Unit) {
         if (busy) item { SetupNote("Importing from Streak...") }
         message?.let { item { SetupNote(it) } }
 
-        item { MonoLabel("Send your changes to Streak") }
+        item { PaperSection("Send your changes to Streak") }
         item {
             SetupNote(
                 "Streak can take in changes from a shared folder. This app writes a Streak backup file there holding only " +

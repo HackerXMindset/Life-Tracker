@@ -19,13 +19,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
@@ -153,7 +149,7 @@ fun ChargingScreen(onBack: () -> Unit, part: Part = Part.Data, vm: ChargingViewM
                     )
                 }
             } else {
-                item { MonoLabel("Sessions · tap to say what you used") }
+                item { PaperSection("Sessions · tap to say what you used") }
                 items(rows.take(100), key = { it.session.id }) { row ->
                     val s = row.session
                     Column(
@@ -186,7 +182,7 @@ fun ChargingScreen(onBack: () -> Unit, part: Part = Part.Data, vm: ChargingViewM
 
         }
         if (part == Part.Settings) {
-            item { MonoLabel("On the Timeline") }
+            item { PaperSection("On the Timeline") }
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -197,7 +193,7 @@ fun ChargingScreen(onBack: () -> Unit, part: Part = Part.Data, vm: ChargingViewM
                     Switch(checked = showOnTimeline, onCheckedChange = vm::setShowOnTimeline)
                 }
             }
-            item { MonoLabel("How it works") }
+            item { PaperSection("How it works") }
             item {
                 Text(
                     "Android cannot tell a power bank from a wall charger, so you tell the app once from the banner and it learns: " +

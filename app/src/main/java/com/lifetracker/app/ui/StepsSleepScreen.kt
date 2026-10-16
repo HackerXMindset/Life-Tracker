@@ -20,14 +20,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
@@ -245,7 +240,7 @@ fun StepsSleepScreen(onBack: () -> Unit, part: Part = Part.Data, vm: StepsSleepV
                 }
             }
 
-            item { MonoLabel("Sleep · tap a night to fix it") }
+            item { PaperSection("Sleep · tap a night to fix it") }
             if (nights.none { it.source != SleepStats.SKIPPED }) {
                 item {
                     Text(
@@ -286,7 +281,7 @@ fun StepsSleepScreen(onBack: () -> Unit, part: Part = Part.Data, vm: StepsSleepV
             }
             item { OutlinedButton(onClick = ::addNight) { Text("Add or fix a night") } }
 
-            item { MonoLabel("Steps by day") }
+            item { PaperSection("Steps by day") }
             if (days.none { it.steps > 0 }) {
                 item {
                     Text(
@@ -308,7 +303,7 @@ fun StepsSleepScreen(onBack: () -> Unit, part: Part = Part.Data, vm: StepsSleepV
 
         }
         if (part == Part.Settings) {
-            item { MonoLabel("Settings") }
+            item { PaperSection("Settings") }
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
