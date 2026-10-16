@@ -144,7 +144,6 @@ Each step is small enough to build, install and try before the next begins. The 
  DONE         Paper P3b New look, Habits: the habit cards
  DONE         Paper P3c New look, Habits: habit page and pop-ups
  NEXT  ──►    Paper P4 New look, Food
-              Paper P4 New look: Food
               Paper P5 New look: Money
               Paper P6 New look: Stats
               Paper P7 New look: Settings and every other page
