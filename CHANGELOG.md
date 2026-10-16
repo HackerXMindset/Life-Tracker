@@ -2,6 +2,16 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📜 Settings in the paper style (part 7e, Calls and Charging)
+
+### ✨ New features
+
+- **Calls and Charging** — the "Allow call log access" box and the charging info boxes ("Allow notifications", how it works) are paper cards. Their switches, minute choices and buttons use the paper look from part 7b.
+
+### ⚠️ Good to know
+
+- Only the look changed. The lists of calls and charging sessions are numbers shown under Stats; they change with Stats later.
+
 ## 📜 Settings in the paper style (part 7d, Places and trips)
 
 ### ✨ New features
