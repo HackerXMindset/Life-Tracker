@@ -283,7 +283,7 @@ Not part of Polish 4, and not built: **Step 13e** (fixing trips and visits by ha
   - **P7d Places and trips. Built.** The biggest page: permissions, your places and Add a place (sheet), how closely to watch, keeping the app awake, status, GPX and CSV files.
   - **P7e Calls and Charging. Built.** Call log access, the shortest call to show (1, 2, 5, 10 minutes), copy older calls; charging record, the banner, notifications.
   - **P7f Activities and apps. Built.** The activities list, the activity editor and the app editor as paper sheets with labelled boxes and pills; hide / show stays.
-  - **P7g Habits, Backup and import.** The Habits choice (own data or Streak), Send to Streak, the folder pickers, backups and restore (its confirm pop-ups), importing Streak and OpenNutriTracker.
+  - **P7g Habits, Backup and import. Built.** The Habits choice (own data or Streak), Send to Streak, the folder pickers, backups and restore (its confirm pop-ups), importing Streak and OpenNutriTracker.
   - **How each part goes:** README first, then code, then CHANGELOG, then the build check, then one PR. After each part you send screenshots and I fix what differs. Nothing is built until you say go.
 
 **Step 14: Life events, month and year views.** Mark moments that changed your life, then look back by month or year to see what you did and how much you studied around each one.

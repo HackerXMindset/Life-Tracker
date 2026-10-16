@@ -2,6 +2,19 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📜 Settings in the paper style (part 7g, Habits and Backup and import)
+
+Settings is now finished in the paper style.
+
+### ✨ New features
+
+- **Habits settings** — the two choices ("This app's own data" and "Import from Streak") are paper cards with a hand-drawn round tick and an "In use" label on the chosen one; the "Send automatically" box is a paper card.
+- **Backup and import** — Backups, Streak and OpenNutriTracker are paper cards; the restore pop-ups use the paper look.
+
+### ⚠️ Good to know
+
+- Only the look changed. Backups, restores and imports work as before, and importing twice never doubles anything.
+
 ## 📜 Settings in the paper style (part 7f, Activities and apps)
 
 ### ✨ New features
