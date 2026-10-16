@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -23,9 +24,12 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,6 +49,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -99,9 +104,29 @@ fun PaperButton(
     enabled: Boolean = true,
     @DrawableRes icon: Int? = null,
 ) {
+    PaperButtonBox(onClick, modifier, style, small, enabled) {
+        val tint = LocalContentColor.current
+        if (icon != null) Icon(painterResource(icon), contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
+        Text(text, color = tint, fontWeight = FontWeight.Bold, fontSize = if (small) 14.sp else 15.sp, maxLines = 1)
+    }
+}
+
+/**
+ * The button itself, with room for any content (the shared Settings pages use it through the Button, OutlinedButton and
+ * TextButton in PaperCompat.kt). Text inside takes the button's ink colour and a bold face unless it says otherwise.
+ */
+@Composable
+fun PaperButtonBox(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    style: PaperButtonStyle = PaperButtonStyle.Dark,
+    small: Boolean = false,
+    enabled: Boolean = true,
+    content: @Composable RowScope.() -> Unit,
+) {
     val p = LocalPaper.current
     val shape = Wobble.Small
-    val (fill, content, edge) = when (style) {
+    val (fill, ink, edge) = when (style) {
         PaperButtonStyle.Dark -> Triple(p.ink, p.bg, p.ink)
         PaperButtonStyle.Ghost -> Triple(p.surface, p.ink, p.pen)
         PaperButtonStyle.Danger -> Triple(p.bad, if (p.dark) p.bg else Color.White, p.bad)
@@ -118,9 +143,12 @@ fun PaperButton(
         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        val tint = if (enabled) content else content.copy(alpha = 0.45f)
-        if (icon != null) Icon(painterResource(icon), contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
-        Text(text, color = tint, fontWeight = FontWeight.Bold, fontSize = if (small) 14.sp else 15.sp, maxLines = 1)
+        val tint = if (enabled) ink else ink.copy(alpha = 0.45f)
+        CompositionLocalProvider(LocalContentColor provides tint) {
+            ProvideTextStyle(TextStyle(fontWeight = FontWeight.Bold, fontSize = if (small) 14.sp else 15.sp)) {
+                content()
+            }
+        }
     }
 }
 
@@ -132,6 +160,20 @@ fun PaperPill(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     dot: Color? = null,
+) {
+    PaperPillBox(selected, onClick, modifier) {
+        if (dot != null) Box(Modifier.size(9.dp).background(dot, CircleShape))
+        Text(text, color = LocalContentColor.current, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1)
+    }
+}
+
+/** The pill itself, with room for any content. Picked ones turn ink-black and their text turns paper-coloured. */
+@Composable
+fun PaperPillBox(
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable RowScope.() -> Unit,
 ) {
     val p = LocalPaper.current
     val shape = Wobble.Pill
@@ -147,8 +189,11 @@ fun PaperPill(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (dot != null) Box(Modifier.size(9.dp).background(dot, CircleShape))
-        Text(text, color = ink, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1)
+        CompositionLocalProvider(LocalContentColor provides ink) {
+            ProvideTextStyle(TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 13.sp)) {
+                content()
+            }
+        }
     }
 }
 

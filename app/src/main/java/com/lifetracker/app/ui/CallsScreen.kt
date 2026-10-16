@@ -14,14 +14,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
+import com.lifetracker.app.ui.theme.PaperCard
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -97,17 +92,12 @@ fun CallsScreen(onBack: () -> Unit, part: Part = Part.Data, vm: CallsViewModel =
 
         if (!hasAccess) {
             item {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                ) {
-                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text(
                             "Allow call log access",
                             fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold,
+                            fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
@@ -164,7 +154,7 @@ fun CallsScreen(onBack: () -> Unit, part: Part = Part.Data, vm: CallsViewModel =
                     )
                 }
             } else {
-                item { MonoLabel("People") }
+                item { PaperSection("People") }
                 items(people.take(15), key = { "p" + it.key }) { person ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -192,7 +182,7 @@ fun CallsScreen(onBack: () -> Unit, part: Part = Part.Data, vm: CallsViewModel =
                     }
                 }
 
-                item { MonoLabel("Latest calls") }
+                item { PaperSection("Latest calls") }
                 items(calls.sortedByDescending { it.startMs }.take(30), key = { "c" + it.id }) { call ->
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
@@ -211,7 +201,7 @@ fun CallsScreen(onBack: () -> Unit, part: Part = Part.Data, vm: CallsViewModel =
 
         }
         if (part == Part.Settings) {
-            item { MonoLabel("Older calls") }
+            item { PaperSection("Older calls") }
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
@@ -228,7 +218,7 @@ fun CallsScreen(onBack: () -> Unit, part: Part = Part.Data, vm: CallsViewModel =
                 }
             }
 
-            item { MonoLabel("On the Timeline") }
+            item { PaperSection("On the Timeline") }
             item { SwitchRow("Show calls on the Timeline", showOnTimeline, vm::setShowOnTimeline) }
             item {
                 Text(

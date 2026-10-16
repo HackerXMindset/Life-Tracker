@@ -20,14 +20,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
+import com.lifetracker.app.ui.theme.PaperCard
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
@@ -245,7 +240,7 @@ fun StepsSleepScreen(onBack: () -> Unit, part: Part = Part.Data, vm: StepsSleepV
                 }
             }
 
-            item { MonoLabel("Sleep · tap a night to fix it") }
+            item { PaperSection("Sleep · tap a night to fix it") }
             if (nights.none { it.source != SleepStats.SKIPPED }) {
                 item {
                     Text(
@@ -256,13 +251,13 @@ fun StepsSleepScreen(onBack: () -> Unit, part: Part = Part.Data, vm: StepsSleepV
                 }
             }
             items(nights.filter { it.source != SleepStats.SKIPPED }, key = { "n" + it.date }) { night ->
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            editing = NightEdit(LocalDate.parse(night.date), minuteOf(night.startMs), minuteOf(night.endMs), night)
-                        },
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                PaperCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    padding = 12.dp,
+                    shadow = false,
+                    onClick = {
+                        editing = NightEdit(LocalDate.parse(night.date), minuteOf(night.startMs), minuteOf(night.endMs), night)
+                    },
                 ) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text(
@@ -286,7 +281,7 @@ fun StepsSleepScreen(onBack: () -> Unit, part: Part = Part.Data, vm: StepsSleepV
             }
             item { OutlinedButton(onClick = ::addNight) { Text("Add or fix a night") } }
 
-            item { MonoLabel("Steps by day") }
+            item { PaperSection("Steps by day") }
             if (days.none { it.steps > 0 }) {
                 item {
                     Text(
@@ -308,7 +303,7 @@ fun StepsSleepScreen(onBack: () -> Unit, part: Part = Part.Data, vm: StepsSleepV
 
         }
         if (part == Part.Settings) {
-            item { MonoLabel("Settings") }
+            item { PaperSection("Settings") }
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -384,14 +379,9 @@ fun StepsSleepScreen(onBack: () -> Unit, part: Part = Part.Data, vm: StepsSleepV
 
 @Composable
 private fun HealthCard(title: String, text: String, actions: @Composable () -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-    ) {
-        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(title, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+    PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
             Text(text, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             actions()
         }

@@ -2,6 +2,77 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📜 Settings in the paper style (part 7g, Habits and Backup and import)
+
+Settings is now finished in the paper style.
+
+### ✨ New features
+
+- **Habits settings** — the two choices ("This app's own data" and "Import from Streak") are paper cards with a hand-drawn round tick and an "In use" label on the chosen one; the "Send automatically" box is a paper card.
+- **Backup and import** — Backups, Streak and OpenNutriTracker are paper cards; the restore pop-ups use the paper look.
+
+### ⚠️ Good to know
+
+- Only the look changed. Backups, restores and imports work as before, and importing twice never doubles anything.
+
+## 📜 Settings in the paper style (part 7f, Activities and apps)
+
+### ✨ New features
+
+- **Activities** — each activity is a paper card with its colour dot; the New / Edit activity pop-up, the "Counts as" pop-up for an app, the pills and the Save button use the paper look.
+
+### ⚠️ Good to know
+
+- Only the look changed. Hiding an activity or an app still removes nothing you logged.
+
+## 📜 Settings in the paper style (part 7e, Calls and Charging)
+
+### ✨ New features
+
+- **Calls and Charging** — the "Allow call log access" box and the charging info boxes ("Allow notifications", how it works) are paper cards. Their switches, minute choices and buttons use the paper look from part 7b.
+
+### ⚠️ Good to know
+
+- Only the look changed. The lists of calls and charging sessions are numbers shown under Stats; they change with Stats later.
+
+## 📜 Settings in the paper style (part 7d, Places and trips)
+
+### ✨ New features
+
+- **Places and trips** — your places, the spots waiting to be named, the readings box and the export/import box are paper cards. The switches, choices (how closely to watch, how often to record) and buttons use the paper look from part 7b.
+
+### ⚠️ Good to know
+
+- Only the look changed. Nothing is deleted or recorded differently.
+
+## 📜 Settings in the paper style (part 7c, Phone usage, Steps and sleep)
+
+### ✨ New features
+
+- **Phone usage** — each app is a paper card with a tally-stroke bar for its time (coloured by the activity it counts as); the "Allow usage access" box is a paper card.
+- **Steps and sleep** — the Health Connect boxes and each night in the sleep list are paper cards (tap a night to fix it, as before).
+
+### ⚠️ Good to know
+
+- Only the look changed. Switches, choices and buttons do what they did.
+
+## 📜 Settings in the paper style (part 7b, shared parts)
+
+Every Settings page now uses the same paper buttons, switches, pills, pop-ups and text boxes, so they all start to look alike before each page is tidied.
+
+### ✨ New features
+
+- **Paper buttons** — ink-black for the main action, outlined for the rest, with hand-drawn corners.
+- **Paper switches and pills** — the pen-drawn on/off switch and the pick-one pills (for example "1 min / 2 min / 5 min").
+- **Paper pop-ups and text boxes** — on a sheet of paper with a pen outline.
+- **New page header** — a big title with a quiet line under it, and orange-swipe section headings, on Phone usage, Steps and sleep, Places and trips, Calls, Charging, Activities, Habits and Backup and import.
+
+### ⚠️ Good to know
+
+- Nothing about what the buttons and switches do has changed.
+- The Stats pages that share these pages, and the Food and Money titles, get the new header too. The rest of those tabs keeps its old look until its own part.
+- Cards and lists inside the Settings pages are still the old look; P7c to P7g do those one page at a time.
+
 ## 📜 Settings in the paper style (part 7a, the Settings tab)
 
 Settings comes first in the paper redesign, at your request. This step is the Settings tab itself; the pages it opens follow.

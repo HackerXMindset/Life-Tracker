@@ -1,7 +1,6 @@
 package com.lifetracker.app.ui
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -20,15 +19,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
+import com.lifetracker.app.ui.theme.PaperCard
+import com.lifetracker.app.ui.theme.TallyBar
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
@@ -113,13 +107,8 @@ fun PhoneUsageScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PhoneUsageV
 
         if (!hasAccess) {
             item {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                ) {
-                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text(
                             "Allow usage access",
                             fontSize = 16.sp,
@@ -184,49 +173,42 @@ fun PhoneUsageScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PhoneUsageV
             items(summary.perApp, key = { "a" + it.first }) { (pkg, ms) ->
                 val info = byPkg[pkg]
                 val activity = info?.activityId?.takeIf { it.isNotEmpty() }?.let { types.byId(it) }
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(enabled = info != null) { editing = info },
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                PaperCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    padding = 12.dp,
+                    shadow = false,
+                    onClick = if (info != null) ({ editing = info }) else null,
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    info?.label ?: pkg,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                )
+                                Text(
+                                    text = if (activity != null) "Counts as ${activity.name}" else "Not linked to an activity",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                             Text(
-                                info?.label ?: pkg,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.SemiBold,
+                                formatDuration(msToMinutes(ms)),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onBackground,
                             )
-                            Text(
-                                text = if (activity != null) "Counts as ${activity.name}" else "Not linked to an activity",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
                         }
-                        Text(
-                            formatDuration(msToMinutes(ms)),
-                            fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.onBackground,
-                        )
-                    }
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(6.dp)
-                            .clip(RoundedCornerShape(3.dp))
-                            .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)),
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth((ms.toFloat() / biggest).coerceIn(0.02f, 1f))
-                                .height(6.dp)
-                                .clip(RoundedCornerShape(3.dp))
-                                .background(activity?.let { it.displayColor() } ?: MaterialTheme.colorScheme.onSurfaceVariant),
+                        TallyBar(
+                            progress = (ms.toFloat() / biggest).coerceIn(0.02f, 1f),
+                            color = activity?.let { it.displayColor() } ?: MaterialTheme.colorScheme.onSurfaceVariant,
+                            height = 12.dp,
                         )
                     }
                 }
@@ -241,7 +223,7 @@ fun PhoneUsageScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PhoneUsageV
 
         }
         if (part == Part.Settings) {
-            item { MonoLabel("On the Timeline") }
+            item { PaperSection("On the Timeline") }
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -269,7 +251,7 @@ fun PhoneUsageScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PhoneUsageV
             }
 
             if (hidden.isNotEmpty()) {
-                item { MonoLabel("Hidden apps") }
+                item { PaperSection("Hidden apps") }
                 items(hidden, key = { "h" + it.pkg }) { app ->
                     Row(
                         modifier = Modifier.fillMaxWidth().clickable { editing = app },

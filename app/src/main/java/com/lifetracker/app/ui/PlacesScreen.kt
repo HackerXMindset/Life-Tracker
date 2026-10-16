@@ -21,16 +21,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
+import com.lifetracker.app.ui.theme.PaperCard
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -136,7 +129,7 @@ fun PlacesScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PlacesViewModel
             }
 
             if (clusters.isNotEmpty()) {
-                item { MonoLabel("To review · ${clusters.size} spot${if (clusters.size == 1) "" else "s"}") }
+                item { PaperSection("To review · ${clusters.size} spot${if (clusters.size == 1) "" else "s"}") }
                 items(clusters, key = { it.ids.first() }) { cluster ->
                     PlacesCard(
                         title = "${cluster.visits.size} stop${if (cluster.visits.size == 1) "" else "s"} · " + PlaceRules.durationText(cluster.totalMs),
@@ -246,7 +239,7 @@ fun PlacesScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PlacesViewModel
                 }
             }
 
-            item { MonoLabel("Your places") }
+            item { PaperSection("Your places") }
             if (data.rows.isEmpty()) {
                 item {
                     Text(
@@ -256,14 +249,16 @@ fun PlacesScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PlacesViewModel
                 }
             } else {
                 items(data.rows, key = { it.place.id }) { row ->
-                    Column(
-                        modifier = Modifier.fillMaxWidth().clickable { editing = row.place },
-                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    PaperCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        padding = 12.dp,
+                        shadow = false,
+                        onClick = { editing = row.place },
                     ) {
                         Text(
                             row.place.name + if (row.place.archived) "  (not watched)" else "",
                             fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold,
+                            fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onBackground,
                         )
                         Text(
@@ -276,7 +271,7 @@ fun PlacesScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PlacesViewModel
             }
             item { Button(onClick = { adding = true }) { Text("Add a place") } }
 
-            item { MonoLabel("How closely to watch") }
+            item { PaperSection("How closely to watch") }
             item {
                 Text(
                     "At a spot the app does not know, it checks your position this often until you leave. At a place you named it checks twice and then rests.",
@@ -310,7 +305,7 @@ fun PlacesScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PlacesViewModel
                 }
             }
 
-            item { MonoLabel("Trips") }
+            item { PaperSection("Trips") }
             item { SwitchRow("Record my trips", recordTrips, vm::setRecordTrips) }
             item {
                 Text(
@@ -327,11 +322,11 @@ fun PlacesScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PlacesViewModel
                 }
             }
 
-            item { MonoLabel("On the Timeline") }
+            item { PaperSection("On the Timeline") }
             item { SwitchRow("Show visits on the Timeline", showOnTimeline, vm::setShowOnTimeline) }
             item { SwitchRow("Show trips on the Timeline", showTripsOnTimeline, vm::setShowTripsOnTimeline) }
 
-            item { MonoLabel("Keep it running") }
+            item { PaperSection("Keep it running") }
             item {
                 PlacesCard(
                     title = "Stop the phone putting the app to sleep",
@@ -348,7 +343,7 @@ fun PlacesScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PlacesViewModel
                 }
             }
 
-            item { MonoLabel("Readings") }
+            item { PaperSection("Readings") }
             item {
                 PlacesCard(
                     title = "${readings.total} readings stored",
@@ -360,7 +355,7 @@ fun PlacesScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PlacesViewModel
                     }
                 }
             }
-            item { MonoLabel("Export and import") }
+            item { PaperSection("Export and import") }
             item {
                 PlacesCard(
                     title = "GPX and CSV files",
@@ -379,7 +374,7 @@ fun PlacesScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PlacesViewModel
                 }
             }
 
-            item { MonoLabel("Status") }
+            item { PaperSection("Status") }
             item {
                 PlacesCard(title = if (enabled) "Status" else "Status (switched off)", text = status) {}
             }
@@ -392,7 +387,7 @@ fun PlacesScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PlacesViewModel
                 ) {}
             }
 
-            item { MonoLabel("How it works") }
+            item { PaperSection("How it works") }
             item {
                 Text(
                     "Android wakes the app when you come near a place, leave one, or the phone goes still or starts moving. " +
@@ -555,14 +550,9 @@ private fun PlaceDialog(
 
 @Composable
 private fun PlacesCard(title: String, text: String, actions: @Composable () -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-    ) {
-        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(title, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+    PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
             Text(text, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             actions()
         }

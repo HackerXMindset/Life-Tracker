@@ -19,13 +19,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
+import com.lifetracker.app.ui.theme.PaperCard
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -219,17 +215,8 @@ fun DataSourcesScreen(onBack: () -> Unit, vm: DataSourcesViewModel = viewModel()
 
 @Composable
 private fun Card(content: @Composable ColumnScope.() -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-    ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            content = content,
-        )
+    PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp), content = content)
     }
 }
 
@@ -245,7 +232,7 @@ private fun SourceCard(
         Text(
             text = title,
             fontSize = 18.sp,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,
         )
         Text(text = description, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
