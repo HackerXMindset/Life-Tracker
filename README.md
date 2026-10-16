@@ -149,8 +149,8 @@ Each step is small enough to build, install and try before the next begins. The 
  DONE         Paper P7h-a Settings 1:1 with your demo: icons, shared pieces, the Settings tab
  DONE         Paper P7h-b Settings 1:1: Phone usage, Steps and sleep
  DONE         Paper P7h-c Settings 1:1: Places and trips
- NEXT  ──►    Paper P7h-d Settings 1:1: Calls, Charging
-              Paper P7h-e Settings 1:1: Activities
+ DONE         Paper P7h-d Settings 1:1: Calls, Charging
+ NEXT  ──►    Paper P7h-e Settings 1:1: Activities
               Paper P7h-f Settings 1:1: Habits
               Paper P7h-g Settings 1:1: Appearance and backups (look, backups, export, imports)
               Paper P4 New look: Food
@@ -293,12 +293,12 @@ Not part of Polish 4, and not built: **Step 13e** (fixing trips and visits by ha
   - **P7f Activities and apps. Built.** The activities list, the activity editor and the app editor as paper sheets with labelled boxes and pills; hide / show stays.
   - **P7g Habits, Backup and import. Built.** The Habits choice (own data or Streak), Send to Streak, the folder pickers, backups and restore (its confirm pop-ups), importing Streak and OpenNutriTracker.
   - **How each part goes:** README first, then code, then CHANGELOG, then the build check, then one PR. After each part you send screenshots and I fix what differs. Nothing is built until you say go.
-- **P7h Settings 1:1 with your demo (your answer: "Yes, match the demo's layout"). In progress (P7h-a to P7h-c built).** P7a to P7g gave Settings the paper skin but kept this app's own layouts, so it is not 1:1. This second pass moves the layout to the demo (`Life-Tracker-paper-6.html`, the same file as before) for everything this app already has. Rules: only features that exist; behaviour never changes; nothing is deleted.
+- **P7h Settings 1:1 with your demo (your answer: "Yes, match the demo's layout"). In progress (P7h-a to P7h-d built).** P7a to P7g gave Settings the paper skin but kept this app's own layouts, so it is not 1:1. This second pass moves the layout to the demo (`Life-Tracker-paper-6.html`, the same file as before) for everything this app already has. Rules: only features that exist; behaviour never changes; nothing is deleted.
   - **What changes everywhere (P7h-a):** the demo's own line icons (drawn as vector icons from the demo's paths); the page top with a round-cornered "Back" and a big title with a quiet line under it; list rows with an icon, name, a small line and a chevron; switches inside one card with dashed dividers and a hint under each name; the switch is ink-black when on (not green); grey-green "lock" notes become the demo's orange-tinted tilted note; key / value lines with dashed dividers.
   - **P7h-a The Settings tab:** four groups as in the demo: Timeline (Activities only; the demo's Timeline page and "Apps and categories" page do not exist here), Collected from your phone (Phone and usage, Sleep and steps, Places and trips, Calls, Charging), Trackers (Habits; Food and Money have no settings here, so they are left out), This app (Appearance and backups). Subtitle "Everything that is not data".
   - **P7h-b Phone usage, Steps and sleep. Built.** the switch card, "Leave out stretches shorter than" as a connected strip (1, 2, 5, 10 minutes as now), the Health Connect row, notes in the demo's note style.
   - **P7h-c Places and trips. Built.** the demo's order: Watch my places, Status (keep it running), Record my trips as a strip, "Cleaner readings" (only the options this app has), On the Timeline switches, Your places with Add a place.
-  - **P7h-d Calls, Charging:** switch cards and strips; Charging's "How it works" as the demo's open-and-close sections.
+  - **P7h-d Calls, Charging. Built.** switch cards and strips; Charging's "How it works" as the demo's open-and-close sections.
   - **P7h-e Activities:** a list with the colour square, a full-width dark **New activity** button, the editor as a bottom sheet, hidden ones under "Hidden from Log".
   - **P7h-f Habits:** "Track habits with" as a two-way strip (Streak / This app), the explaining card, the Streak sharing card with its key / value lines and buttons.
   - **P7h-g Appearance and backups:** one page as in the demo: Appearance (System / Light / Dark moves here from the Settings tab), Backups, Export (the file buttons this app has; the demo's CSV choices and day ranges are not built), Imports (Streak, OpenNutriTracker, GPX). The old "Backup and import" page and the Look strip on the Settings tab are replaced by it.

@@ -13,6 +13,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -187,5 +191,26 @@ fun LockNote(text: String, @DrawableRes icon: Int = R.drawable.ic_p_lock, modifi
     ) {
         PaperIcon(icon)
         Text(text, modifier = Modifier.weight(1f), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = p.ink)
+    }
+}
+
+/** A row that opens and closes to show a paragraph, like the demo's "How it works". */
+@Composable
+fun AccordionRow(title: String, body: String, first: Boolean = false) {
+    val p = LocalPaper.current
+    var open by rememberSaveable(title) { mutableStateOf(false) }
+    Column(modifier = Modifier.fillMaxWidth().then(if (first) Modifier else Modifier.dashedTop(p.line))) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(role = Role.Button) { open = !open }
+                .padding(vertical = 13.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(title, modifier = Modifier.weight(1f), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = p.ink)
+            PaperIcon(if (open) R.drawable.ic_p_down else R.drawable.ic_p_chev, size = 18.dp, tint = p.ink2)
+        }
+        if (open) Text(body, modifier = Modifier.padding(bottom = 14.dp), fontSize = 14.sp, lineHeight = 21.sp, color = p.ink2)
     }
 }

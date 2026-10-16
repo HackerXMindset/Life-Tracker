@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import com.lifetracker.app.ui.theme.PaperCard
+import com.lifetracker.app.ui.theme.PaperSegmented
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -82,8 +83,12 @@ fun CallsScreen(onBack: () -> Unit, part: Part = Part.Data, vm: CallsViewModel =
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        item { TextButton(onClick = onBack) { Text("Back") } }
-        item { ScreenHeader(label = if (part == Part.Data) "Stats" else "Settings", badge = "On this phone", title = "Calls") }
+        if (part == Part.Settings) {
+            item { SettingsTop("Calls", "Which calls show up", onBack) }
+        } else {
+            item { TextButton(onClick = onBack) { Text("Back") } }
+            item { ScreenHeader(label = "Stats", badge = "On this phone", title = "Calls") }
+        }
 
         if (!hasAccess && part == Part.Data) {
             item { SetupNote("Call log access is off, so there is nothing to show yet. Allow it in the Settings tab, under Calls.") }
@@ -201,6 +206,19 @@ fun CallsScreen(onBack: () -> Unit, part: Part = Part.Data, vm: CallsViewModel =
 
         }
         if (part == Part.Settings) {
+            item { SetCard { ToggleRow("Show calls on the Timeline", showOnTimeline, vm::setShowOnTimeline, first = true) } }
+            item { PaperSection("Only show calls longer than", "shorter ones stay in Stats") }
+            item {
+                val choices = CallStats.MIN_TALK_CHOICES.toList()
+                PaperSegmented(
+                    options = choices.map { "$it min" },
+                    selected = choices.indexOf(minTalk),
+                    onSelect = { vm.setMinTalkMinutes(choices[it]) },
+                )
+            }
+            item {
+                LockNote("Missed calls, declined calls and calls nobody answered are never drawn on the Timeline. They still count in the Calls stats.")
+            }
             item { PaperSection("Older calls") }
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -218,28 +236,6 @@ fun CallsScreen(onBack: () -> Unit, part: Part = Part.Data, vm: CallsViewModel =
                 }
             }
 
-            item { PaperSection("On the Timeline") }
-            item { SwitchRow("Show calls on the Timeline", showOnTimeline, vm::setShowOnTimeline) }
-            item {
-                Text(
-                    "Only show a call on the Timeline if you talked for at least:",
-                    color = MaterialTheme.colorScheme.onBackground,
-                )
-            }
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    CallStats.MIN_TALK_CHOICES.forEach { minutes ->
-                        FilterChip(selected = minTalk == minutes, onClick = { vm.setMinTalkMinutes(minutes) }, label = { Text("$minutes min") })
-                    }
-                }
-            }
-            item {
-                Text(
-                    "Missed calls, declined calls and calls nobody answered are never drawn on the Timeline. They still count in the Calls stats.",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
             item {
                 Text(
                     "Backups include your calls, with numbers and names, as plain text. Keep the backup folder private.",

@@ -2,6 +2,13 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📜 Settings like your demo (part 4: Calls and Charging)
+
+### ✨ New features
+
+- **Calls** — the "Show calls on the Timeline" card, "Only show calls longer than" as a connected strip (shorter ones stay in Stats) and the tilted orange note about missed calls; "Older calls" stays below.
+- **Charging** — one card with Record charging, Banner when I plug in and Show charging on the Timeline (each with its hint), then "How it works" and the Xiaomi / HyperOS help as open-and-close rows, like the demo.
+
 ## 📜 Settings like your demo (part 3: Places and trips)
 
 ### ✨ New features
