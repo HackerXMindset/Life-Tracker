@@ -144,6 +144,20 @@ object AppBranding {
         )
     }
 
+    /** Fits the complete image on a transparent square canvas without cropping any artwork. */
+    fun fitBitmap(source: Bitmap): Bitmap {
+        val result = Bitmap.createBitmap(ICON_EDGE, ICON_EDGE, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(result)
+        val scale = min(ICON_EDGE.toFloat() / source.width, ICON_EDGE.toFloat() / source.height)
+        val width = source.width * scale
+        val height = source.height * scale
+        val destination = RectF((ICON_EDGE - width) / 2f, (ICON_EDGE - height) / 2f,
+            (ICON_EDGE + width) / 2f, (ICON_EDGE + height) / 2f)
+        val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG or android.graphics.Paint.FILTER_BITMAP_FLAG)
+        canvas.drawBitmap(source, null, destination, paint)
+        return result
+    }
+
     /** Writes the cropped, square logo into private app storage. */
     fun saveCustomIcon(context: Context, bitmap: Bitmap) {
         val target = iconFile(context)

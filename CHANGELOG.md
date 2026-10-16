@@ -6,7 +6,7 @@ Every release page shows the sections below that were added since the last relea
 
 ### ✨ New features
 
-- **Custom home-screen identity** — inside Appearance and backups, choose a name and pick an image through the system image picker. Crop and position it in the app, zoom it, preview it, reset it, and create or update a matching home-screen shortcut.
+- **Custom home-screen identity** — inside Appearance and backups, choose a name and pick an image through the system image picker. Fit the whole image or fill/crop a square, preview different backgrounds, position/zoom it, reset it, and create or update a matching home-screen shortcut.
 - Accepts common Android-decodable image formats, including raster photos and SVG. SVGs are rendered into a square viewport so the full drawing is fitted rather than clipped; the cropped icon is stored privately on the phone.
 
 ### ⚠️ Good to know

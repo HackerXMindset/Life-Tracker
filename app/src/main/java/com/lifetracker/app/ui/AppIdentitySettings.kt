@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -36,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -59,6 +61,7 @@ fun AppIdentitySettings() {
     var iconRevision by remember { mutableIntStateOf(0) }
     var pendingImage by remember { mutableStateOf<Bitmap?>(null) }
     var cropOpen by remember { mutableStateOf(false) }
+    var iconBackground by rememberSaveable { mutableIntStateOf(0) }
 
     val pickImage = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
@@ -91,12 +94,14 @@ fun AppIdentitySettings() {
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Image(
-                bitmap = preview,
-                contentDescription = "Preview of the home-screen shortcut icon",
-                modifier = Modifier.size(56.dp),
-                contentScale = ContentScale.Fit,
-            )
+            Box(
+                modifier = Modifier.size(64.dp).clip(RoundedCornerShape(16.dp))
+                    .background(listOf(Color.Transparent, Color.White, Color.Black, MaterialTheme.colorScheme.primaryContainer)[iconBackground]),
+                contentAlignment = Alignment.Center,
+            ) {
+                Image(bitmap = preview, contentDescription = "Preview of the home-screen shortcut icon",
+                    modifier = Modifier.size(56.dp), contentScale = ContentScale.Fit)
+            }
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     text = if (hasCustomIcon) "Custom icon selected" else "Using the current app icon",
@@ -110,6 +115,14 @@ fun AppIdentitySettings() {
                 )
             }
         }
+        Text("Preview background", style = MaterialTheme.typography.labelLarge)
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            listOf("Auto", "White", "Black", "Theme").forEachIndexed { index, label ->
+                FilterChip(selected = iconBackground == index, onClick = { iconBackground = index }, label = { Text(label) })
+            }
+        }
+        Text("Preview is illustrative; launchers may apply their own icon mask and truncate labels.",
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         OutlinedTextField(
             value = name,
             onValueChange = {
@@ -219,6 +232,11 @@ private fun CropImageDialog(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text("Crop image", style = MaterialTheme.typography.titleLarge)
+                var fitMode by remember(source) { mutableIntStateOf(1) }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(selected = fitMode == 0, onClick = { fitMode = 0 }, label = { Text("Fit whole image") })
+                    FilterChip(selected = fitMode == 1, onClick = { fitMode = 1 }, label = { Text("Fill square") })
+                }
                 Text(
                     "Drag the image to position it. Use the slider to zoom in or out.",
                     style = MaterialTheme.typography.bodySmall,
@@ -233,7 +251,7 @@ private fun CropImageDialog(
                     Image(
                         bitmap = source.asImageBitmap(),
                         contentDescription = "Image crop preview",
-                        contentScale = ContentScale.Crop,
+                        contentScale = if (fitMode == 0) ContentScale.Fit else ContentScale.Crop,
                         modifier = Modifier
                             .fillMaxSize()
                             .graphicsLayer {
@@ -293,7 +311,7 @@ private fun CropImageDialog(
                     ) { Text("Center") }
                     Button(
                         onClick = {
-                            onUse(AppBranding.cropBitmap(source, zoom, offsetX, offsetY, viewportPx))
+                            onUse(if (fitMode == 0) AppBranding.fitBitmap(source) else AppBranding.cropBitmap(source, zoom, offsetX, offsetY, viewportPx))
                         },
                         modifier = Modifier.weight(1f),
                     ) { Text("Use crop") }

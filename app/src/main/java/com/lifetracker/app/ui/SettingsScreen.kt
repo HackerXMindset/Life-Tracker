@@ -14,10 +14,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifetracker.app.R
-import com.lifetracker.app.ui.theme.AppTheme
-import com.lifetracker.app.ui.theme.LocalPaper
-import com.lifetracker.app.ui.theme.PaperSegmented
-import com.lifetracker.app.ui.theme.ThemeMode
 import com.lifetracker.app.data.CallsCollector
 import com.lifetracker.app.data.ChargeSettings
 import com.lifetracker.app.data.HabitSource
@@ -106,15 +102,5 @@ fun SettingsScreen(onOpen: (Page) -> Unit) {
             SettingsRow(R.drawable.ic_p_cloud, "Appearance and backups", "Light or dark, backups, import and export") { onOpen(Page.Backup) }
         }
 
-        // Until Appearance moves into that page (part P7h-g), the Look choice stays here so it is not lost.
-        item { PaperSection("Look") }
-        item {
-            val mode = AppTheme.mode
-            PaperSegmented(
-                options = ThemeMode.entries.map { it.label },
-                selected = ThemeMode.entries.indexOf(mode),
-                onSelect = { AppTheme.set(context, ThemeMode.entries[it]) },
-            )
-        }
     }
 }
