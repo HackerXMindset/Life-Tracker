@@ -20,7 +20,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import com.lifetracker.app.R
 import com.lifetracker.app.ui.theme.PaperCard
+import com.lifetracker.app.ui.theme.PaperSegmented
 import com.lifetracker.app.ui.theme.TallyBar
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -97,8 +99,12 @@ fun PhoneUsageScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PhoneUsageV
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        item { TextButton(onClick = onBack) { Text("Back") } }
-        item { ScreenHeader(label = if (part == Part.Data) "Stats" else "Settings", badge = "On this phone", title = "Phone usage") }
+        if (part == Part.Settings) {
+            item { SettingsTop("Phone and usage", "App use on the Timeline", onBack) }
+        } else {
+            item { TextButton(onClick = onBack) { Text("Back") } }
+            item { ScreenHeader(label = "Stats", badge = "On this phone", title = "Phone usage") }
+        }
 
         if (!hasAccess && part == Part.Data) {
             item { SetupNote("Usage access is off, so there is nothing to show yet. Switch it on in the Settings tab, under Phone usage.") }
@@ -223,45 +229,44 @@ fun PhoneUsageScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PhoneUsageV
 
         }
         if (part == Part.Settings) {
-            item { PaperSection("On the Timeline") }
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text("Show app use on the Timeline", color = MaterialTheme.colorScheme.onBackground)
-                    Switch(checked = showOnTimeline, onCheckedChange = vm::setShowOnTimeline)
-                }
-            }
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Leave out stretches shorter than", color = MaterialTheme.colorScheme.onBackground)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(1, 2, 5, 10).forEach { m ->
-                            FilterChip(selected = minBlock == m, onClick = { vm.setMinBlockMinutes(m) }, label = { Text("$m min") })
-                        }
-                    }
-                    Text(
-                        "Short stretches still count in the totals. Stretches of the same app less than 2 minutes apart are shown as one.",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                SetCard {
+                    ToggleRow(
+                        label = "Show app use on the Timeline",
+                        checked = showOnTimeline,
+                        onChange = vm::setShowOnTimeline,
+                        hint = "Each stretch appears with its exact time",
+                        first = true,
                     )
                 }
             }
-
+            item { PaperSection("Leave out stretches shorter than", "they stay in the totals") }
+            item {
+                val options = listOf(1, 2, 5, 10)
+                PaperSegmented(
+                    options = options.map { "$it min" },
+                    selected = options.indexOf(minBlock),
+                    onSelect = { vm.setMinBlockMinutes(options[it]) },
+                )
+            }
+            item {
+                Text(
+                    "Stretches of the same app less than 2 minutes apart are shown as one.",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             if (hidden.isNotEmpty()) {
-                item { PaperSection("Hidden apps") }
+                item { PaperSection("Apps") }
                 items(hidden, key = { "h" + it.pkg }) { app ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth().clickable { editing = app },
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.onSurfaceVariant))
-                        Text(app.label, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
+                    SettingsRow(R.drawable.ic_p_eyeoff, app.label, "Hidden everywhere · tap to change", onClick = { editing = app })
                 }
+            }
+            item {
+                LockNote(
+                    (if (lastSync.isEmpty()) "Not copied yet." else "Last copied $lastSync.") +
+                        " Android keeps about a week of detail, so the app saves its own copy.",
+                )
             }
         }
     }

@@ -2,6 +2,54 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📜 Settings like your demo (part 4: Calls and Charging)
+
+### ✨ New features
+
+- **Calls** — the "Show calls on the Timeline" card, "Only show calls longer than" as a connected strip (shorter ones stay in Stats) and the tilted orange note about missed calls; "Older calls" stays below.
+- **Charging** — one card with Record charging, Banner when I plug in and Show charging on the Timeline (each with its hint), then "How it works" and the Xiaomi / HyperOS help as open-and-close rows, like the demo.
+
+## 📜 Settings like your demo (part 3: Places and trips)
+
+### ✨ New features
+
+- **Places and trips in the demo's order** — Watch my places (with "Needs location all the time, set once"), the permissions, Keep it running, How closely to watch (connected 1 / 2 / 5 min strip, Use GPS and Always on in one card), Record my trips (switch plus a 15 s / 30 s / 1 min strip), On the Timeline (one card with both switches), then your places as rows with "radius m circle · kind" and Add a place.
+- Back button and big title like the demo.
+
+### ⚠️ Good to know
+
+- The demo's "Cleaner readings" options (stop length, trip start distance, motion sensor, ignore GPS jumps) are not built; this app has no such options.
+- Readings, Export and import, Status and How it works stay as before, below your places.
+
+## 📜 Settings like your demo (part 2: Phone and usage, Sleep and steps)
+
+### ✨ New features
+
+- **Phone and usage** — as in the demo: a card with the "Show app use on the Timeline" switch and its hint, "Leave out stretches shorter than" as a connected strip (1, 2, 5, 10 min), hidden apps as rows, and the tilted orange note about when the usage was last copied.
+- **Sleep and steps** — the "Health Connect is connected" line, an "Open Health Connect" row, and one card with the step counter, "Sleep from phone use" and "Show sleep on the Timeline" switches, each with its hint.
+- Both pages now start with the demo's Back button and big title with a quiet line.
+
+### ⚠️ Good to know
+
+- The "Workouts" switch in the demo is not built (this app does not read workouts).
+- The Stats halves of these pages keep their old top for now.
+
+## 📜 Settings like your demo (part 1: icons, shared pieces, the Settings tab)
+
+Your demo's Settings layout, step one. The Settings tab now matches it, and the pieces the other Settings pages will use are in place.
+
+### ✨ New features
+
+- **The demo's line icons** — drawn from the demo's own icon paths.
+- **Settings tab like the demo** — four groups: Timeline (Activities), Collected from your phone (Phone and usage, Sleep and steps, Places and trips, Calls, Charging), Trackers (Habits) and This app (Appearance and backups). Each row has an icon, a name, a small line and a chevron. Under the title: "Everything that is not data".
+- **Switches are ink-black when on** — as in the demo (they were green).
+- **New shared pieces** — page top with a Back button, switch cards with dashed dividers, key / value lines and the tilted orange note. The other Settings pages move to them in the next parts.
+
+### ⚠️ Good to know
+
+- The state chips (Allowed, Watching...) are gone from the tab, as in the demo; when something is not allowed or switched off, the small line says so ("Not allowed yet · ...").
+- The Look choice stays at the bottom of the tab until "Appearance and backups" is redone (last part).
+
 ## 📜 Settings in the paper style (part 7g, Habits and Backup and import)
 
 Settings is now finished in the paper style.

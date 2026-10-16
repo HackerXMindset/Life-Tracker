@@ -241,7 +241,7 @@ fun PaperToggle(checked: Boolean, onChange: (Boolean) -> Unit, modifier: Modifie
     Box(
         modifier = modifier
             .size(width = 50.dp, height = 30.dp)
-            .background(if (checked) p.accent else p.surface2, CircleShape)
+            .background(if (checked) p.ink else p.surface2, CircleShape)
             .border(1.5.dp, p.pen, CircleShape)
             .clickable(role = Role.Switch) { onChange(!checked) }
             .semantics { stateDescription = if (checked) "On" else "Off" },

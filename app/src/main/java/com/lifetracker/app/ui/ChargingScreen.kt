@@ -76,28 +76,19 @@ fun ChargingScreen(onBack: () -> Unit, part: Part = Part.Data, vm: ChargingViewM
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        item { TextButton(onClick = onBack) { Text("Back") } }
-        item { ScreenHeader(label = if (part == Part.Data) "Stats" else "Settings", badge = "On this phone", title = "Charging") }
+        if (part == Part.Settings) {
+            item { SettingsTop("Charging", "Recording and the banner", onBack) }
+        } else {
+            item { TextButton(onClick = onBack) { Text("Back") } }
+            item { ScreenHeader(label = "Stats", badge = "On this phone", title = "Charging") }
+        }
 
         if (part == Part.Settings) {
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text("Record charging", color = MaterialTheme.colorScheme.onBackground)
-                    Switch(checked = track, onCheckedChange = vm::setTrack)
-                }
-            }
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text("Banner when I plug in", color = MaterialTheme.colorScheme.onBackground)
-                    Switch(checked = showBanner, onCheckedChange = vm::setShowBanner)
+                SetCard {
+                    ToggleRow("Record charging", track, vm::setTrack, hint = "Start, end, battery level and speed", first = true)
+                    ToggleRow("Banner when I plug in", showBanner, vm::setShowBanner, hint = "Asks what you are charging with")
+                    ToggleRow("Show charging on the Timeline", showOnTimeline, vm::setShowOnTimeline)
                 }
             }
             if (showBanner && !notificationsOn) {
@@ -182,35 +173,24 @@ fun ChargingScreen(onBack: () -> Unit, part: Part = Part.Data, vm: ChargingViewM
 
         }
         if (part == Part.Settings) {
-            item { PaperSection("On the Timeline") }
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text("Show charging on the Timeline", color = MaterialTheme.colorScheme.onBackground)
-                    Switch(checked = showOnTimeline, onCheckedChange = vm::setShowOnTimeline)
-                }
-            }
             item { PaperSection("How it works") }
             item {
-                Text(
-                    "Android cannot tell a power bank from a wall charger, so you tell the app once from the banner and it learns: " +
-                        "the same kind of plug and about the same speed, tagged the same way at least 3 times, shows up as \"(guess)\". " +
-                        "The app does not run in the background while the phone is not charging. While charging, Android wakes it about every 15 minutes " +
-                        "to note the battery level and speed, so a session's end time can be up to 15 minutes early, unless the app was open when you unplugged. " +
-                        "The speed shown is what goes into the battery, a little less than the charger's label, and lower if you were using the phone.",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            item {
-                InfoCard(
-                    title = "If the banner never appears (Xiaomi / HyperOS)",
-                    text = "Open Android Settings > Apps > this app and turn on Autostart, set Battery saver to No restrictions, " +
-                        "and allow Notifications including pop-ups. HyperOS otherwise stops background work to save battery.",
-                ) {}
+                SetCard {
+                    AccordionRow(
+                        "How it works",
+                        "Android cannot tell a power bank from a wall charger, so you tell the app once from the banner and it learns: " +
+                            "the same kind of plug and about the same speed, tagged the same way at least 3 times, shows up as \"(guess)\". " +
+                            "The app does not run in the background while the phone is not charging. While charging, Android wakes it about every 15 minutes " +
+                            "to note the battery level and speed, so a session's end time can be up to 15 minutes early, unless the app was open when you unplugged. " +
+                            "The speed shown is what goes into the battery, a little less than the charger's label, and lower if you were using the phone.",
+                        first = true,
+                    )
+                    AccordionRow(
+                        "If the banner never appears (Xiaomi / HyperOS)",
+                        "Open Android Settings > Apps > this app and turn on Autostart, set Battery saver to No restrictions, " +
+                            "and allow Notifications including pop-ups. HyperOS otherwise stops background work to save battery.",
+                    )
+                }
             }
             item {
                 Text(
