@@ -2,6 +2,19 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📜 Custom home-screen name and icon
+
+### ✨ New features
+
+- **Custom home-screen identity** — Settings lets you save a shortcut name, select a local SVG logo (up to 1 MB), preview it, reset it, and create or update a matching home-screen shortcut.
+- SVG files are validated before saving and stored privately on the phone; no image or name is uploaded.
+
+### ⚠️ Good to know
+
+- Android does not let an app replace its own installed app-drawer label and icon with arbitrary user-selected values at runtime. This feature creates a separate home-screen shortcut; the original Life Tracker app entry remains unchanged.
+- Launcher support and label truncation vary by device. The launcher may ask for confirmation before adding a shortcut.
+
+
 ## 📜 Settings like your demo (part 4: Calls and Charging)
 
 ### ✨ New features
