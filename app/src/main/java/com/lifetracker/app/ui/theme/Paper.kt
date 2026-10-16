@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -341,6 +342,7 @@ fun PaperField(
     placeholder: String? = null,
     singleLine: Boolean = false,
     minLines: Int = 1,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
 ) {
     val p = LocalPaper.current
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -356,6 +358,7 @@ fun PaperField(
             },
             singleLine = singleLine,
             minLines = minLines,
+            keyboardOptions = keyboardOptions,
             shape = Wobble.Small,
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = p.ink,
@@ -379,6 +382,7 @@ fun PaperDialog(
     onConfirm: (() -> Unit)? = null,
     dismissText: String = "Cancel",
     confirmStyle: PaperButtonStyle = PaperButtonStyle.Dark,
+    confirmEnabled: Boolean = true,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val p = LocalPaper.current
@@ -391,8 +395,25 @@ fun PaperDialog(
         title = { Text(title, fontWeight = FontWeight.Bold, fontSize = 18.sp, maxLines = 2) },
         text = { Column(verticalArrangement = Arrangement.spacedBy(10.dp), content = content) },
         confirmButton = {
-            if (confirmText != null && onConfirm != null) PaperButton(confirmText, onConfirm, style = confirmStyle, small = true)
+            if (confirmText != null && onConfirm != null) PaperButton(confirmText, onConfirm, style = confirmStyle, small = true, enabled = confirmEnabled)
         },
         dismissButton = { PaperButton(dismissText, onDismiss, style = PaperButtonStyle.Ghost, small = true) },
+    )
+}
+
+/** A small orange-pencil label that says where something comes from ("Shared with Streak"). */
+@Composable
+fun PaperChip(text: String, modifier: Modifier = Modifier) {
+    val p = LocalPaper.current
+    Text(
+        text = text,
+        modifier = modifier
+            .background(p.sun.copy(alpha = 0.22f), Wobble.Pill)
+            .border(1.25.dp, p.sun, Wobble.Pill)
+            .padding(horizontal = 10.dp, vertical = 3.dp),
+        fontSize = 11.sp,
+        fontWeight = FontWeight.Bold,
+        color = p.ink,
+        maxLines = 1,
     )
 }

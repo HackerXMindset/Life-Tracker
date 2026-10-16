@@ -140,7 +140,10 @@ Each step is small enough to build, install and try before the next begins. The 
  DONE         Paper P2b New look, Timeline: the whole-day strip
  DONE         Paper P2c New look, Timeline: the In order list
  DONE         Paper P2d New look, Timeline: Pie, Log button and Log sheet
- NEXT  ──►    Paper P3 New look: Habits
+ DONE         Paper P3a New look, Habits: top of the page
+ DONE         Paper P3b New look, Habits: the habit cards
+ DONE         Paper P3c New look, Habits: habit page and pop-ups
+ NEXT  ──►    Paper P4 New look, Food
               Paper P4 New look: Food
               Paper P5 New look: Money
               Paper P6 New look: Stats
@@ -264,7 +267,11 @@ Not part of Polish 4, and not built: **Step 13e** (fixing trips and visits by ha
   - **P2b The whole day. Built, then removed at your request.** The 24-hour Where / What strip card was built and then taken out again after you saw it on your phone. What stays from P2b: the row of activity pills with the time spent on each, and the highlighted section headings.
   - **P2c The In order list. Built.** Place blocks (coloured side bar with the place name, wobbly body), rows with the coloured line (solid = you logged it, dashed = the phone collected it), "No data" gaps with Fill in, trips with the "How did you go?" chips, to-dos and notes. All taps stay: edit, tick a to-do, fill a gap, pick how you travelled.
   - **P2d Pie, Log button, Log sheet. Built.** The Log button is the paper one (ink-black, wobbly, pencil shadow). The Log sheet and the Timeline's pop-ups (edit a stretch, hidden items, delete, how did you travel) use new shared paper parts that every later screen will reuse: `PaperSheet` (a bottom sheet), `PaperField` (a labelled text box), `PaperDialog` (a pop-up with paper buttons) and `PaperFab`. The Pie is now drawn like the demo: **what you did is the inner pie, where you were is the outer ring**, sized by share of the recorded time (not by clock position; the 24-hour strip above is the clock view). Tap a slice or a row to see it named with its share and what it overlapped ("at Home 2h", "doing Study 1h"); the rest fades. Under it: the Tasks list, the Places list, and "How you got around" from your trips. The old two-ring "you logged / collected for you" pie is gone; the solid and dashed lines in the list still tell those apart. Pure sums are in `DayPieMath.kt` and tested.
-- **P3 Habits. Planned.** Cards, Week / Month / Year, the habit page, notes, the editor, and the Streak strip ("Shared with Streak, backup written 18:02, Write now") showing the real send status.
+- **P3 Habits (three small steps).** Same habits, same ticking, same long-press, same Streak behaviour; only the look changes.
+  - **P3 rule (your words: "don't copy the habit page, we have better"):** the Habits layout stays exactly as it is in this app (Streak-classic cards, week row, month and year views, strips). Only the paper skin is applied: colours, font, wobbly outlines, pencil shadows, paper buttons and pills. The demo's own Habits layout is not copied.
+  - **P3a Top of the page. Built.** The big "Habits" title with round paper buttons (All notes, collapse or expand the cards) and a dark **New** button. Under it the Streak strip: a small orange chip and one line saying the real state, with a button. When your habits are this app's own, it says **Shared with Streak** and shows when the last send happened (or why nothing was sent), and the button is **Write now** (the same as "Send to Streak now" in Settings). When your habits come from Streak, it says **From Streak** instead. Then the Today card with the progress ring (green), the Week / Month / Year switch, the category pills, the "No habits yet" card, and the Archived habits link and rows.
+  - **P3b The habit cards. Built.** A paper card per habit: a letter tile in the habit's colour, the name, the flame and streak, the amount and category, a strength bar of tally strokes with its percent, and the round tick / plus / ban button. The days under it become paper tiles: done = the habit's colour with white text, part-done lighter, clean days soft, a relapse red, paused blue, empty days worn paper, today ringed in pen. Same for Week, Month, Year and the small cards' thin strips.
+  - **P3c Habit page and pop-ups. Built.** The habit page (numbers with dashed dividers, notes, Archive / Edit / Close), the long-press day menu, the editor, the All notes page, the note box and the relapse question, all on the paper sheets and dialogs from P2.
 - **P4 Food. Planned.** The diary and its sheets.
 - **P5 Money. Planned.** The month card, sorting, the entry sheets.
 - **P6 Stats. Planned.** The charts, the 20-week heatmap, and every tab.

@@ -2,6 +2,21 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📜 Habits in the paper style (part 3 of 7)
+
+The Habits tab, the habit page and all its pop-ups now have the paper look. The layout is exactly the one you already have; only the skin changed.
+
+### ✨ New features
+
+- **Paper top of the page** — big "Habits" title, round paper buttons, a dark **New** button, and a small strip saying the real Streak state (Shared with Streak plus the last send, or From Streak) with a **Write now** button.
+- **Paper habit cards** — wobbly letter tiles, a tally-stroke strength bar, paper day tiles and tick buttons, in Week, Month and Year views.
+- **Paper pop-ups** — the habit page (numbers with dashed dividers), the long-press day menu, the editor, the note box, All notes and the relapse question use the paper dialogs, pills, labelled boxes and buttons.
+
+### ⚠️ Good to know
+
+- Your own Habits layout was kept on purpose; the demo's Habits layout was not copied.
+- Nothing about ticking, notes, relapses or the Streak sending changed.
+
 ## 🧹 Timeline: the whole-day strip is gone
 
 ### 🛠 Changed

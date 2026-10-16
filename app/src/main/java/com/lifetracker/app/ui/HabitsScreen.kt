@@ -30,18 +30,17 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,6 +57,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -73,9 +73,23 @@ import com.lifetracker.app.data.HabitNotes
 import com.lifetracker.app.data.HabitRules
 import com.lifetracker.app.data.HabitSource
 import com.lifetracker.app.data.HabitStats
+import com.lifetracker.app.data.HabitSyncState
 import com.lifetracker.app.data.HabitsSettings
 import com.lifetracker.app.data.StreakLink
 import com.lifetracker.app.data.TodayProgress
+import com.lifetracker.app.data.streak.StreakFolderWriter
+import com.lifetracker.app.ui.theme.LocalPaper
+import com.lifetracker.app.ui.theme.PaperDialog
+import com.lifetracker.app.ui.theme.PaperButton
+import com.lifetracker.app.ui.theme.PaperButtonStyle
+import com.lifetracker.app.ui.theme.PaperCard
+import com.lifetracker.app.ui.theme.PaperChip
+import com.lifetracker.app.ui.theme.PaperIconButton
+import com.lifetracker.app.ui.theme.PaperPill
+import com.lifetracker.app.ui.theme.PaperSegmented
+import com.lifetracker.app.ui.theme.TallyBar
+import com.lifetracker.app.ui.theme.Wobble
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.Month
 import java.time.format.DateTimeFormatter
@@ -121,6 +135,7 @@ fun HabitsScreen(vm: HabitsViewModel = viewModel()) {
                 onNotes = { showNotes = true },
             )
         }
+        item(key = "streak-strip") { StreakStrip(source) }
         item(key = "today") { TodayCard(ui.today, ui.progress) }
         if (!ui.hasAny) {
             item(key = "empty") { EmptyCard() }
@@ -162,7 +177,8 @@ fun HabitsScreen(vm: HabitsViewModel = viewModel()) {
                     modifier = Modifier.clickable { showArchived = !showArchived }.padding(vertical = 8.dp),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = LocalPaper.current.ink,
+                    textDecoration = TextDecoration.Underline,
                 )
             }
             if (showArchived) {
@@ -234,18 +250,18 @@ fun HabitsScreen(vm: HabitsViewModel = viewModel()) {
     }
 
     relapseFor?.let { habit ->
-        AlertDialog(
-            onDismissRequest = { relapseFor = null },
-            title = { Text("Log a relapse?") },
-            text = { Text("Log a relapse for \"${habit.name}\" today? This ends the streak of days without one.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    vm.tap(habit, ui.today)
-                    relapseFor = null
-                }) { Text("Log relapse") }
+        PaperDialog(
+            title = "Log a relapse?",
+            onDismiss = { relapseFor = null },
+            confirmText = "Log relapse",
+            confirmStyle = PaperButtonStyle.Danger,
+            onConfirm = {
+                vm.tap(habit, ui.today)
+                relapseFor = null
             },
-            dismissButton = { TextButton(onClick = { relapseFor = null }) { Text("Cancel") } },
-        )
+        ) {
+            Text("Log a relapse for \"${habit.name}\" today? This ends the streak of days without one.", color = LocalPaper.current.ink)
+        }
     }
 }
 
@@ -255,6 +271,7 @@ private fun HabitRules.cellIsRelapse(day: LocalDate): Boolean = cell(day).kind =
 
 @Composable
 private fun TopBar(compact: Boolean, onToggle: () -> Unit, onNew: () -> Unit, onNotes: () -> Unit) {
+    val paper = LocalPaper.current
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -263,96 +280,115 @@ private fun TopBar(compact: Boolean, onToggle: () -> Unit, onNew: () -> Unit, on
         Text(
             text = "Habits",
             modifier = Modifier.weight(1f),
-            fontSize = 30.sp,
-            lineHeight = 33.sp,
-            fontWeight = FontWeight.ExtraBold,
-            color = MaterialTheme.colorScheme.onBackground,
+            fontSize = 38.sp,
+            lineHeight = 40.sp,
+            fontWeight = FontWeight.Bold,
+            color = paper.ink,
+            maxLines = 1,
         )
-        RoundIconButton(icon = R.drawable.ic_notes, description = "All notes", onClick = onNotes)
+        PaperIconButton(icon = R.drawable.ic_notes, description = "All notes", onClick = onNotes)
         // The up-down button: small cards when they are big, big cards when they are small.
-        RoundIconButton(
+        PaperIconButton(
             icon = if (compact) R.drawable.ic_chevrons_updown else R.drawable.ic_chevrons_downup,
             description = if (compact) "Expand cards" else "Collapse cards",
             onClick = onToggle,
         )
-        Surface(
-            modifier = Modifier.height(40.dp).clickable(onClick = onNew),
-            shape = RoundedCornerShape(20.dp),
-            color = MaterialTheme.colorScheme.primary,
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(5.dp),
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_add),
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.onPrimary,
+        PaperButton(text = "New", onClick = onNew, small = true, icon = R.drawable.ic_add)
+    }
+}
+
+/**
+ * Says where your habits are shared. With this app's own data it is the Streak send status ("Shared with Streak"), with a
+ * button that sends now; with Streak as the source it just says so.
+ */
+@Composable
+private fun StreakStrip(source: HabitSource) {
+    val paper = LocalPaper.current
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val syncState = remember { HabitSyncState(context) }
+    var tick by remember { mutableStateOf(0) }
+    var sending by remember { mutableStateOf(false) }
+    var result by remember { mutableStateOf<String?>(null) }
+    val canWrite = remember(tick) { StreakFolderWriter.canWrite(context) }
+    val lastSent = remember(tick) { syncState.lastSentText }
+    val note = remember(tick) { syncState.lastSendNote }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            if (source == HabitSource.Own) {
+                PaperChip("Shared with Streak")
+                Text(
+                    text = result ?: note ?: when {
+                        !canWrite -> "Streak's folder is not set up for writing. See Settings, Habits."
+                        lastSent != null -> "Last sent $lastSent · Streak picks it up at its next check"
+                        else -> "Nothing sent yet · Streak picks it up at its next check"
+                    },
+                    fontSize = 11.sp,
+                    color = paper.ink2,
                 )
-                Text("New", fontSize = 13.5.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
+            } else {
+                PaperChip("From Streak")
+                Text("Your habits come from Streak's backups. Tap a habit to open it in Streak.", fontSize = 11.sp, color = paper.ink2)
             }
+        }
+        if (source == HabitSource.Own) {
+            PaperButton(
+                text = if (sending) "Sending..." else "Write now",
+                onClick = {
+                    if (!sending) {
+                        sending = true
+                        scope.launch {
+                            result = try {
+                                StreakFolderWriter.send(context).message
+                            } catch (e: Exception) {
+                                e.message ?: "Could not send to Streak."
+                            }
+                            sending = false
+                            tick++
+                        }
+                    }
+                },
+                small = true,
+                enabled = canWrite && !sending,
+            )
         }
     }
 }
 
 @Composable
 private fun ArchivedRow(habit: HabitEntity, onShow: () -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-    ) {
+    val paper = LocalPaper.current
+    PaperCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp, shadow = false) {
         Row(
-            modifier = Modifier.padding(start = 14.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
+            modifier = Modifier.padding(start = 14.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(
                 text = habit.name,
                 modifier = Modifier.weight(1f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = paper.ink,
             )
-            TextButton(onClick = onShow) { Text("Show again") }
-        }
-    }
-}
-
-@Composable
-private fun RoundIconButton(icon: Int, description: String, onClick: () -> Unit) {
-    Surface(
-        modifier = Modifier.size(40.dp).clickable(onClick = onClick),
-        shape = CircleShape,
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(
-                painter = painterResource(icon),
-                contentDescription = description,
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.onSurface,
-            )
+            PaperButton("Show again", onShow, style = PaperButtonStyle.Ghost, small = true)
         }
     }
 }
 
 @Composable
 private fun TodayCard(today: LocalDate, progress: TodayProgress) {
+    val paper = LocalPaper.current
     val title = when {
         progress.total == 0 -> "No habits due today"
         progress.allDone -> "All done today"
         else -> "${progress.done} of ${progress.total} completed"
     }
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-    ) {
+    PaperCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp, shadow = false) {
         Row(
             modifier = Modifier.padding(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -360,17 +396,11 @@ private fun TodayCard(today: LocalDate, progress: TodayProgress) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = today.format(DateTimeFormatter.ofPattern("EEEE, d MMM", Locale.getDefault())),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 12.sp,
+                    color = paper.ink2,
                 )
                 Spacer(Modifier.height(4.dp))
-                Text(
-                    text = title,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
+                Text(text = title, fontSize = 19.sp, fontWeight = FontWeight.Bold, color = paper.ink)
             }
             Ring(progress.ratio)
         }
@@ -379,108 +409,48 @@ private fun TodayCard(today: LocalDate, progress: TodayProgress) {
 
 @Composable
 private fun Ring(ratio: Float) {
-    val color = MaterialTheme.colorScheme.primary
-    val track = MaterialTheme.colorScheme.surfaceVariant
+    val paper = LocalPaper.current
     Box(modifier = Modifier.size(64.dp), contentAlignment = Alignment.Center) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val width = 7.dp.toPx()
             val inset = width / 2
             val arc = Size(size.width - width, size.height - width)
-            drawArc(track, 0f, 360f, false, Offset(inset, inset), arc, style = Stroke(width))
+            drawArc(paper.surface2, 0f, 360f, false, Offset(inset, inset), arc, style = Stroke(width))
             if (ratio > 0f) {
-                drawArc(color, -90f, 360f * ratio, false, Offset(inset, inset), arc, style = Stroke(width, cap = StrokeCap.Round))
+                drawArc(paper.accent, -90f, 360f * ratio, false, Offset(inset, inset), arc, style = Stroke(width, cap = StrokeCap.Round))
             }
         }
-        Text(
-            text = "${Math.round(ratio * 100)}%",
-            fontSize = 14.sp,
-            fontWeight = FontWeight.ExtraBold,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
+        Text(text = "${Math.round(ratio * 100)}%", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = paper.ink)
     }
 }
 
 @Composable
 private fun EmptyCard() {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-    ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(
-                text = "No habits yet",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = "Tap New to add a habit. Or choose your Streak folder under Data sources (the gear on the Timeline); " +
-                    "your Streak habits come in when you next open the app, or tap Import now.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+    val paper = LocalPaper.current
+    PaperCard(modifier = Modifier.fillMaxWidth(), shadow = false) {
+        Text(text = "No habits yet", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = paper.ink)
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = "Tap New to add a habit. Or choose your Streak folder under Data sources (the gear on the Timeline); " +
+                "your Streak habits come in when you next open the app, or tap Import now.",
+            fontSize = 13.sp,
+            color = paper.ink2,
+        )
     }
 }
 
 /** Week | Month | Year, as in Streak. */
 @Composable
 private fun ModeSwitch(mode: HabitMode, onChange: (HabitMode) -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
-    ) {
-        Row(modifier = Modifier.padding(4.dp)) {
-            HabitMode.entries.forEach { option ->
-                val on = option == mode
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(if (on) MaterialTheme.colorScheme.primary else Color.Transparent)
-                        .clickable { onChange(option) }
-                        .padding(vertical = 9.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = option.label,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center,
-                        color = if (on) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        }
-    }
+    val options = HabitMode.entries
+    PaperSegmented(options.map { it.label }, options.indexOf(mode), { onChange(options[it]) })
 }
 
 @Composable
 private fun CategoryChips(chips: List<String>, selected: String, onSelect: (String) -> Unit) {
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        item { Chip("All", selected.isEmpty()) { onSelect("") } }
-        items(chips) { name -> Chip(name, name == selected) { onSelect(name) } }
-    }
-}
-
-@Composable
-private fun Chip(label: String, active: Boolean, onClick: () -> Unit) {
-    Surface(
-        modifier = Modifier.height(36.dp).clickable(onClick = onClick),
-        shape = RoundedCornerShape(18.dp),
-        color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
-        border = if (active) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-    ) {
-        Box(modifier = Modifier.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
-            Text(
-                text = label,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        item { PaperPill("All", selected.isEmpty(), { onSelect("") }) }
+        items(chips) { name -> PaperPill(name, name == selected, { onSelect(name) }) }
     }
 }
 
@@ -506,13 +476,11 @@ private fun HabitCardView(
     val accent = Color(habit.color.toInt())
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
 
-    Surface(
+    PaperCard(
         modifier = Modifier.fillMaxWidth().combinedClickable(onClick = onOpen, onLongClick = onHold),
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        padding = if (compact) 11.dp else 16.dp,
+        shadow = false,
     ) {
-        Column(modifier = Modifier.padding(if (compact) 11.dp else 16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 GlyphTile(habit, accent, if (compact) 34.dp else 46.dp)
                 Spacer(Modifier.width(if (compact) 11.dp else 14.dp))
@@ -553,7 +521,6 @@ private fun HabitCardView(
                 Spacer(Modifier.height(16.dp))
                 HabitCalendarView(row.rules, mode, today, accent, onDay, onMenu)
             }
-        }
     }
 }
 
@@ -564,8 +531,9 @@ private fun GlyphTile(habit: HabitEntity, accent: Color, size: Dp) {
     Box(
         modifier = Modifier
             .size(size)
-            .clip(RoundedCornerShape(if (size < 40.dp) 11.dp else 14.dp))
-            .background(accent.copy(alpha = 0.18f)),
+            .background(accent.copy(alpha = 0.18f), Wobble.Small)
+            .border(1.25.dp, accent.copy(alpha = 0.45f), Wobble.Small)
+            .clip(Wobble.Small),
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -620,17 +588,7 @@ private fun MetaLine(row: HabitRow, accent: Color, muted: Color) {
 
 @Composable
 private fun StrengthBar(value: Float, accent: Color, modifier: Modifier) {
-    Box(
-        modifier = modifier.height(6.dp).clip(RoundedCornerShape(3.dp)).background(MaterialTheme.colorScheme.surfaceVariant),
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(value.coerceIn(0f, 1f))
-                .height(6.dp)
-                .clip(RoundedCornerShape(3.dp))
-                .background(accent),
-        )
-    }
+    TallyBar(progress = value.coerceIn(0f, 1f), modifier = modifier, color = accent, height = 14.dp)
 }
 
 /** The tick on the right of a card: a check for yes/no, a plus for counted, a ban for a relapse habit. */
@@ -653,14 +611,16 @@ private fun ActionButton(row: HabitRow, accent: Color, size: Dp, onClick: () -> 
     Box(
         modifier = Modifier
             .size(size)
-            .clip(RoundedCornerShape(size * 0.3f))
             .background(
                 when {
                     filled -> accent
                     relapsedToday -> MaterialTheme.colorScheme.error.copy(alpha = 0.18f)
                     else -> accent.copy(alpha = 0.12f)
                 },
+                Wobble.Small,
             )
+            .border(1.25.dp, if (relapsedToday) MaterialTheme.colorScheme.error.copy(alpha = 0.5f) else accent.copy(alpha = if (filled) 1f else 0.45f), Wobble.Small)
+            .clip(Wobble.Small)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -735,9 +695,9 @@ private fun WeekRow(rules: HabitRules, today: LocalDate, accent: Color, onTap: (
                     .weight(1f)
                     .padding(horizontal = 2.dp)
                     .height(46.dp)
-                    .clip(RoundedCornerShape(11.dp))
+                    .clip(Wobble.Small)
                     .background(fill)
-                    .then(if (date == today) Modifier.border(2.dp, ringColor(fill, accent), RoundedCornerShape(11.dp)) else Modifier)
+                    .then(if (date == today) Modifier.border(2.dp, ringColor(fill, accent), Wobble.Small) else Modifier)
                     .dayTouch(date, today, onTap, onMenu),
                 contentAlignment = Alignment.Center,
             ) {
