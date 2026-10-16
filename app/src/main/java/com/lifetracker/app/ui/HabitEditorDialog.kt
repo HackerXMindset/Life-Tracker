@@ -15,12 +15,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,6 +33,12 @@ import com.lifetracker.app.data.HabitEntity
 import com.lifetracker.app.data.HabitForm
 import com.lifetracker.app.data.HabitPlan
 import com.lifetracker.app.data.HabitStats
+import com.lifetracker.app.ui.theme.LocalPaper
+import com.lifetracker.app.ui.theme.PaperButton
+import com.lifetracker.app.ui.theme.PaperButtonStyle
+import com.lifetracker.app.ui.theme.PaperDialog
+import com.lifetracker.app.ui.theme.PaperField
+import com.lifetracker.app.ui.theme.PaperPill
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -108,189 +109,192 @@ fun HabitEditorDialog(
         )
     }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(if (initial == null) "New habit" else "Edit habit") },
-        text = {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it; error = null },
+    val paper = LocalPaper.current
+    PaperDialog(
+        title = if (initial == null) "New habit" else "Edit habit",
+        onDismiss = onDismiss,
+        confirmText = "Save",
+        onConfirm = {
+            val built = form()
+            val problem = HabitEditor.validate(built)
+            if (problem != null) error = problem else onSave(built)
+        },
+    ) {
+        Column(
+            modifier = Modifier.verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            PaperField(
+                value = name,
+                onValueChange = { name = it; error = null },
+                modifier = Modifier.fillMaxWidth(),
+                label = "Name",
+                placeholder = "e.g. Read 20 pages",
+                singleLine = true,
+            )
+
+            MonoLabel("Icon")
+            Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                HabitEditor.QUICK_ICONS.forEach { e ->
+                    PaperPill(e, icon == e, { icon = if (icon == e) "" else e })
+                }
+            }
+            PaperField(
+                value = icon,
+                onValueChange = { icon = it.take(8) },
+                modifier = Modifier.fillMaxWidth(),
+                label = "Or type any emoji",
+                singleLine = true,
+            )
+
+            MonoLabel("Colour")
+            HabitEditor.PALETTE.chunked(8).forEach { rowColors ->
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    rowColors.forEach { c ->
+                        Box(
+                            modifier = Modifier
+                                .size(30.dp)
+                                .clip(CircleShape)
+                                .background(Color(c.toInt()))
+                                .then(
+                                    if (c == color) Modifier.border(3.dp, paper.ink, CircleShape)
+                                    else Modifier,
+                                )
+                                .clickable { color = c },
+                        )
+                    }
+                }
+            }
+
+            MonoLabel("Category")
+            Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                PaperPill("None", category.isEmpty() && newCategory.isBlank(), { category = ""; newCategory = "" })
+                categories.forEach { c ->
+                    PaperPill(c, category == c && newCategory.isBlank(), { category = c; newCategory = "" })
+                }
+            }
+            PaperField(
+                value = newCategory,
+                onValueChange = { newCategory = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = "Or a new category",
+                singleLine = true,
+            )
+
+            MonoLabel("Type")
+            Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                PaperPill("Yes / no", kind == HabitStats.KIND_YES_NO, { kind = HabitStats.KIND_YES_NO })
+                PaperPill("Avoid", kind == HabitStats.KIND_RELAPSE, { kind = HabitStats.KIND_RELAPSE })
+                PaperPill("Counted", kind == HabitStats.KIND_COUNTED, { kind = HabitStats.KIND_COUNTED })
+            }
+            Text(
+                text = when (kind) {
+                    HabitStats.KIND_RELAPSE -> "Counts the days you stay clear of something. You log a relapse when it happens."
+                    HabitStats.KIND_COUNTED -> "You add an amount each day, like 8 glasses of water."
+                    else -> "Done or not done each day."
+                },
+                fontSize = 12.sp,
+                color = paper.ink2,
+            )
+            if (kind == HabitStats.KIND_COUNTED) {
+                PaperField(
+                    value = target,
+                    onValueChange = { target = it; error = null },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Name") },
-                    placeholder = { Text("e.g. Read 20 pages") },
+                    label = "Goal for one day",
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                )
+                PaperField(
+                    value = unit,
+                    onValueChange = { unit = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = "Unit (glasses, pages, minutes)",
                     singleLine = true,
                 )
-
-                MonoLabel("Icon")
-                Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    HabitEditor.QUICK_ICONS.forEach { e ->
-                        FilterChip(selected = icon == e, onClick = { icon = if (icon == e) "" else e }, label = { Text(e) })
-                    }
-                }
-                OutlinedTextField(
-                    value = icon,
-                    onValueChange = { icon = it.take(8) },
+                PaperField(
+                    value = step,
+                    onValueChange = { step = it; error = null },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Or type any emoji") },
+                    label = "Added by each tap",
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 )
+                SwitchRow("Any amount counts as done", anyAmount) { anyAmount = it }
+            }
 
-                MonoLabel("Colour")
-                HabitEditor.PALETTE.chunked(8).forEach { rowColors ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        rowColors.forEach { c ->
-                            Box(
-                                modifier = Modifier
-                                    .size(30.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(c.toInt()))
-                                    .then(
-                                        if (c == color) Modifier.border(3.dp, MaterialTheme.colorScheme.onBackground, CircleShape)
-                                        else Modifier,
-                                    )
-                                    .clickable { color = c },
-                            )
-                        }
+            MonoLabel("How often")
+            Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf(
+                    HabitPlan.DAILY to "Every day",
+                    HabitPlan.WEEKDAYS to "Some days",
+                    HabitPlan.WEEKLY to "Per week",
+                    HabitPlan.MONTHLY to "Per month",
+                    HabitPlan.EVERY_X_DAYS to "Every X",
+                ).forEach { (value, label) ->
+                    PaperPill(label, interval == value, { interval = value; error = null })
+                }
+            }
+            when (interval) {
+                HabitPlan.WEEKDAYS -> Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    HabitEditor.DAY_NAMES.forEachIndexed { i, label ->
+                        val day = i + 1
+                        PaperPill(
+                            label,
+                            day in weekdays,
+                            { weekdays = if (day in weekdays) weekdays - day else weekdays + day; error = null },
+                        )
                     }
                 }
-
-                MonoLabel("Category")
-                Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    FilterChip(selected = category.isEmpty() && newCategory.isBlank(), onClick = { category = ""; newCategory = "" }, label = { Text("None") })
-                    categories.forEach { c ->
-                        FilterChip(selected = category == c && newCategory.isBlank(), onClick = { category = c; newCategory = "" }, label = { Text(c) })
-                    }
-                }
-                OutlinedTextField(
-                    value = newCategory,
-                    onValueChange = { newCategory = it },
+                HabitPlan.WEEKLY, HabitPlan.MONTHLY -> PaperField(
+                    value = times,
+                    onValueChange = { times = it; error = null },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Or a new category") },
+                    label = if (interval == HabitPlan.WEEKLY) "Days per week" else "Days per month",
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 )
-
-                MonoLabel("Type")
-                Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    FilterChip(selected = kind == HabitStats.KIND_YES_NO, onClick = { kind = HabitStats.KIND_YES_NO }, label = { Text("Yes / no") })
-                    FilterChip(selected = kind == HabitStats.KIND_RELAPSE, onClick = { kind = HabitStats.KIND_RELAPSE }, label = { Text("Avoid") })
-                    FilterChip(selected = kind == HabitStats.KIND_COUNTED, onClick = { kind = HabitStats.KIND_COUNTED }, label = { Text("Counted") })
-                }
-                Text(
-                    text = when (kind) {
-                        HabitStats.KIND_RELAPSE -> "Counts the days you stay clear of something. You log a relapse when it happens."
-                        HabitStats.KIND_COUNTED -> "You add an amount each day, like 8 glasses of water."
-                        else -> "Done or not done each day."
-                    },
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                if (kind == HabitStats.KIND_COUNTED) {
-                    OutlinedTextField(
-                        value = target,
-                        onValueChange = { target = it; error = null },
+                HabitPlan.EVERY_X_DAYS -> {
+                    PaperField(
+                        value = every,
+                        onValueChange = { every = it; error = null },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Goal for one day") },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    )
-                    OutlinedTextField(
-                        value = unit,
-                        onValueChange = { unit = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Unit (glasses, pages, minutes)") },
-                        singleLine = true,
-                    )
-                    OutlinedTextField(
-                        value = step,
-                        onValueChange = { step = it; error = null },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Added by each tap") },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    )
-                    SwitchRow("Any amount counts as done", anyAmount) { anyAmount = it }
-                }
-
-                MonoLabel("How often")
-                Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf(
-                        HabitPlan.DAILY to "Every day",
-                        HabitPlan.WEEKDAYS to "Some days",
-                        HabitPlan.WEEKLY to "Per week",
-                        HabitPlan.MONTHLY to "Per month",
-                        HabitPlan.EVERY_X_DAYS to "Every X",
-                    ).forEach { (value, label) ->
-                        FilterChip(selected = interval == value, onClick = { interval = value; error = null }, label = { Text(label) })
-                    }
-                }
-                when (interval) {
-                    HabitPlan.WEEKDAYS -> Row(
-                        modifier = Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        HabitEditor.DAY_NAMES.forEachIndexed { i, label ->
-                            val day = i + 1
-                            FilterChip(
-                                selected = day in weekdays,
-                                onClick = { weekdays = if (day in weekdays) weekdays - day else weekdays + day; error = null },
-                                label = { Text(label) },
-                            )
-                        }
-                    }
-                    HabitPlan.WEEKLY, HabitPlan.MONTHLY -> OutlinedTextField(
-                        value = times,
-                        onValueChange = { times = it; error = null },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text(if (interval == HabitPlan.WEEKLY) "Days per week" else "Days per month") },
+                        label = "Every how many",
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     )
-                    HabitPlan.EVERY_X_DAYS -> {
-                        OutlinedTextField(
-                            value = every,
-                            onValueChange = { every = it; error = null },
-                            modifier = Modifier.fillMaxWidth(),
-                            label = { Text("Every how many") },
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        )
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            listOf(HabitPlan.UNIT_DAYS to "days", HabitPlan.UNIT_WEEKS to "weeks", HabitPlan.UNIT_MONTHS to "months")
-                                .forEach { (value, label) ->
-                                    FilterChip(selected = everyUnit == value, onClick = { everyUnit = value }, label = { Text(label) })
-                                }
-                        }
-                        TextButton(onClick = {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf(HabitPlan.UNIT_DAYS to "days", HabitPlan.UNIT_WEEKS to "weeks", HabitPlan.UNIT_MONTHS to "months")
+                            .forEach { (value, label) ->
+                                PaperPill(label, everyUnit == value, { everyUnit = value })
+                            }
+                    }
+                    PaperButton(
+                        "Counting from ${from.format(START_LABEL)}",
+                        {
                             DatePickerDialog(
                                 context,
                                 { _, y, m, d -> from = LocalDate.of(y, m + 1, d) },
                                 from.year, from.monthValue - 1, from.dayOfMonth,
                             ).show()
-                        }) { Text("Counting from ${from.format(START_LABEL)}") }
-                    }
+                        },
+                        style = PaperButtonStyle.Ghost,
+                        small = true,
+                    )
                 }
-
-                OutlinedTextField(
-                    value = description,
-                    onValueChange = { description = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Description (optional)") },
-                )
-
-                error?.let { Text(text = it, color = MaterialTheme.colorScheme.error, fontSize = 13.sp) }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                val built = form()
-                val problem = HabitEditor.validate(built)
-                if (problem != null) error = problem else onSave(built)
-            }) { Text("Save") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-    )
+
+            PaperField(
+                value = description,
+                onValueChange = { description = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = "Description (optional)",
+            )
+
+            error?.let { Text(text = it, color = paper.bad, fontSize = 13.sp) }
+        }
+    }
 }

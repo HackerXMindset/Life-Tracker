@@ -30,12 +30,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -81,6 +79,7 @@ import com.lifetracker.app.data.StreakLink
 import com.lifetracker.app.data.TodayProgress
 import com.lifetracker.app.data.streak.StreakFolderWriter
 import com.lifetracker.app.ui.theme.LocalPaper
+import com.lifetracker.app.ui.theme.PaperDialog
 import com.lifetracker.app.ui.theme.PaperButton
 import com.lifetracker.app.ui.theme.PaperButtonStyle
 import com.lifetracker.app.ui.theme.PaperCard
@@ -251,18 +250,18 @@ fun HabitsScreen(vm: HabitsViewModel = viewModel()) {
     }
 
     relapseFor?.let { habit ->
-        AlertDialog(
-            onDismissRequest = { relapseFor = null },
-            title = { Text("Log a relapse?") },
-            text = { Text("Log a relapse for \"${habit.name}\" today? This ends the streak of days without one.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    vm.tap(habit, ui.today)
-                    relapseFor = null
-                }) { Text("Log relapse") }
+        PaperDialog(
+            title = "Log a relapse?",
+            onDismiss = { relapseFor = null },
+            confirmText = "Log relapse",
+            confirmStyle = PaperButtonStyle.Danger,
+            onConfirm = {
+                vm.tap(habit, ui.today)
+                relapseFor = null
             },
-            dismissButton = { TextButton(onClick = { relapseFor = null }) { Text("Cancel") } },
-        )
+        ) {
+            Text("Log a relapse for \"${habit.name}\" today? This ends the streak of days without one.", color = LocalPaper.current.ink)
+        }
     }
 }
 

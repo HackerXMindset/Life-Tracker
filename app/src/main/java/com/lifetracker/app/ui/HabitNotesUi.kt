@@ -1,7 +1,6 @@
 package com.lifetracker.app.ui
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -14,15 +13,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,6 +27,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifetracker.app.data.HabitNotes
 import com.lifetracker.app.data.NoteEntity
+import com.lifetracker.app.ui.theme.LocalPaper
+import com.lifetracker.app.ui.theme.PaperButton
+import com.lifetracker.app.ui.theme.PaperButtonStyle
+import com.lifetracker.app.ui.theme.PaperCard
+import com.lifetracker.app.ui.theme.PaperDialog
+import com.lifetracker.app.ui.theme.PaperField
+import com.lifetracker.app.ui.theme.PaperPill
 import java.time.LocalDate
 
 /**
@@ -59,52 +58,47 @@ fun NoteDialog(
     var text by remember(draft) { mutableStateOf(draft.note?.text.orEmpty()) }
     var habit by remember(draft) { mutableStateOf(draft.habitId) }
     val day = HabitNotes.dayLabel(draft.note?.date ?: draft.date.toString(), today)
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(if (draft.note == null) "New note" else "Edit note") },
-        text = {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                if (habits != null && draft.note == null) {
-                    MonoLabel("Habit")
-                    Row(
-                        modifier = Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        habits.forEach { (id, name) ->
-                            FilterChip(selected = habit == id, onClick = { habit = id }, label = { Text(name) })
-                        }
+    val paper = LocalPaper.current
+    PaperDialog(
+        title = if (draft.note == null) "New note" else "Edit note",
+        onDismiss = onDismiss,
+        confirmText = "Save",
+        confirmEnabled = text.isNotBlank() && (draft.note != null || habit.isNotEmpty()),
+        onConfirm = { onSave(habit, text) },
+    ) {
+        Column(
+            modifier = Modifier.verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            if (habits != null && draft.note == null) {
+                MonoLabel("Habit")
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    habits.forEach { (id, name) ->
+                        PaperPill(name, habit == id, { habit = id })
                     }
-                } else {
-                    Text(
-                        text = listOfNotNull(habitName, day).joinToString("  ·  "),
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
                 }
-                if (habits != null && draft.note == null) {
-                    Text(day, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                OutlinedTextField(
-                    value = text,
-                    onValueChange = { text = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Note") },
-                    minLines = 3,
-                    maxLines = 8,
+            } else {
+                Text(
+                    text = listOfNotNull(habitName, day).joinToString("  ·  "),
+                    fontSize = 13.sp,
+                    color = paper.ink2,
                 )
             }
-        },
-        confirmButton = {
-            TextButton(
-                enabled = text.isNotBlank() && (draft.note != null || habit.isNotEmpty()),
-                onClick = { onSave(habit, text) },
-            ) { Text("Save") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-    )
+            if (habits != null && draft.note == null) {
+                Text(day, fontSize = 13.sp, color = paper.ink2)
+            }
+            PaperField(
+                value = text,
+                onValueChange = { text = it },
+                label = "Note",
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 3,
+            )
+        }
+    }
 }
 
 /** The notes of one habit, as lines inside a dialog. Tap one to change it. */
@@ -115,6 +109,7 @@ fun HabitNotesList(
     onEdit: (NoteEntity) -> Unit,
     onAdd: () -> Unit,
 ) {
+    val paper = LocalPaper.current
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -122,19 +117,19 @@ fun HabitNotesList(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             MonoLabel("Notes (${notes.size})")
-            TextButton(onClick = onAdd) { Text("Add note") }
+            PaperButton("Add note", onAdd, style = PaperButtonStyle.Ghost, small = true)
         }
         if (notes.isEmpty()) {
-            Text("No notes yet.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("No notes yet.", fontSize = 13.sp, color = paper.ink2)
         }
         notes.forEach { note ->
             Column(modifier = Modifier.fillMaxWidth().clickable { onEdit(note) }.padding(vertical = 2.dp)) {
                 Text(
                     text = HabitNotes.dayLabel(note.date, today),
                     fontSize = 11.5.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = paper.ink2,
                 )
-                Text(note.text, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+                Text(note.text, fontSize = 14.sp, color = paper.ink)
             }
         }
     }
@@ -151,6 +146,7 @@ fun HabitNotesPage(
     onBack: () -> Unit,
 ) {
     BackHandler(onBack = onBack)
+    val paper = LocalPaper.current
     var filter by remember { mutableStateOf("") }
     val ids = HabitNotes.habitsWithNotes(notes)
     val picked = filter.takeIf { it in ids } ?: ""
@@ -167,15 +163,15 @@ fun HabitNotesPage(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                TextButton(onClick = onBack) { Text("Back") }
+                PaperButton("Back", onBack, style = PaperButtonStyle.Ghost, small = true)
                 Text(
                     text = "All notes",
                     modifier = Modifier.weight(1f),
                     fontSize = 26.sp,
                     fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.onBackground,
+                    color = paper.ink,
                 )
-                TextButton(onClick = { onNew(picked) }) { Text("New note") }
+                PaperButton("New note", { onNew(picked) }, small = true)
             }
         }
         if (ids.size > 1) {
@@ -184,9 +180,9 @@ fun HabitNotesPage(
                     modifier = Modifier.horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    FilterChip(selected = picked.isEmpty(), onClick = { filter = "" }, label = { Text("All") })
+                    PaperPill("All", picked.isEmpty(), { filter = "" })
                     ids.forEach { id ->
-                        FilterChip(selected = picked == id, onClick = { filter = id }, label = { Text(names[id] ?: "Habit") })
+                        PaperPill(names[id] ?: "Habit", picked == id, { filter = id })
                     }
                 }
             }
@@ -196,19 +192,19 @@ fun HabitNotesPage(
                 Text(
                     text = "No notes yet. Use New note, or add one from a habit's page.",
                     fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = paper.ink2,
                     modifier = Modifier.padding(top = 12.dp),
                 )
             }
         }
         items(shown, key = { it.id }) { note ->
-            Surface(
-                modifier = Modifier.fillMaxWidth().clickable { onEdit(note) },
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+            PaperCard(
+                modifier = Modifier.fillMaxWidth(),
+                padding = 14.dp,
+                shadow = false,
+                onClick = { onEdit(note) },
             ) {
-                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
                         text = listOfNotNull(
                             names[note.habitId] ?: "No habit",
@@ -216,9 +212,9 @@ fun HabitNotesPage(
                             HabitNotes.kindLabel(note.type).takeIf { note.type != HabitNotes.TYPE_NOTE },
                         ).joinToString("  ·  "),
                         fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = paper.ink2,
                     )
-                    Text(note.text, fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurface)
+                    Text(note.text, fontSize = 15.sp, color = paper.ink)
                 }
             }
         }

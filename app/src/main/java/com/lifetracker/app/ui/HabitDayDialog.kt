@@ -8,12 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -25,6 +20,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifetracker.app.data.HabitEditor
 import com.lifetracker.app.data.HabitStats
+import com.lifetracker.app.ui.theme.LocalPaper
+import com.lifetracker.app.ui.theme.PaperButton
+import com.lifetracker.app.ui.theme.PaperButtonStyle
+import com.lifetracker.app.ui.theme.PaperDialog
+import com.lifetracker.app.ui.theme.PaperField
+import com.lifetracker.app.ui.theme.PaperPill
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -66,86 +67,94 @@ fun HabitDayDialog(
         else -> "Not done"
     }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(habit.name) },
-        text = {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Text(
-                    text = date.format(DateTimeFormatter.ofPattern("EEEE, d MMM yyyy", Locale.getDefault())) + "  ·  " + status,
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+    val paper = LocalPaper.current
+    PaperDialog(title = habit.name, onDismiss = onDismiss, dismissText = "Close") {
+        Column(
+            modifier = Modifier.verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                text = date.format(DateTimeFormatter.ofPattern("EEEE, d MMM yyyy", Locale.getDefault())) + "  ·  " + status,
+                fontSize = 12.sp,
+                color = paper.ink2,
+            )
+            when {
+                counted -> Row(
+                    verticalAlignment = androidx.compose.ui.Alignment.Bottom,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    PaperField(
+                        value = amount,
+                        onValueChange = { amount = it },
+                        label = "Amount$unit",
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    )
+                    PaperButton(
+                        text = "Set",
+                        enabled = amount.replace(",", ".").trim().toDoubleOrNull() != null,
+                        small = true,
+                        onClick = {
+                            amount.replace(",", ".").trim().toDoubleOrNull()?.let {
+                                onAmount(it)
+                                onDismiss()
+                            }
+                        },
+                    )
+                }
+                relapse -> PaperButton(
+                    text = if (recorded > 0) "Clear this relapse" else "Log a relapse on this day",
+                    onClick = { onToggle(); onDismiss() },
+                    style = PaperButtonStyle.Ghost,
+                    small = true,
                 )
-                when {
-                    counted -> Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                        OutlinedTextField(
-                            value = amount,
-                            onValueChange = { amount = it },
-                            modifier = Modifier.weight(1f),
-                            label = { Text("Amount$unit") },
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        )
-                        TextButton(
-                            enabled = amount.replace(",", ".").trim().toDoubleOrNull() != null,
-                            onClick = {
-                                amount.replace(",", ".").trim().toDoubleOrNull()?.let {
-                                    onAmount(it)
-                                    onDismiss()
-                                }
-                            },
-                        ) { Text("Set") }
-                    }
-                    relapse -> TextButton(onClick = { onToggle(); onDismiss() }) {
-                        Text(if (recorded > 0) "Clear this relapse" else "Log a relapse on this day")
-                    }
-                    else -> TextButton(onClick = { onToggle(); onDismiss() }) {
-                        Text(if (done) "Mark not done" else "Mark done")
+                else -> PaperButton(
+                    text = if (done) "Mark not done" else "Mark done",
+                    onClick = { onToggle(); onDismiss() },
+                    style = PaperButtonStyle.Ghost,
+                    small = true,
+                )
+            }
+
+            PaperButton("Add a note for this day", { onNote(); onDismiss() }, style = PaperButtonStyle.Ghost, small = true)
+
+            if (rules.canMiss(date) && !relapse) {
+                MonoLabel("Why was it missed?")
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    HabitEditor.reasonOptions(habit).forEach { option ->
+                        PaperPill(option, reason == option, { onReason(if (reason == option) null else option) })
                     }
                 }
-
-                TextButton(onClick = { onNote(); onDismiss() }) { Text("Add a note for this day") }
-
-                if (rules.canMiss(date) && !relapse) {
-                    MonoLabel("Why was it missed?")
-                    Row(
-                        modifier = Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        HabitEditor.reasonOptions(habit).forEach { option ->
-                            FilterChip(
-                                selected = reason == option,
-                                onClick = { onReason(if (reason == option) null else option) },
-                                label = { Text(option) },
-                            )
-                        }
-                    }
-                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                        OutlinedTextField(
-                            value = custom,
-                            onValueChange = { custom = it },
-                            modifier = Modifier.weight(1f),
-                            label = { Text("Or in your own words") },
-                            singleLine = true,
-                        )
-                        TextButton(
-                            enabled = custom.isNotBlank(),
-                            onClick = { onReason(custom); custom = "" },
-                        ) { Text("Save") }
-                    }
-                    if (reason.isNotEmpty()) {
-                        Text("Reason: $reason", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
-                    }
+                Row(
+                    verticalAlignment = androidx.compose.ui.Alignment.Bottom,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    PaperField(
+                        value = custom,
+                        onValueChange = { custom = it },
+                        label = "Or in your own words",
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                    )
+                    PaperButton(
+                        text = "Save",
+                        enabled = custom.isNotBlank(),
+                        small = true,
+                        onClick = { onReason(custom); custom = "" },
+                    )
                 }
-
-                if (recorded > 0 && !relapse) {
-                    TextButton(onClick = { onClear(); onDismiss() }) { Text("Clear this day") }
+                if (reason.isNotEmpty()) {
+                    Text("Reason: $reason", fontSize = 13.sp, color = paper.ink)
                 }
             }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
-    )
+
+            if (recorded > 0 && !relapse) {
+                PaperButton("Clear this day", { onClear(); onDismiss() }, style = PaperButtonStyle.Danger, small = true)
+            }
+        }
+    }
 }
