@@ -97,7 +97,7 @@ fun ActivityEditorDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = {
+            Button(onClick = {
                 when {
                     name.isBlank() -> error = "Give it a name."
                     else -> onSave(

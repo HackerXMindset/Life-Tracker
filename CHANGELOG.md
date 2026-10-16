@@ -2,6 +2,16 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📜 Settings in the paper style (part 7f, Activities and apps)
+
+### ✨ New features
+
+- **Activities** — each activity is a paper card with its colour dot; the New / Edit activity pop-up, the "Counts as" pop-up for an app, the pills and the Save button use the paper look.
+
+### ⚠️ Good to know
+
+- Only the look changed. Hiding an activity or an app still removes nothing you logged.
+
 ## 📜 Settings in the paper style (part 7e, Calls and Charging)
 
 ### ✨ New features
