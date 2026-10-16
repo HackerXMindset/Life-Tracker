@@ -2,6 +2,17 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📜 Settings in the paper style (part 7c, Phone usage, Steps and sleep)
+
+### ✨ New features
+
+- **Phone usage** — each app is a paper card with a tally-stroke bar for its time (coloured by the activity it counts as); the "Allow usage access" box is a paper card.
+- **Steps and sleep** — the Health Connect boxes and each night in the sleep list are paper cards (tap a night to fix it, as before).
+
+### ⚠️ Good to know
+
+- Only the look changed. Switches, choices and buttons do what they did.
+
 ## 📜 Settings in the paper style (part 7b, shared parts)
 
 Every Settings page now uses the same paper buttons, switches, pills, pop-ups and text boxes, so they all start to look alike before each page is tidied.
