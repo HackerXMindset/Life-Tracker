@@ -37,7 +37,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.consume
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -197,16 +196,12 @@ private fun CropImageDialog(
 ) {
     val viewportDp = 260.dp
     val viewportPx = with(LocalDensity.current) { viewportDp.toPx() }
-    val imageAspect = source.width.toFloat() / source.height.toFloat()
     val fittedWidthPx = source.width * max(viewportPx / source.width, viewportPx / source.height)
     val fittedHeightPx = source.height * max(viewportPx / source.width, viewportPx / source.height)
 
     var zoom by remember(source) { mutableFloatStateOf(1f) }
     var offsetX by remember(source) { mutableFloatStateOf(0f) }
     var offsetY by remember(source) { mutableFloatStateOf(0f) }
-
-    val maxOffsetX = ((fittedWidthPx * zoom - viewportPx) / 2f).coerceAtLeast(0f)
-    val maxOffsetY = ((fittedHeightPx * zoom - viewportPx) / 2f).coerceAtLeast(0f)
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -264,7 +259,8 @@ private fun CropImageDialog(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text("Zoom", style = MaterialTheme.typography.bodyMedium)
-                    Text("${zoom.toInt()}x".let { if (zoom % 1f == 0f) it else "${"%.1f".format(zoom)}x" },
+                    Text(
+                        text = "Zoom: " + String.format(java.util.Locale.US, "%.1f", zoom) + "×",
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
