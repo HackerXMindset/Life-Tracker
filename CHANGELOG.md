@@ -2,6 +2,18 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📜 Settings like your demo (part 3: Places and trips)
+
+### ✨ New features
+
+- **Places and trips in the demo's order** — Watch my places (with "Needs location all the time, set once"), the permissions, Keep it running, How closely to watch (connected 1 / 2 / 5 min strip, Use GPS and Always on in one card), Record my trips (switch plus a 15 s / 30 s / 1 min strip), On the Timeline (one card with both switches), then your places as rows with "radius m circle · kind" and Add a place.
+- Back button and big title like the demo.
+
+### ⚠️ Good to know
+
+- The demo's "Cleaner readings" options (stop length, trip start distance, motion sensor, ignore GPS jumps) are not built; this app has no such options.
+- Readings, Export and import, Status and How it works stay as before, below your places.
+
 ## 📜 Settings like your demo (part 2: Phone and usage, Sleep and steps)
 
 ### ✨ New features

@@ -23,6 +23,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import com.lifetracker.app.ui.theme.PaperCard
+import com.lifetracker.app.ui.theme.PaperSegmented
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -114,13 +115,11 @@ fun PlacesScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PlacesViewModel
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        item { TextButton(onClick = onBack) { Text("Back") } }
-        item {
-            ScreenHeader(
-                label = if (part == Part.Data) "Stats" else "Settings",
-                badge = "On this phone",
-                title = if (part == Part.Data) "Places" else "Places and trips",
-            )
+        if (part == Part.Settings) {
+            item { SettingsTop("Places and trips", "Permissions and recording", onBack) }
+        } else {
+            item { TextButton(onClick = onBack) { Text("Back") } }
+            item { ScreenHeader(label = "Stats", badge = "On this phone", title = "Places") }
         }
 
         if (part == Part.Data) {
@@ -199,7 +198,11 @@ fun PlacesScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PlacesViewModel
         }
 
         if (part == Part.Settings) {
-            item { SwitchRow("Watch my places", enabled, vm::setEnabled) }
+            item {
+                SetCard {
+                    ToggleRow("Watch my places", enabled, vm::setEnabled, hint = "Needs location all the time, set once", first = true)
+                }
+            }
 
             if (!access.all) {
                 item {
@@ -239,94 +242,8 @@ fun PlacesScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PlacesViewModel
                 }
             }
 
-            item { PaperSection("Your places") }
-            if (data.rows.isEmpty()) {
-                item {
-                    Text(
-                        "No places yet. Add one (Home, Library, Gym), or stay somewhere for 3 minutes and it appears in the Places stats for you to name.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            } else {
-                items(data.rows, key = { it.place.id }) { row ->
-                    PaperCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        padding = 12.dp,
-                        shadow = false,
-                        onClick = { editing = row.place },
-                    ) {
-                        Text(
-                            row.place.name + if (row.place.archived) "  (not watched)" else "",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onBackground,
-                        )
-                        Text(
-                            PlaceKinds.label(row.place.kind) + " · ${row.place.radiusM} m",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            }
-            item { Button(onClick = { adding = true }) { Text("Add a place") } }
 
-            item { PaperSection("How closely to watch") }
-            item {
-                Text(
-                    "At a spot the app does not know, it checks your position this often until you leave. At a place you named it checks twice and then rests.",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(60 to "1 min", 120 to "2 min", 300 to "5 min").forEach { (sec, label) ->
-                        FilterChip(selected = interval == sec, onClick = { vm.setIntervalSec(sec) }, label = { Text(label) })
-                    }
-                }
-            }
-            item { SwitchRow("Use GPS (most exact, more battery)", useGps, vm::setUseGps) }
-            item { SwitchRow("Always on (more complete, more battery)", alwaysOn, vm::setAlwaysOn) }
-            if (alwaysOn) {
-                item {
-                    Text(
-                        "Reads your position all the time, using Wi-Fi and mobile network while you stand still and GPS while you move. A notification shows all the time. How often while standing still:",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                item {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(60 to "1 min", 120 to "2 min", 300 to "5 min").forEach { (sec, label) ->
-                            FilterChip(selected = alwaysOnInterval == sec, onClick = { vm.setAlwaysOnIntervalSec(sec) }, label = { Text(label) })
-                        }
-                    }
-                }
-            }
-
-            item { PaperSection("Trips") }
-            item { SwitchRow("Record my trips", recordTrips, vm::setRecordTrips) }
-            item {
-                Text(
-                    "While you are on the way, the app reads your position this often. Quicker is more exact for speed and route, and uses more battery. Trips need place watching to be switched on.",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(15 to "15 s", 30 to "30 s", 60 to "1 min").forEach { (sec, label) ->
-                        FilterChip(selected = tripPace == sec, onClick = { vm.setTripIntervalSec(sec) }, label = { Text(label) })
-                    }
-                }
-            }
-
-            item { PaperSection("On the Timeline") }
-            item { SwitchRow("Show visits on the Timeline", showOnTimeline, vm::setShowOnTimeline) }
-            item { SwitchRow("Show trips on the Timeline", showTripsOnTimeline, vm::setShowTripsOnTimeline) }
-
-            item { PaperSection("Keep it running") }
+            item { PaperSection("Keep it running", "keeps recording alive") }
             item {
                 PlacesCard(
                     title = "Stop the phone putting the app to sleep",
@@ -342,6 +259,92 @@ fun PlacesScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PlacesViewModel
                     OutlinedButton(onClick = { KeepAlive.open(context, KeepAlive.batterySaverIntents(context)) }) { Text("Battery saver: No restrictions") }
                 }
             }
+
+            item { PaperSection("How closely to watch") }
+            item {
+                Text(
+                    "At a spot the app does not know, it checks your position this often until you leave. At a place you named it checks twice and then rests.",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            item {
+                val options = listOf(60, 120, 300)
+                PaperSegmented(
+                    options = listOf("1 min", "2 min", "5 min"),
+                    selected = options.indexOf(interval),
+                    onSelect = { vm.setIntervalSec(options[it]) },
+                )
+            }
+            item {
+                SetCard {
+                    ToggleRow("Use GPS", useGps, vm::setUseGps, hint = "Most exact, more battery", first = true)
+                    ToggleRow("Always on", alwaysOn, vm::setAlwaysOn, hint = "More complete, more battery")
+                }
+            }
+            if (alwaysOn) {
+                item {
+                    Text(
+                        "Reads your position all the time, using Wi-Fi and mobile network while you stand still and GPS while you move. A notification shows all the time. How often while standing still:",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                item {
+                    val options = listOf(60, 120, 300)
+                    PaperSegmented(
+                        options = listOf("1 min", "2 min", "5 min"),
+                        selected = options.indexOf(alwaysOnInterval),
+                        onSelect = { vm.setAlwaysOnIntervalSec(options[it]) },
+                    )
+                }
+            }
+
+            item { PaperSection("Record my trips", "how often to check") }
+            item { SetCard { ToggleRow("Record my trips", recordTrips, vm::setRecordTrips, first = true) } }
+            item {
+                Text(
+                    "While you are on the way, the app reads your position this often. Quicker is more exact for speed and route, and uses more battery. Trips need place watching to be switched on.",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            item {
+                val options = listOf(15, 30, 60)
+                PaperSegmented(
+                    options = listOf("15 s", "30 s", "1 min"),
+                    selected = options.indexOf(tripPace),
+                    onSelect = { vm.setTripIntervalSec(options[it]) },
+                )
+            }
+
+            item { PaperSection("On the Timeline") }
+            item {
+                SetCard {
+                    ToggleRow("Show visits on the Timeline", showOnTimeline, vm::setShowOnTimeline, first = true)
+                    ToggleRow("Show trips on the Timeline", showTripsOnTimeline, vm::setShowTripsOnTimeline)
+                }
+            }
+
+            item { PaperSection("Your places") }
+            if (data.rows.isEmpty()) {
+                item {
+                    Text(
+                        "No places yet. Add one (Home, Library, Gym), or stay somewhere for 3 minutes and it appears in the Places stats for you to name.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            } else {
+                items(data.rows, key = { it.place.id }) { row ->
+                    SettingsRow(
+                        icon = null,
+                        title = row.place.name + if (row.place.archived) "  (not watched)" else "",
+                        hint = "${row.place.radiusM} m circle · " + PlaceKinds.label(row.place.kind),
+                        onClick = { editing = row.place },
+                    )
+                }
+            }
+            item { Button(onClick = { adding = true }) { Text("Add a place") } }
 
             item { PaperSection("Readings") }
             item {
