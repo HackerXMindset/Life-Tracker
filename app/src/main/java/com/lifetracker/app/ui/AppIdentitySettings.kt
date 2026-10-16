@@ -37,7 +37,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -61,7 +60,6 @@ fun AppIdentitySettings() {
     var iconRevision by remember { mutableIntStateOf(0) }
     var pendingImage by remember { mutableStateOf<Bitmap?>(null) }
     var cropOpen by remember { mutableStateOf(false) }
-    var iconBackground by rememberSaveable { mutableIntStateOf(0) }
 
     val pickImage = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
@@ -96,7 +94,7 @@ fun AppIdentitySettings() {
         ) {
             Box(
                 modifier = Modifier.size(64.dp).clip(RoundedCornerShape(16.dp))
-                    .background(listOf(Color.Transparent, Color.White, Color.Black, MaterialTheme.colorScheme.primaryContainer)[iconBackground]),
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center,
             ) {
                 Image(bitmap = preview, contentDescription = "Preview of the home-screen shortcut icon",
@@ -115,14 +113,11 @@ fun AppIdentitySettings() {
                 )
             }
         }
-        Text("Preview background", style = MaterialTheme.typography.labelLarge)
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            listOf("Auto", "White", "Black", "Theme").forEachIndexed { index, label ->
-                FilterChip(selected = iconBackground == index, onClick = { iconBackground = index }, label = { Text(label) })
-            }
-        }
-        Text("Preview is illustrative; launchers may apply their own icon mask and truncate labels.",
-            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            "Launcher appearance can vary, including icon shape and label truncation.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         OutlinedTextField(
             value = name,
             onValueChange = {

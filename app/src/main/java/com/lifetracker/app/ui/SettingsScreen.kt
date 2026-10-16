@@ -23,7 +23,7 @@ import com.lifetracker.app.data.UsageCollector
 import com.lifetracker.app.ui.theme.LocalPaper
 
 /** Everything that can be opened from the Settings tab. The numbers for each live under Stats. */
-enum class Page { Phone, Steps, Places, Calls, Charging, Activities, Habits, Backup }
+enum class Page { Phone, Steps, Places, Calls, Charging, Activities, Habits, Appearance, Backup }
 
 /**
  * The Settings tab, laid out like the demo: a big title, then four groups of rows. Each row has an icon, a name, one small
@@ -100,7 +100,10 @@ fun SettingsScreen(onOpen: (Page) -> Unit) {
 
         item { PaperSection("This app") }
         item {
-            SettingsRow(R.drawable.ic_p_cloud, "Appearance and backups", "Light or dark, backups, import and export") { onOpen(Page.Backup) }
+            SettingsRow(R.drawable.ic_p_gear, "Appearance", "Theme, app name and home-screen icon") { onOpen(Page.Appearance) }
+        }
+        item {
+            SettingsRow(R.drawable.ic_p_cloud, "Backups and imports", "Back up, restore, or import tracker data") { onOpen(Page.Backup) }
         }
 
     }

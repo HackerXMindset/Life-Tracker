@@ -38,10 +38,6 @@ import com.lifetracker.app.data.BackupManager
 import com.lifetracker.app.data.BackupManager.BackupFile
 import com.lifetracker.app.data.DataSources.Slot
 import com.lifetracker.app.data.FoundFile
-import androidx.compose.ui.platform.LocalContext
-import com.lifetracker.app.ui.theme.AppTheme
-import com.lifetracker.app.ui.theme.ThemeMode
-import com.lifetracker.app.ui.theme.PaperSegmented
 
 /** A hint that makes Android's folder picker open near where the folder usually is. */
 private fun startHint(folderName: String): Uri =
@@ -50,7 +46,6 @@ private fun startHint(folderName: String): Uri =
 @Composable
 fun DataSourcesScreen(onBack: () -> Unit, vm: DataSourcesViewModel = viewModel()) {
     val state by vm.state.collectAsState()
-    val context = LocalContext.current
     BackHandler(onBack = onBack)
 
     var showRestoreList by remember { mutableStateOf(false) }
@@ -75,7 +70,7 @@ fun DataSourcesScreen(onBack: () -> Unit, vm: DataSourcesViewModel = viewModel()
             TextButton(onClick = onBack) { Text("Back") }
         }
         item {
-            ScreenHeader(label = "Settings", badge = "On this phone", title = "Appearance and backups")
+            ScreenHeader(label = "Settings", badge = "On this phone", title = "Backups and imports")
         }
         state.message?.let { message ->
             item {
@@ -106,17 +101,6 @@ fun DataSourcesScreen(onBack: () -> Unit, vm: DataSourcesViewModel = viewModel()
                 }
             }
         }
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Appearance", style = MaterialTheme.typography.titleMedium)
-                Text("Choose how Life Tracker looks.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                PaperSegmented(options = ThemeMode.entries.map { it.label },
-                    selected = ThemeMode.entries.indexOf(AppTheme.mode),
-                    onSelect = { AppTheme.set(context, ThemeMode.entries[it]) })
-            }
-        }
-        item { AppIdentitySettings() }
-
         item {
             SourceCard(
                 title = "Streak",

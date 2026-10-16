@@ -113,6 +113,7 @@ fun LifeTrackerApp() {
             if (current != null) {
                 val back = { page = null }
                 when (current) {
+                    Page.Appearance -> AppearanceScreen(onBack = back)
                     Page.Backup -> DataSourcesScreen(onBack = back)
                     Page.Activities -> ActivitiesScreen(onBack = back)
                     Page.Habits -> HabitsSettingsScreen(onBack = back)
