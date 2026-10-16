@@ -20,6 +20,7 @@ import com.lifetracker.app.data.HabitSource
 import com.lifetracker.app.data.HabitsSettings
 import com.lifetracker.app.data.PlacesSettings
 import com.lifetracker.app.data.UsageCollector
+import com.lifetracker.app.ui.theme.LocalPaper
 
 /** Everything that can be opened from the Settings tab. The numbers for each live under Stats. */
 enum class Page { Phone, Steps, Places, Calls, Charging, Activities, Habits, Backup }
