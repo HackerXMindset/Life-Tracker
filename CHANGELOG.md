@@ -2,6 +2,19 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📜 Settings like your demo (part 2: Phone and usage, Sleep and steps)
+
+### ✨ New features
+
+- **Phone and usage** — as in the demo: a card with the "Show app use on the Timeline" switch and its hint, "Leave out stretches shorter than" as a connected strip (1, 2, 5, 10 min), hidden apps as rows, and the tilted orange note about when the usage was last copied.
+- **Sleep and steps** — the "Health Connect is connected" line, an "Open Health Connect" row, and one card with the step counter, "Sleep from phone use" and "Show sleep on the Timeline" switches, each with its hint.
+- Both pages now start with the demo's Back button and big title with a quiet line.
+
+### ⚠️ Good to know
+
+- The "Workouts" switch in the demo is not built (this app does not read workouts).
+- The Stats halves of these pages keep their old top for now.
+
 ## 📜 Settings like your demo (part 1: icons, shared pieces, the Settings tab)
 
 Your demo's Settings layout, step one. The Settings tab now matches it, and the pieces the other Settings pages will use are in place.

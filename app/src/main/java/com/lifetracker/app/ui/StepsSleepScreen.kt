@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import com.lifetracker.app.R
 import com.lifetracker.app.ui.theme.PaperCard
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -138,19 +139,40 @@ fun StepsSleepScreen(onBack: () -> Unit, part: Part = Part.Data, vm: StepsSleepV
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        item { TextButton(onClick = onBack) { Text("Back") } }
-        item { ScreenHeader(label = if (part == Part.Data) "Stats" else "Settings", badge = "On this phone", title = "Steps and sleep") }
+        if (part == Part.Settings) {
+            item { SettingsTop("Sleep and steps", "Where they come from", onBack) }
+        } else {
+            item { TextButton(onClick = onBack) { Text("Back") } }
+            item { ScreenHeader(label = "Stats", badge = "On this phone", title = "Steps and sleep") }
+        }
 
         if (part == Part.Settings) {
             item {
                 when (hc) {
                     HcState.Checking -> Unit
-                    HcState.Connected -> HealthCard(
-                        title = "Health Connect is connected",
-                        text = "Steps come from Health Connect, which on Android 14 and newer counts your phone's steps itself. " +
-                            "It only started counting when an app was first allowed to read steps, so earlier days stay empty unless another app saved them there.",
-                    ) {
-                        TextButton(onClick = ::openSettings) { Text("Open Health Connect") }
+                    HcState.Connected -> Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        SetCard {
+                            Row(
+                                modifier = Modifier.padding(vertical = 14.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                PaperIcon(R.drawable.ic_p_check)
+                                Text(
+                                    "Health Connect is connected." + if (lastSync.isEmpty()) "" else " Last updated $lastSync.",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
+                        }
+                        SettingsRow(R.drawable.ic_p_ext, "Open Health Connect", "Change what this app may read", onClick = ::openSettings)
+                        Text(
+                            "Steps come from Health Connect, which on Android 14 and newer counts your phone's steps itself. " +
+                                "It only started counting when an app was first allowed to read steps, so earlier days stay empty unless another app saved them there.",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                     HcState.NeedsPermission -> HealthCard(
                         title = "Allow Health Connect",
@@ -179,31 +201,41 @@ fun StepsSleepScreen(onBack: () -> Unit, part: Part = Part.Data, vm: StepsSleepV
                 }
             }
 
+            item {
+                SetCard {
+                    var first = true
+                    if (vm.hasCounterSensor) {
+                        ToggleRow(
+                            label = "Use the phone's step counter",
+                            checked = useCounter && counterPermission,
+                            onChange = { on ->
+                                if (!on) vm.setUseStepCounter(false)
+                                else if (counterPermission) vm.setUseStepCounter(true)
+                                else askActivity.launch(android.Manifest.permission.ACTIVITY_RECOGNITION)
+                            },
+                            hint = "When Health Connect has nothing for today",
+                            first = true,
+                        )
+                        first = false
+                    }
+                    ToggleRow(
+                        label = "Sleep from phone use",
+                        checked = estimate,
+                        onChange = vm::setEstimateSleep,
+                        hint = "Longest 3 to 14 hour stretch at night with no phone use",
+                        first = first,
+                    )
+                    ToggleRow("Show sleep on the Timeline", showOnTimeline, vm::setShowOnTimeline)
+                }
+            }
             if (vm.hasCounterSensor) {
                 item {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text("Use the phone's step counter", color = MaterialTheme.colorScheme.onBackground)
-                            Switch(
-                                checked = useCounter && counterPermission,
-                                onCheckedChange = { on ->
-                                    if (!on) vm.setUseStepCounter(false)
-                                    else if (counterPermission) vm.setUseStepCounter(true)
-                                    else askActivity.launch(android.Manifest.permission.ACTIVITY_RECOGNITION)
-                                },
-                            )
-                        }
-                        Text(
-                            "Only used on days Health Connect has no steps. Counts from when you switch it on, in readings taken whenever the app syncs, " +
-                                "so steps are filed under the day of the reading. Asks for the \"Physical activity\" permission.",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+                    Text(
+                        "The step counter is only used on days Health Connect has no steps. It counts from when you switch it on, in readings taken whenever the app syncs, " +
+                            "so steps are filed under the day of the reading. Asks for the \"Physical activity\" permission.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
 
@@ -303,27 +335,6 @@ fun StepsSleepScreen(onBack: () -> Unit, part: Part = Part.Data, vm: StepsSleepV
 
         }
         if (part == Part.Settings) {
-            item { PaperSection("Settings") }
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text("Work out sleep from phone use", color = MaterialTheme.colorScheme.onBackground)
-                    Switch(checked = estimate, onCheckedChange = vm::setEstimateSleep)
-                }
-            }
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text("Show on the Timeline", color = MaterialTheme.colorScheme.onBackground)
-                    Switch(checked = showOnTimeline, onCheckedChange = vm::setShowOnTimeline)
-                }
-            }
             item {
                 Text(
                     "The sleep estimate is the longest stretch of 3 to 14 hours at night with no phone use, ignoring quick checks under 5 minutes between 12:30 and 6 am. " +
