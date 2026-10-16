@@ -2,6 +2,22 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📜 Settings like your demo (part 1: icons, shared pieces, the Settings tab)
+
+Your demo's Settings layout, step one. The Settings tab now matches it, and the pieces the other Settings pages will use are in place.
+
+### ✨ New features
+
+- **The demo's line icons** — drawn from the demo's own icon paths.
+- **Settings tab like the demo** — four groups: Timeline (Activities), Collected from your phone (Phone and usage, Sleep and steps, Places and trips, Calls, Charging), Trackers (Habits) and This app (Appearance and backups). Each row has an icon, a name, a small line and a chevron. Under the title: "Everything that is not data".
+- **Switches are ink-black when on** — as in the demo (they were green).
+- **New shared pieces** — page top with a Back button, switch cards with dashed dividers, key / value lines and the tilted orange note. The other Settings pages move to them in the next parts.
+
+### ⚠️ Good to know
+
+- The state chips (Allowed, Watching...) are gone from the tab, as in the demo; when something is not allowed or switched off, the small line says so ("Not allowed yet · ...").
+- The Look choice stays at the bottom of the tab until "Appearance and backups" is redone (last part).
+
 ## 📜 Settings in the paper style (part 7g, Habits and Backup and import)
 
 Settings is now finished in the paper style.
