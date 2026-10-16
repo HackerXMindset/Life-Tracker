@@ -88,6 +88,8 @@ import com.lifetracker.app.ui.theme.PaperChip
 import com.lifetracker.app.ui.theme.PaperIconButton
 import com.lifetracker.app.ui.theme.PaperPill
 import com.lifetracker.app.ui.theme.PaperSegmented
+import com.lifetracker.app.ui.theme.TallyBar
+import com.lifetracker.app.ui.theme.Wobble
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.Month
@@ -475,13 +477,11 @@ private fun HabitCardView(
     val accent = Color(habit.color.toInt())
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
 
-    Surface(
+    PaperCard(
         modifier = Modifier.fillMaxWidth().combinedClickable(onClick = onOpen, onLongClick = onHold),
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        padding = if (compact) 11.dp else 16.dp,
+        shadow = false,
     ) {
-        Column(modifier = Modifier.padding(if (compact) 11.dp else 16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 GlyphTile(habit, accent, if (compact) 34.dp else 46.dp)
                 Spacer(Modifier.width(if (compact) 11.dp else 14.dp))
@@ -522,7 +522,6 @@ private fun HabitCardView(
                 Spacer(Modifier.height(16.dp))
                 HabitCalendarView(row.rules, mode, today, accent, onDay, onMenu)
             }
-        }
     }
 }
 
@@ -533,8 +532,9 @@ private fun GlyphTile(habit: HabitEntity, accent: Color, size: Dp) {
     Box(
         modifier = Modifier
             .size(size)
-            .clip(RoundedCornerShape(if (size < 40.dp) 11.dp else 14.dp))
-            .background(accent.copy(alpha = 0.18f)),
+            .background(accent.copy(alpha = 0.18f), Wobble.Small)
+            .border(1.25.dp, accent.copy(alpha = 0.45f), Wobble.Small)
+            .clip(Wobble.Small),
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -589,17 +589,7 @@ private fun MetaLine(row: HabitRow, accent: Color, muted: Color) {
 
 @Composable
 private fun StrengthBar(value: Float, accent: Color, modifier: Modifier) {
-    Box(
-        modifier = modifier.height(6.dp).clip(RoundedCornerShape(3.dp)).background(MaterialTheme.colorScheme.surfaceVariant),
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(value.coerceIn(0f, 1f))
-                .height(6.dp)
-                .clip(RoundedCornerShape(3.dp))
-                .background(accent),
-        )
-    }
+    TallyBar(progress = value.coerceIn(0f, 1f), modifier = modifier, color = accent, height = 14.dp)
 }
 
 /** The tick on the right of a card: a check for yes/no, a plus for counted, a ban for a relapse habit. */
@@ -622,14 +612,16 @@ private fun ActionButton(row: HabitRow, accent: Color, size: Dp, onClick: () -> 
     Box(
         modifier = Modifier
             .size(size)
-            .clip(RoundedCornerShape(size * 0.3f))
             .background(
                 when {
                     filled -> accent
                     relapsedToday -> MaterialTheme.colorScheme.error.copy(alpha = 0.18f)
                     else -> accent.copy(alpha = 0.12f)
                 },
+                Wobble.Small,
             )
+            .border(1.25.dp, if (relapsedToday) MaterialTheme.colorScheme.error.copy(alpha = 0.5f) else accent.copy(alpha = if (filled) 1f else 0.45f), Wobble.Small)
+            .clip(Wobble.Small)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -704,9 +696,9 @@ private fun WeekRow(rules: HabitRules, today: LocalDate, accent: Color, onTap: (
                     .weight(1f)
                     .padding(horizontal = 2.dp)
                     .height(46.dp)
-                    .clip(RoundedCornerShape(11.dp))
+                    .clip(Wobble.Small)
                     .background(fill)
-                    .then(if (date == today) Modifier.border(2.dp, ringColor(fill, accent), RoundedCornerShape(11.dp)) else Modifier)
+                    .then(if (date == today) Modifier.border(2.dp, ringColor(fill, accent), Wobble.Small) else Modifier)
                     .dayTouch(date, today, onTap, onMenu),
                 contentAlignment = Alignment.Center,
             ) {
