@@ -3,24 +3,37 @@ package com.lifetracker.app.data
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
-import android.graphics.Rect
+import android.graphics.Matrix
+import android.graphics.RectF
+import android.net.Uri
 import androidx.core.content.edit
 import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
+import androidx.exifinterface.media.ExifInterface
 import com.caverock.androidsvg.SVG
 import com.lifetracker.app.MainActivity
 import com.lifetracker.app.R
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.io.File
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.roundToInt
 
 /** Keeps the user's custom home-screen identity on this phone and creates its launcher shortcut. */
 object AppBranding {
     private const val PREFS = "app_branding"
     private const val NAME_KEY = "shortcut_name"
-    private const val SVG_FILE = "custom_home_icon.svg"
+    private const val PNG_FILE = "custom_home_icon.png"
+    // Keep supporting SVGs selected in builds of the first version of this feature.
+    private const val LEGACY_SVG_FILE = "custom_home_icon.svg"
     private const val SHORTCUT_ID = "life_tracker_custom_identity"
-    private const val MAX_SVG_BYTES = 1024 * 1024
+    private const val MAX_IMAGE_BYTES = 25 * 1024 * 1024
+    private const val WORKING_IMAGE_EDGE = 2048
+    private const val ICON_EDGE = 512
 
     enum class ShortcutResult { PinRequested, Updated, Unsupported, UpdateFailed }
 
@@ -34,48 +47,170 @@ object AppBranding {
         }
     }
 
-    fun hasCustomIcon(context: Context): Boolean = iconFile(context).isFile
+    fun hasCustomIcon(context: Context): Boolean =
+        iconFile(context).isFile || legacySvgFile(context).isFile
 
-    /** Saves only valid, reasonably sized SVG text to the app's private storage. Returns an error for the UI, if any. */
-    fun saveCustomSvg(context: Context, svgText: String): String? {
-        val bytes = svgText.toByteArray(Charsets.UTF_8)
-        if (bytes.isEmpty() || bytes.size > MAX_SVG_BYTES) {
-            return "Choose an SVG file smaller than 1 MB."
-        }
-
-        return try {
-            // Render once as validation so an unsupported or malformed file is not saved as the current icon.
-            SVG.getFromString(svgText).renderToPicture(192, 192)
-            val target = iconFile(context)
-            val temporary = File(context.filesDir, "$SVG_FILE.tmp")
-            temporary.writeBytes(bytes)
-            if (!temporary.renameTo(target)) {
-                temporary.copyTo(target, overwrite = true)
-                temporary.delete()
+    /**
+     * Loads a local raster image or SVG from Android's document picker.
+     * SVGs are rendered into a square viewport so the full viewBox is fitted, not cropped.
+     */
+    fun decodeImage(context: Context, uri: Uri): Bitmap {
+        val resolver = context.contentResolver
+        val bytes = resolver.openInputStream(uri)?.use { input ->
+            val output = ByteArrayOutputStream()
+            val buffer = ByteArray(8192)
+            var total = 0
+            while (true) {
+                val count = input.read(buffer)
+                if (count < 0) break
+                total += count
+                require(total <= MAX_IMAGE_BYTES) { "Choose an image smaller than 25 MB." }
+                output.write(buffer, 0, count)
             }
-            null
-        } catch (_: Exception) {
-            File(context.filesDir, "$SVG_FILE.tmp").delete()
-            "That file could not be read as a valid SVG. Choose another file."
+            output.toByteArray()
+        } ?: throw IllegalArgumentException("The selected image could not be opened.")
+
+        val mime = resolver.getType(uri).orEmpty()
+        val header = bytes.copyOfRange(0, min(bytes.size, 4096)).toString(Charsets.UTF_8)
+        val isSvg = mime.contains("svg", ignoreCase = true) ||
+            Regex("<svg(?:\\s|>)", RegexOption.IGNORE_CASE).containsMatchIn(header)
+
+        return if (isSvg) {
+            renderSvg(bytes.toString(Charsets.UTF_8), WORKING_IMAGE_EDGE)
+        } else {
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+            require(bounds.outWidth > 0 && bounds.outHeight > 0) {
+                "This image format is not supported by your phone."
+            }
+
+            var sample = 1
+            while (max(bounds.outWidth, bounds.outHeight) / sample > WORKING_IMAGE_EDGE) sample *= 2
+            val bitmap = BitmapFactory.decodeByteArray(
+                bytes,
+                0,
+                bytes.size,
+                BitmapFactory.Options().apply { inSampleSize = sample },
+            ) ?: throw IllegalArgumentException("This image format is not supported by your phone.")
+
+            applyExifOrientation(bytes, bitmap)
         }
+    }
+
+    /** Renders an SVG via its viewport, preserving the document aspect ratio and keeping the complete viewBox visible. */
+    private fun renderSvg(svgText: String, edge: Int): Bitmap {
+        val svg = SVG.getFromString(svgText)
+        if (svg.documentViewBox == null) {
+            val width = svg.documentWidth
+            val height = svg.documentHeight
+            require(width > 0f && height > 0f) { "This SVG needs a valid viewBox or explicit width and height." }
+            svg.setDocumentViewBox(0f, 0f, width, height)
+        }
+
+        val bitmap = Bitmap.createBitmap(edge, edge, Bitmap.Config.ARGB_8888)
+        // Supplying the destination viewport lets AndroidSVG fit the SVG into the whole square.
+        // Drawing a Picture into another Rect can apply confusing sizing to SVGs with intrinsic dimensions.
+        svg.renderToCanvas(Canvas(bitmap), RectF(0f, 0f, edge.toFloat(), edge.toFloat()))
+        return bitmap
+    }
+
+    private fun applyExifOrientation(bytes: ByteArray, bitmap: Bitmap): Bitmap {
+        val orientation = runCatching {
+            ExifInterface(ByteArrayInputStream(bytes)).getAttributeInt(
+                ExifInterface.TAG_ORIENTATION,
+                ExifInterface.ORIENTATION_NORMAL,
+            )
+        }.getOrDefault(ExifInterface.ORIENTATION_NORMAL)
+
+        val matrix = Matrix()
+        when (orientation) {
+            ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.setScale(-1f, 1f)
+            ExifInterface.ORIENTATION_ROTATE_180 -> matrix.setRotate(180f)
+            ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.setScale(1f, -1f)
+            ExifInterface.ORIENTATION_TRANSPOSE -> {
+                matrix.setRotate(90f)
+                matrix.postScale(-1f, 1f)
+            }
+            ExifInterface.ORIENTATION_ROTATE_90 -> matrix.setRotate(90f)
+            ExifInterface.ORIENTATION_TRANSVERSE -> {
+                matrix.setRotate(270f)
+                matrix.postScale(-1f, 1f)
+            }
+            ExifInterface.ORIENTATION_ROTATE_270 -> matrix.setRotate(270f)
+        }
+
+        return if (matrix.isIdentity) bitmap else Bitmap.createBitmap(
+            bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true,
+        )
+    }
+
+    /** Writes the cropped, square logo into private app storage. */
+    fun saveCustomIcon(context: Context, bitmap: Bitmap) {
+        val target = iconFile(context)
+        val temporary = File(context.filesDir, "$PNG_FILE.tmp")
+        FileOutputStreamCompat.writePng(temporary, bitmap)
+        if (!temporary.renameTo(target)) {
+            temporary.copyTo(target, overwrite = true)
+            temporary.delete()
+        }
+        // The PNG takes precedence; retaining the old SVG is harmless, but no longer necessary.
+        legacySvgFile(context).delete()
     }
 
     fun clearCustomIcon(context: Context) {
         iconFile(context).delete()
+        legacySvgFile(context).delete()
     }
 
-    /** Produces a bitmap for the launcher shortcut, using the original app icon when no SVG is selected. */
+    /**
+     * Crops a square from the image using the same zoom and pan as the editor, then returns a 512px launcher icon.
+     * Offsets and viewportSizePx are display pixels, matching Compose's pointer/graphics-layer coordinates.
+     */
+    fun cropBitmap(
+        source: Bitmap,
+        zoom: Float,
+        offsetX: Float,
+        offsetY: Float,
+        viewportSizePx: Float,
+    ): Bitmap {
+        val displayScale = max(
+            viewportSizePx / source.width.toFloat(),
+            viewportSizePx / source.height.toFloat(),
+        ) * zoom.coerceAtLeast(1f)
+        val side = (viewportSizePx / displayScale)
+            .coerceAtMost(min(source.width, source.height).toFloat())
+            .coerceAtLeast(1f)
+        val left = ((source.width - side) / 2f - offsetX / displayScale)
+            .coerceIn(0f, source.width - side)
+        val top = ((source.height - side) / 2f - offsetY / displayScale)
+            .coerceIn(0f, source.height - side)
+
+        val sideInt = side.roundToInt().coerceAtLeast(1).coerceAtMost(min(source.width, source.height))
+        val leftInt = left.roundToInt().coerceIn(0, source.width - sideInt)
+        val topInt = top.roundToInt().coerceIn(0, source.height - sideInt)
+        val cropped = Bitmap.createBitmap(source, leftInt, topInt, sideInt, sideInt)
+        return if (cropped.width == ICON_EDGE && cropped.height == ICON_EDGE) cropped
+        else Bitmap.createScaledBitmap(cropped, ICON_EDGE, ICON_EDGE, true).also {
+            if (cropped !== source) cropped.recycle()
+        }
+    }
+
+    /** Produces a bitmap for the launcher shortcut, supporting both new PNGs and SVGs saved by the earlier PR version. */
     fun createIconBitmap(context: Context, size: Int = 192): Bitmap {
         val appContext = context.applicationContext
-        val customFile = iconFile(appContext)
-        if (customFile.isFile) {
+        val customPng = iconFile(appContext)
+        if (customPng.isFile) {
             runCatching {
-                val picture = SVG.getFromString(customFile.readText(Charsets.UTF_8))
-                    .renderToPicture(size, size)
-                val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-                Canvas(bitmap).drawPicture(picture, Rect(0, 0, size, size))
-                return bitmap
+                BitmapFactory.decodeFile(customPng.absolutePath)?.let { saved ->
+                    if (saved.width == size && saved.height == size) return saved
+                    return Bitmap.createScaledBitmap(saved, size, size, true)
+                }
             }
+        }
+
+        val legacySvg = legacySvgFile(appContext)
+        if (legacySvg.isFile) {
+            runCatching { return renderSvg(legacySvg.readText(Charsets.UTF_8), size) }
         }
 
         val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
@@ -89,7 +224,6 @@ object AppBranding {
         val appContext = context.applicationContext
         val name = requestedName.trim().ifEmpty { appContext.getString(R.string.app_name) }
         val shortcut = ShortcutInfoCompat.Builder(appContext, SHORTCUT_ID)
-            // Android launchers prefer a concise short label. The full saved name remains editable in Settings.
             .setShortLabel(name.take(25))
             .setLongLabel(name.take(100))
             .setIcon(IconCompat.createWithBitmap(createIconBitmap(appContext)))
@@ -127,5 +261,19 @@ object AppBranding {
         context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
     private fun iconFile(context: Context) =
-        File(context.applicationContext.filesDir, SVG_FILE)
+        File(context.applicationContext.filesDir, PNG_FILE)
+
+    private fun legacySvgFile(context: Context) =
+        File(context.applicationContext.filesDir, LEGACY_SVG_FILE)
+
+    /** Isolated so the PNG is fully written before a rename can make it the active icon. */
+    private object FileOutputStreamCompat {
+        fun writePng(file: File, bitmap: Bitmap) {
+            file.outputStream().buffered().use { output ->
+                check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)) {
+                    "The cropped image could not be saved."
+                }
+            }
+        }
+    }
 }

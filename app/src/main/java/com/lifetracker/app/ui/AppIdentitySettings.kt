@@ -1,20 +1,32 @@
 package com.lifetracker.app.ui
 
+import android.graphics.Bitmap
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -22,45 +34,47 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.consume
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.foundation.layout.widthIn
 import com.lifetracker.app.data.AppBranding
 import com.lifetracker.app.data.AppBranding.ShortcutResult
 import com.lifetracker.app.ui.theme.PaperCard
+import kotlin.math.max
 
-/** Name and SVG selection for the custom launcher shortcut (Android keeps the original app-drawer identity). */
+/** Lets the user choose any image supported by Android, crop/position it in-app, and make a matching launcher shortcut. */
 @Composable
 fun AppIdentitySettings() {
     val context = LocalContext.current
     var name by rememberSaveable { mutableStateOf(AppBranding.savedName(context)) }
     var message by rememberSaveable { mutableStateOf<String?>(null) }
     var iconRevision by remember { mutableIntStateOf(0) }
+    var pendingImage by remember { mutableStateOf<Bitmap?>(null) }
+    var cropOpen by remember { mutableStateOf(false) }
 
-    val pickSvg = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    val pickImage = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
-            val contents = runCatching {
-                context.contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }
-                    ?: error("The selected file could not be opened.")
-            }
-            if (contents.isFailure) {
-                message = "Could not read that file. Please choose an SVG image."
-            } else {
-                val error = AppBranding.saveCustomSvg(context, contents.getOrThrow())
-                if (error == null) {
-                    iconRevision++
-                    message = "Custom SVG saved privately on this phone."
-                } else {
-                    message = error
-                }
+            val result = runCatching { AppBranding.decodeImage(context, uri) }
+            result.onSuccess { bitmap ->
+                pendingImage = bitmap
+                cropOpen = true
+                message = "Move the image and adjust the zoom, then use the crop."
+            }.onFailure { error ->
+                message = error.message ?: "The image could not be opened. Choose another image."
             }
         }
     }
 
-    val preview = remember(iconRevision) {
-        AppBranding.createIconBitmap(context, 144).asImageBitmap()
-    }
+    val preview = remember(iconRevision) { AppBranding.createIconBitmap(context, 144).asImageBitmap() }
     val hasCustomIcon = remember(iconRevision) { AppBranding.hasCustomIcon(context) }
 
     PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
@@ -70,7 +84,7 @@ fun AppIdentitySettings() {
             color = MaterialTheme.colorScheme.onSurface,
         )
         Text(
-            text = "Choose a name and an SVG logo for a separate home-screen shortcut. Android keeps the original app-drawer name and icon unchanged.",
+            text = "Choose a name and any supported image for a separate home-screen shortcut. The installed app-drawer name and icon stay unchanged.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -86,12 +100,12 @@ fun AppIdentitySettings() {
             )
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = if (hasCustomIcon) "Custom SVG selected" else "Using the current app icon",
+                    text = if (hasCustomIcon) "Custom icon selected" else "Using the current app icon",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
-                    text = "SVG files up to 1 MB are supported.",
+                    text = "Photos, PNG, JPEG, WebP and SVG are supported when Android can decode them.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -109,8 +123,8 @@ fun AppIdentitySettings() {
             singleLine = true,
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = { pickSvg.launch(arrayOf("image/svg+xml")) }) {
-                Text("Choose SVG")
+            OutlinedButton(onClick = { pickImage.launch(arrayOf("image/*")) }) {
+                Text("Choose image")
             }
             OutlinedButton(
                 onClick = {
@@ -147,6 +161,150 @@ fun AppIdentitySettings() {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+
+    if (cropOpen) {
+        pendingImage?.let { source ->
+            CropImageDialog(
+                source = source,
+                onDismiss = {
+                    cropOpen = false
+                    pendingImage = null
+                },
+                onUse = { cropped ->
+                    val saved = runCatching { AppBranding.saveCustomIcon(context, cropped) }
+                    cropped.recycle()
+                    cropOpen = false
+                    pendingImage = null
+                    if (saved.isSuccess) {
+                        iconRevision++
+                        message = "Cropped image saved privately on this phone. Save name and create / update shortcut to apply it."
+                    } else {
+                        message = saved.exceptionOrNull()?.message ?: "The cropped image could not be saved."
+                    }
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun CropImageDialog(
+    source: Bitmap,
+    onDismiss: () -> Unit,
+    onUse: (Bitmap) -> Unit,
+) {
+    val viewportDp = 260.dp
+    val viewportPx = with(LocalDensity.current) { viewportDp.toPx() }
+    val imageAspect = source.width.toFloat() / source.height.toFloat()
+    val fittedWidthPx = source.width * max(viewportPx / source.width, viewportPx / source.height)
+    val fittedHeightPx = source.height * max(viewportPx / source.width, viewportPx / source.height)
+
+    var zoom by remember(source) { mutableFloatStateOf(1f) }
+    var offsetX by remember(source) { mutableFloatStateOf(0f) }
+    var offsetY by remember(source) { mutableFloatStateOf(0f) }
+
+    val maxOffsetX = ((fittedWidthPx * zoom - viewportPx) / 2f).coerceAtLeast(0f)
+    val maxOffsetY = ((fittedHeightPx * zoom - viewportPx) / 2f).coerceAtLeast(0f)
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(0.94f).widthIn(max = 440.dp),
+            shape = RoundedCornerShape(24.dp),
+            tonalElevation = 6.dp,
+            color = MaterialTheme.colorScheme.surface,
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text("Crop image", style = MaterialTheme.typography.titleLarge)
+                Text(
+                    "Drag the image to position it. Use the slider to zoom in or out.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Box(
+                    modifier = Modifier
+                        .size(viewportDp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                ) {
+                    Image(
+                        bitmap = source.asImageBitmap(),
+                        contentDescription = "Image crop preview",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                scaleX = zoom
+                                scaleY = zoom
+                                translationX = offsetX
+                                translationY = offsetY
+                            }
+                            .pointerInput(source, zoom, viewportPx) {
+                                detectDragGestures { change, dragAmount ->
+                                    change.consume()
+                                    val widthMax = ((fittedWidthPx * zoom - viewportPx) / 2f).coerceAtLeast(0f)
+                                    val heightMax = ((fittedHeightPx * zoom - viewportPx) / 2f).coerceAtLeast(0f)
+                                    offsetX = (offsetX + dragAmount.x).coerceIn(-widthMax, widthMax)
+                                    offsetY = (offsetY + dragAmount.y).coerceIn(-heightMax, heightMax)
+                                }
+                            },
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Zoom", style = MaterialTheme.typography.bodyMedium)
+                    Text("${zoom.toInt()}x".let { if (zoom % 1f == 0f) it else "${"%.1f".format(zoom)}x" },
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                Slider(
+                    value = zoom,
+                    onValueChange = { value ->
+                        zoom = value
+                        offsetX = offsetX.coerceIn(
+                            -((fittedWidthPx * value - viewportPx) / 2f).coerceAtLeast(0f),
+                            ((fittedWidthPx * value - viewportPx) / 2f).coerceAtLeast(0f),
+                        )
+                        offsetY = offsetY.coerceIn(
+                            -((fittedHeightPx * value - viewportPx) / 2f).coerceAtLeast(0f),
+                            ((fittedHeightPx * value - viewportPx) / 2f).coerceAtLeast(0f),
+                        )
+                    },
+                    valueRange = 1f..4f,
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            zoom = 1f
+                            offsetX = 0f
+                            offsetY = 0f
+                        },
+                        modifier = Modifier.weight(1f),
+                    ) { Text("Center") }
+                    Button(
+                        onClick = {
+                            onUse(AppBranding.cropBitmap(source, zoom, offsetX, offsetY, viewportPx))
+                        },
+                        modifier = Modifier.weight(1f),
+                    ) { Text("Use crop") }
+                }
+                Spacer(Modifier.size(2.dp))
+                TextButton(onClick = onDismiss) { Text("Cancel") }
+            }
         }
     }
 }

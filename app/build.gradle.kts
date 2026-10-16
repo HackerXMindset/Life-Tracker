@@ -64,6 +64,7 @@ dependencies {
 
     // Runtime SVG support for user-selected home-screen shortcut icons.
     implementation("com.caverock:androidsvg-aar:1.4")
+    implementation("androidx.exifinterface:exifinterface:1.3.7")
 
     // On-phone database. Never use destructive migrations: future versions must
     // add a Migration so your logged data survives updates.

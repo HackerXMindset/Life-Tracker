@@ -6,8 +6,8 @@ Every release page shows the sections below that were added since the last relea
 
 ### ✨ New features
 
-- **Custom home-screen identity** — Settings lets you save a shortcut name, select a local SVG logo (up to 1 MB), preview it, reset it, and create or update a matching home-screen shortcut.
-- SVG files are validated before saving and stored privately on the phone; no image or name is uploaded.
+- **Custom home-screen identity** — inside Appearance and backups, choose a name and pick an image through the system image picker. Crop and position it in the app, zoom it, preview it, reset it, and create or update a matching home-screen shortcut.
+- Accepts common Android-decodable image formats, including raster photos and SVG. SVGs are rendered into a square viewport so the full drawing is fitted rather than clipped; the cropped icon is stored privately on the phone.
 
 ### ⚠️ Good to know
 

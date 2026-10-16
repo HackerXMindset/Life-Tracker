@@ -105,8 +105,6 @@ fun SettingsScreen(onOpen: (Page) -> Unit) {
         item {
             SettingsRow(R.drawable.ic_p_cloud, "Appearance and backups", "Light or dark, backups, import and export") { onOpen(Page.Backup) }
         }
-        item { PaperSection("App identity") }
-        item { AppIdentitySettings() }
 
         // Until Appearance moves into that page (part P7h-g), the Look choice stays here so it is not lost.
         item { PaperSection("Look") }

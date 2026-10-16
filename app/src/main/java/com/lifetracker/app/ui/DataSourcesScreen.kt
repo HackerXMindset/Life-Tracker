@@ -70,7 +70,7 @@ fun DataSourcesScreen(onBack: () -> Unit, vm: DataSourcesViewModel = viewModel()
             TextButton(onClick = onBack) { Text("Back") }
         }
         item {
-            ScreenHeader(label = "Settings", badge = "On this phone", title = "Data sources")
+            ScreenHeader(label = "Settings", badge = "On this phone", title = "Appearance and backups")
         }
         state.message?.let { message ->
             item {
@@ -101,6 +101,8 @@ fun DataSourcesScreen(onBack: () -> Unit, vm: DataSourcesViewModel = viewModel()
                 }
             }
         }
+        item { AppIdentitySettings() }
+
         item {
             SourceCard(
                 title = "Streak",
