@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -218,7 +219,7 @@ fun DayCalendar(rows: List<DayLayout.Row>, a: DayActions) {
                         )
                         Bar.GAP -> {
                             val w = BAR_WIDTH.toPx()
-                            androidx.compose.ui.graphics.drawscope.clipRect(x, top, x + w, top + height) {
+                            clipRect(x, top, x + w, top + height) {
                                 var k = -w
                                 while (k < height + w) {
                                     drawLine(hatch, Offset(x, top + k + w), Offset(x + w, top + k), 1.dp.toPx())
