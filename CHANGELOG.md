@@ -2,6 +2,11 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## ✦ Continuous Timeline lines
+
+- Removed dashed styles from event rails and card outlines, travel connectors, ongoing-stay markers, the day-progress arc, and breakdown-list separators.
+- Manually logged and automatically collected events now use the same continuous line style; their colours still identify their categories.
+
 ## 📜 Export and GPX import moved
 
 ### ✨ New features
