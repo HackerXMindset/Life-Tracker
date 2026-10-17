@@ -276,6 +276,51 @@ object AppBranding {
         }
     }
 
+    /**
+     * Creates or updates a home-screen shortcut for one saved design.
+     * Each design has a stable, independent ID, so its name and image coexist with other shortcuts.
+     */
+    fun createOrUpdateSavedDesignShortcut(context: Context, designId: String): ShortcutResult {
+        val appContext = context.applicationContext
+        val design = savedDesigns(appContext).firstOrNull { it.id == designId }
+            ?: return ShortcutResult.UpdateFailed
+        val icon = savedDesignIcon(appContext, designId, ICON_EDGE)
+            ?: return ShortcutResult.UpdateFailed
+        val shortcutId = "life_tracker_design_${design.id}"
+        val shortcut = ShortcutInfoCompat.Builder(appContext, shortcutId)
+            .setShortLabel(design.name.take(25))
+            .setLongLabel(design.name.take(100))
+            .setIcon(IconCompat.createWithBitmap(icon))
+            .setIntent(
+                Intent(appContext, MainActivity::class.java).apply {
+                    action = Intent.ACTION_MAIN
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                },
+            )
+            .setLongLived(true)
+            .build()
+
+        if (!ShortcutManagerCompat.isRequestPinShortcutSupported(appContext)) {
+            return ShortcutResult.Unsupported
+        }
+
+        val alreadyPinned = ShortcutManagerCompat
+            .getShortcuts(appContext, ShortcutManagerCompat.FLAG_MATCH_PINNED)
+            .any { it.id == shortcutId }
+
+        return if (alreadyPinned) {
+            if (ShortcutManagerCompat.updateShortcuts(appContext, listOf(shortcut))) {
+                ShortcutResult.Updated
+            } else {
+                ShortcutResult.UpdateFailed
+            }
+        } else if (ShortcutManagerCompat.requestPinShortcut(appContext, shortcut, null)) {
+            ShortcutResult.PinRequested
+        } else {
+            ShortcutResult.Unsupported
+        }
+    }
+
     /** Saves the current logo and the supplied launcher name as a separate reusable design. */
     fun saveDesign(context: Context, requestedName: String): SavedDesign {
         val appContext = context.applicationContext

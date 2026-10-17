@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -181,6 +182,20 @@ private fun SavedAppDesignsSettings(
                                         }
                                     },
                                 ) { Text("Apply") }
+                                OutlinedButton(
+                                    onClick = {
+                                        message = when (AppBranding.createOrUpdateSavedDesignShortcut(context, design.id)) {
+                                            AppBranding.ShortcutResult.PinRequested ->
+                                                "\" ${design.name}\" shortcut requested. Approve the launcher prompt if it appears."
+                                            AppBranding.ShortcutResult.Updated ->
+                                                "\" ${design.name}\" home-screen shortcut updated."
+                                            AppBranding.ShortcutResult.Unsupported ->
+                                                "This launcher does not support pinned shortcuts."
+                                            AppBranding.ShortcutResult.UpdateFailed ->
+                                                "Could not create or update this design's shortcut. Try again."
+                                        }
+                                    },
+                                ) { Text("Add shortcut") }
                                 TextButton(onClick = { deleteTarget = design }) { Text("Delete") }
                             }
                         }
@@ -197,7 +212,7 @@ private fun SavedAppDesignsSettings(
         AlertDialog(
             onDismissRequest = { deleteTarget = null },
             title = { Text("Delete saved design?") },
-            text = { Text("\"${design.name}\" will be removed from your saved designs. Your currently active icon and name won't change.") },
+            text = { Text("\"${design.name}\" will be removed from this list. Your active identity will not change; a shortcut already added may remain on your home screen.") },
             confirmButton = {
                 TextButton(onClick = {
                     val removed = AppBranding.deleteSavedDesign(context, design.id)
