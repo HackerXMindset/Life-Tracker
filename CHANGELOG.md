@@ -2,6 +2,12 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🐞 Fill in now stays inside the place
+
+### 🔧 Fixes
+
+- **Fill in** — an entry you add for a gap inside a place now stays inside that place, and the gap disappears. Before, the entry only knew whole minutes, so it could start a few seconds before the stay did and was drawn above the place with the gap still showing. An item now belongs to the stay it overlaps most.
+
 ## ✦ Continuous Timeline lines
 
 - Removed dashed styles from event rails and card outlines, travel connectors, ongoing-stay markers, the day-progress arc, and breakdown-list separators.
