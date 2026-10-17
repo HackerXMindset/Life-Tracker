@@ -14,19 +14,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifetracker.app.R
-import com.lifetracker.app.ui.theme.AppTheme
-import com.lifetracker.app.ui.theme.LocalPaper
-import com.lifetracker.app.ui.theme.PaperSegmented
-import com.lifetracker.app.ui.theme.ThemeMode
 import com.lifetracker.app.data.CallsCollector
 import com.lifetracker.app.data.ChargeSettings
 import com.lifetracker.app.data.HabitSource
 import com.lifetracker.app.data.HabitsSettings
 import com.lifetracker.app.data.PlacesSettings
 import com.lifetracker.app.data.UsageCollector
+import com.lifetracker.app.ui.theme.LocalPaper
 
 /** Everything that can be opened from the Settings tab. The numbers for each live under Stats. */
-enum class Page { Phone, Steps, Places, Calls, Charging, Activities, Habits, Backup }
+enum class Page { Phone, Steps, Places, Calls, Charging, Activities, Habits, Appearance, Backup }
 
 /**
  * The Settings tab, laid out like the demo: a big title, then four groups of rows. Each row has an icon, a name, one small
@@ -103,17 +100,11 @@ fun SettingsScreen(onOpen: (Page) -> Unit) {
 
         item { PaperSection("This app") }
         item {
-            SettingsRow(R.drawable.ic_p_cloud, "Appearance and backups", "Light or dark, backups, import and export") { onOpen(Page.Backup) }
+            SettingsRow(R.drawable.ic_p_gear, "Appearance", "Theme, app name and home-screen icon") { onOpen(Page.Appearance) }
         }
-        // Until Appearance moves into that page (part P7h-g), the Look choice stays here so it is not lost.
-        item { PaperSection("Look") }
         item {
-            val mode = AppTheme.mode
-            PaperSegmented(
-                options = ThemeMode.entries.map { it.label },
-                selected = ThemeMode.entries.indexOf(mode),
-                onSelect = { AppTheme.set(context, ThemeMode.entries[it]) },
-            )
+            SettingsRow(R.drawable.ic_p_cloud, "Backups and imports", "Back up, restore, or import tracker data") { onOpen(Page.Backup) }
         }
+
     }
 }
