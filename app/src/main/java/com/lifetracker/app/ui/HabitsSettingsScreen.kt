@@ -21,6 +21,7 @@ import androidx.compose.material3.MaterialTheme
 import com.lifetracker.app.ui.theme.LocalPaper
 import com.lifetracker.app.ui.theme.PaperCard
 import com.lifetracker.app.ui.theme.PaperChip
+import com.lifetracker.app.ui.theme.PaperSegmented
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -34,6 +35,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lifetracker.app.R
 import com.lifetracker.app.data.DataSources
 import com.lifetracker.app.data.HabitSource
 import com.lifetracker.app.data.HabitSyncState
@@ -78,40 +80,49 @@ fun HabitsSettingsScreen(onBack: () -> Unit) {
         }
     }
 
+    val streakInstalled = StreakLink.isInstalled(context)
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item { TextButton(onClick = onBack) { Text("Back") } }
-        item { ScreenHeader(label = "Settings", badge = "On this phone", title = "Habits") }
-        item { PaperSection("Where your habits live") }
+        item { SettingsTop("Habits", "Where habits come from", onBack) }
+        item { PaperSection("Track habits with") }
         item {
-            SourceCard(
-                selected = source == HabitSource.Own,
-                title = "This app's own data",
-                text = "You add and track habits here. Nothing is imported from Streak, so nothing you change is put back, and you don't need Streak installed.",
-                onClick = {
-                    settings.source = HabitSource.Own
-                    source = HabitSource.Own
-                    message = null
+            PaperSegmented(
+                options = listOf("Streak", "This app"),
+                selected = if (source == HabitSource.Streak) 0 else 1,
+                onSelect = { i ->
+                    if (i == 0) {
+                        if (source != HabitSource.Streak) confirm = true
+                    } else {
+                        settings.source = HabitSource.Own
+                        source = HabitSource.Own
+                        message = null
+                    }
                 },
             )
         }
         item {
-            SourceCard(
-                selected = source == HabitSource.Streak,
-                title = "Import from Streak",
-                text = "Your habits come from Streak's backups, as before. Tapping a habit opens it in Streak.",
-                onClick = { if (source != HabitSource.Streak) confirm = true },
+            SetupNote(
+                if (source == HabitSource.Streak) {
+                    "Your habits come from Streak's backups. Tapping a habit opens it in Streak."
+                } else {
+                    "You add and track habits here. Nothing is imported from Streak, so nothing you change is put back, and you don't need Streak installed."
+                },
             )
         }
         if (source == HabitSource.Streak) {
             item {
-                SetupNote(
-                    "Streak app: " + (if (StreakLink.isInstalled(context)) "installed" else "not found on this phone") + "\n" +
-                        "Streak backup folder: " + (folder ?: "not chosen yet (set it under Backup and import)") + "\n\n" +
-                        "For now, a habit you change here that also exists in Streak goes back to Streak's version each time a " +
+                SetCard {
+                    KvRow("Streak app", if (streakInstalled) "installed" else "not found", first = true)
+                    KvRow("Streak backup folder", folder ?: "not chosen yet")
+                }
+            }
+            item {
+                LockNote(
+                    "For now, a habit you change here that also exists in Streak goes back to Streak's version each time a " +
                         "Streak backup is imported, unless the change has already been sent to Streak (see below). Days you tick here are kept.",
                 )
             }
@@ -119,64 +130,61 @@ fun HabitsSettingsScreen(onBack: () -> Unit) {
         if (busy) item { SetupNote("Importing from Streak...") }
         message?.let { item { SetupNote(it) } }
 
-        item { PaperSection("Send your changes to Streak") }
+        item { PaperSection("Send your changes to Streak", "what you changed here") }
         item {
             SetupNote(
                 "Streak can take in changes from a shared folder. This app writes a Streak backup file there holding only " +
-                    "what you changed here (new habits, edits, ticks, notes). Streak reads it the next time it checks the folder.\n\n" +
-                    "Streak's folder: " + (folder ?: "not chosen yet") + "\n" +
-                    "Writing allowed: " + (if (canWrite) "yes" else "no, choose the folder again below") + "\n" +
-                    "Last sent: " + (lastSent ?: "never") + "\n\n" +
-                    "A day you un-tick here stays ticked in Streak, because Streak only ever adds days.",
+                    "what you changed here (new habits, edits, ticks, notes). Streak reads it the next time it checks the folder.",
             )
         }
         item {
-            PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("Send automatically", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                        Text(
-                            "A few seconds after a change, and each time the app opens. Needs the folder to allow writing.",
-                            fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    Switch(
-                        checked = auto,
-                        onCheckedChange = {
-                            auto = it
-                            syncState.autoSend = it
-                            if (it) StreakSendWorker.schedule(context, delaySeconds = 0)
-                        },
-                    )
-                }
+            SetCard {
+                ToggleRow(
+                    label = "Send automatically",
+                    checked = auto,
+                    onChange = {
+                        auto = it
+                        syncState.autoSend = it
+                        if (it) StreakSendWorker.schedule(context, delaySeconds = 0)
+                    },
+                    hint = "A few seconds after a change, and each time the app opens. Needs the folder to allow writing.",
+                    first = true,
+                )
+                KvRow("Streak's folder", folder ?: "not chosen yet")
+                KvRow("Writing allowed", if (canWrite) "yes" else "no")
+                KvRow("Last sent", lastSent ?: "never")
             }
         }
         autoNote?.let { note -> item { SetupNote(note) } }
         item {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = { pickFolder.launch(null) }) { Text(if (canWrite) "Change folder" else "Choose the folder again") }
-                TextButton(
-                    enabled = canWrite && !sending,
-                    onClick = {
-                        sending = true
-                        sendMessage = null
-                        scope.launch {
-                            sendMessage = try {
-                                StreakFolderWriter.send(context).message
-                            } catch (e: Exception) {
-                                e.message ?: "Could not send to Streak."
-                            }
-                            sending = false
+            SettingsRow(
+                R.drawable.ic_p_restore,
+                if (sending) "Sending..." else "Send to Streak now",
+                if (canWrite) "Saves a Streak-format file into the shared folder" else "Choose the folder again first",
+            ) {
+                if (canWrite && !sending) {
+                    sending = true
+                    sendMessage = null
+                    scope.launch {
+                        sendMessage = try {
+                            StreakFolderWriter.send(context).message
+                        } catch (e: Exception) {
+                            e.message ?: "Could not send to Streak."
                         }
-                    },
-                ) { Text(if (sending) "Sending..." else "Send to Streak now") }
+                        sending = false
+                    }
+                }
             }
         }
+        item {
+            SettingsRow(
+                R.drawable.ic_p_folder,
+                if (canWrite) "Change folder" else "Choose the folder again",
+                "Pick the folder Streak also reads",
+            ) { pickFolder.launch(null) }
+        }
         sendMessage?.let { item { SetupNote(it) } }
+        item { LockNote("A day you un-tick here stays ticked in Streak, because Streak only ever adds days.", R.drawable.ic_p_note) }
     }
 
     if (confirm) {
