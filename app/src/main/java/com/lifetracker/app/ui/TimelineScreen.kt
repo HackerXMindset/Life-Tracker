@@ -416,7 +416,7 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
                     }
                 }
             } else {
-                items(rows, key = { it.key }) { row -> DayRow(row, actions) }
+                item(key = "calendar") { DayCalendar(rows, actions) }
                 if (anyTimeTodos.isNotEmpty()) {
                     item(key = "todos-header") {
                         PaperSection("To do on this day", if (plannedMinutes > 0) "${formatDuration(plannedMinutes)} planned" else null)

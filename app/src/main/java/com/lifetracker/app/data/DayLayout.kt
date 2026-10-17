@@ -212,4 +212,26 @@ object DayLayout {
         if (to - cursor >= minMs) out += cursor to to
         return out
     }
+
+    /**
+     * Gives each stretch (start to end) a lane so that stretches that overlap in time sit side by side and the others share a
+     * lane. Lane 0 is used first. The answer is in the same order as [spans].
+     */
+    fun lanes(spans: List<Pair<Long, Long>>): List<Int> {
+        val order = spans.indices.sortedWith(compareBy({ spans[it].first }, { spans[it].second }, { it }))
+        val laneEnds = ArrayList<Long>()
+        val out = IntArray(spans.size)
+        for (i in order) {
+            val (start, end) = spans[i]
+            var lane = laneEnds.indexOfFirst { it <= start }
+            if (lane < 0) {
+                lane = laneEnds.size
+                laneEnds += end
+            } else {
+                laneEnds[lane] = end
+            }
+            out[i] = lane
+        }
+        return out.toList()
+    }
 }
