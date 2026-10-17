@@ -167,13 +167,13 @@ private fun SavedAppDesignsSettings(
                                         }.onSuccess { active ->
                                             message = when (AppBranding.createOrUpdateShortcut(context, active.name)) {
                                                 AppBranding.ShortcutResult.PinRequested ->
-                                                    "\" ${active.name}\" selected. Approve the launcher request to add its shortcut."
+                                                    "\"${active.name}\" selected. Approve the launcher request to add its shortcut."
                                                 AppBranding.ShortcutResult.Updated ->
-                                                    "\" ${active.name}\" applied and the home-screen shortcut was updated."
+                                                    "\"${active.name}\" applied and the home-screen shortcut was updated."
                                                 AppBranding.ShortcutResult.Unsupported ->
-                                                    "\" ${active.name}\" applied here, but this launcher cannot pin shortcuts."
+                                                    "\"${active.name}\" applied here, but this launcher cannot pin shortcuts."
                                                 AppBranding.ShortcutResult.UpdateFailed ->
-                                                    "\" ${active.name}\" applied here, but the launcher could not update the shortcut."
+                                                    "\"${active.name}\" applied here, but the launcher could not update the shortcut."
                                             }
                                             onDesignApplied()
                                         }.onFailure { error ->
