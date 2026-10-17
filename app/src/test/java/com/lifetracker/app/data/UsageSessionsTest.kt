@@ -257,6 +257,56 @@ class UsageSessionsTest {
         assertEquals("", day.blocks.single().comboId)
     }
 
+    @Test
+    fun aShortInterruptionDoesNotBreakANamedCombination() {
+        val combos = listOf(UsageDays.Combo("study-pw", setOf("pw", "gpt"), "Study"))
+        val day = UsageDays.build(
+            listOf(
+                session("pw", 0, 10 * min),
+                session("gpt", 10 * min, 20 * min),
+                session("g", 21 * min, 23 * min),
+                session("pw", 24 * min, 40 * min),
+                session("gpt", 40 * min, 50 * min),
+            ),
+            mapOf(app("pw", "Physics Wallah"), app("gpt", "ChatGPT"), app("g", "Game", "Screen")),
+            dayStart,
+            dayEnd,
+            combos = combos,
+        )
+        val block = day.blocks.single()
+        assertEquals("Study", block.activityId)
+        assertEquals(0L, block.startMs)
+        assertEquals(50 * min, block.endMs)
+        assertEquals(3, block.apps.size)
+    }
+
+    @Test
+    fun aLongInterruptionStillBreaksTheCombination() {
+        val combos = listOf(UsageDays.Combo("study-pw", setOf("pw", "gpt"), "Study"))
+        val day = UsageDays.build(
+            listOf(
+                session("pw", 0, 5 * min),
+                session("gpt", 5 * min, 10 * min),
+                session("g", 11 * min, 31 * min),
+                session("pw", 32 * min, 37 * min),
+                session("gpt", 37 * min, 42 * min),
+            ),
+            mapOf(app("pw", "Physics Wallah"), app("gpt", "ChatGPT"), app("g", "Game", "Screen")),
+            dayStart,
+            dayEnd,
+            combos = combos,
+        )
+        assertEquals(listOf("Study", "Screen", "Study"), day.blocks.map { it.activityId })
+    }
+
+    @Test
+    fun theCombinationNeedsMostOfThePeriod() {
+        val combos = listOf(UsageDays.Combo("c", setOf("a", "b"), "Study"))
+        val use = mapOf("a" to 5 * min, "b" to 5 * min, "x" to 5 * min)
+        assertEquals(null, UsageDays.bestCombo(use, combos))
+        assertEquals("c", UsageDays.bestCombo(mapOf("a" to 5 * min, "b" to 5 * min, "x" to 1 * min), combos)?.id)
+    }
+
     private fun evc(time: Long, pkg: String, type: RawType, cls: String) = RawEvent(time, pkg, type, cls)
 
     /** The case behind the missing time: a late "stopped" for the old screen must not end the session on the new one. */

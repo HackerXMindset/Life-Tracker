@@ -100,6 +100,10 @@ class BackupCodecTest {
             RawFixEntity(1_760_000_090_500L, 28.609900, 77.209800, 30f),
             RawFixEntity(1_760_200_000_000L, -33.868800, 151.209300, 5f, 27.5f),
         ),
+        usageCombos = listOf(
+            UsageComboEntity("c1", "Study", "com.openai.chatgpt,xyz.penpencil.physicswala", "Study", 1_760_300_000_002L),
+            UsageComboEntity("c2", "Say \"hi\" & more", "a,b", "", 0L),
+        ),
         timelineEdits = listOf(
             TimelineEditEntity("call", "1760000000000|98765", 1_760_000_100_000L, 1_760_000_900_000L, "Study", false, 1_760_300_000_000L, "Call with \"Mom\""),
             TimelineEditEntity("visit", "v1", -1L, -1L, "", true, 1_760_300_000_001L, "Home"),

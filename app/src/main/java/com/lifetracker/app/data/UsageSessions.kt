@@ -160,11 +160,51 @@ object UsageDays {
         return inPeriod.all { category(it) == first } && category(pkg) == first
     }
 
-    /** The combination that decides a period: it needs at least two of its apps (or all of them if it has fewer), and the one covering the most time wins. */
-    internal fun bestCombo(use: Map<String, Long>, combos: List<Combo>): Combo? =
-        combos
+    /** Share of a period's time that the apps of a combination must make up, so one app used on the side does not decide it. */
+    const val COMBO_MIN_SHARE = 0.8
+
+    /**
+     * The combination that decides a period: it needs at least two of its apps (or all of them if it has fewer), those apps must make
+     * up at least 80% of the period's time (so an app of another kind used for less than 20% does not break it), and the one
+     * covering the most time wins.
+     */
+    internal fun bestCombo(use: Map<String, Long>, combos: List<Combo>): Combo? {
+        val total = use.values.sum()
+        return combos
             .filter { c -> c.pkgs.count { it in use } >= minOf(2, c.pkgs.size) }
+            .filter { c -> c.pkgs.sumOf { use[it] ?: 0L } >= total * COMBO_MIN_SHARE }
             .maxWithOrNull(compareBy<Combo>({ c -> c.pkgs.sumOf { use[it] ?: 0L } }, { it.id }))
+    }
+
+    private fun activeByApp(run: List<UsageSessionEntity>): Map<String, Long> {
+        val out = LinkedHashMap<String, Long>()
+        for (s in run) out[s.pkg] = (out[s.pkg] ?: 0L) + (s.endMs - s.startMs)
+        return out
+    }
+
+    /**
+     * A short stretch of something else between two stretches of a named combination (you studied, glanced at a game for two
+     * minutes, and went back) does not end the combination: the three become one period when together they still match it.
+     */
+    private fun absorbInterruptions(runs: MutableList<MutableList<UsageSessionEntity>>, combos: List<Combo>, idleGapMs: Long) {
+        if (combos.isEmpty()) return
+        var i = 1
+        while (i < runs.size - 1) {
+            val before = runs[i - 1]
+            val mid = runs[i]
+            val after = runs[i + 1]
+            val closeBefore = mid.first().startMs - before.maxOf { it.endMs } < idleGapMs
+            val closeAfter = after.first().startMs - mid.maxOf { it.endMs } < idleGapMs
+            if (closeBefore && closeAfter && bestCombo(activeByApp(before + mid + after), combos) != null) {
+                runs[i - 1] = (before + mid + after).toMutableList()
+                runs.removeAt(i + 1)
+                runs.removeAt(i)
+                i = maxOf(1, i - 1)
+            } else {
+                i++
+            }
+        }
+    }
 
     fun build(
         sessions: List<UsageSessionEntity>,
@@ -203,13 +243,12 @@ object UsageDays {
             lastEnd = maxOf(lastEnd, s.endMs)
         }
 
+        absorbInterruptions(runs, combos, idleGapMs)
+
         val blocks = runs.map { run ->
-            val active = LinkedHashMap<String, Long>()
+            val active = activeByApp(run)
             val opens = HashMap<String, Int>()
-            for (s in run) {
-                active[s.pkg] = (active[s.pkg] ?: 0L) + (s.endMs - s.startMs)
-                opens[s.pkg] = (opens[s.pkg] ?: 0) + 1
-            }
+            for (s in run) opens[s.pkg] = (opens[s.pkg] ?: 0) + 1
             val uses = active.map { (pkg, ms) -> AppUse(pkg, label(pkg), category(pkg), ms, opens[pkg] ?: 1) }
                 .sortedWith(compareByDescending<AppUse> { it.activeMs }.thenBy { it.pkg })
             val combo = bestCombo(active, combos)

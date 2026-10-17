@@ -2,6 +2,19 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## ✦ Name your app combinations
+
+### ✨ New
+
+- **Name a combination** — open an app period on the Timeline and choose "Always count this combination as...". Pick a name, the apps and the category. Whenever those apps are used together, on any day, past or future, the whole stretch counts as that category. Physics Wallah (PW) and ChatGPT together can be Study; Claude and Brave can be Building.
+- **A short interruption does not break it** — a few minutes in another app (less than a fifth of the period) between two stretches of the combination no longer splits it. The combination's apps must make up at least 80% of the period.
+- **Suggestions** — Phone usage settings now has a Combinations section. It suggests a name when the same apps are used together at least 3 times over 2 or more days, or when a built-in example fits (study, building, travel, shopping, banking, reading, writing, chatting). Nothing is named until you confirm, and "Not now" hides a suggestion.
+- **Backups** — your combinations are saved in backups (backup version 16). Restoring only adds them.
+
+### 🔧 Fixes
+
+- Nothing saved is changed: combinations are applied when a day is drawn, and removing one only removes the rule.
+
 ## ✦ Periods of use on the Timeline
 
 ### ✨ New
