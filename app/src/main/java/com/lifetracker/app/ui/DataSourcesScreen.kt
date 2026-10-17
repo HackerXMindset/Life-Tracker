@@ -70,7 +70,7 @@ fun DataSourcesScreen(onBack: () -> Unit, vm: DataSourcesViewModel = viewModel()
             TextButton(onClick = onBack) { Text("Back") }
         }
         item {
-            ScreenHeader(label = "Settings", badge = "On this phone", title = "Data sources")
+            ScreenHeader(label = "Settings", badge = "On this phone", title = "Backups and imports")
         }
         state.message?.let { message ->
             item {

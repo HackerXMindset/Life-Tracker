@@ -9,6 +9,31 @@ Every release page shows the sections below that were added since the last relea
 - **Activities** — a list with the colour square and a pencil on each row, a full-width dark **New activity** button, and hidden ones under "Hidden from Log" (dimmed, with a crossed-out eye).
 - **Editing an activity** now opens as a bottom sheet like the demo: name, colours, and a "Hide from Log" switch (saved when you tap Save). Old entries keep their colour; nothing you logged is removed.
 
+## ✦ Kairos shelf-of-days launcher icon
+
+- Replaced the placeholder clock launcher icon with a Kairos icon based on the supplied shelf-of-days SVG: parchment background, dark book spines, and the orange accent.
+- Recreated the artwork with native Android vector paths so the launcher resource builds without unsupported SVG filters or `strokeDashArray` features. Fine grain texture from the SVG is omitted.
+
+## ✦ Kairos and independent home-screen shortcuts
+
+- Changed the installed app label to **Kairos**.
+- Each saved app design can create or update its own home-screen shortcut, using its own name and icon without replacing other saved designs.
+- Reworked Calls settings into full-width cards so headings, options, and controls have room to lay out cleanly.
+
+## 📜 Custom home-screen name and icon
+
+### ✨ New features
+
+- **Separate settings sections** — Appearance and Backups and imports have their own entries instead of being grouped together.
+- **Custom home-screen identity** — inside Settings → Appearance, choose a name and pick an image through the system image picker. Fit the whole image or fill/crop a square, position/zoom it, reset it, and create or update a matching home-screen shortcut. Save multiple name-and-icon designs locally and apply or delete them later.
+- Accepts common Android-decodable image formats, including raster photos and SVG. SVGs are rendered into a square viewport so the full drawing is fitted rather than clipped; the cropped icon is stored privately on the phone.
+
+### ⚠️ Good to know
+
+- Android does not let an app replace its own installed app-drawer label and icon with arbitrary user-selected values at runtime. This feature creates a separate home-screen shortcut; the original Life Tracker app entry remains unchanged.
+- Launcher support and label truncation vary by device. The launcher may ask for confirmation before adding a shortcut.
+
+
 ## 📜 Settings like your demo (part 4: Calls and Charging)
 
 ### ✨ New features

@@ -62,6 +62,10 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
 
+    // Runtime SVG support for user-selected home-screen shortcut icons.
+    implementation("com.caverock:androidsvg-aar:1.4")
+    implementation("androidx.exifinterface:exifinterface:1.3.7")
+
     // On-phone database. Never use destructive migrations: future versions must
     // add a Migration so your logged data survives updates.
     implementation("androidx.room:room-runtime:2.6.1")
