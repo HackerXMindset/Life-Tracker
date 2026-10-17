@@ -7,6 +7,12 @@ Every release page shows the sections below that were added since the last relea
 - Removed dashed styles from event rails and card outlines, travel connectors, ongoing-stay markers, the day-progress arc, and breakdown-list separators.
 - Manually logged and automatically collected events now use the same continuous line style; their colours still identify their categories.
 
+## 📜 Export and GPX import moved
+
+### ✨ New features
+
+- **Backups and imports** now holds **Export** (Readings as GPX, Readings as CSV, Trips as GPX) and the **GPX files** import, like the demo. They were on the Places and trips page; they work exactly as before and nothing was removed.
+
 ## 📜 Settings like your demo (part 7: Appearance, Backups and imports)
 
 ### ✨ New features
