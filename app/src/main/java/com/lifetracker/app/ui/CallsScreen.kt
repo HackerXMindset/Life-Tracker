@@ -206,42 +206,93 @@ fun CallsScreen(onBack: () -> Unit, part: Part = Part.Data, vm: CallsViewModel =
 
         }
         if (part == Part.Settings) {
-            item { SetCard { ToggleRow("Show calls on the Timeline", showOnTimeline, vm::setShowOnTimeline, first = true) } }
-            item { PaperSection("Only show calls longer than", "shorter ones stay in Stats") }
             item {
-                val choices = CallStats.MIN_TALK_CHOICES.toList()
-                PaperSegmented(
-                    options = choices.map { "$it min" },
-                    selected = choices.indexOf(minTalk),
-                    onSelect = { vm.setMinTalkMinutes(choices[it]) },
-                )
-            }
-            item {
-                LockNote("Missed calls, declined calls and calls nobody answered are never drawn on the Timeline. They still count in the Calls stats.")
-            }
-            item { PaperSection("Older calls") }
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(
-                        "Normal syncs only look at new calls. If days before your first copy look empty, copy the whole call log once. Safe to repeat.",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    OutlinedButton(onClick = vm::copyOlder, enabled = !copyingOlder) {
-                        Text(if (copyingOlder) "Copying..." else "Copy older calls")
-                    }
-                    if (olderResult.isNotEmpty()) {
-                        Text(olderResult, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        Text(
+                            "Timeline",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        ToggleRow(
+                            "Show calls on the Timeline",
+                            showOnTimeline,
+                            vm::setShowOnTimeline,
+                            first = true,
+                        )
                     }
                 }
             }
-
             item {
-                Text(
-                    "Backups include your calls, with numbers and names, as plain text. Keep the backup folder private.",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        Text(
+                            "Only show calls longer than",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            "Shorter calls stay in Stats.",
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        val choices = CallStats.MIN_TALK_CHOICES.toList()
+                        PaperSegmented(
+                            options = choices.map { "$it min" },
+                            selected = choices.indexOf(minTalk),
+                            onSelect = { vm.setMinTalkMinutes(choices[it]) },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        LockNote(
+                            "Missed calls, declined calls and calls nobody answered are never drawn on the Timeline. They still count in the Calls stats.",
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
+            }
+            item {
+                PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        Text(
+                            "Older calls",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            "Normal syncs only look at new calls. If days before your first copy look empty, copy the whole call log once. Safe to repeat.",
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        OutlinedButton(
+                            onClick = vm::copyOlder,
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !copyingOlder,
+                        ) {
+                            Text(if (copyingOlder) "Copying..." else "Copy older calls")
+                        }
+                        if (olderResult.isNotEmpty()) {
+                            Text(olderResult, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            }
+            item {
+                PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
+                    Text(
+                        "Backups include your calls, with numbers and names, as plain text. Keep the backup folder private.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
     }

@@ -2,6 +2,12 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## ✦ Kairos and independent home-screen shortcuts
+
+- Changed the installed app label to **Kairos**.
+- Each saved app design can create or update its own home-screen shortcut, using its own name and icon without replacing other saved designs.
+- Reworked Calls settings into full-width cards so headings, options, and controls have room to lay out cleanly.
+
 ## 📜 Custom home-screen name and icon
 
 ### ✨ New features
