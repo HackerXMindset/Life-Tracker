@@ -164,8 +164,15 @@ fun KvRow(label: String, value: String, first: Boolean = false) {
             .padding(vertical = 10.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text(label, fontSize = 14.sp, color = p.ink2)
-        Text(value, modifier = Modifier.weight(1f), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = p.ink, textAlign = androidx.compose.ui.text.style.TextAlign.End)
+        Text(label, modifier = Modifier.weight(1f), fontSize = 14.sp, color = p.ink2)
+        Text(
+            value,
+            modifier = Modifier.weight(1f),
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+            color = p.ink,
+            textAlign = androidx.compose.ui.text.style.TextAlign.End,
+        )
     }
 }
 
