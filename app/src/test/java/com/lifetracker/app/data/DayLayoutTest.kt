@@ -142,4 +142,39 @@ class DayLayoutTest {
         val rows = build(visits = listOf(visit("v1", "home", 0, 2), hidden))
         assertTrue(rows.isEmpty())
     }
+
+    /** An entry made with Fill in only knows whole minutes, so it can start seconds before the stay does. */
+    @Test
+    fun anEntryStartingSecondsBeforeTheStayStillBelongsToIt() {
+        val visits = listOf(visit("v1", "home", 0, 30), visit("v2", "park", 37, 100).copy(startMs = 37 * min + 40_000L))
+        val filled = item("filled", 37, 100, DayLayout.Kind.ENTRY)
+        val rows = build(items = listOf(filled), visits = visits)
+        val park = rows.filterIsInstance<DayLayout.Place>().single { it.placeId == "park" }
+        assertEquals(listOf("filled"), park.children.filterIsInstance<DayLayout.Thing>().map { it.key })
+        assertTrue(rows.none { it is DayLayout.Thing })
+    }
+
+    @Test
+    fun fillingTheWholeGapLeavesNoGapInsideThePlace() {
+        val visits = listOf(visit("v2", "park", 0, 100).copy(startMs = 40_000L))
+        val rows = build(items = listOf(item("filled", 0, 100, DayLayout.Kind.ENTRY)), visits = visits)
+        assertTrue((rows.single() as DayLayout.Place).children.none { it is DayLayout.Gap })
+    }
+
+    @Test
+    fun anItemGoesToTheStayItOverlapsMost() {
+        val visits = listOf(visit("v1", "home", 0, 60), visit("v2", "park", 60, 120))
+        val rows = build(items = listOf(item("x", 50, 110)), visits = visits)
+        val park = rows.filterIsInstance<DayLayout.Place>().single { it.placeId == "park" }
+        val home = rows.filterIsInstance<DayLayout.Place>().single { it.placeId == "home" }
+        // It starts at Home, but 50 of its 60 minutes lie at the park, so it belongs to the park.
+        assertEquals(1, park.children.filterIsInstance<DayLayout.Thing>().size)
+        assertEquals(0, home.children.filterIsInstance<DayLayout.Thing>().size)
+    }
+
+    @Test
+    fun anItemFarOutsideEveryStayStaysOnItsOwn() {
+        val rows = build(items = listOf(item("far", 300, 330)), visits = listOf(visit("v1", "home", 0, 60)))
+        assertTrue(rows.any { it is DayLayout.Thing })
+    }
 }

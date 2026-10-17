@@ -118,7 +118,7 @@ object DayLayout {
         val inside = stays.map { ArrayList<Item>() }
         val loose = ArrayList<Item>()
         for (item in items.sortedBy { it.startMs }) {
-            val at = stays.indexOfFirst { item.startMs >= it.startMs && item.startMs < it.endMs }
+            val at = stayFor(item, stays.map { it.startMs to it.endMs })
             if (at >= 0) inside[at] += item else loose += item
         }
 
@@ -175,6 +175,30 @@ object DayLayout {
             }
         }
         return out
+    }
+
+    /** How far before a stay began an item may start and still belong to it (entries only know whole minutes). */
+    const val EDGE_TOLERANCE_MS = 2 * 60_000L
+
+    /**
+     * Which of the [stays] (start to end pairs) [item] belongs to, or -1 when it belongs to none. It belongs to the stay it
+     * overlaps most, as long as it starts inside that stay (a few minutes early is fine, because entries made with Fill in
+     * only know whole minutes and so can start seconds before the stay) or more than half of it lies inside.
+     */
+    fun stayFor(item: Item, stays: List<Pair<Long, Long>>): Int {
+        val length = (item.coveredEndMs - item.startMs).coerceAtLeast(1L)
+        var best = -1
+        var bestOverlap = 0L
+        stays.forEachIndexed { i, (from, to) ->
+            val overlap = min(item.coveredEndMs, to) - max(item.startMs, from)
+            if (overlap <= 0L) return@forEachIndexed
+            val startsInside = item.startMs >= from - EDGE_TOLERANCE_MS && item.startMs < to
+            if ((startsInside || overlap * 2 >= length) && overlap > bestOverlap) {
+                best = i
+                bestOverlap = overlap
+            }
+        }
+        return best
     }
 
     /** The stretches of [from, to) not covered by any of [covered] that last at least [minMs]. */
