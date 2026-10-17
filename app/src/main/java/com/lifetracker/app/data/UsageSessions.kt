@@ -1,10 +1,23 @@
 package com.lifetracker.app.data
 
 /** The few kinds of Android usage event the app cares about. */
-enum class RawType { RESUME, PAUSE, SCREEN_OFF, SHUTDOWN }
+enum class RawType {
+    RESUME,
+    PAUSE,
 
-/** One usage event: at [time] (ms), something happened to app [pkg]. */
-data class RawEvent(val time: Long, val pkg: String, val type: RawType)
+    /** An activity was stopped. It can arrive late, after the next screen has already opened, so it is only trusted for the screen on top. */
+    STOP,
+
+    /** The screen turned off or the phone was locked. */
+    SCREEN_OFF,
+    SHUTDOWN,
+
+    /** The phone started again. If it died without saying so, whatever was open ended at the last event before this. */
+    STARTUP,
+}
+
+/** One usage event: at [time] (ms), something happened to screen [cls] of app [pkg]. [cls] is empty when not known. */
+data class RawEvent(val time: Long, val pkg: String, val type: RawType, val cls: String = "")
 
 /**
  * Turns Android's raw app events into sessions: one stretch of one app on screen.
@@ -28,24 +41,37 @@ object UsageSessions {
     fun build(events: List<RawEvent>, until: Long, skip: Set<String> = emptySet()): List<UsageSessionEntity> {
         val raw = ArrayList<UsageSessionEntity>()
         var current: String? = null
+        var currentCls = ""
         var start = 0L
+        var lastTime = 0L
 
         fun close(at: Long) {
             val pkg = current ?: return
             if (at > start) raw += UsageSessionEntity(UsageSessionEntity.idFor(pkg, start), pkg, start, at)
             current = null
+            currentCls = ""
         }
+
+        // An event for another screen of the same app is about a screen that is no longer on top, so it must not end the session.
+        fun isTopScreen(cls: String) = cls.isEmpty() || currentCls.isEmpty() || cls == currentCls
 
         for (e in events) {
             when (e.type) {
-                RawType.RESUME -> if (current != e.pkg) {
+                RawType.RESUME -> if (current == e.pkg) {
+                    // Moving to another screen of the same app: still the same stretch.
+                    currentCls = e.cls
+                } else {
                     close(e.time)
                     current = e.pkg
+                    currentCls = e.cls
                     start = e.time
                 }
-                RawType.PAUSE -> if (current == e.pkg) close(e.time)
+                RawType.PAUSE -> if (current == e.pkg && isTopScreen(e.cls)) close(e.time)
+                RawType.STOP -> if (current == e.pkg && e.cls.isNotEmpty() && e.cls == currentCls) close(e.time)
                 RawType.SCREEN_OFF, RawType.SHUTDOWN -> close(e.time)
+                RawType.STARTUP -> close(lastTime)
             }
+            if (e.type != RawType.STARTUP) lastTime = e.time
         }
         close(until)
 
@@ -82,6 +108,8 @@ object UsageDays {
         val opens: Int = 1,
         /** Where the block began as the phone recorded it; stays the same when you move the block, so your change can be found again. */
         val refStartMs: Long = startMs,
+        /** The stretches of real use inside this block (start, end), so totals and the pie count only time on screen. */
+        val spans: List<Pair<Long, Long>> = emptyList(),
     )
 
     data class Day(
@@ -119,10 +147,14 @@ object UsageDays {
                     endMs = maxOf(last.endMs, s.endMs),
                     activeMs = last.activeMs + (s.endMs - s.startMs),
                     opens = last.opens + 1,
+                    spans = last.spans + (s.startMs to s.endMs),
                 )
             } else {
                 openBlock[s.pkg] = blocks.size
-                blocks += Block(s.pkg, info?.label ?: s.pkg, info?.activityId.orEmpty(), s.startMs, s.endMs, s.endMs - s.startMs)
+                blocks += Block(
+                    s.pkg, info?.label ?: s.pkg, info?.activityId.orEmpty(), s.startMs, s.endMs, s.endMs - s.startMs,
+                    spans = listOf(s.startMs to s.endMs),
+                )
             }
         }
 

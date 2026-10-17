@@ -22,6 +22,11 @@ class UsageSettings(context: Context) {
         get() = prefs.getString("last_sync", "") ?: ""
         set(value) = prefs.edit { putString("last_sync", value) }
 
+    /** Which version of the session rules the saved days were last built with (see UsageCollector.REBUILD_VERSION). */
+    var rebuiltVersion: Int
+        get() = prefs.getInt("rebuilt_version", 0)
+        set(value) = prefs.edit { putInt("rebuilt_version", value) }
+
     /** Set when you tap "Not now" on the Timeline card that asks for usage access. */
     var promptDismissed: Boolean
         get() = prefs.getBoolean("prompt_dismissed", false)

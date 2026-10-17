@@ -193,7 +193,11 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
         val e = editOf(TimelineEdits.APP, TimelineEdits.appRef(b.pkg, b.refStartMs))
         if (TimelineEdits.isHidden(e)) return@mapNotNull null
         val (s, en) = TimelineEdits.times(b.startMs, b.endMs, e)
-        b.copy(startMs = s, endMs = en, activityId = TimelineEdits.category(e) ?: b.activityId)
+        val shift = s - b.startMs
+        b.copy(
+            startMs = s, endMs = en, activityId = TimelineEdits.category(e) ?: b.activityId,
+            spans = b.spans.map { (from, to) -> (from + shift) to (to + shift) },
+        )
     }
 
     var showLog by remember { mutableStateOf(false) }
@@ -257,7 +261,10 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
         }
         if (usageAccess) blocksEff.forEach {
             val t = it.activityId.takeIf { id -> id.isNotEmpty() }?.let { id -> types.byId(id) }
-            add(DaySegments.Seg(it.startMs, it.endMs, t?.displayColor()?.toArgb() ?: 0xFF738078.toInt(), t?.name ?: "Phone", false))
+            // One stretch for each time the app was really on screen, so the pie and the totals count real use, not the whole block.
+            val argb = t?.displayColor()?.toArgb() ?: 0xFF738078.toInt()
+            val label = t?.name ?: "Phone"
+            it.spans.ifEmpty { listOf(it.startMs to it.endMs) }.forEach { (from, to) -> add(DaySegments.Seg(from, to, argb, label, false)) }
         }
         if (showTrips) tripsEff.forEach {
             val t = typeOf(TimelineEdits.TRIP, it.id)

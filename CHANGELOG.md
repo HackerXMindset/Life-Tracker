@@ -2,6 +2,16 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🐞 Phone usage now counts the way Digital Wellbeing does
+
+### 🔧 Fixes
+
+- **Missing time** — moving between screens of one app (for example inside Brave or WhatsApp) no longer ends the stretch early. Android sometimes reports the old screen as "stopped" after the new one opened; that report is now ignored unless it is about the screen on top. This was the main reason your totals were about an hour below Digital Wellbeing.
+- **Screen lock** — locking the phone now ends the stretch, and a phone that shut down or died ends it at its last event.
+- **The Phone pill and the pie** — they added up the time from the first to the last use of an app, so they could show more than the Phone number. They now count only the time an app was really on screen.
+- **Check line** — Phone usage shows this app's total next to Android's own total for the same days, to compare with Digital Wellbeing.
+- **Days already saved** — the first sync after this update builds again the days Android still remembers (about a week) with the corrected rules. Older days are left exactly as they are, and every backup keeps the old numbers.
+
 ## 🐞 Fill in now stays inside the place
 
 ### 🔧 Fixes
