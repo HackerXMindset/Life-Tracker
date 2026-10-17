@@ -2,6 +2,12 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📜 Settings like your demo (part 6: Habits)
+
+### ✨ New features
+
+- **Habits settings** — "Track habits with" is now a two-way strip (Streak / This app). Switching to Streak still asks before importing, exactly as before. Below it: a short explaining card, the Streak details as key / value lines, the "Send automatically" switch, **Send to Streak now** and **Change folder** as rows, and the tilted note about un-ticked days. Nothing about how habits are stored or sent has changed.
+
 ## 📜 Settings like your demo (part 5: Activities)
 
 ### ✨ New features
