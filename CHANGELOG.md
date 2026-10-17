@@ -2,6 +2,12 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📜 Export and GPX import moved
+
+### ✨ New features
+
+- **Backups and imports** now holds **Export** (Readings as GPX, Readings as CSV, Trips as GPX) and the **GPX files** import, like the demo. They were on the Places and trips page; they work exactly as before and nothing was removed.
+
 ## 📜 Settings like your demo (part 7: Appearance, Backups and imports)
 
 ### ✨ New features
