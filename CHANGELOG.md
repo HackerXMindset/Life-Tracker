@@ -7,6 +7,26 @@ Every release page shows the sections below that were added since the last relea
 - Removed dashed styles from event rails and card outlines, travel connectors, ongoing-stay markers, the day-progress arc, and breakdown-list separators.
 - Manually logged and automatically collected events now use the same continuous line style; their colours still identify their categories.
 
+## 📜 Settings like your demo (part 7: Appearance, Backups and imports)
+
+### ✨ New features
+
+- **Backups and imports** — the tilted note "Everything stays on this phone", Backups with folder / newest backup lines and **Back up now** / **Restore**, and Streak and OpenNutriTracker as cards with their folder, newest file, last import and **Import now**.
+- **Appearance** — the theme is a strip under a "Theme" heading. Your home-screen name, icon and saved designs are unchanged, now with paper buttons (the three buttons on a saved design wrap onto a second line on narrow screens).
+
+## 📜 Settings like your demo (part 6: Habits)
+
+### ✨ New features
+
+- **Habits settings** — "Track habits with" is now a two-way strip (Streak / This app). Switching to Streak still asks before importing, exactly as before. Below it: a short explaining card, the Streak details as key / value lines, the "Send automatically" switch, **Send to Streak now** and **Change folder** as rows, and the tilted note about un-ticked days. Nothing about how habits are stored or sent has changed.
+
+## 📜 Settings like your demo (part 5: Activities)
+
+### ✨ New features
+
+- **Activities** — a list with the colour square and a pencil on each row, a full-width dark **New activity** button, and hidden ones under "Hidden from Log" (dimmed, with a crossed-out eye).
+- **Editing an activity** now opens as a bottom sheet like the demo: name, colours, and a "Hide from Log" switch (saved when you tap Save). Old entries keep their colour; nothing you logged is removed.
+
 ## ✦ Kairos shelf-of-days launcher icon
 
 - Replaced the placeholder clock launcher icon with a Kairos icon based on the supplied shelf-of-days SVG: parchment background, dark book spines, and the orange accent.
