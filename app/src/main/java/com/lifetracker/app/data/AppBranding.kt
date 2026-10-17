@@ -19,6 +19,7 @@ import com.lifetracker.app.R
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.util.UUID
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -27,6 +28,7 @@ import kotlin.math.roundToInt
 object AppBranding {
     private const val PREFS = "app_branding"
     private const val NAME_KEY = "shortcut_name"
+    private const val DESIGN_IDS_KEY = "saved_design_ids"
     private const val PNG_FILE = "custom_home_icon.png"
     // Keep supporting SVGs selected in builds of the first version of this feature.
     private const val LEGACY_SVG_FILE = "custom_home_icon.svg"
@@ -36,6 +38,9 @@ object AppBranding {
     private const val ICON_EDGE = 512
 
     enum class ShortcutResult { PinRequested, Updated, Unsupported, UpdateFailed }
+
+    /** A locally saved name-and-icon pair that can be restored later. */
+    data class SavedDesign(val id: String, val name: String)
 
     fun savedName(context: Context): String =
         preferences(context).getString(NAME_KEY, null)?.takeIf { it.isNotBlank() }
@@ -271,11 +276,101 @@ object AppBranding {
         }
     }
 
+    /** Saves the current logo and the supplied launcher name as a separate reusable design. */
+    fun saveDesign(context: Context, requestedName: String): SavedDesign {
+        val appContext = context.applicationContext
+        val name = requestedName.trim().ifBlank { appContext.getString(R.string.app_name) }
+        val id = UUID.randomUUID().toString().replace("-", "")
+        val target = designFile(appContext, id)
+        val temporary = File(appContext.filesDir, "${target.name}.tmp")
+        val bitmap = createIconBitmap(appContext, ICON_EDGE)
+        try {
+            FileOutputStreamCompat.writePng(temporary, bitmap)
+            if (!temporary.renameTo(target)) {
+                temporary.copyTo(target, overwrite = true)
+                temporary.delete()
+            }
+        } catch (error: Exception) {
+            temporary.delete()
+            target.delete()
+            throw error
+        } finally {
+            bitmap.recycle()
+        }
+
+        val prefs = preferences(appContext)
+        val ids = prefs.getString(DESIGN_IDS_KEY, "").orEmpty()
+            .split(',').filter { it.isNotBlank() }
+        prefs.edit {
+            putString("saved_design_name_$id", name)
+            putString(DESIGN_IDS_KEY, (ids + id).joinToString(","))
+        }
+        return SavedDesign(id, name)
+    }
+
+    /** Returns saved designs in the order they were created, skipping missing/corrupt entries. */
+    fun savedDesigns(context: Context): List<SavedDesign> {
+        val appContext = context.applicationContext
+        val prefs = preferences(appContext)
+        return prefs.getString(DESIGN_IDS_KEY, "").orEmpty()
+            .split(',').filter { it.matches(Regex("[a-f0-9]{32}")) }
+            .mapNotNull { id ->
+                val file = designFile(appContext, id)
+                val name = prefs.getString("saved_design_name_$id", null)
+                if (file.isFile && !name.isNullOrBlank()) SavedDesign(id, name) else null
+            }
+    }
+
+    /** Loads a thumbnail of a saved design's logo, or null if the stored image cannot be read. */
+    fun savedDesignIcon(context: Context, id: String, size: Int = 128): Bitmap? {
+        if (!id.matches(Regex("[a-f0-9]{32}"))) return null
+        val decoded = BitmapFactory.decodeFile(designFile(context, id).absolutePath) ?: return null
+        if (decoded.width == size && decoded.height == size) return decoded
+        return Bitmap.createScaledBitmap(decoded, size, size, true).also { decoded.recycle() }
+    }
+
+    /** Activates a saved design locally. The caller decides when to request a launcher shortcut update. */
+    fun applySavedDesign(context: Context, id: String): SavedDesign {
+        val appContext = context.applicationContext
+        val design = savedDesigns(appContext).firstOrNull { it.id == id }
+            ?: throw IllegalArgumentException("This saved design is no longer available.")
+        val source = designFile(appContext, id)
+        val target = iconFile(appContext)
+        val temporary = File(appContext.filesDir, "$PNG_FILE.apply.tmp")
+        source.copyTo(temporary, overwrite = true)
+        if (!temporary.renameTo(target)) {
+            temporary.copyTo(target, overwrite = true)
+            temporary.delete()
+        }
+        legacySvgFile(appContext).delete()
+        saveName(appContext, design.name)
+        return design
+    }
+
+    /** Removes one saved design without changing the currently active identity. */
+    fun deleteSavedDesign(context: Context, id: String): Boolean {
+        if (!id.matches(Regex("[a-f0-9]{32}"))) return false
+        val appContext = context.applicationContext
+        val prefs = preferences(appContext)
+        val ids = prefs.getString(DESIGN_IDS_KEY, "").orEmpty()
+            .split(',').filter { it.isNotBlank() }
+        if (id !in ids) return false
+        designFile(appContext, id).delete()
+        prefs.edit {
+            putString(DESIGN_IDS_KEY, ids.filterNot { it == id }.joinToString(","))
+            remove("saved_design_name_$id")
+        }
+        return true
+    }
+
     private fun preferences(context: Context) =
         context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
     private fun iconFile(context: Context) =
         File(context.applicationContext.filesDir, PNG_FILE)
+
+    private fun designFile(context: Context, id: String): File =
+        File(context.applicationContext.filesDir, "saved_home_icon_$id.png")
 
     private fun legacySvgFile(context: Context) =
         File(context.applicationContext.filesDir, LEGACY_SVG_FILE)

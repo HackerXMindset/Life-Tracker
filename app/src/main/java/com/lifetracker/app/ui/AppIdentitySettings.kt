@@ -53,7 +53,7 @@ import kotlin.math.max
 
 /** Lets the user choose any image supported by Android, crop/position it in-app, and make a matching launcher shortcut. */
 @Composable
-fun AppIdentitySettings() {
+fun AppIdentitySettings(onDesignSaved: () -> Unit = {}) {
     val context = LocalContext.current
     var name by rememberSaveable { mutableStateOf(AppBranding.savedName(context)) }
     var message by rememberSaveable { mutableStateOf<String?>(null) }
@@ -161,6 +161,23 @@ fun AppIdentitySettings() {
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text("Save name and create / update shortcut")
+        }
+        OutlinedButton(
+            onClick = {
+                runCatching {
+                    AppBranding.saveDesign(context, name).also {
+                        AppBranding.saveName(context, name)
+                    }
+                }.onSuccess { design ->
+                    message = "Saved \"${design.name}\". Your saved designs are listed below."
+                    onDesignSaved()
+                }.onFailure { error ->
+                    message = error.message ?: "This design could not be saved."
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Save current design")
         }
         message?.let {
             Text(

@@ -1,3 +1,4 @@
+- Appearance and backups now have separate Settings entries; appearance includes locally saved app-name/icon designs.
 # What's new in Life Tracker
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
