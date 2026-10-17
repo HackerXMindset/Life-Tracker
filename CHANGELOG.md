@@ -1,4 +1,3 @@
-- Appearance and backups now have separate Settings entries; appearance includes locally saved app-name/icon designs.
 # What's new in Life Tracker
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
@@ -7,6 +6,7 @@ Every release page shows the sections below that were added since the last relea
 
 ### ✨ New features
 
+- **Separate settings sections** — Appearance and Backups and imports have their own entries instead of being grouped together.
 - **Custom home-screen identity** — inside Settings → Appearance, choose a name and pick an image through the system image picker. Fit the whole image or fill/crop a square, position/zoom it, reset it, and create or update a matching home-screen shortcut. Save multiple name-and-icon designs locally and apply or delete them later.
 - Accepts common Android-decodable image formats, including raster photos and SVG. SVGs are rendered into a square viewport so the full drawing is fitted rather than clipped; the cropped icon is stored privately on the phone.
 
