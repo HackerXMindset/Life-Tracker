@@ -2,6 +2,18 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## ✦ Periods of use on the Timeline
+
+### ✨ New
+
+- **One row for a stretch of phone use** — a period ends after 5 minutes without using the phone, or when you start an app from a different category. Apps used together (for example Telegram and Brave) now show as one row with a line per app: minutes and how many times it was opened.
+- **Its category** — apps that share a category give the period that category (Anki and Notes are both Study, so it counts as Study). Several apps without a category count as Screen and leisure. One app with no category just shows the app, as before.
+- **Past days follow the rules** — periods are worked out each time a day is drawn from the saved app use, so nothing is ever lost or rewritten.
+
+### 🔧 Fixes
+
+- **Goals and Stats** — the minutes of a period count towards the period's activity, and the totals still count only time an app was really on screen.
+
 ## 🐞 Phone usage now counts the way Digital Wellbeing does
 
 ### 🔧 Fixes

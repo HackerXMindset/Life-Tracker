@@ -344,8 +344,10 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
                 DayLayout.Kind.PHONE -> (item.ref as UsageDays.Block).let { b ->
                     editTarget = target(
                         TimelineEdits.APP, TimelineEdits.appRef(b.pkg, b.refStartMs), b.label, b.startMs, b.endMs,
-                        extraLabel = "Set this app's category on every day",
-                        onExtra = { editApp = usageApps[b.pkg] ?: UsageAppEntity(b.pkg, b.label, "", false) },
+                        extraLabel = if (b.apps.size > 1) null else "Set this app's category on every day",
+                        onExtra = if (b.apps.size > 1) null else {
+                            { editApp = usageApps[b.pkg] ?: UsageAppEntity(b.pkg, b.label, "", false) }
+                        },
                     )
                 }
                 else -> Unit

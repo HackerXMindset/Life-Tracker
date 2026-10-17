@@ -89,15 +89,40 @@ object UsageSessions {
     }
 }
 
-/** Turns one day's sessions into what the Timeline and the Phone usage screen show. */
+/**
+ * Turns one day's sessions into what the Timeline and the Phone usage screen show.
+ *
+ * A **period of use** is a run of phone use. It ends after [IDLE_GAP_MS] without using any app, or when an app from a
+ * different category starts (unless the two apps are part of a combination you named). Every app used inside a period
+ * counts towards the period's activity, so ChatGPT used while studying counts as studying when you have said so.
+ * Which activity a period gets:
+ *  1. the activity of a named combination whose apps were used together,
+ *  2. else the category the apps share (one app, or several apps with the same category),
+ *  3. else, when several apps with no category were used together, Screen and leisure,
+ *  4. else (one app with no category) none, and the Timeline shows just the app.
+ * Nothing is stored: periods are worked out from the saved sessions each time they are drawn, so naming a combination
+ * later also changes the past days, and nothing is ever lost.
+ */
 object UsageDays {
-    /**
-     * Stretches of the same app closer than this are shown as one block, even if other apps were used in between.
-     * So Telegram, then Brave, then Telegram again a few minutes later is one Telegram block and one Brave block.
-     */
-    const val BLOCK_GAP_MS = 10 * 60_000L
+    /** No app used for this long ends a period. */
+    const val IDLE_GAP_MS = 5 * 60_000L
 
-    /** A run of one app, with [activeMs] actually on screen inside it and [opens] separate times it was opened. */
+    /** What several apps used together count as when nothing says otherwise. */
+    const val MIXED_ACTIVITY_ID = "Screen"
+
+    /** One app inside a period: how long it was really on screen and how many separate times it was opened. */
+    data class AppUse(
+        val pkg: String,
+        val label: String,
+        val activityId: String,
+        val activeMs: Long,
+        val opens: Int,
+    )
+
+    /** A combination of apps you named: when these are used together the period counts as [activityId]. */
+    data class Combo(val id: String, val pkgs: Set<String>, val activityId: String)
+
+    /** A period of use, with [activeMs] actually on screen inside it. For one app [label] is its name; for several, the names joined. */
     data class Block(
         val pkg: String,
         val label: String,
@@ -106,10 +131,14 @@ object UsageDays {
         val endMs: Long,
         val activeMs: Long,
         val opens: Int = 1,
-        /** Where the block began as the phone recorded it; stays the same when you move the block, so your change can be found again. */
+        /** Where the period began as the phone recorded it; stays the same when you move the block, so your change can be found again. */
         val refStartMs: Long = startMs,
         /** The stretches of real use inside this block (start, end), so totals and the pie count only time on screen. */
         val spans: List<Pair<Long, Long>> = emptyList(),
+        /** Every app used in the period, longest first. */
+        val apps: List<AppUse> = emptyList(),
+        /** The named combination that decided the activity, or empty. */
+        val comboId: String = "",
     )
 
     data class Day(
@@ -117,60 +146,111 @@ object UsageDays {
         val totalMs: Long,
         /** Time per app, biggest first (ignored apps left out). */
         val perApp: List<Pair<String, Long>>,
-        /** Minutes per linked activity, to count towards goals. */
+        /** Minutes per activity, to count towards goals. Each period counts for its own activity. */
         val minutesByActivity: Map<String, Int>,
+        /** The name of every app seen, to label [perApp]. */
+        val appLabels: Map<String, String> = emptyMap(),
     )
+
+    /** Whether app [pkg] belongs to the period that already holds [inPeriod]. */
+    internal fun joins(inPeriod: Set<String>, pkg: String, category: (String) -> String, combos: List<Combo>): Boolean {
+        if (pkg in inPeriod) return true
+        if (combos.any { pkg in it.pkgs && inPeriod.any { a -> a in it.pkgs } }) return true
+        val first = category(inPeriod.first())
+        return inPeriod.all { category(it) == first } && category(pkg) == first
+    }
+
+    /** The combination that decides a period: it needs at least two of its apps (or all of them if it has fewer), and the one covering the most time wins. */
+    internal fun bestCombo(use: Map<String, Long>, combos: List<Combo>): Combo? =
+        combos
+            .filter { c -> c.pkgs.count { it in use } >= minOf(2, c.pkgs.size) }
+            .maxWithOrNull(compareBy<Combo>({ c -> c.pkgs.sumOf { use[it] ?: 0L } }, { it.id }))
 
     fun build(
         sessions: List<UsageSessionEntity>,
         apps: Map<String, UsageAppEntity>,
         dayStart: Long,
         dayEnd: Long,
-        blockGapMs: Long = BLOCK_GAP_MS,
+        idleGapMs: Long = IDLE_GAP_MS,
+        combos: List<Combo> = emptyList(),
     ): Day {
         // Cut sessions at midnight, so a late-night session counts towards the right days.
         val clipped = sessions.mapNotNull { s ->
             val a = maxOf(s.startMs, dayStart)
             val b = minOf(s.endMs, dayEnd)
             if (b > a && apps[s.pkg]?.ignored != true) s.copy(startMs = a, endMs = b) else null
-        }.sortedBy { it.startMs }
+        }.sortedWith(compareBy({ it.startMs }, { it.endMs }))
 
-        // Each app has one block open at a time; a new stretch joins it if it starts within blockGapMs of where the block ended.
-        val blocks = ArrayList<Block>()
-        val openBlock = HashMap<String, Int>()
+        fun category(pkg: String) = apps[pkg]?.activityId.orEmpty()
+        fun label(pkg: String) = apps[pkg]?.label ?: pkg
+
+        // Group the sessions into periods.
+        val runs = ArrayList<MutableList<UsageSessionEntity>>()
+        var current: MutableList<UsageSessionEntity>? = null
+        val inCurrent = LinkedHashSet<String>()
+        var lastEnd = 0L
         for (s in clipped) {
-            val info = apps[s.pkg]
-            val at = openBlock[s.pkg]
-            val last = at?.let { blocks[it] }
-            if (last != null && s.startMs - last.endMs <= blockGapMs) {
-                blocks[at] = last.copy(
-                    endMs = maxOf(last.endMs, s.endMs),
-                    activeMs = last.activeMs + (s.endMs - s.startMs),
-                    opens = last.opens + 1,
-                    spans = last.spans + (s.startMs to s.endMs),
-                )
+            val run = current
+            if (run != null && s.startMs - lastEnd < idleGapMs && joins(inCurrent, s.pkg, ::category, combos)) {
+                run += s
             } else {
-                openBlock[s.pkg] = blocks.size
-                blocks += Block(
-                    s.pkg, info?.label ?: s.pkg, info?.activityId.orEmpty(), s.startMs, s.endMs, s.endMs - s.startMs,
-                    spans = listOf(s.startMs to s.endMs),
-                )
+                val fresh = mutableListOf(s)
+                runs += fresh
+                current = fresh
+                inCurrent.clear()
             }
+            inCurrent += s.pkg
+            lastEnd = maxOf(lastEnd, s.endMs)
+        }
+
+        val blocks = runs.map { run ->
+            val active = LinkedHashMap<String, Long>()
+            val opens = HashMap<String, Int>()
+            for (s in run) {
+                active[s.pkg] = (active[s.pkg] ?: 0L) + (s.endMs - s.startMs)
+                opens[s.pkg] = (opens[s.pkg] ?: 0) + 1
+            }
+            val uses = active.map { (pkg, ms) -> AppUse(pkg, label(pkg), category(pkg), ms, opens[pkg] ?: 1) }
+                .sortedWith(compareByDescending<AppUse> { it.activeMs }.thenBy { it.pkg })
+            val combo = bestCombo(active, combos)
+            val categories = uses.map { it.activityId }.distinct()
+            val activity = when {
+                combo != null -> combo.activityId
+                uses.size == 1 -> categories.single()
+                categories.size == 1 -> categories.single().ifEmpty { MIXED_ACTIVITY_ID }
+                else -> MIXED_ACTIVITY_ID
+            }
+            val title = if (uses.size == 1) {
+                uses.single().label
+            } else {
+                uses.take(3).joinToString(" + ") { it.label } + if (uses.size > 3) " + ${uses.size - 3} more" else ""
+            }
+            val first = run.first()
+            Block(
+                pkg = first.pkg,
+                label = title,
+                activityId = activity,
+                startMs = first.startMs,
+                endMs = run.maxOf { it.endMs },
+                activeMs = uses.sumOf { it.activeMs },
+                opens = run.size,
+                spans = run.map { it.startMs to it.endMs },
+                apps = uses,
+                comboId = combo?.id.orEmpty(),
+            )
         }
 
         val perApp = clipped.groupBy { it.pkg }
             .map { (pkg, list) -> pkg to list.sumOf { it.endMs - it.startMs } }
             .sortedByDescending { it.second }
         val byActivity = HashMap<String, Long>()
-        for ((pkg, ms) in perApp) {
-            val activity = apps[pkg]?.activityId.orEmpty()
-            if (activity.isNotEmpty()) byActivity[activity] = (byActivity[activity] ?: 0L) + ms
-        }
+        for (b in blocks) if (b.activityId.isNotEmpty()) byActivity[b.activityId] = (byActivity[b.activityId] ?: 0L) + b.activeMs
         return Day(
             blocks = blocks,
             totalMs = perApp.sumOf { it.second },
             perApp = perApp,
             minutesByActivity = byActivity.mapValues { (it.value / 60_000L).toInt() },
+            appLabels = perApp.associate { (pkg, _) -> pkg to label(pkg) },
         )
     }
 }
