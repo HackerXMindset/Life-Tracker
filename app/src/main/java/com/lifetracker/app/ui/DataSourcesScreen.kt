@@ -1,6 +1,7 @@
 package com.lifetracker.app.ui
 
 import android.net.Uri
+import androidx.annotation.DrawableRes
 import android.provider.DocumentsContract
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -21,7 +22,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import com.lifetracker.app.ui.theme.PaperCard
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
+import com.lifetracker.app.R
+import com.lifetracker.app.ui.theme.LocalPaper
+import com.lifetracker.app.ui.theme.PaperButtonBox
+import com.lifetracker.app.ui.theme.PaperButtonStyle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -64,45 +71,55 @@ fun DataSourcesScreen(onBack: () -> Unit, vm: DataSourcesViewModel = viewModel()
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item {
-            TextButton(onClick = onBack) { Text("Back") }
-        }
-        item {
-            ScreenHeader(label = "Settings", badge = "On this phone", title = "Backups and imports")
-        }
+        item { SettingsTop("Backups and imports", "Back up, restore, or import tracker data", onBack) }
+        item { LockNote("Everything stays on this phone. No account, no server.") }
         state.message?.let { message ->
             item {
-                Card {
-                    Text(message, color = MaterialTheme.colorScheme.onSurface)
-                    TextButton(onClick = vm::dismissMessage) { Text("OK") }
-                }
+                SetupNote(message)
             }
+            item { PaperButtonBox(onClick = vm::dismissMessage, style = PaperButtonStyle.Ghost, small = true) { Text("OK") } }
         }
+
+        item { PaperSection("Backups", "the newest 5 are kept") }
         item {
-            SourceCard(
+            SourceBlock(
+                icon = R.drawable.ic_p_cloud,
                 title = "Backups",
-                description = "Saves your data as a file in a folder on this phone. The newest 5 are kept, " +
-                    "and a safety copy is made before any restore. Nothing leaves the phone.",
+                description = "Saves your data as a file in a folder on this phone. A safety copy is made before any restore. " +
+                    "A backup is also made the first time you open the app each day. Nothing leaves the phone.",
                 folderName = state.backupFolder,
                 onChoose = { pickBackup.launch(startHint("Documents")) },
             ) {
-                Detail(if (state.lastBackup != null) "Last backup: ${state.lastBackup}" else "No backup made yet.")
+                KvRow("Newest backup", state.lastBackup ?: "none yet")
                 if (state.backupFolder != null) {
-                    Detail("A backup is also made the first time you open the app each day.")
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Button(onClick = vm::backupNow, enabled = !state.busy) { Text("Back up now") }
-                        OutlinedButton(
+                    Row(
+                        modifier = Modifier.padding(vertical = 10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        PaperButtonBox(onClick = vm::backupNow, small = true, enabled = !state.busy) {
+                            PaperIcon(R.drawable.ic_p_cloud, size = 16.dp, tint = LocalContentColor.current)
+                            Text("Back up now")
+                        }
+                        PaperButtonBox(
                             onClick = { showRestoreList = true },
+                            style = PaperButtonStyle.Ghost,
+                            small = true,
                             enabled = !state.busy,
-                        ) { Text("Restore") }
+                        ) {
+                            PaperIcon(R.drawable.ic_p_restore, size = 16.dp, tint = LocalContentColor.current)
+                            Text("Restore")
+                        }
                     }
                 }
             }
         }
+
+        item { PaperSection("Imports", "read only, never doubled") }
         item {
-            SourceCard(
+            SourceBlock(
+                icon = R.drawable.ic_p_habits,
                 title = "Streak",
                 description = "Where Streak saves its backups. When you open the app, the newest one is imported: " +
                     "habits, notes, to-dos, and focus sessions, which appear on your Timeline. " +
@@ -112,15 +129,14 @@ fun DataSourcesScreen(onBack: () -> Unit, vm: DataSourcesViewModel = viewModel()
             ) {
                 if (state.streakFolder != null) {
                     NewestFile(state.streakNewest, "No Streak backup found in this folder.")
-                    Detail(if (state.lastStreakImport != null) "Last import: ${state.lastStreakImport}" else "Not imported yet.")
-                    Button(onClick = vm::importStreak, enabled = !state.busy && state.streakNewest != null) {
-                        Text("Import now")
-                    }
+                    KvRow("Last import", state.lastStreakImport ?: "not yet")
+                    ImportButton(enabled = !state.busy && state.streakNewest != null, onClick = vm::importStreak)
                 }
             }
         }
         item {
-            SourceCard(
+            SourceBlock(
+                icon = R.drawable.ic_p_food,
                 title = "OpenNutriTracker",
                 description = "Where OpenNutriTracker saves its export. When you open the app, the newest one is imported: " +
                     "meals, daily goals, and activities, which appear on your Timeline. " +
@@ -130,18 +146,17 @@ fun DataSourcesScreen(onBack: () -> Unit, vm: DataSourcesViewModel = viewModel()
             ) {
                 if (state.nutriFolder != null) {
                     NewestFile(state.nutriNewest, "No OpenNutriTracker export found in this folder.")
-                    Detail(if (state.lastOntImport != null) "Last import: ${state.lastOntImport}" else "Not imported yet.")
-                    Button(onClick = vm::importOpenNutriTracker, enabled = !state.busy && state.nutriNewest != null) {
-                        Text("Import now")
-                    }
+                    KvRow("Last import", state.lastOntImport ?: "not yet")
+                    ImportButton(enabled = !state.busy && state.nutriNewest != null, onClick = vm::importOpenNutriTracker)
                 }
             }
         }
         item {
             Text(
-                text = "The app only reads the Streak and OpenNutriTracker folders. It never changes files in them.",
+                text = "The app only reads the Streak and OpenNutriTracker folders. It never changes files in them. " +
+                    "GPX files and exports are under Places and trips.",
                 fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = LocalPaper.current.ink2,
             )
         }
     }
@@ -213,53 +228,53 @@ fun DataSourcesScreen(onBack: () -> Unit, vm: DataSourcesViewModel = viewModel()
     }
 }
 
+/** The demo's "flat card": an icon and name with a short line, then key / value lines, then whatever [extra] adds. */
 @Composable
-private fun Card(content: @Composable ColumnScope.() -> Unit) {
-    PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp), content = content)
-    }
-}
-
-@Composable
-private fun SourceCard(
+private fun SourceBlock(
+    @DrawableRes icon: Int,
     title: String,
     description: String,
     folderName: String?,
     onChoose: () -> Unit,
-    extra: @Composable ColumnScope.() -> Unit,
+    extra: @Composable () -> Unit,
 ) {
-    Card {
-        Text(
-            text = title,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-        Text(text = description, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        MonoLabel("Folder")
-        Text(
-            text = folderName ?: "Not chosen yet",
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-        OutlinedButton(onClick = onChoose) {
-            Text(if (folderName == null) "Choose folder" else "Change folder")
+    val p = LocalPaper.current
+    SetCard {
+        Row(
+            modifier = Modifier.padding(top = 14.dp, bottom = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            PaperIcon(icon)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = p.ink)
+                Text(description, fontSize = 12.5.sp, color = p.ink2)
+            }
         }
+        KvRow("Folder", folderName ?: "not chosen yet")
         extra()
+        Row(modifier = Modifier.padding(top = 4.dp, bottom = 14.dp)) {
+            PaperButtonBox(onClick = onChoose, style = PaperButtonStyle.Ghost, small = true) {
+                PaperIcon(R.drawable.ic_p_folder, size = 16.dp, tint = LocalContentColor.current)
+                Text(if (folderName == null) "Choose folder" else "Change folder")
+            }
+        }
     }
 }
 
 @Composable
-private fun Detail(text: String) {
-    Text(text = text, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+private fun ImportButton(enabled: Boolean, onClick: () -> Unit) {
+    Row(modifier = Modifier.padding(top = 4.dp, bottom = 10.dp)) {
+        PaperButtonBox(onClick = onClick, small = true, enabled = enabled) { Text("Import now") }
+    }
 }
 
 @Composable
 private fun NewestFile(file: FoundFile?, emptyText: String) {
     if (file == null) {
-        Detail(emptyText)
+        Text(emptyText, fontSize = 12.5.sp, color = LocalPaper.current.ink2, modifier = Modifier.padding(vertical = 8.dp))
     } else {
-        MonoLabel("Newest file found")
-        Text(text = file.name, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
-        Detail("Modified ${formatDateTime(file.modified)}")
+        KvRow("Newest file found", file.name)
+        KvRow("Modified", formatDateTime(file.modified))
     }
 }

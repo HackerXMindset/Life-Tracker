@@ -3,6 +3,8 @@ package com.lifetracker.app.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -12,11 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -48,7 +46,7 @@ fun AppearanceScreen(onBack: () -> Unit) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item {
             SettingsTop(
@@ -57,26 +55,13 @@ fun AppearanceScreen(onBack: () -> Unit) {
                 onBack = onBack,
             )
         }
+        item { PaperSection("Theme", "how Life Tracker looks") }
         item {
-            PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        "Theme",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    Text(
-                        "Choose how Life Tracker looks.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    PaperSegmented(
-                        options = ThemeMode.entries.map { it.label },
-                        selected = ThemeMode.entries.indexOf(AppTheme.mode),
-                        onSelect = { AppTheme.set(context, ThemeMode.entries[it]) },
-                    )
-                }
-            }
+            PaperSegmented(
+                options = ThemeMode.entries.map { it.label },
+                selected = ThemeMode.entries.indexOf(AppTheme.mode),
+                onSelect = { AppTheme.set(context, ThemeMode.entries[it]) },
+            )
         }
         item {
             key(activeIdentityRevision) {
@@ -94,6 +79,7 @@ fun AppearanceScreen(onBack: () -> Unit) {
 }
 
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SavedAppDesignsSettings(
     revision: Int,
@@ -157,9 +143,9 @@ private fun SavedAppDesignsSettings(
                                 color = MaterialTheme.colorScheme.onSurface,
                                 maxLines = 2,
                             )
-                            Row(
+                            FlowRow(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
                                 Button(
                                     onClick = {
