@@ -2,6 +2,13 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📜 Settings like your demo (part 7: Appearance, Backups and imports)
+
+### ✨ New features
+
+- **Backups and imports** — the tilted note "Everything stays on this phone", Backups with folder / newest backup lines and **Back up now** / **Restore**, and Streak and OpenNutriTracker as cards with their folder, newest file, last import and **Import now**.
+- **Appearance** — the theme is a strip under a "Theme" heading. Your home-screen name, icon and saved designs are unchanged, now with paper buttons (the three buttons on a saved design wrap onto a second line on narrow screens).
+
 ## 📜 Settings like your demo (part 6: Habits)
 
 ### ✨ New features
