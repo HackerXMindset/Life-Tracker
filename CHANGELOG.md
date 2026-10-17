@@ -2,6 +2,11 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## ✦ Kairos shelf-of-days launcher icon
+
+- Replaced the placeholder clock launcher icon with a Kairos icon based on the supplied shelf-of-days SVG: parchment background, dark book spines, and the orange accent.
+- Recreated the artwork with native Android vector paths so the launcher resource builds without unsupported SVG filters or `strokeDashArray` features. Fine grain texture from the SVG is omitted.
+
 ## ✦ Kairos and independent home-screen shortcuts
 
 - Changed the installed app label to **Kairos**.

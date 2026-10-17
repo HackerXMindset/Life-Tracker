@@ -1,19 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+
+    <!-- Orange accent book behind the shelf. The source SVG's texture filter is
+         intentionally omitted because Android VectorDrawable does not support it. -->
+    <group
+        android:pivotX="61.68"
+        android:pivotY="52.72"
+        android:rotation="-2.5">
+        <path
+            android:fillColor="#F08A24"
+            android:fillAlpha="0.85"
+            android:pathData="M58.48,30 H64.88 A0.96,0.96 0,0 1 65.84,30.96 V74.48 A0.96,0.96 0,0 1 64.88,75.44 H58.48 A0.96,0.96 0,0 1 57.52,74.48 V30.96 A0.96,0.96 0,0 1 58.48,30 Z" />
+    </group>
+
+    <!-- Book spines and the shelf. -->
+    <path
+        android:fillColor="#1C1B19"
+        android:pathData="M26.48,40.88 H32.88 V72.88 H26.48 Z
+            M34.48,32.88 H40.88 V72.88 H34.48 Z
+            M42.48,45.68 H48.88 V72.88 H42.48 Z
+            M58.48,31.28 H64.88 V72.88 H58.48 Z
+            M66.48,42.48 H72.88 V72.88 H66.48 Z
+            M74.48,36.08 H80.88 V72.88 H74.48 Z
+            M23.28,72.88 H84.72 V75.76 H23.28 Z
+            M21.36,75.76 H86.64 V78 H21.36 Z" />
+
+    <!-- Light grooves on each book spine. -->
     <path
         android:fillColor="#00000000"
-        android:pathData="M30,54a24,24 0 1,0 48,0a24,24 0 1,0 -48,0"
-        android:strokeColor="#FFFFFF"
+        android:strokeColor="#F2E9D8"
+        android:strokeWidth="0.4"
         android:strokeLineCap="round"
-        android:strokeWidth="5" />
+        android:pathData="M28.56,44.08 V70
+            M30.8,44.08 V70
+            M36.56,36.08 V70
+            M38.8,36.08 V70
+            M44.56,48.88 V70
+            M46.8,48.88 V70
+            M60.56,34.48 V70
+            M62.8,34.48 V70
+            M68.56,45.68 V70
+            M70.8,45.68 V70
+            M76.56,39.28 V70
+            M78.8,39.28 V70" />
+
+    <!-- Dashed outline of the missing/placeholder book, drawn as segments
+         because android:strokeDashArray is not supported in VectorDrawable. -->
     <path
         android:fillColor="#00000000"
-        android:pathData="M54,42v12l8,6"
-        android:strokeColor="#FFFFFF"
-        android:strokeLineCap="round"
+        android:strokeColor="#1C1B19"
+        android:strokeWidth="0.56"
         android:strokeLineJoin="round"
-        android:strokeWidth="5" />
+        android:pathData="
+            M50.48,37.68 h1.12 M52.56,37.68 h1.12 M54.64,37.68 h1.12 M56.72,37.68 h0.16
+            M50.48,72.88 h1.12 M52.56,72.88 h1.12 M54.64,72.88 h1.12 M56.72,72.88 h0.16
+            M50.48,37.68 v1.12 M50.48,39.76 v1.12 M50.48,41.84 v1.12
+            M50.48,43.92 v1.12 M50.48,46 v1.12 M50.48,48.08 v1.12
+            M50.48,50.16 v1.12 M50.48,52.24 v1.12 M50.48,54.32 v1.12
+            M50.48,56.4 v1.12 M50.48,58.48 v1.12 M50.48,60.56 v1.12
+            M50.48,62.64 v1.12 M50.48,64.72 v1.12 M50.48,66.8 v1.12
+            M50.48,68.88 v1.12 M50.48,70.96 v1.12
+            M56.88,37.68 v1.12 M56.88,39.76 v1.12 M56.88,41.84 v1.12
+            M56.88,43.92 v1.12 M56.88,46 v1.12 M56.88,48.08 v1.12
+            M56.88,50.16 v1.12 M56.88,52.24 v1.12 M56.88,54.32 v1.12
+            M56.88,56.4 v1.12 M56.88,58.48 v1.12 M56.88,60.56 v1.12
+            M56.88,62.64 v1.12 M56.88,64.72 v1.12 M56.88,66.8 v1.12
+            M56.88,68.88 v1.12 M56.88,70.96 v1.12" />
 </vector>
