@@ -160,7 +160,7 @@ class UsageSessionsTest {
     }
 
     @Test
-    fun theSameAppTenMinutesApartIsOneBlockEvenWithAnotherAppBetween() {
+    fun appsWithNoCategoryUsedTogetherBecomeOneScreenPeriod() {
         val day = UsageDays.build(
             listOf(
                 session("t", 0, 5 * min),
@@ -172,26 +172,89 @@ class UsageSessionsTest {
             dayStart,
             dayEnd,
         )
-        val telegram = day.blocks.filter { it.pkg == "t" }
-        assertEquals(1, telegram.size)
-        assertEquals(0L, telegram[0].startMs)
-        assertEquals(22 * min, telegram[0].endMs)
-        assertEquals(10 * min, telegram[0].activeMs)
-        assertEquals(3, telegram[0].opens)
-        assertEquals(1, day.blocks.count { it.pkg == "b" })
+        assertEquals(2, day.blocks.size)
+        val first = day.blocks[0]
+        assertEquals("Telegram + Brave", first.label)
+        assertEquals(0L, first.startMs)
+        assertEquals(12 * min, first.endMs)
+        assertEquals(10 * min, first.activeMs)
+        assertEquals(UsageDays.MIXED_ACTIVITY_ID, first.activityId)
+        assertEquals(listOf("t", "b"), first.apps.map { it.pkg })
+        assertEquals(2, first.apps[0].opens)
+        assertEquals("t", day.blocks[1].pkg)
         assertEquals(12 * min, day.totalMs)
     }
 
     @Test
-    fun moreThanTenMinutesApartStartsANewBlock() {
+    fun fiveMinutesWithoutUseEndsAPeriodButJustUnderDoesNot() {
+        val apart = UsageDays.build(listOf(session("t", 0, 5 * min), session("t", 10 * min, 12 * min)), mapOf(app("t", "Telegram")), dayStart, dayEnd)
+        assertEquals(2, apart.blocks.size)
+        val close = UsageDays.build(listOf(session("t", 0, 5 * min), session("t", 9 * min + 59 * s, 12 * min)), mapOf(app("t", "Telegram")), dayStart, dayEnd)
+        assertEquals(1, close.blocks.size)
+        assertEquals(listOf(1, 1), apart.blocks.map { it.opens })
+    }
+
+    @Test
+    fun appsOfTheSameCategoryJoinOneStudyPeriod() {
         val day = UsageDays.build(
-            listOf(session("t", 0, 5 * min), session("t", 16 * min, 18 * min)),
-            mapOf(app("t", "Telegram")),
+            listOf(session("a", 0, 10 * min), session("c", 11 * min, 20 * min)),
+            mapOf(app("a", "Anki", "Study"), app("c", "Notes", "Study")),
+            dayStart,
+            dayEnd,
+        )
+        val block = day.blocks.single()
+        assertEquals("Study", block.activityId)
+        assertEquals(19 * min, block.activeMs)
+        assertEquals(19, day.minutesByActivity["Study"])
+    }
+
+    @Test
+    fun anAppOfAnotherCategoryStartsANewPeriod() {
+        val day = UsageDays.build(
+            listOf(session("a", 0, 10 * min), session("g", 11 * min, 20 * min), session("a", 21 * min, 25 * min)),
+            mapOf(app("a", "Anki", "Study"), app("g", "Game", "Screen")),
+            dayStart,
+            dayEnd,
+        )
+        assertEquals(listOf("Study", "Screen", "Study"), day.blocks.map { it.activityId })
+        assertEquals(14, day.minutesByActivity["Study"])
+        assertEquals(9, day.minutesByActivity["Screen"])
+    }
+
+    @Test
+    fun aCategorisedAppAndAnUncategorisedAppAreNotMixed() {
+        val day = UsageDays.build(
+            listOf(session("a", 0, 10 * min), session("x", 11 * min, 14 * min)),
+            mapOf(app("a", "Anki", "Study")),
             dayStart,
             dayEnd,
         )
         assertEquals(2, day.blocks.size)
-        assertEquals(listOf(1, 1), day.blocks.map { it.opens })
+        assertEquals("", day.blocks[1].activityId)
+    }
+
+    @Test
+    fun aNamedCombinationJoinsItsAppsAndDecidesTheActivity() {
+        val combos = listOf(UsageDays.Combo("study-pw", setOf("pw", "gpt"), "Study"))
+        val day = UsageDays.build(
+            listOf(session("pw", 0, 10 * min), session("gpt", 11 * min, 16 * min), session("pw", 17 * min, 30 * min)),
+            mapOf(app("pw", "Physics Wallah"), app("gpt", "ChatGPT", "Screen")),
+            dayStart,
+            dayEnd,
+            combos = combos,
+        )
+        val block = day.blocks.single()
+        assertEquals("Study", block.activityId)
+        assertEquals("study-pw", block.comboId)
+        assertEquals(28, day.minutesByActivity["Study"])
+    }
+
+    @Test
+    fun aCombinationNeedsAtLeastTwoOfItsAppsToApply() {
+        val combos = listOf(UsageDays.Combo("study-pw", setOf("pw", "gpt"), "Study"))
+        val day = UsageDays.build(listOf(session("pw", 0, 10 * min)), mapOf(app("pw", "Physics Wallah")), dayStart, dayEnd, combos = combos)
+        assertEquals("", day.blocks.single().activityId)
+        assertEquals("", day.blocks.single().comboId)
     }
 
     private fun evc(time: Long, pkg: String, type: RawType, cls: String) = RawEvent(time, pkg, type, cls)

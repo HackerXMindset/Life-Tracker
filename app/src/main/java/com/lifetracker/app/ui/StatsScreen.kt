@@ -136,7 +136,7 @@ internal fun PhoneSummary(day: UsageDays.Day, onClick: () -> Unit) {
                 )
             }
             top.forEach { (pkg, ms) ->
-                val label = day.blocks.firstOrNull { it.pkg == pkg }?.label ?: pkg
+                val label = day.appLabels[pkg] ?: pkg
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(label, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(

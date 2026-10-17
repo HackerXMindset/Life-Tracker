@@ -252,7 +252,14 @@ private fun describe(item: DayLayout.Item, a: DayActions): Look {
             val type = b.activityId.takeIf { it.isNotEmpty() }?.let { a.types.byId(it) }
             Look(
                 color = type?.displayColor() ?: quiet, title = b.label,
-                lines = listOfNotNull(if (b.opens > 1) "opened ${b.opens} times" else null),
+                lines = if (b.apps.size > 1) {
+                    b.apps.take(4).map { u ->
+                        u.label + " · " + formatDuration(((u.activeMs + 30_000L) / 60_000L).toInt().coerceAtLeast(1)) +
+                            if (u.opens > 1) " · opened ${u.opens} times" else ""
+                    }
+                } else {
+                    listOfNotNull(if (b.opens > 1) "opened ${b.opens} times" else null)
+                },
                 chip = type?.name ?: "no category, tap to set",
                 trailing = formatDuration(((b.activeMs + 30_000L) / 60_000L).toInt().coerceAtLeast(1)),
                 editable = true, onClick = { a.onEditItem(item) },
