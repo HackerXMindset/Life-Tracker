@@ -1,27 +1,90 @@
-# Life Tracker
+<div align="center">
+  <h1>Life Tracker</h1>
+  <p><strong>Your whole day. One private timeline.</strong></p>
+  <p>One Android app for activities, study, habits, food, money, phone use, health, places and trips — designed around a timeline that helps you understand where your time goes.</p>
+  <p>
+    <a href="https://github.com/HackerXMindset/Life-Tracker/releases"><img alt="Total APK downloads" src="https://img.shields.io/github/downloads/HackerXMindset/Life-Tracker/total?style=for-the-badge&logo=android&logoColor=white&label=APK%20downloads&color=7C3AED" /></a>
+    <a href="https://github.com/HackerXMindset/Life-Tracker/actions/workflows/build.yml"><img alt="Main build status" src="https://img.shields.io/github/actions/workflow/status/HackerXMindset/Life-Tracker/build.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=build" /></a>
+    <a href="https://github.com/HackerXMindset/Life-Tracker/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/HackerXMindset/Life-Tracker?style=for-the-badge&logo=github" /></a>
+    <a href="https://github.com/HackerXMindset/Life-Tracker/forks"><img alt="GitHub forks" src="https://img.shields.io/github/forks/HackerXMindset/Life-Tracker?style=for-the-badge&logo=github" /></a>
+    <a href="https://github.com/HackerXMindset/Life-Tracker/issues"><img alt="Open issues" src="https://img.shields.io/github/issues/HackerXMindset/Life-Tracker?style=for-the-badge&logo=github" /></a>
+    <a href="https://github.com/HackerXMindset/Life-Tracker/commits/main"><img alt="Last commit" src="https://img.shields.io/github/last-commit/HackerXMindset/Life-Tracker?style=for-the-badge&logo=git" /></a>
+    <img alt="Repository size" src="https://img.shields.io/github/repo-size/HackerXMindset/Life-Tracker?style=for-the-badge&label=repo%20size" />
+  </p>
+  <p>
+    <a href="https://github.com/HackerXMindset/Life-Tracker/releases/latest"><strong>Download the latest APK</strong></a>
+    &nbsp;·&nbsp;
+    <a href="#the-idea-in-one-minute">Explore features</a>
+    &nbsp;·&nbsp;
+    <a href="#the-roadmap">Roadmap</a>
+  </p>
+</div>
 
-<img alt="Downloads" src="https://img.shields.io/github/downloads/HackerXMindset/Life-Tracker/total?style=flat&logo=github&logoColor=white&label=Downloads&color=7C3AED" />
+<p align="center">
+  <img alt="Android" src="https://img.shields.io/badge/Platform-Android-3DDC84?style=flat-square&logo=android&logoColor=white" />
+  <img alt="Kotlin" src="https://img.shields.io/badge/Language-Kotlin-7F52FF?style=flat-square&logo=kotlin&logoColor=white" />
+  <img alt="Jetpack Compose" src="https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4?style=flat-square&logo=jetpackcompose&logoColor=white" />
+  <img alt="Room and SQLite" src="https://img.shields.io/badge/Storage-Room%20%2F%20SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white" />
+  <img alt="GitHub Actions" src="https://img.shields.io/badge/Build-GitHub%20Actions-2088FF?style=flat-square&logo=githubactions&logoColor=white" />
+</p>
 
-**One private app for your whole day: what you did, what you ate, which habits you kept, where your money went, and what it all adds up to.**
-
-Life Tracker is an Android app built for a single person: its owner. It replaces a pile of separate apps with one place, and it keeps every byte of your data on your own phone. There is no account, no server and no subscription.
+<p align="center">
+  <img alt="Timeline" src="https://img.shields.io/badge/Timeline-1F6FEB?style=flat-square" />
+  <img alt="Habits" src="https://img.shields.io/badge/Habits-8B5CF6?style=flat-square" />
+  <img alt="Food" src="https://img.shields.io/badge/Food-F97316?style=flat-square" />
+  <img alt="Money" src="https://img.shields.io/badge/Money-0F766E?style=flat-square" />
+  <img alt="Phone usage" src="https://img.shields.io/badge/Phone%20use-64748B?style=flat-square" />
+  <img alt="Health" src="https://img.shields.io/badge/Health-DB2777?style=flat-square" />
+  <img alt="Places and trips" src="https://img.shields.io/badge/Places%20%26%20trips-2563EB?style=flat-square" />
+  <img alt="Local backups" src="https://img.shields.io/badge/Local%20backups-475569?style=flat-square" />
+</p>
 
 ---
 
 ## Contents
 
-1. [The idea in one minute](#the-idea-in-one-minute)
-2. [Where the project stands today](#where-the-project-stands-today)
-3. [The roadmap](#the-roadmap)
-4. [How the app is organised](#how-the-app-is-organised)
-5. [The file architecture](#the-file-architecture)
-6. [How your data is stored and protected](#how-your-data-is-stored-and-protected)
-7. [Installing on your phone](#installing-on-your-phone)
-8. [How a new version gets built](#how-a-new-version-gets-built)
-9. [Rules the project lives by](#rules-the-project-lives-by)
+1. [Live developer dashboard](#live-developer-dashboard)
+2. [The idea in one minute](#the-idea-in-one-minute)
+3. [Where the project stands today](#where-the-project-stands-today)
+4. [The roadmap](#the-roadmap)
+5. [How the app is organised](#how-the-app-is-organised)
+6. [The file architecture](#the-file-architecture)
+7. [How your data is stored and protected](#how-your-data-is-stored-and-protected)
+8. [Installing on your phone](#installing-on-your-phone)
+9. [How a new version gets built](#how-a-new-version-gets-built)
+10. [Rules the project lives by](#rules-the-project-lives-by)
 
 ---
 
+## Live developer dashboard
+
+These cards are generated from the public GitHub activity of **HackerXMindset**. They describe the developer account, **not** Life Tracker installs, users, or private app data.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://github-readme-activity-graph.vercel.app/graph?username=HackerXMindset&theme=github-compact&hide_border=true&area=true" />
+  <source media="(prefers-color-scheme: light)" srcset="https://github-readme-activity-graph.vercel.app/graph?username=HackerXMindset&theme=github&hide_border=true&area=true" />
+  <img alt="HackerXMindset GitHub activity graph for the last 31 days" src="https://github-readme-activity-graph.vercel.app/graph?username=HackerXMindset&theme=github&hide_border=true&area=true" width="100%" />
+</picture>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://streak-stats.demolab.com?user=HackerXMindset&theme=dark&hide_border=true" />
+    <source media="(prefers-color-scheme: light)" srcset="https://streak-stats.demolab.com?user=HackerXMindset&theme=default&hide_border=true" />
+    <img alt="HackerXMindset GitHub contribution totals and streak" src="https://streak-stats.demolab.com?user=HackerXMindset&theme=default&hide_border=true" width="49%" />
+  </picture>
+  <a href="https://github.com/seuthootDev/github-readme-zodiac">
+    <img alt="HackerXMindset GitHub zodiac activity card" src="https://github-readme-zodiac.vercel.app/api/card?username=HackerXMindset" width="49%" />
+  </a>
+</p>
+
+<details>
+  <summary><strong>Open a random developer joke</strong></summary>
+  <p align="center">
+    <img alt="Random programming joke" src="https://readme-jokes.vercel.app/api?hideBorder" />
+  </p>
+</details>
+
+---
 ## The idea in one minute
 
 Most life-tracking apps do one thing well and ignore the rest. This project joins four of them into one and adds the part that none of them have: statistics you can shape yourself.
