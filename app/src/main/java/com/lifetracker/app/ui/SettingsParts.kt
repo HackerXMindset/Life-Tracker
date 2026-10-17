@@ -53,7 +53,12 @@ fun PaperIcon(@DrawableRes icon: Int, modifier: Modifier = Modifier, size: Dp = 
 @Composable
 fun SettingsTop(title: String, sub: String, onBack: () -> Unit) {
     val p = LocalPaper.current
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    // Constrain the whole header to the available screen width. Without this,
+    // wrap-content measurement can leave header text with an unexpectedly narrow width.
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
         Row(
             modifier = Modifier
                 .clip(Wobble.Small)
@@ -74,7 +79,7 @@ fun SettingsTop(title: String, sub: String, onBack: () -> Unit) {
                 color = p.ink,
                 maxLines = 2,
             )
-            Text(text = sub, fontSize = 12.sp, color = p.ink2)
+            Text(text = sub, modifier = Modifier.fillMaxWidth(), fontSize = 12.sp, color = p.ink2)
         }
     }
 }
