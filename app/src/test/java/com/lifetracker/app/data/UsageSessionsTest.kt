@@ -193,4 +193,70 @@ class UsageSessionsTest {
         assertEquals(2, day.blocks.size)
         assertEquals(listOf(1, 1), day.blocks.map { it.opens })
     }
+
+    private fun evc(time: Long, pkg: String, type: RawType, cls: String) = RawEvent(time, pkg, type, cls)
+
+    /** The case behind the missing time: a late "stopped" for the old screen must not end the session on the new one. */
+    @Test
+    fun aLateStopOfTheOldScreenDoesNotCutTheSession() {
+        val out = UsageSessions.build(
+            listOf(
+                evc(0, "a", RawType.RESUME, "A1"),
+                evc(10 * s, "a", RawType.PAUSE, "A1"),
+                evc(10 * s, "a", RawType.RESUME, "A2"),
+                evc(11 * s, "a", RawType.STOP, "A1"),
+                evc(60 * s, "a", RawType.PAUSE, "A2"),
+            ),
+            100 * s,
+        )
+        assertEquals(listOf(Triple("a", 0L, 60 * s)), spans(out))
+    }
+
+    @Test
+    fun aPauseOfAScreenThatIsNoLongerOnTopIsIgnored() {
+        val out = UsageSessions.build(
+            listOf(
+                evc(0, "a", RawType.RESUME, "A1"),
+                evc(10 * s, "a", RawType.RESUME, "A2"),
+                evc(11 * s, "a", RawType.PAUSE, "A1"),
+                evc(50 * s, "a", RawType.PAUSE, "A2"),
+            ),
+            100 * s,
+        )
+        assertEquals(listOf(Triple("a", 0L, 50 * s)), spans(out))
+    }
+
+    @Test
+    fun aStopOfTheScreenOnTopEndsTheSessionWhenNoPauseCame() {
+        val out = UsageSessions.build(listOf(evc(0, "a", RawType.RESUME, "A1"), evc(40 * s, "a", RawType.STOP, "A1")), 100 * s)
+        assertEquals(listOf(Triple("a", 0L, 40 * s)), spans(out))
+    }
+
+    @Test
+    fun aStopWithoutAScreenNameIsNotTrusted() {
+        val out = UsageSessions.build(listOf(ev(0, "a", RawType.RESUME), ev(40 * s, "a", RawType.STOP), ev(90 * s, "a", RawType.PAUSE)), 100 * s)
+        assertEquals(listOf(Triple("a", 0L, 90 * s)), spans(out))
+    }
+
+    @Test
+    fun aPhoneThatDiedEndsTheSessionAtItsLastEvent() {
+        val out = UsageSessions.build(
+            listOf(ev(0, "a", RawType.RESUME), ev(30 * s, "a", RawType.RESUME), ev(5000 * s, "", RawType.STARTUP)),
+            9000 * s,
+        )
+        assertEquals(listOf(Triple("a", 0L, 30 * s)), spans(out))
+    }
+
+    @Test
+    fun theBlockKeepsTheStretchesOfRealUse() {
+        val sessions = listOf(
+            UsageSessionEntity("a|0", "a", 0, 60 * s),
+            UsageSessionEntity("a|1", "a", 120 * s, 180 * s),
+        )
+        val day = UsageDays.build(sessions, emptyMap(), 0, 1000 * s)
+        val block = day.blocks.single()
+        assertEquals(listOf(0L to 60 * s, 120 * s to 180 * s), block.spans)
+        assertEquals(120 * s, block.activeMs)
+        assertEquals(120 * s, day.totalMs)
+    }
 }

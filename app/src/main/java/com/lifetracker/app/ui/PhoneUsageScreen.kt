@@ -67,6 +67,7 @@ fun PhoneUsageScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PhoneUsageV
     val context = LocalContext.current
     val hasAccess by vm.hasAccess.collectAsState()
     val summary by vm.summary.collectAsState()
+    val androidTotal by vm.androidTotalMs.collectAsState()
     val apps by vm.apps.collectAsState()
     val types by vm.activityTypes.collectAsState()
     val range by vm.range.collectAsState()
@@ -164,6 +165,16 @@ fun PhoneUsageScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PhoneUsageV
                         fontSize = 30.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = MaterialTheme.colorScheme.onBackground,
+                    )
+                }
+            }
+
+            androidTotal?.let { androidMs ->
+                item {
+                    SetupNote(
+                        "Check: this app counts ${formatDuration(msToMinutes(summary.totalMs))}. Android's own total for the same days is " +
+                            "${formatDuration(msToMinutes(androidMs))}. Android's total reads a little higher than Digital Wellbeing, and apps you " +
+                            "hid are left out of this app's number, so compare with Digital Wellbeing for the final check.",
                     )
                 }
             }

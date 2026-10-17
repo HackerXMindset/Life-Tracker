@@ -67,6 +67,10 @@ interface UsageDao {
     @Query("DELETE FROM usage_sessions")
     suspend fun deleteAllSessions()
 
+    /** Used only when the sessions of the days Android still remembers are built again with the corrected rules. */
+    @Query("DELETE FROM usage_sessions WHERE startMs >= :from")
+    suspend fun deleteSessionsFrom(from: Long)
+
     @Query("SELECT * FROM usage_apps ORDER BY label COLLATE NOCASE")
     fun observeApps(): Flow<List<UsageAppEntity>>
 

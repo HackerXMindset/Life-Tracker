@@ -25,6 +25,14 @@ object UsageCollector {
     private const val SCREEN_NON_INTERACTIVE = 16
     private const val ACTIVITY_STOPPED = 23
     private const val DEVICE_SHUTDOWN = 26
+    private const val DEVICE_STARTUP = 27
+    private const val KEYGUARD_SHOWN = 17
+
+    /**
+     * Raise this when the rules that turn events into sessions change. The next sync then builds the days Android still
+     * remembers again, so they are counted the new way. Days Android no longer remembers are left exactly as they are.
+     */
+    private const val REBUILD_VERSION = 2
 
     private const val FIRST_LOOKBACK_MS = 14L * 24 * 60 * 60 * 1000
     private const val MAX_LOOKBACK_MS = 30L * 24 * 60 * 60 * 1000
@@ -68,10 +76,16 @@ object UsageCollector {
         val dao = db.usageDao()
 
         // Start just before the newest saved session, so it is read again and extended if it was still going.
+        val settings = UsageSettings(context)
+        val rebuild = settings.rebuiltVersion < REBUILD_VERSION
         val latest = dao.latestStart()
-        val from = if (latest != null) maxOf(latest - 5_000L, now - MAX_LOOKBACK_MS) else now - FIRST_LOOKBACK_MS
+        val from = when {
+            rebuild || latest == null -> now - FIRST_LOOKBACK_MS
+            else -> maxOf(latest - 5_000L, now - MAX_LOOKBACK_MS)
+        }
 
-        val sessions = UsageSessions.build(readEvents(context, from, now), now, skipPackages(context))
+        val events = readEvents(context, from, now)
+        val sessions = UsageSessions.build(events, now, skipPackages(context))
         val known = dao.allApps().associateBy { it.pkg }
         val pm = context.packageManager
         val apps = sessions.map { it.pkg }.distinct().mapNotNull { pkg ->
@@ -85,9 +99,25 @@ object UsageCollector {
         }
         db.withTransaction {
             dao.upsertApps(apps)
+            // Building again from the first event Android still has: what was saved from that moment on was built with the
+            // old rules, so it is replaced. Anything before the first event is not touched.
+            if (rebuild && events.isNotEmpty()) dao.deleteSessionsFrom(events.first().time)
             dao.upsertSessions(sessions)
         }
+        if (rebuild && events.isNotEmpty()) settings.rebuiltVersion = REBUILD_VERSION
         sessions.size
+    }
+
+    /**
+     * Android's own total of time in front for [startMs, endMs), summed over every app except the phone itself. It is only a
+     * rough guide: it reads a little higher than Digital Wellbeing, which counts the events more carefully (as this app does).
+     * Null without usage access.
+     */
+    suspend fun androidTotalMs(context: Context, startMs: Long, endMs: Long): Long? = withContext(Dispatchers.IO) {
+        if (!hasAccess(context)) return@withContext null
+        val manager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+        val skip = skipPackages(context)
+        manager.queryAndAggregateUsageStats(startMs, endMs).filterKeys { it !in skip }.values.sumOf { it.totalTimeInForeground }
     }
 
     private fun readEvents(context: Context, from: Long, to: Long): List<RawEvent> {
@@ -100,12 +130,14 @@ object UsageCollector {
             val pkg = e.packageName ?: ""
             val type = when (e.eventType) {
                 ACTIVITY_RESUMED -> RawType.RESUME
-                ACTIVITY_PAUSED, ACTIVITY_STOPPED -> RawType.PAUSE
-                SCREEN_NON_INTERACTIVE -> RawType.SCREEN_OFF
+                ACTIVITY_PAUSED -> RawType.PAUSE
+                ACTIVITY_STOPPED -> RawType.STOP
+                SCREEN_NON_INTERACTIVE, KEYGUARD_SHOWN -> RawType.SCREEN_OFF
                 DEVICE_SHUTDOWN -> RawType.SHUTDOWN
+                DEVICE_STARTUP -> RawType.STARTUP
                 else -> null
             } ?: continue
-            out += RawEvent(e.timeStamp, pkg, type)
+            out += RawEvent(e.timeStamp, pkg, type, e.className ?: "")
         }
         return out.sortedBy { it.time }
     }

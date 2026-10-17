@@ -65,6 +65,18 @@ class PhoneUsageViewModel(private val app: Application) : AndroidViewModel(app) 
         },
     )
 
+    /** Android's own total for the chosen days, for the "check against Android" line. Null while loading or without access. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val androidTotalMs: StateFlow<Long?> = share(
+        null,
+        combine(rangeFlow, syncingFlow) { r, _ -> r }.flatMapLatest { r ->
+            kotlinx.coroutines.flow.flow {
+                val zone = ZoneId.systemDefault()
+                emit(runCatching { UsageCollector.androidTotalMs(app, r.span.startMs(zone), r.span.endMs(zone)) }.getOrNull())
+            }
+        },
+    )
+
     fun setRange(r: RangeChoice) {
         rangeFlow.value = r
     }
