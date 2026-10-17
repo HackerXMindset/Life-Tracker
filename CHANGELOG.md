@@ -2,6 +2,13 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📜 Settings like your demo (part 5: Activities)
+
+### ✨ New features
+
+- **Activities** — a list with the colour square and a pencil on each row, a full-width dark **New activity** button, and hidden ones under "Hidden from Log" (dimmed, with a crossed-out eye).
+- **Editing an activity** now opens as a bottom sheet like the demo: name, colours, and a "Hide from Log" switch (saved when you tap Save). Old entries keep their colour; nothing you logged is removed.
+
 ## ✦ Kairos shelf-of-days launcher icon
 
 - Replaced the placeholder clock launcher icon with a Kairos icon based on the supplied shelf-of-days SVG: parchment background, dark book spines, and the orange accent.
