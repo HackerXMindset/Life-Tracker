@@ -49,11 +49,19 @@ fun PaperSection(title: String, hint: String? = null, modifier: Modifier = Modif
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.Bottom,
     ) {
-        HighlightedHeading(title, fontSize = 17f)
+        // Let the hint take its natural width first; constrain the heading to the
+        // remaining space. Weighting the hint instead can leave it a few pixels wide,
+        // causing Compose to place one letter on each line on narrow screens.
+        Box(
+            modifier = Modifier.weight(1f, fill = false),
+            contentAlignment = Alignment.CenterStart,
+        ) {
+            HighlightedHeading(title, fontSize = 17f)
+        }
         if (hint != null) {
             Text(
                 hint,
-                modifier = Modifier.weight(1f, fill = false).padding(start = 8.dp),
+                modifier = Modifier.padding(start = 8.dp),
                 fontSize = 12.sp,
                 color = LocalPaper.current.ink2,
                 textAlign = TextAlign.End,
