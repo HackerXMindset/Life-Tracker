@@ -37,11 +37,9 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.drawOutline
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -131,14 +129,10 @@ private fun Indented(content: @Composable () -> Unit) {
     Box(modifier = Modifier.fillMaxWidth().padding(start = RAIL_WIDTH + GAP)) { content() }
 }
 
-/** A hand-drawn outline in pen: solid, or dashed for what the phone collected on its own. */
-private fun Modifier.penOutline(shape: Shape, color: Color, dashed: Boolean = false, width: Dp = 1.25.dp): Modifier = drawBehind {
+/** A hand-drawn outline in pen, always drawn as one continuous stroke. */
+private fun Modifier.penOutline(shape: Shape, color: Color, width: Dp = 1.25.dp): Modifier = drawBehind {
     val outline = shape.createOutline(size, layoutDirection, this)
-    val stroke = Stroke(
-        width = width.toPx(),
-        pathEffect = if (dashed) PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 4.dp.toPx())) else null,
-    )
-    drawOutline(outline, color, style = stroke)
+    drawOutline(outline, color, style = Stroke(width = width.toPx()))
 }
 
 @Composable
@@ -206,7 +200,7 @@ private fun PlaceBlock(p: DayLayout.Place, a: DayActions) {
     }
 }
 
-/** A dashed orange line with the time, at the bottom of a stay that is still going. */
+/** A continuous orange line with the time, at the bottom of a stay that is still going. */
 @Composable
 private fun NowRow() {
     val paper = LocalPaper.current
@@ -218,7 +212,6 @@ private fun NowRow() {
                 start = Offset(0f, size.height / 2),
                 end = Offset(size.width, size.height / 2),
                 strokeWidth = 2.5.dp.toPx(),
-                pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 4.dp.toPx())),
             )
         }
     }
@@ -227,7 +220,6 @@ private fun NowRow() {
 /** What a card shows for one kind of thing. */
 private class Look(
     val color: Color,
-    val dashed: Boolean,
     val title: String,
     val lines: List<String>,
     val chip: String?,
@@ -248,7 +240,7 @@ private fun describe(item: DayLayout.Item, a: DayActions): Look {
             val e = item.ref as EntryEntity
             val type = a.types.byId(e.category)
             Look(
-                color = type.displayColor(), dashed = false, title = e.title,
+                color = type.displayColor(), title = e.title,
                 lines = listOfNotNull(e.note.trim().ifEmpty { null }),
                 chip = type.name,
                 trailing = if (e.endMinute != null) formatDuration(minutes.coerceAtLeast(1)) else "moment",
@@ -259,7 +251,7 @@ private fun describe(item: DayLayout.Item, a: DayActions): Look {
             val b = item.ref as UsageDays.Block
             val type = b.activityId.takeIf { it.isNotEmpty() }?.let { a.types.byId(it) }
             Look(
-                color = type?.displayColor() ?: quiet, dashed = true, title = b.label,
+                color = type?.displayColor() ?: quiet, title = b.label,
                 lines = listOfNotNull(if (b.opens > 1) "opened ${b.opens} times" else null),
                 chip = type?.name ?: "no category, tap to set",
                 trailing = formatDuration(((b.activeMs + 30_000L) / 60_000L).toInt().coerceAtLeast(1)),
@@ -270,7 +262,7 @@ private fun describe(item: DayLayout.Item, a: DayActions): Look {
             val m = item.ref as MealEntity
             val over = chosen(m.id, TimelineEdits.MEAL)
             Look(
-                color = (over ?: a.types.byId("Food")).displayColor(), dashed = false, title = m.name,
+                color = (over ?: a.types.byId("Food")).displayColor(), title = m.name,
                 lines = listOf(mealTypeLabel(m.mealType) + " · " + Math.round(m.kcal) + " kcal · " + Math.round(m.grams) + " g"),
                 chip = over?.name ?: "Food", trailing = null, editable = true, onClick = { a.onEditItem(item) },
             )
@@ -279,7 +271,7 @@ private fun describe(item: DayLayout.Item, a: DayActions): Look {
             val c = item.ref as CallEntity
             val over = chosen(c.id, TimelineEdits.CALL)
             Look(
-                color = over?.displayColor() ?: MaterialTheme.colorScheme.primary, dashed = true, title = CallStats.title(c),
+                color = over?.displayColor() ?: MaterialTheme.colorScheme.primary, title = CallStats.title(c),
                 lines = listOf("Call · " + CallStats.detail(c)),
                 chip = over?.name ?: "Calls and people",
                 trailing = if (c.durationSec > 0) CallStats.durationText(c.durationSec) else null,
@@ -290,7 +282,7 @@ private fun describe(item: DayLayout.Item, a: DayActions): Look {
             val s = item.ref as ChargeSessionEntity
             val over = chosen(s.id, TimelineEdits.CHARGE)
             Look(
-                color = over?.displayColor() ?: MaterialTheme.colorScheme.tertiary, dashed = true, title = "Charging · " + ChargeStats.title(s),
+                color = over?.displayColor() ?: MaterialTheme.colorScheme.tertiary, title = "Charging · " + ChargeStats.title(s),
                 lines = listOf(ChargeStats.detail(s)),
                 chip = over?.name, trailing = lengthText(item.endMs - item.startMs), editable = true, onClick = { a.onEditItem(item) },
             )
@@ -299,7 +291,7 @@ private fun describe(item: DayLayout.Item, a: DayActions): Look {
             val n = item.ref as SleepNightEntity
             val over = chosen(n.date, TimelineEdits.SLEEP)
             Look(
-                color = (over ?: a.types.byId("Sleep")).displayColor(), dashed = true, title = "Slept " + formatDuration(SleepStats.minutes(n)),
+                color = (over ?: a.types.byId("Sleep")).displayColor(), title = "Slept " + formatDuration(SleepStats.minutes(n)),
                 lines = listOf(clock(n.startMs) + " → " + clock(n.endMs) + " · " + SleepStats.label(n.source)),
                 chip = over?.name ?: "Sleep", trailing = null, editable = true, onClick = { a.onEditItem(item) },
             )
@@ -308,7 +300,7 @@ private fun describe(item: DayLayout.Item, a: DayActions): Look {
             val t = item.ref as TodoEntity
             val first = t.text.trim().split('\n').first().ifBlank { "To-do" }
             Look(
-                color = MaterialTheme.colorScheme.primary, dashed = false, title = first,
+                color = MaterialTheme.colorScheme.primary, title = first,
                 lines = listOfNotNull(
                     "To do",
                     a.projectNames[t.project]?.takeIf { it.isNotBlank() },
@@ -322,7 +314,7 @@ private fun describe(item: DayLayout.Item, a: DayActions): Look {
             val first = n.text.trim().split('\n').first().ifBlank { "Note" }
             val kind = listOf("Note", "Planned", "Completed").getOrElse(n.type) { "Note" }
             Look(
-                color = quiet, dashed = false, title = first,
+                color = quiet, title = first,
                 lines = listOf(listOfNotNull(kind, a.habitNames[n.habitId]?.takeIf { it.isNotBlank() }).joinToString(" · ")),
                 chip = null, trailing = null, editable = false, onClick = null,
             )
@@ -341,27 +333,16 @@ private fun TimeColumn(startMs: Long, endMs: Long?) {
     }
 }
 
-/** The coloured line beside a card: solid for what you logged, dashed for what the phone collected. */
+/** The coloured line beside every card, always drawn as one continuous stroke. */
 @Composable
-private fun SegmentLine(color: Color, dashed: Boolean) {
+private fun SegmentLine(color: Color) {
     Box(
         modifier = Modifier
             .width(8.dp)
             .fillMaxHeight()
             .padding(top = 8.dp, bottom = 4.dp)
             .drawBehind {
-                if (dashed) {
-                    drawLine(
-                        color = color,
-                        start = Offset(size.width / 2, 0f),
-                        end = Offset(size.width / 2, size.height),
-                        strokeWidth = size.width,
-                        cap = StrokeCap.Butt,
-                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(7.dp.toPx(), 4.dp.toPx())),
-                    )
-                } else {
-                    drawRoundRect(color = color, cornerRadius = CornerRadius(4.dp.toPx()))
-                }
+                drawRoundRect(color, cornerRadius = CornerRadius(4.dp.toPx()))
             },
     )
 }
@@ -379,14 +360,14 @@ private fun ThingRow(item: DayLayout.Item, a: DayActions) {
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         TimeColumn(item.startMs, if (item.showEnd) item.endMs else null)
-        SegmentLine(look.color, look.dashed)
+        SegmentLine(look.color)
         Box(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxHeight()
                 .padding(vertical = 4.dp)
-                .then(if (look.dashed) Modifier else Modifier.background(paper.surface, shape))
-                .penOutline(shape, paper.line, dashed = look.dashed)
+                .background(paper.surface, shape)
+                .penOutline(shape, paper.line)
                 .clip(shape)
                 .then(if (look.onClick != null) Modifier.clickable { look.onClick.invoke() } else Modifier),
         ) {
@@ -451,7 +432,7 @@ private fun GapRow(gap: DayLayout.Gap, a: DayActions) {
             modifier = Modifier
                 .weight(1f)
                 .padding(vertical = 4.dp)
-                .penOutline(shape, paper.line, dashed = true)
+                .penOutline(shape, paper.line)
                 .clip(shape)
                 .drawBehind {
                     // Faint slanted pencil lines, the way the demo marks "no data".
@@ -504,7 +485,7 @@ private fun TravelCard(t: DayLayout.Travel, a: DayActions) {
         modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
         horizontalArrangement = Arrangement.spacedBy(GAP),
     ) {
-        // A dashed line under the place bars: the way from one place to the next.
+        // A continuous line under the place bars: the way from one place to the next.
         Box(
             modifier = Modifier
                 .width(RAIL_WIDTH)
@@ -516,7 +497,6 @@ private fun TravelCard(t: DayLayout.Travel, a: DayActions) {
                         start = Offset(size.width / 2, 0f),
                         end = Offset(size.width / 2, size.height),
                         strokeWidth = 2.5.dp.toPx(),
-                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 4.dp.toPx())),
                     )
                 },
         )
@@ -525,7 +505,7 @@ private fun TravelCard(t: DayLayout.Travel, a: DayActions) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(if (unknown) paper.sun.copy(alpha = 0.14f).compositeOver(paper.surface) else paper.surface, shape)
-                    .penOutline(shape, if (unknown) paper.sun else paper.line, dashed = unknown, width = if (unknown) 1.5.dp else 1.25.dp)
+                    .penOutline(shape, if (unknown) paper.sun else paper.line, width = if (unknown) 1.5.dp else 1.25.dp)
                     .clip(shape)
                     .then(if (trip != null) Modifier.clickable { picking = true } else Modifier),
             ) {

@@ -30,7 +30,6 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
@@ -195,7 +194,6 @@ private fun PieList(slices: List<DayPieMath.Slice>, key: String, sel: String?, o
                             if (!on && i < slices.lastIndex) {
                                 drawLine(
                                     paper.line, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx(),
-                                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(5.dp.toPx(), 4.dp.toPx())),
                                 )
                             }
                         }
