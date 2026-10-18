@@ -13,16 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -38,6 +29,12 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifetracker.app.data.MealEntity
+import com.lifetracker.app.ui.theme.LocalPaper
+import com.lifetracker.app.ui.theme.PaperButton
+import com.lifetracker.app.ui.theme.PaperButtonStyle
+import com.lifetracker.app.ui.theme.PaperField
+import com.lifetracker.app.ui.theme.PaperPill
+import com.lifetracker.app.ui.theme.PaperSheet
 import java.time.LocalDate
 import java.time.LocalTime
 import java.util.UUID
@@ -49,21 +46,22 @@ fun mealTypeLabel(type: String): String = type.replaceFirstChar { it.uppercase()
 private fun amountText(value: Double): String =
     if (value == Math.floor(value)) value.toLong().toString() else String.format("%.1f", value)
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddMealSheet(
     date: LocalDate,
     recent: List<MealEntity>,
     onDismiss: () -> Unit,
     onSave: (MealEntity) -> Unit,
+    startType: String? = null,
 ) {
     val context = LocalContext.current
+    val p = LocalPaper.current
     val now = remember { LocalTime.now().let { it.hour * 60 + it.minute } }
     val startMinute = if (date == LocalDate.now()) now else 12 * 60
 
     var type by remember {
         mutableStateOf(
-            when (startMinute / 60) {
+            startType ?: when (startMinute / 60) {
                 in 0..10 -> "breakfast"
                 in 11..15 -> "lunch"
                 in 16..18 -> "snack"
@@ -89,7 +87,7 @@ fun AddMealSheet(
 
     val decimal = KeyboardOptions(keyboardType = KeyboardType.Decimal)
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    PaperSheet(onDismiss = onDismiss) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -101,8 +99,8 @@ fun AddMealSheet(
             Text(
                 text = "Add a meal",
                 fontSize = 22.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = MaterialTheme.colorScheme.onBackground,
+                fontWeight = FontWeight.Bold,
+                color = p.ink,
             )
 
             if (recent.isNotEmpty()) {
@@ -112,7 +110,9 @@ fun AddMealSheet(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     recent.forEach { meal ->
-                        AssistChip(
+                        PaperPill(
+                            text = meal.name,
+                            selected = false,
                             onClick = {
                                 name = meal.name
                                 grams = amountText(meal.grams)
@@ -123,7 +123,6 @@ fun AddMealSheet(
                                 type = meal.mealType
                                 error = null
                             },
-                            label = { Text(meal.name, maxLines = 1) },
                         )
                     }
                 }
@@ -134,89 +133,84 @@ fun AddMealSheet(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 MEAL_TYPES.forEach { t ->
-                    FilterChip(selected = type == t, onClick = { type = t }, label = { Text(mealTypeLabel(t)) })
+                    PaperPill(text = mealTypeLabel(t), selected = type == t, onClick = { type = t }, dot = mealColor(t))
                 }
             }
 
-            OutlinedTextField(
+            PaperField(
                 value = name,
                 onValueChange = { name = it; error = null },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("What did you eat?") },
+                label = "What did you eat?",
                 singleLine = true,
             )
 
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Bottom) {
-                OutlinedTextField(
+                PaperField(
                     value = grams,
                     onValueChange = { grams = it; error = null },
+                    label = "Amount eaten (g)",
                     modifier = Modifier.weight(1f),
-                    label = { Text("Amount eaten (g)") },
                     keyboardOptions = decimal,
                     singleLine = true,
                 )
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    MonoLabel("Time")
-                    OutlinedButton(
+                    Text("Time", fontSize = 12.sp, color = p.ink2)
+                    PaperButton(
+                        text = formatMinute(minute),
                         onClick = {
                             TimePickerDialog(context, { _, h, m -> minute = h * 60 + m }, minute / 60, minute % 60, false).show()
                         },
                         modifier = Modifier.fillMaxWidth(),
-                    ) { Text(formatMinute(minute)) }
+                        style = PaperButtonStyle.Ghost,
+                    )
                 }
             }
 
             MonoLabel("Nutrition per 100 g")
-            OutlinedTextField(
+            PaperField(
                 value = kcal,
                 onValueChange = { kcal = it; error = null },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Calories (kcal)") },
+                label = "Calories (kcal)",
                 keyboardOptions = decimal,
                 singleLine = true,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedTextField(
+                PaperField(
                     value = carbs,
                     onValueChange = { carbs = it },
+                    label = "Carbs g",
                     modifier = Modifier.weight(1f),
-                    label = { Text("Carbs g") },
                     keyboardOptions = decimal,
                     singleLine = true,
                 )
-                OutlinedTextField(
+                PaperField(
                     value = fat,
                     onValueChange = { fat = it },
+                    label = "Fat g",
                     modifier = Modifier.weight(1f),
-                    label = { Text("Fat g") },
                     keyboardOptions = decimal,
                     singleLine = true,
                 )
-                OutlinedTextField(
+                PaperField(
                     value = protein,
                     onValueChange = { protein = it },
+                    label = "Protein g",
                     modifier = Modifier.weight(1f),
-                    label = { Text("Protein g") },
                     keyboardOptions = decimal,
                     singleLine = true,
                 )
             }
-            Text(
-                text = preview,
-                fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Text(text = preview, fontSize = 13.sp, color = p.ink2)
 
-            error?.let { Text(text = it, color = MaterialTheme.colorScheme.error, fontSize = 13.sp) }
+            error?.let { Text(text = it, color = p.bad, fontSize = 13.sp) }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                TextButton(onClick = onDismiss) { Text("Cancel") }
-                Spacer(Modifier.padding(horizontal = 4.dp))
-                Button(onClick = {
+                PaperButton("Cancel", onClick = onDismiss, style = PaperButtonStyle.Ghost, small = true)
+                PaperButton("Add meal", small = true, onClick = {
                     when {
                         name.isBlank() -> error = "Give the meal a name."
                         g <= 0.0 -> error = "Enter how many grams you ate."
@@ -238,7 +232,7 @@ fun AddMealSheet(
                             ),
                         )
                     }
-                }) { Text("Add meal") }
+                })
             }
             Spacer(Modifier.height(12.dp))
         }

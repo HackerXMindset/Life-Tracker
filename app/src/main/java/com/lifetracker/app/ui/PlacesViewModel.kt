@@ -182,6 +182,32 @@ class PlacesViewModel(private val app: Application) : AndroidViewModel(app) {
     private val tripsTimelineFlow = MutableStateFlow(settings.showTripsOnTimeline)
     val showTripsOnTimeline: StateFlow<Boolean> = tripsTimelineFlow
 
+    private val heightFlow = MutableStateFlow(settings.heightCm)
+    val heightCm: StateFlow<Int> = heightFlow
+
+    private val strideFlow = MutableStateFlow(settings.strideM())
+
+    /** The step length in use, in metres (learned, else from your height, else a typical 0.70). */
+    val strideM: StateFlow<Double> = strideFlow
+
+    private val learnedFlow = MutableStateFlow(settings.learnedStrideM > 0f)
+    val strideLearned: StateFlow<Boolean> = learnedFlow
+
+    /** Your height in cm (0 for not said). Step length starts again from it. */
+    fun setHeightCm(cm: Int) {
+        settings.heightCm = cm.coerceIn(0, 250)
+        heightFlow.value = settings.heightCm
+        strideFlow.value = settings.strideM()
+        learnedFlow.value = false
+    }
+
+    /** Forgets the learned step length so it is learned again from your next walks. */
+    fun resetStride() {
+        settings.learnedStrideM = 0f
+        strideFlow.value = settings.strideM()
+        learnedFlow.value = false
+    }
+
     fun setRecordTrips(on: Boolean) {
         settings.recordTrips = on
         recordTripsFlow.value = on

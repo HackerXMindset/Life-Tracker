@@ -14,6 +14,7 @@ import com.lifetracker.app.data.MealEntity
 import com.lifetracker.app.data.NoteEntity
 import com.lifetracker.app.data.PlaceTrail
 import com.lifetracker.app.data.TimelineEditEntity
+import com.lifetracker.app.data.TimelineSettings
 import com.lifetracker.app.data.PlaceVisitEntity
 import com.lifetracker.app.data.SleepNightEntity
 import com.lifetracker.app.data.StepDayEntity
@@ -66,6 +67,13 @@ class TimelineViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    private val settingsTick = MutableStateFlow(0)
+
+    /** Called when the Timeline is shown, so the switches on the Timeline settings page take effect at once. */
+    fun reloadSettings() {
+        settingsTick.value = settingsTick.value + 1
+    }
+
     /** App use on the selected day: blocks for the Timeline, the total, and time per linked activity. */
     @OptIn(ExperimentalCoroutinesApi::class)
     val usageDay: StateFlow<UsageDays.Day> = share(
@@ -74,8 +82,10 @@ class TimelineViewModel(app: Application) : AndroidViewModel(app) {
             val zone = ZoneId.systemDefault()
             val start = d.atStartOfDay(zone).toInstant().toEpochMilli()
             val end = d.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
-            combine(db.usageDao().sessionsBetween(start, end), db.usageDao().observeApps(), db.usageDao().observeCombos()) { sessions, apps, combos ->
-                UsageDays.build(sessions, apps.associateBy { it.pkg }, start, end, combos = combos.map { it.toCombo() })
+            combine(db.usageDao().sessionsBetween(start, end), db.usageDao().observeApps(), db.usageDao().observeCombos(), settingsTick) { sessions, apps, combos, _ ->
+                // With "Group repeated opens" off, every stretch of app use is its own row.
+                val idleGap = if (TimelineSettings(getApplication<android.app.Application>()).groupRepeatedOpens) UsageDays.IDLE_GAP_MS else 0L
+                UsageDays.build(sessions, apps.associateBy { it.pkg }, start, end, idleGapMs = idleGap, combos = combos.map { it.toCombo() })
             }
         },
     )

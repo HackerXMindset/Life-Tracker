@@ -2,6 +2,26 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🍽️ Food in the paper look
+
+### ✨ New
+
+- **Month calendar** on the Food tab — pick any day from a paper month (‹ month ›), with a small square mark on days that have food logged. Today is ringed, the chosen day is inked, and a "Today" pill brings you back. The day-by-day ‹ › buttons are still there.
+- **The day card** — calories eaten in big type with "left" or "over" against your goal, a bar split by meal (breakfast, lunch, dinner, snack in their own colours), and carbs, fat and protein in tally strokes. Water is its own card with the same +250 / +500 / Undo buttons.
+- **Meals in paper cards** — one card per meal type with its coloured edge, its kcal total and a small + to add straight into that meal. Add meal, the Add sheet and the delete question all use the paper sheets and buttons.
+
+### 🔧 Unchanged
+
+- Same meals, water, goals and OpenNutriTracker import. Nothing saved is touched.
+
+## ⚙️ Timeline and apps settings
+
+### ✨ New
+
+- **Apps and categories** (Settings > Timeline) — every app the phone has seen, with a "Counts as ..." pill. Tap a row to pick its category, or to hide it; hidden apps are listed below so you can bring them back. A category applies to every day, past and future.
+- **Timeline settings** (Settings > Timeline) — four switches, all on to begin with: *Show gaps*, *Group repeated opens*, *Ask how I travelled* and *Remember my category changes* (a category you give one app period on the Timeline also applies to that app on every day). They only change how a day is drawn or what is asked; nothing saved is changed or removed, and switching one back on brings everything back.
+- **Walking** (Settings > Places and trips) — enter your height so your step length starts right (height × 0.415), see the step length in use, and start learning again if it looks wrong.
+
 ## 🚶 Walking distance you can trust
 
 ### ✨ New

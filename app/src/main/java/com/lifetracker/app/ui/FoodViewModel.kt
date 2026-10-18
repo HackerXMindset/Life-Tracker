@@ -44,6 +44,14 @@ class FoodViewModel(app: Application) : AndroidViewModel(app) {
     val recent: StateFlow<List<MealEntity>> =
         share(emptyList(), dao.observeRecentMeals().map { FoodStats.recentDistinct(it, 8) })
 
+    /** Every day that has at least one meal, as yyyy-mm-dd, for the marks on the month calendar. */
+    val datesWithMeals: StateFlow<Set<String>> =
+        share(emptySet(), dao.datesWithMeals().map { it.toSet() })
+
+    fun select(day: LocalDate) {
+        selected.value = day
+    }
+
     fun shift(days: Long) {
         selected.value = selected.value.plusDays(days)
     }

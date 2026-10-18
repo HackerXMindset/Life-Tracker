@@ -138,6 +138,7 @@ object DayLayout {
         showTrips: Boolean = true,
         minGapMs: Long = MIN_GAP_MS,
         offs: List<Off> = emptyList(),
+        showGaps: Boolean = true,
     ): List<Row> {
         // On today nothing after now can be missing yet.
         val limit = if (nowMs in dayStartMs until dayEndMs) nowMs else dayEndMs
@@ -172,7 +173,7 @@ object DayLayout {
 
         val places = stays.mapIndexed { i, s ->
             val things = inside[i].map { Thing(it) }
-            val holes = holes(inside[i].map { it.startMs to min(it.coveredEndMs, s.endMs) }, s.startMs, s.endMs, minGapMs)
+            val holes: List<Gap> = if (!showGaps) emptyList() else holes(inside[i].map { it.startMs to min(it.coveredEndMs, s.endMs) }, s.startMs, s.endMs, minGapMs)
                 .flatMap { (a, b) -> cutGap(a, b, offs, minGapMs, "Phone not used") }
             val id = s.visit.placeId
             Place(
@@ -212,7 +213,7 @@ object DayLayout {
                         "unknown$frontier", frontier, row.startMs, null, before.name, row.name,
                         from = before.visit, to = row.visit, straightLineM = PlaceTrail.straightLineM(before.visit, row.visit),
                     )
-                } else {
+                } else if (showGaps) {
                     out += cutGap(frontier, row.startMs, offs, minGapMs, "no place and no phone data")
                 }
             }

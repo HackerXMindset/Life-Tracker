@@ -240,4 +240,20 @@ class DayLayoutTest {
         assertEquals(DayLayout.GapKind.NO_DATA, pieces[0].kind)
         assertEquals("note", pieces[0].note)
     }
+
+    @Test
+    fun withShowGapsOffNoGapIsDrawnAnywhereButEverythingElseStays() {
+        val items = listOf(item("a", 0, 30), item("b", 45, 60), item("c", 200, 220))
+        val visits = listOf(visit("v1", "home", 0, 60))
+        val on = DayLayout.build(items, visits, emptyList(), names, dayStart, dayEnd, dayEnd + 1)
+        val off = DayLayout.build(items, visits, emptyList(), names, dayStart, dayEnd, dayEnd + 1, showGaps = false)
+        // On: a gap inside Home, and one between Home and the loose item.
+        assertEquals(2, on.filterIsInstance<DayLayout.Gap>().size + (on.first() as DayLayout.Place).children.filterIsInstance<DayLayout.Gap>().size)
+        // Off: none, and the same things are still there.
+        assertEquals(0, off.filterIsInstance<DayLayout.Gap>().size)
+        val home = off.first() as DayLayout.Place
+        assertEquals(0, home.children.filterIsInstance<DayLayout.Gap>().size)
+        assertEquals(listOf("a", "b"), home.children.filterIsInstance<DayLayout.Thing>().map { it.key })
+        assertEquals(1, off.filterIsInstance<DayLayout.Thing>().size)
+    }
 }

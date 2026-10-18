@@ -27,4 +27,15 @@ object FoodStats {
         meals.sortedWith(compareByDescending<MealEntity> { it.date }.thenByDescending { it.minuteOfDay })
             .distinctBy { it.name.trim().lowercase() }
             .take(limit)
+
+    /**
+     * How wide each meal's piece of the day bar is, as a share of the whole bar (0 to 1), in the order given.
+     * The bar stands for the goal, or for what you ate when that is more (or there is no goal).
+     */
+    fun fuelShares(kcals: List<Double>, goalKcal: Double?): List<Double> {
+        val eaten = kcals.sum()
+        val whole = maxOf(goalKcal ?: 0.0, eaten)
+        if (whole <= 0.0) return kcals.map { 0.0 }
+        return kcals.map { it.coerceAtLeast(0.0) / whole }
+    }
 }

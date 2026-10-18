@@ -97,6 +97,8 @@ class DayActions(
     val onEditItem: (DayLayout.Item) -> Unit,
     val onEditPlace: (DayLayout.Place) -> Unit,
     val onEditTrip: (TripEntity) -> Unit,
+    /** Whether to show the quick buttons that ask how you travelled (Timeline settings). */
+    val askHowTravelled: Boolean = true,
 )
 
 private val TIME_WIDTH = 58.dp
@@ -611,7 +613,7 @@ private fun TravelCard(t: DayLayout.Travel, a: DayActions) {
                     }
                 }
             }
-            if (trip == null && t.from != null && t.to != null) {
+            if (a.askHowTravelled && trip == null && t.from != null && t.to != null) {
                 Text(
                     text = "How did you go? The phone has no record of the way, so the distance is a straight line.",
                     fontSize = 11.sp,
@@ -623,7 +625,7 @@ private fun TravelCard(t: DayLayout.Travel, a: DayActions) {
                     }
                 }
             }
-            if (trip != null && unknown) {
+            if (a.askHowTravelled && trip != null && unknown) {
                 Text(
                     text = "How did you go? Distance is worked out from the position readings.",
                     fontSize = 11.sp,
