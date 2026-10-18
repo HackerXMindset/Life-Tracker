@@ -186,9 +186,9 @@ fun ChargingScreen(onBack: () -> Unit, part: Part = Part.Data, vm: ChargingViewM
                         first = true,
                     )
                     AccordionRow(
-                        "If the banner never appears (Xiaomi / HyperOS)",
-                        "Open Android Settings > Apps > this app and turn on Autostart, set Battery saver to No restrictions, " +
-                            "and allow Notifications including pop-ups. HyperOS otherwise stops background work to save battery.",
+                        "If the banner never appears",
+                        "Open Android Settings > Apps > this app, set Battery to No restrictions, " +
+                            "and allow Notifications including pop-ups. Android otherwise stops background work to save battery.",
                     )
                 }
             }

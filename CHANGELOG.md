@@ -2,6 +2,16 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧵 Thicker lines, no phone-maker text
+
+### ✨ New
+
+- **Thicker Timeline lines.** The lines for things, places and journeys are thicker and the dots for moments bigger, so they are easier to see and tap near.
+
+### 🔧 Changed
+
+- **Plain Android wording for battery help.** The "Keep it running" card on Places and the help rows on Places and Charging no longer name one phone maker, and the Autostart and Battery saver buttons (which only opened that maker's screens) are gone. "Allow unrestricted" and "Open this app's settings" stay.
+
 ## 🧹 Timeline tidy-up
 
 ### 🔧 Fixed
@@ -186,7 +196,7 @@ Every release page shows the sections below that were added since the last relea
 ### ✨ New features
 
 - **Calls** — the "Show calls on the Timeline" card, "Only show calls longer than" as a connected strip (shorter ones stay in Stats) and the tilted orange note about missed calls; "Older calls" stays below.
-- **Charging** — one card with Record charging, Banner when I plug in and Show charging on the Timeline (each with its hint), then "How it works" and the Xiaomi / HyperOS help as open-and-close rows, like the demo.
+- **Charging** — one card with Record charging, Banner when I plug in and Show charging on the Timeline (each with its hint), then "How it works" and the battery help as open-and-close rows, like the demo.
 
 ## 📜 Settings like your demo (part 3: Places and trips)
 

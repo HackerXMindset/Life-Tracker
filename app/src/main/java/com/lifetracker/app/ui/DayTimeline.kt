@@ -141,8 +141,8 @@ private class Slot(
 }
 
 private val RULER_WIDTH = 36.dp
-private val LANE_WIDTH = 10.dp
-private val BAR_WIDTH = 6.dp
+private val LANE_WIDTH = 13.dp
+private val BAR_WIDTH = 9.dp
 
 /** The space between two rows, and the smallest a row is: a thing, place or journey, and an Offline / No data line. */
 private val ROW_GAP = 6.dp
@@ -244,9 +244,9 @@ fun DayCalendar(rows: List<DayLayout.Row>, a: DayActions) {
                             s.color, Offset(x, top), androidx.compose.ui.geometry.Size(barW, height),
                             CornerRadius(barW / 2),
                         )
-                        Bar.MOMENT -> drawCircle(s.color, 3.5.dp.toPx(), Offset(x + barW / 2, top))
+                        Bar.MOMENT -> drawCircle(s.color, 5.dp.toPx(), Offset(x + barW / 2, top))
                         Bar.LINE, Bar.LINE_UNKNOWN -> drawLine(
-                            s.color, Offset(x + barW / 2, top), Offset(x + barW / 2, top + height), 2.5.dp.toPx(),
+                            s.color, Offset(x + barW / 2, top), Offset(x + barW / 2, top + height), 4.dp.toPx(),
                         )
                         Bar.QUIET -> drawRoundRect(
                             quietBar, Offset(x, top), androidx.compose.ui.geometry.Size(barW, height),
