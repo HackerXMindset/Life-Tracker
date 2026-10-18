@@ -161,7 +161,7 @@ Each step is small enough to build, install and try before the next begins. The 
   DONE         Timeline T-F Offline / Phone off / No data
   DONE         Timeline T-G Walking distance from readings and the step counter
   DONE         Timeline T-H Apps and categories page, Timeline settings page, Cleaner readings (Walking)
-  NEXT ──►    Timeline T-I Clean Timeline: one time map, small rows that open in place, soft grey Offline
+  DONE         Timeline T-I Clean Timeline: one time map, small rows that open in place, soft grey Offline
   DONE         Paper P4 New look: Food
               Paper P5 New look: Money
               Paper P6 New look: Stats
