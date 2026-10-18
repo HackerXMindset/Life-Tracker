@@ -1,102 +1,170 @@
-# Life Tracker
+<div align="center">
 
-<img alt="Downloads" src="https://img.shields.io/github/downloads/HackerXMindset/Life-Tracker/total?style=flat&logo=github&logoColor=white&label=Downloads&color=7C3AED" />
+<h1>Life Tracker</h1>
 
-**One private app for your whole day: what you did, what you ate, which habits you kept, where your money went, and what it all adds up to.**
+<p><strong>One timeline. Your whole life.</strong></p>
 
-Life Tracker is an Android app built for a single person: its owner. It replaces a pile of separate apps with one place, and it keeps every byte of your data on your own phone. There is no account, no server and no subscription.
+<p>Track what you do, what you eat, which habits you keep, where your money goes, and how your days fit together — in one Android app.</p>
+
+<p>
+  <a href="https://github.com/HackerXMindset/Life-Tracker/releases/latest"><img alt="Download the latest APK" src="https://img.shields.io/badge/Download-Latest%20APK-7C3AED?style=for-the-badge&logo=android&logoColor=white" /></a>
+  <img alt="Total APK downloads" src="https://img.shields.io/github/downloads/HackerXMindset/Life-Tracker/total?style=for-the-badge&logo=github&logoColor=white&label=APK%20downloads&color=7C3AED" />
+  <a href="https://github.com/HackerXMindset/Life-Tracker/actions/workflows/build.yml"><img alt="Build pipeline" src="https://img.shields.io/badge/Build-GitHub%20Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white" /></a>
+</p>
+
+<p>
+  <img alt="Android API 26+" src="https://img.shields.io/badge/Android-API%2026%2B-3DDC84?style=flat&logo=android&logoColor=white" />
+  <img alt="Kotlin" src="https://img.shields.io/badge/Language-Kotlin-7F52FF?style=flat&logo=kotlin&logoColor=white" />
+  <img alt="Jetpack Compose" src="https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4?style=flat&logo=jetpackcompose&logoColor=white" />
+  <img alt="On-device database" src="https://img.shields.io/badge/Storage-Room%20%2B%20SQLite-003B57?style=flat&logo=sqlite&logoColor=white" />
+  <img alt="Offline first" src="https://img.shields.io/badge/Approach-Offline--first-1F6FEB?style=flat&logo=android&logoColor=white" />
+</p>
+
+<p>
+  <a href="https://kotlinlang.org/"><img alt="Kotlin" height="34" src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/kotlin/kotlin-original.svg" /></a>
+  &nbsp;
+  <a href="https://developer.android.com/"><img alt="Android" height="34" src="https://cdn.simpleicons.org/android/3DDC84" /></a>
+  &nbsp;
+  <a href="https://developer.android.com/develop/ui/compose"><img alt="Jetpack Compose" height="34" src="https://cdn.simpleicons.org/jetpackcompose/4285F4" /></a>
+  &nbsp;
+  <a href="https://developer.android.com/training/data-storage/room"><img alt="SQLite" height="34" src="https://cdn.simpleicons.org/sqlite/003B57" /></a>
+  &nbsp;
+  <a href="https://github.com/features/actions"><img alt="GitHub Actions" height="34" src="https://cdn.simpleicons.org/githubactions/2088FF" /></a>
+</p>
+
+<p>
+  <a href="CHANGELOG.md">What's new</a> ·
+  <a href="#current-status">Current status</a> ·
+  <a href="#the-roadmap">Roadmap</a> ·
+  <a href="#how-your-data-is-stored-and-protected">Privacy and data</a>
+</p>
+
+<sub>Project/repository name: Life Tracker · The installed app launcher label can be customised; the current default label is Kairos.</sub>
+
+</div>
 
 ---
 
 ## Contents
 
-1. [The idea in one minute](#the-idea-in-one-minute)
-2. [Where the project stands today](#where-the-project-stands-today)
-3. [The roadmap](#the-roadmap)
-4. [How the app is organised](#how-the-app-is-organised)
-5. [The file architecture](#the-file-architecture)
-6. [How your data is stored and protected](#how-your-data-is-stored-and-protected)
-7. [Installing on your phone](#installing-on-your-phone)
-8. [How a new version gets built](#how-a-new-version-gets-built)
-9. [Rules the project lives by](#rules-the-project-lives-by)
+- [What it tracks](#what-it-tracks)
+- [Current status](#current-status)
+- [Feature tour](#feature-tour)
+- [Roadmap](#the-roadmap)
+- [How the app is organised](#how-the-app-is-organised)
+- [The file architecture](#the-file-architecture)
+- [How your data is stored and protected](#how-your-data-is-stored-and-protected)
+- [Installing on your phone](#installing-on-your-phone)
+- [How a new version gets built](#how-a-new-version-gets-built)
+- [Maintainer activity](#maintainer-activity)
+- [Rules the project lives by](#rules-the-project-lives-by)
 
 ---
 
-## The idea in one minute
+## What it tracks
 
-Most life-tracking apps do one thing well and ignore the rest. This project joins four of them into one and adds the part that none of them have: statistics you can shape yourself.
+Life Tracker combines a manually edited diary with records collected by Android and imports from the trackers you already use. The result is a day-by-day history you can review without maintaining separate logs in several apps.
 
-| What you want | The app it learns from | What this app does |
+| Area | Available features | Source / notes |
 | --- | --- | --- |
-| A timeline of your day, logged by hand, with your own activities such as hours studied | LifeXP | **Timeline** tab |
-| Meals, calories, macros and water | OpenNutriTracker | **Food** tab, with automatic import |
-| Habits, streaks and totals | Streak | **Habits** tab, with automatic import |
-| Income and spending | (new) | **Money** tab |
-| Deep, customisable statistics on everything | Simkl | **Stats** tab |
+| **Timeline** | Manual entries, a time-scaled day view, a Pie breakdown, editable past events, app-use periods, place blocks, journeys, meals, calls, charging and sleep | Stored in the on-device Room database |
+| **Phone usage** | Per-app totals, short-use filtering, app-to-activity links, named app combinations and suggestions, plus a comparison with Android's daily usage total | Requires Android Usage Access; the app copies history because Android retains detailed usage events for only a limited period |
+| **Places and journeys** | Named places, visit review and confidence, saved location readings, trip distance and speed, travel-mode corrections, GPX/CSV export and GPX import | Requires location access; continuous tracking can need battery/autostart settings |
+| **Habits** | Local habits, schedules, streaks, Week / Month / Year views, day amounts and missed reasons, notes, archiving, and optional Streak sync | Streak data moves through a folder the user chooses |
+| **Food** | Meal diary, calories and macro goals, water logging, repeat-meal shortcuts and daily navigation | Imports OpenNutriTracker exports; imported files are not modified |
+| **Money** | Expenses and income, recurring monthly items, reusable quick-log items, categories and month totals | Entries are logged and stored locally |
+| **Steps and sleep** | Steps from Health Connect or the phone step counter; sleep from Health Connect or an editable phone-use estimate | Permissions and the availability of data on the phone determine coverage |
+| **Calls and charging** | Phone call history, minimum talk-time filtering, charge sessions, plug-in banner and Timeline records | Standard phone calls only; OEM background restrictions can affect automatic collection |
+| **Stats and settings** | Daily source summaries, date-range views, permissions, tracking switches, appearance, custom home-screen shortcuts, backups and imports | More flexible cross-source statistics and life-event views remain on the roadmap |
 
-It also remembers the big moments, such as moving to a new city or starting a new exam preparation, and shows what you did and how much you studied around them, by month and by year.
+### Inspirations versus actual integrations
+
+| Project / platform | How Life Tracker uses it |
+| --- | --- |
+| **Streak** | Imports habits, history, focus sessions, to-dos and notes. The app can also send supported habit edits back through Streak's backup folder. |
+| **OpenNutriTracker** | Imports meal, nutrition-goal and activity data from its export files. |
+| **Android** | Supplies app-usage events, phone-call records, charging state and step-sensor readings, subject to the relevant permissions. |
+| **Health Connect** | Supplies steps and sleep data when another app has written those records. |
+| **OpenStreetMap** | Supplies name hints for unnamed stops when automatic tidy-up runs; suggestions are never applied without a tap. |
+| **LifeXP and Simkl** | Product inspirations only. There is no LifeXP or Simkl account sync in the current implementation. |
+
+**Core principle:** there is no Life Tracker account, subscription, or app backend. Most records are kept on the phone. The one network-based helper is OpenStreetMap name lookup for unnamed places; details are in [How your data is stored and protected](#how-your-data-is-stored-and-protected).
 
 ---
 
-## Where the project stands today
+## Current status
 
 | Part | Status |
 | --- | --- |
-| App skeleton with five tabs | Done |
-| Automatic APK builds in the cloud | Done |
-| Timeline with a real on-phone database | Done |
-| Data sources and backups | Done |
-| Habits, with Streak import (also focus sessions, to-dos, notes) | Done |
-| Food, with OpenNutriTracker import, water and meal logging | Done |
-| Your own activities, colours and daily goals | Done |
-| Money: income and spending, monthly items, quick-log items, categories | Done |
-| Phone usage: app sessions on the Timeline, per-app totals, app-to-activity links | Done |
-| Calls from the call log, on the Timeline | Built, waiting to be tried on a phone |
-| Charging sessions, a banner to say what you plugged into, phone use while charging | Built, waiting to be tried on a phone |
-| Steps (Health Connect or the phone step counter) and sleep (estimated from phone use, editable) | Built, waiting to be tried on a phone |
-| Stats | Placeholder screen |
+| Six-tab Android app, Room database and cloud APK builds | Built |
+| Timeline: manual logging, editable events, time-scaled layout, Pie and data-gap states | Built |
+| Phone usage: saved history, app combinations and suggestions, usage-total comparison | Built |
+| Habits: Streak import, local habit rules, notes, archive and supported write-back | Built |
+| Food: meals, nutrition goals, water and OpenNutriTracker import | Built; paper-style visual refresh planned |
+| Money: income, spending, recurring items, quick log and categories | Built; paper-style visual refresh planned |
+| Places and journeys: readings, visits, travel records, cleanup and GPX/CSV tools | Built; Android background permissions affect reliability |
+| Calls, charging, steps and sleep | Built; collection depends on phone permissions and OS/OEM behaviour |
+| Settings and backups | Built, including theme, custom home-screen shortcuts, restore and imports |
+| Detailed custom statistics and life-event/month/year views | Planned |
 
-**What works right now (Steps 2 to 6).** On the Timeline tab you can:
+**Current focus:** Timeline T-G (walking distance using stored readings and the step counter) and T-H (remaining apps/categories and Timeline settings), followed by the planned Food, Money and Stats visual refreshes and the later life-events/statistics steps. The full step-by-step plan and implementation history are below.
 
-- scroll through the last 60 days, with a dot under every day that has entries;
-- tap **Log** to record an activity (pick one of your own, or tap **+ New** to make one on the spot), a name, a start and end time, and an optional note, or log a single moment with no end time;
-- see the day's tracked time, entry count and how many goals you met, plus a bar for every activity that has a daily goal (Study starts with 8 hours, and you can change it);
-- tap an entry to delete it.
+---
 
-Everything is saved in a database on the phone and is still there after the app is closed.
+## Feature tour
 
-The list icon at the top of the Timeline opens **Activities**, where you can add your own activities, rename them, pick a colour from a palette, and set a daily goal for each: *at least* (such as 8 hours of study) or *at most* (such as 2 hours of screen time, whose bar turns red if you go over). *Hide from Log* removes an activity from the Log pop-up without touching anything already logged.
+### Timeline: what happened, when
 
-The gear icon beside it opens **Data sources**, where you can:
+The Timeline mixes your own logs with collected records in chronological order. Its day is drawn to time scale; overlapping events use separate lanes. You can edit entries without modifying the original phone records, and past days are drawn using the same rules as today.
 
-- choose a **backup folder** on the phone, tap **Back up now**, and **Restore** from any backup or safety copy (a safety copy of your current data is always saved first);
-- choose the **Streak** and **OpenNutriTracker** folders, and see the newest file the app found in each;
-- tap **Import now** under Streak or OpenNutriTracker to bring in the newest export straight away.
+- Log an activity or a single moment with a start time, an end time and an optional note.
+- Review app-use periods. Apps used together can be named as a combination; short interruptions do not automatically split a combination, and the app can suggest combinations after seeing repeated patterns.
+- See named-place blocks, journeys, meals, calls, charging, sleep and other supported records alongside manual entries.
+- Distinguish **Offline**, **Phone off** and **No data** periods, and use **Fill in** for a genuine gap.
+- Switch between the Timeline and Pie breakdown; edit supported events and travel modes directly from the day.
 
-The app also makes one backup automatically the first time you open it each day (keeping the newest 5), and then imports anything new from Streak and OpenNutriTracker.
+### Habits and Streak
 
-**From Streak you get:**
+Track habits inside Life Tracker or import them from Streak. Habit rules include yes/no, avoid/relapse and counted habits, with schedules such as selected weekdays, a number of days per week/month or every X days. Habit pages include streaks and totals, Week / Month / Year views, notes, missed-day reasons, archive and restore.
 
-- **Habits tab.** Every habit with its current streak, best streak and totals, and a 14-day row you can tap to tick a day (counted habits add one step per tap, "relapse" habits toggle a relapse, press and hold clears a day).
-- **Focus sessions** become ordinary entries on your Timeline, at the time you focused, split at midnight when needed. Each is brought in once; if you delete one, it stays deleted.
-- **To-dos** that have a date appear on that day of the Timeline, at their time and with their estimated length if set, including future days. Tap one to tick it off. To-dos with no date are imported but not shown yet.
-- **Notes** appear on the day they were written for.
+Streak imports are repeatable: importing again does not create duplicate records. Supported habit changes can be written back through the selected Streak folder; the app does not alter Streak's existing backup files.
 
-**From OpenNutriTracker you get:**
+### Food and OpenNutriTracker
 
-- **Food tab.** Pick a day (‹ Previous / Next ›) and see calories against that day's goal, carbs, fat and protein against theirs, and every meal grouped as breakfast, lunch, dinner and snack. **Add meal** logs a new one, with an "Eat again" row of things you have eaten before. Tap a meal to delete it.
-- **Water** is tracked in the app (+250 ml, +500 ml, Undo) against a 3000 ml target. OpenNutriTracker does not export water, so this starts at zero.
-- **Meals on the Timeline.** Each meal also shows on its day of the Timeline, at the time you ate it.
-- **Activities** (walking, and custom ones such as a "stool" log) become Timeline entries, in Health or Exercise. Each is brought in once; if you delete one, it stays deleted.
-- **Amounts are grams.** OpenNutriTracker counts every amount as grams even when it says "serving", and its daily totals match this app's to the calorie.
+The Food tab has a day-based diary for meals, calories, carbs, fat and protein, with daily goals, manual meal logging, repeat-meal shortcuts and water logging. Life Tracker can import OpenNutriTracker exports and leaves the imported source files unchanged. Water is maintained in Life Tracker because the supported OpenNutriTracker export does not include it.
 
-Nothing in Streak or OpenNutriTracker is ever changed. Importing twice never doubles anything: for each habit day the higher count is kept, and a to-do you ticked stays ticked. Streak's weekly, monthly and "every X days" schedules are stored but not applied yet, so every habit's streak is counted as a daily one.
+### Money
 
-*Honest note:* the builds compile and install, but Step 2 has had only a cloud build so far. It has not yet been tested by hand on a real phone.
+Log expenses and income once, save common items for quick entry, or schedule recurring monthly amounts such as rent, subscriptions and salary. See monthly in/out totals, categories and entries by day. The currency defaults to rupees and can be changed.
+
+### Phone, health, places and journeys
+
+- **Phone usage:** copies Android usage history into the app so older days remain available longer; it links apps to activities and checks its daily total against Android's total.
+- **Calls:** copies the standard phone call log. Contact access is optional for turning numbers into names; internet calls such as WhatsApp and Telegram are not in Android's normal phone call log.
+- **Charging:** records charge sessions and battery readings. Android cannot reliably tell a wall outlet from a power bank by itself, so the plug-in banner and prior tagged sessions help record that context.
+- **Steps and sleep:** uses Health Connect when data is available, with the phone step counter as a fallback; estimated sleep can be edited, added or marked as not sleep.
+- **Places and journeys:** records position readings, identifies stays and journeys, lets you review unknown stops, correct travel modes and export/import GPX or CSV. Always-on location collection is optional because it costs battery.
+
+### Backups and imports
+
+Choose a backup folder and the app can make a daily backup when it is opened, keeping the newest five copies. **Back up now** creates an immediate copy; **Restore** validates a selected file and saves a safety copy of current data first. The Backups and imports settings page also handles the Streak and OpenNutriTracker folders, GPX import and GPX/CSV exports.
+
+### Important limits
+
+- Automatic collection is constrained by Android permissions, OS retention and device background rules. On Xiaomi/HyperOS, location and charging features may need Autostart and unrestricted battery settings to be reliable.
+- The app does not yet import Google Timeline history or read workouts that were not written to Health Connect.
+- Full cross-source custom statistics and life-event/month/year views are not finished yet; see the roadmap for the next steps.
 
 ---
 
 ## The roadmap
+
+**Next:** Timeline T-G and T-H. **After that:** paper-style refreshes for Food, Money and Stats, then Life events and deeper custom Stats.
+
+The roadmap below is the detailed implementation ledger. Expand it for the completed-step history, technical notes and remaining work.
+
+<details>
+<summary>Open the full roadmap and implementation notes</summary>
 
 Each step is small enough to build, install and try before the next begins. The order below is the plan, and it can be changed at any time.
 
@@ -171,7 +239,7 @@ Each step is small enough to build, install and try before the next begins. The 
 
 ### Done
 
-**Step 1: Skeleton.** Five tabs, a light and dark theme, an app icon, and the cloud build that turns every change into an installable APK.
+**Step 1: Skeleton.** Six tabs, a light and dark theme, an app icon, and the cloud build that turns every change into an installable APK.
 
 **Step 2: Timeline and database.** The Room database, the **Log** button, the day strip, daily summary, study goal bar and deleting entries.
 
@@ -181,7 +249,7 @@ Each step is small enough to build, install and try before the next begins. The 
 - the **OpenNutriTracker folder** (`Internal shared storage/OpenNutritracker`);
 - a **backup folder** on the phone, such as `Documents/LifeTracker`.
 
-Android remembers each choice, so you never pick them again. This step also adds **Back up now** and **Restore**, plus a daily automatic backup when the app is opened, with the 5 most recent copies kept. Backups stay on the device. Nothing is uploaded anywhere. (Built; the Streak and OpenNutriTracker folders are only checked in this step, and the imports follow in Steps 4 and 5.)
+Android remembers each choice, so you never pick them again. This step also adds **Back up now** and **Restore**, plus a daily automatic backup when the app is opened, with the 5 most recent copies kept. Backups stay on the device; the documented OpenStreetMap name-hint lookup is the only network-based tracking helper. (Built; the Streak and OpenNutriTracker folders are only checked in this step, and the imports follow in Steps 4 and 5.)
 
 **Step 4: Habits.** On opening, the app finds the newest Streak backup in the Streak folder and imports it: habits and their history, categories, focus sessions (as Timeline entries), to-dos and notes. The Habits tab shows streaks, totals and a 14-day row for each habit, and handles all three of your habit kinds: yes or no, the "Relap" kind, and counted habits. This was the first change to the database layout, done with a proper migration so nothing you had logged was touched.
 
@@ -201,9 +269,9 @@ You make your own spending and income categories (a starter set is there), see e
 
 **Step 9: Calls.** The app copies the phone's call log (who, when, how long, and whether it was incoming, outgoing, missed or declined) into its own database, once you allow *Call logs*. Contacts access is optional and only turns numbers into names. Calls show on the Timeline with their time, and a card shows the day's count and talk time. A *Calls* screen totals any days you choose (quick choices from Today to All time, or any From and To dates, or a single day), lists the people you talked to most, and shows your latest calls. Only normal phone calls are in the call log, so WhatsApp and Telegram calls do not appear. The first copy reads the whole call log, and *Copy older calls* repeats that on demand. The *Phone usage* screen has the same day picker; it can only show days the app has already copied, because Android keeps about a week of detail. Phone usage and calls are a history that only grows: syncing adds new rows and restoring a backup adds to what is already there, so nothing copied from the phone is ever deleted by the app. Backups include calls, with numbers and names as plain text, so keep the backup folder private. This was the sixth database change (version 6 to 7), and backups moved to format 7.
 
-### Next
+### Detailed implementation notes
 
-The next steps were planned together after asking for more automatic tracking. They are ordered so that nothing needs an always-on notification or drains the battery: each one uses Android's own low-power services.
+These notes record how features were implemented and their caveats. The roadmap status block above is the source of truth for what remains to be done.
 
 **Step 10: Charging.** The app records every time the phone is on a charger: start and end, battery level at both ends, the plug type (charger, USB, wireless), and the average speed (watts into the battery, from Android's battery readings). When a session starts, a banner asks "What are you charging with?" with Wall / Power bank / Laptop buttons; you can also set it later on the *Charging* screen. After at least 3 similar tagged sessions (same plug type, about the same speed, 70% the same answer) the app suggests the answer itself and shows it as "(guess)". The screen also shows how long you used the phone while it charged, taken from the Phone usage sessions. Android only tells apps about plug-in and unplug while they are running, and cannot tell a power bank from a wall charger, so the app does not guess that alone. Nothing runs while the phone is not charging: Android runs a small job about every 15 minutes only while charging, which opens a session and notes level and speed, and the plug and unplug events give exact times whenever the app happens to be running. A session's end can therefore be up to 15 minutes early. On Xiaomi/HyperOS, Autostart, battery saver *No restrictions* and pop-up notifications must be allowed or the banner may not appear. Charging history is like phone usage and calls: it only grows, and restoring a backup adds to it. This was the seventh database change (version 7 to 8), and backups moved to format 8.
 
@@ -332,6 +400,8 @@ Why: phone usage showed less than Digital Wellbeing (Wed 14 Oct 6h 20m vs 7h 24m
 
 **Step 16: Polish.** Reminders, search, smoother screens, and anything learned from using the app every day.
 
+</details>
+
 ---
 
 ## How the app is organised
@@ -355,6 +425,9 @@ The app has three layers. Each file belongs to exactly one of them, which makes 
 ---
 
 ## The file architecture
+
+<details>
+<summary>Show the full source tree</summary>
 
 Files marked **(planned)** do not exist yet. They show where each upcoming step will live.
 
@@ -526,11 +599,15 @@ life-tracker/
             └── values-night/          Dark theme
 ```
 
+
+</details>
+
 ---
 
 ## How your data is stored and protected
 
-- **On the phone only.** The database is a private SQLite file that no other app can read.
+- **On the phone by default.** The database is a private SQLite file that no other app can read.
+- **One documented network exception.** OpenStreetMap can be queried for name hints for unnamed stops. Up to six stops can be looked up in a tidy-up cycle; only the coordinates for those unnamed spots are sent for the lookup, and nothing is named until you choose a suggestion. This is not a general location upload or an app backend.
 - **Imports read, never change.** The app reads your Streak and OpenNutriTracker backups and never writes to those folders or alters those files.
 - **Imports are repeatable.** Each import overwrites matching records instead of adding copies, so running the same one twice is harmless.
 - **Backups are plain files.** A backup is an ordinary JSON file you can open, copy or keep, and it still exists if the app is uninstalled. Each file is written under a temporary name and renamed only when complete, so a crash never leaves a broken backup.
@@ -567,10 +644,39 @@ The run number also becomes the app's internal version code, so every build coun
 
 ---
 
+## Maintainer activity
+
+These optional cards show public GitHub profile signals for the maintainer, **not** Life Tracker usage, personal diary records or health data. They are generated by third-party image services, so GitHub may cache them and they may occasionally be unavailable.
+
+<details>
+<summary>Open GitHub activity, streak and profile cards</summary>
+
+<p align="center">
+  <a href="https://github.com/ashutosh00710/github-readme-activity-graph">
+    <img alt="HackerXMindset GitHub activity graph" src="https://github-readme-activity-graph.vercel.app/graph?username=HackerXMindset&theme=github-compact&hide_border=true&area=true&custom_title=Maintainer%20activity" />
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/DenverCoder1/github-readme-streak-stats">
+    <img alt="HackerXMindset GitHub contribution streak" src="https://streak-stats.demolab.com?user=HackerXMindset&theme=default&hide_border=true" />
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/seuthootDev/github-readme-zodiac">
+    <img alt="HackerXMindset GitHub zodiac profile card" src="https://github-readme-zodiac.vercel.app/api/card?username=HackerXMindset&width=480" />
+  </a>
+</p>
+
+</details>
+
+---
+
 ## Rules the project lives by
 
-1. **Your data stays on your phone.** No accounts, no servers, no tracking.
+1. **Your diary stays on your phone by default.** There is no account or app backend. When place tracking is active, OpenStreetMap name hints send coordinates for unnamed stops; optional README cards contact third-party image services but cannot access app records.
 2. **No data is ever lost by an update.** Every change to the database structure ships with a proper migration. Wiping and rebuilding the database is never allowed.
 3. **Small steps you can try.** Each roadmap step ends with something you can install and use.
-4. **Plain and quiet.** No notifications, ads or nagging unless you ask for them.
+4. **Plain and quiet.** No ads, subscription prompts or nagging. Android-required status notifications may appear for background tracking and charging features.
 5. **Built when you say so.** Work on a step begins only when the owner asks for it.
