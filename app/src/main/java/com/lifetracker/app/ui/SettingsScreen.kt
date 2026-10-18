@@ -23,7 +23,7 @@ import com.lifetracker.app.data.UsageCollector
 import com.lifetracker.app.ui.theme.LocalPaper
 
 /** Everything that can be opened from the Settings tab. The numbers for each live under Stats. */
-enum class Page { Phone, Steps, Places, Calls, Charging, Activities, Habits, Appearance, Backup }
+enum class Page { Phone, Steps, Places, Calls, Charging, Activities, Habits, Appearance, Backup, Timeline, Apps }
 
 /**
  * The Settings tab, laid out like the demo: a big title, then four groups of rows. Each row has an icon, a name, one small
@@ -60,7 +60,13 @@ fun SettingsScreen(onOpen: (Page) -> Unit) {
 
         item { PaperSection("Timeline") }
         item {
+            SettingsRow(R.drawable.ic_p_timeline, "Timeline", "Gaps, repeated opens and travel questions") { onOpen(Page.Timeline) }
+        }
+        item {
             SettingsRow(R.drawable.ic_p_list, "Activities", "The kinds of activity you sort things into") { onOpen(Page.Activities) }
+        }
+        item {
+            SettingsRow(R.drawable.ic_p_link, "Apps and categories", "Which category each app counts as") { onOpen(Page.Apps) }
         }
 
         item { PaperSection("Collected from your phone") }

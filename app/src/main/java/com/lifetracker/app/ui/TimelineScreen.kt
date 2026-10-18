@@ -84,6 +84,7 @@ import com.lifetracker.app.data.SleepStats
 import com.lifetracker.app.data.StepDayEntity
 import com.lifetracker.app.data.StepStats
 import com.lifetracker.app.data.TimelineEdits
+import com.lifetracker.app.data.TimelineSettings
 import com.lifetracker.app.data.TimelineEditEntity
 import com.lifetracker.app.data.TripEntity
 import com.lifetracker.app.data.TripModes
@@ -118,6 +119,8 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
     val types by vm.activityTypes.collectAsState()
     val usageDay by vm.usageDay.collectAsState()
     val usageOffs by vm.usageOffs.collectAsState()
+    val timelineSettings = TimelineSettings(LocalContext.current)
+    LaunchedEffect(Unit) { vm.reloadSettings() }
     val calls by vm.calls.collectAsState()
     val charges by vm.charges.collectAsState()
     val steps by vm.steps.collectAsState()
@@ -285,7 +288,7 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
     var pie by rememberSaveable { mutableStateOf(false) }
 
     val offs = usageOffs.map { DayLayout.Off(it.startMs, it.endMs, it.kind == UsageStateEntity.SHUTDOWN) }
-    val rows = DayLayout.build(items, visitsEff, tripsEff, placeNames, dayStartMs, dayEndMs, nowMs, showPlaces, showTrips, offs = offs)
+    val rows = DayLayout.build(items, visitsEff, tripsEff, placeNames, dayStartMs, dayEndMs, nowMs, showPlaces, showTrips, offs = offs, showGaps = timelineSettings.showGaps)
 
     // The "Where" line: each stay at a place, and each journey between places.
     val whereSegs = rows.mapNotNull { r ->
@@ -370,6 +373,7 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
                 openLabel = if (p.named) "Open Places" else "Name this spot in Places", onOpen = onOpenPlaces,
             )
         },
+        askHowTravelled = timelineSettings.askHowTravelled,
         onEditTrip = { t ->
             editTarget = target(TimelineEdits.TRIP, t.id, "Trip", t.startMs, t.endMs)
         },
@@ -523,6 +527,13 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
             types = types,
             onSave = { startMs, endMs, activityId ->
                 val old = edits[key]
+                // "Remember my category changes": a category given to a single-app period is kept for that app on every day.
+                if (t.kind == TimelineEdits.APP && activityId.isNotEmpty() && timelineSettings.rememberCategoryChanges) {
+                    val pkg = t.refId.substringBeforeLast('@')
+                    if (blocksEff.firstOrNull { it.pkg == pkg && TimelineEdits.appRef(it.pkg, it.refStartMs) == t.refId }?.apps?.size == 1) {
+                        vm.linkApp(usageApps[pkg] ?: UsageAppEntity(pkg, t.title, "", false), activityId)
+                    }
+                }
                 val timesChanged = startMs != t.startMs || (endMs ?: -1L) != (t.endMs ?: -1L)
                 vm.saveEdit(
                     TimelineEdits.edit(

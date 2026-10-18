@@ -61,6 +61,10 @@ fun PlacesScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PlacesViewModel
     val range by vm.range.collectAsState()
     val trail by vm.trail.collectAsState()
     val recordTrips by vm.recordTrips.collectAsState()
+    val heightCm by vm.heightCm.collectAsState()
+    val strideM by vm.strideM.collectAsState()
+    val strideLearned by vm.strideLearned.collectAsState()
+    var heightText by remember(heightCm) { mutableStateOf(if (heightCm > 0) heightCm.toString() else "") }
     val tripPace by vm.tripIntervalSec.collectAsState()
     val showTripsOnTimeline by vm.showTripsOnTimeline.collectAsState()
     val enabled by vm.enabled.collectAsState()
@@ -303,6 +307,35 @@ fun PlacesScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PlacesViewModel
                     selected = options.indexOf(tripPace),
                     onSelect = { vm.setTripIntervalSec(options[it]) },
                 )
+            }
+
+            item { PaperSection("Walking", "step length for walks") }
+            item {
+                Text(
+                    "For a walk, the app counts your steps and trusts them over the position readings when the readings wander. Your step length starts at your height times 0.415 and is learned from your own walks.",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            item {
+                OutlinedTextField(
+                    value = heightText,
+                    onValueChange = { text -> heightText = text.filter { it.isDigit() }.take(3) },
+                    label = { Text("Your height in cm") },
+                    singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                )
+            }
+            item {
+                SetCard {
+                    KvRow("Step length in use", String.format(java.util.Locale.ENGLISH, "%.2f m", strideM) + if (strideLearned) " (learned)" else "", first = true)
+                }
+            }
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = { vm.setHeightCm(heightText.toIntOrNull() ?: 0) }) { Text("Save height") }
+                    OutlinedButton(enabled = strideLearned, onClick = vm::resetStride) { Text("Learn again") }
+                }
             }
 
             item { PaperSection("On the Timeline") }

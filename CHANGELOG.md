@@ -2,6 +2,14 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## ⚙️ Timeline and apps settings
+
+### ✨ New
+
+- **Apps and categories** (Settings > Timeline) — every app the phone has seen, with a "Counts as ..." pill. Tap a row to pick its category, or to hide it; hidden apps are listed below so you can bring them back. A category applies to every day, past and future.
+- **Timeline settings** (Settings > Timeline) — four switches, all on to begin with: *Show gaps*, *Group repeated opens*, *Ask how I travelled* and *Remember my category changes* (a category you give one app period on the Timeline also applies to that app on every day). They only change how a day is drawn or what is asked; nothing saved is changed or removed, and switching one back on brings everything back.
+- **Walking** (Settings > Places and trips) — enter your height so your step length starts right (height × 0.415), see the step length in use, and start learning again if it looks wrong.
+
 ## 🚶 Walking distance you can trust
 
 ### ✨ New
