@@ -2,6 +2,15 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## ✦ Offline, Phone off, No data
+
+### ✨ New
+
+- **Offline** — when your screen stayed off (for example at night, or while the phone sat on a desk), that stretch is now called Offline instead of No data.
+- **Phone off** — when the phone was switched off, that stretch says Phone off, and runs until the phone started again.
+- **No data** — now means only: the screen was on but the app cannot tell what you were using. It is the only one that is hatched; Offline and Phone off are quiet outlines. Each still has "+ Fill in".
+- **How it works** — the app also saves when the screen turned on and off. The first sync after this update builds again the days Android still remembers (about a week); older days stay as they are and read as No data. Everything is kept in backups (backup version 17), and restoring only adds.
+
 ## ✦ The Timeline is drawn to scale
 
 ### ✨ New

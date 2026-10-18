@@ -8,8 +8,14 @@ enum class RawType {
     /** An activity was stopped. It can arrive late, after the next screen has already opened, so it is only trusted for the screen on top. */
     STOP,
 
-    /** The screen turned off or the phone was locked. */
+    /** The screen turned off. */
     SCREEN_OFF,
+
+    /** The screen turned on. */
+    SCREEN_ON,
+
+    /** The phone was locked (the screen may still be lit). */
+    LOCK,
     SHUTDOWN,
 
     /** The phone started again. If it died without saying so, whatever was open ended at the last event before this. */
@@ -68,7 +74,8 @@ object UsageSessions {
                 }
                 RawType.PAUSE -> if (current == e.pkg && isTopScreen(e.cls)) close(e.time)
                 RawType.STOP -> if (current == e.pkg && e.cls.isNotEmpty() && e.cls == currentCls) close(e.time)
-                RawType.SCREEN_OFF, RawType.SHUTDOWN -> close(e.time)
+                RawType.SCREEN_OFF, RawType.LOCK, RawType.SHUTDOWN -> close(e.time)
+                RawType.SCREEN_ON -> Unit
                 RawType.STARTUP -> close(lastTime)
             }
             if (e.type != RawType.STARTUP) lastTime = e.time

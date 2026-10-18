@@ -22,6 +22,7 @@ import com.lifetracker.app.data.TripEntity
 import com.lifetracker.app.data.UsageAppEntity
 import com.lifetracker.app.data.UsageComboEntity
 import com.lifetracker.app.data.UsageDays
+import com.lifetracker.app.data.UsageStateEntity
 import java.time.ZoneId
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -74,6 +75,18 @@ class TimelineViewModel(app: Application) : AndroidViewModel(app) {
             combine(db.usageDao().sessionsBetween(start, end), db.usageDao().observeApps(), db.usageDao().observeCombos()) { sessions, apps, combos ->
                 UsageDays.build(sessions, apps.associateBy { it.pkg }, start, end, combos = combos.map { it.toCombo() })
             }
+        },
+    )
+
+    /** The stretches of the selected day when the phone was off or its screen stayed off. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val usageOffs: StateFlow<List<UsageStateEntity>> = share(
+        emptyList(),
+        selectedDate.flatMapLatest { d ->
+            val zone = ZoneId.systemDefault()
+            val start = d.atStartOfDay(zone).toInstant().toEpochMilli()
+            val end = d.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+            db.usageDao().statesBetween(start, end)
         },
     )
 

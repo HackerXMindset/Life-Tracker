@@ -199,4 +199,45 @@ class DayLayoutTest {
         val lanes = DayLayout.lanes(listOf(30 * m to 50 * m, 0L to 20 * m, 10 * m to 40 * m))
         assertEquals(listOf(0, 0, 1), lanes)
     }
+
+    @Test
+    fun aGapIsCutIntoOfflinePhoneOffAndNoData() {
+        val m = 60_000L
+        val offs = listOf(DayLayout.Off(20 * m, 60 * m, false), DayLayout.Off(70 * m, 100 * m, true))
+        val pieces = DayLayout.cutGap(0, 120 * m, offs, 10 * m, "x")
+        assertEquals(
+            listOf(
+                Triple(DayLayout.GapKind.NO_DATA, 0L, 20 * m),
+                Triple(DayLayout.GapKind.OFFLINE, 20 * m, 60 * m),
+                Triple(DayLayout.GapKind.NO_DATA, 60 * m, 70 * m),
+                Triple(DayLayout.GapKind.PHONE_OFF, 70 * m, 100 * m),
+                Triple(DayLayout.GapKind.NO_DATA, 100 * m, 120 * m),
+            ),
+            pieces.map { Triple(it.kind, it.startMs, it.endMs) },
+        )
+    }
+
+    @Test
+    fun phoneOffWinsWhereTheTwoOverlapAndShortPiecesAreDropped() {
+        val m = 60_000L
+        val offs = listOf(DayLayout.Off(0, 50 * m, false), DayLayout.Off(10 * m, 30 * m, true))
+        val pieces = DayLayout.cutGap(0, 55 * m, offs, 10 * m, "x")
+        assertEquals(
+            listOf(
+                Triple(DayLayout.GapKind.OFFLINE, 0L, 10 * m),
+                Triple(DayLayout.GapKind.PHONE_OFF, 10 * m, 30 * m),
+                Triple(DayLayout.GapKind.OFFLINE, 30 * m, 50 * m),
+            ),
+            pieces.map { Triple(it.kind, it.startMs, it.endMs) },
+        )
+    }
+
+    @Test
+    fun withoutOffPeriodsAGapStaysOneNoDataGap() {
+        val m = 60_000L
+        val pieces = DayLayout.cutGap(5 * m, 50 * m, emptyList(), 10 * m, "note")
+        assertEquals(1, pieces.size)
+        assertEquals(DayLayout.GapKind.NO_DATA, pieces[0].kind)
+        assertEquals("note", pieces[0].note)
+    }
 }
