@@ -2,6 +2,18 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🍽️ Food in the paper look
+
+### ✨ New
+
+- **Month calendar** on the Food tab — pick any day from a paper month (‹ month ›), with a small square mark on days that have food logged. Today is ringed, the chosen day is inked, and a "Today" pill brings you back. The day-by-day ‹ › buttons are still there.
+- **The day card** — calories eaten in big type with "left" or "over" against your goal, a bar split by meal (breakfast, lunch, dinner, snack in their own colours), and carbs, fat and protein in tally strokes. Water is its own card with the same +250 / +500 / Undo buttons.
+- **Meals in paper cards** — one card per meal type with its coloured edge, its kcal total and a small + to add straight into that meal. Add meal, the Add sheet and the delete question all use the paper sheets and buttons.
+
+### 🔧 Unchanged
+
+- Same meals, water, goals and OpenNutriTracker import. Nothing saved is touched.
+
 ## ⚙️ Timeline and apps settings
 
 ### ✨ New
