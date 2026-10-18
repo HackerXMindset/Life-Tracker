@@ -91,7 +91,7 @@ class BackupCodecTest {
         ),
         tripPoints = listOf(
             TripPointEntity("t1760003600000", 1_760_003_600_000L, 28.61, 77.21, 15f),
-            TripPointEntity("t1760003600000", 1_760_003_630_000L, 28.6122, 77.2101, 12.5f),
+            TripPointEntity("t1760003600000", 1_760_003_630_000L, 28.6122, 77.2101, 12.5f, 123_456L),
             TripPointEntity("t1760020000000", 1_760_020_000_000L, 28.7, 77.3, 8f),
         ),
         rawFixes = listOf(

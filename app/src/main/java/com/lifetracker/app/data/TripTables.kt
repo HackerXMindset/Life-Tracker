@@ -1,5 +1,6 @@
 package com.lifetracker.app.data
 
+import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Entity
 import androidx.room.Index
@@ -47,6 +48,8 @@ data class TripPointEntity(
     val lat: Double,
     val lng: Double,
     val acc: Float,
+    /** The phone's step counter at this reading (steps since it last started), or -1 when it was not known. Added in database version 18. */
+    @ColumnInfo(defaultValue = "-1") val steps: Long = -1L,
 )
 
 @Dao
@@ -61,6 +64,9 @@ interface TripDao {
     /** Trips that started in [from, to), read once. */
     @Query("SELECT * FROM trips WHERE startMs >= :from AND startMs < :to ORDER BY startMs")
     suspend fun tripsIn(from: Long, to: Long): List<TripEntity>
+
+    @Query("SELECT * FROM trips WHERE id = :id")
+    suspend fun trip(id: String): TripEntity?
 
     @Query("UPDATE trips SET distanceM = :distanceM, medianKmh = :median, topKmh = :top WHERE id = :id")
     suspend fun setStats(id: String, distanceM: Int, median: Int, top: Int)

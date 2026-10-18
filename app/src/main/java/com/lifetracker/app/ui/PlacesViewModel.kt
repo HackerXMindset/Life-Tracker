@@ -18,6 +18,7 @@ import com.lifetracker.app.data.PlaceWatchService
 import com.lifetracker.app.data.PlacesSettings
 import com.lifetracker.app.data.PlacesTracker
 import com.lifetracker.app.data.PlacesWorker
+import com.lifetracker.app.data.TripAdjust
 import com.lifetracker.app.data.TripModes
 import com.lifetracker.app.data.TripRules
 import java.io.IOException
@@ -205,6 +206,7 @@ class PlacesViewModel(private val app: Application) : AndroidViewModel(app) {
             val trip = journey.trip
             if (trip != null) {
                 tripDao.setMode(trip.id, mode, "you")
+                TripAdjust.refresh(db, trip.id, settings.strideM())
                 reguess()
             } else {
                 PlaceTrail.tripFor(journey, mode)?.let { tripDao.upsertTrip(it) }
@@ -217,7 +219,10 @@ class PlacesViewModel(private val app: Application) : AndroidViewModel(app) {
         for (t in tripDao.guessed()) {
             val stats = com.lifetracker.app.data.TripStats(t.distanceM, t.endMs - t.startMs, t.medianKmh, t.topKmh, TripRules.MIN_FARTHEST_M)
             val mode = TripModes.guess(stats, TripModes.parseActivity(t.activity), t.fromPlaceId, t.toPlaceId, learned)
-            if (mode != t.mode) tripDao.setMode(t.id, mode, "auto")
+            if (mode != t.mode) {
+                tripDao.setMode(t.id, mode, "auto")
+                TripAdjust.refresh(db, t.id, settings.strideM())
+            }
         }
     }
 

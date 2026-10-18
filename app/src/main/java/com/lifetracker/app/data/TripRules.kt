@@ -53,6 +53,68 @@ object TripRules {
 
     fun isRealTrip(stats: TripStats): Boolean = stats.farthestM >= MIN_FARTHEST_M && stats.durationMs >= 60_000L
 
+    /** The fastest a trip made on foot or by bike can honestly be, in km/h. Anything quicker was not made that way. */
+    fun maxKmh(mode: String): Double? = when (mode) {
+        "walk" -> 8.0
+        "run" -> 20.0
+        "cycle" -> 35.0
+        else -> null
+    }
+
+    /** Fewest steps worth trusting a distance to. */
+    const val MIN_STEPS = 20
+
+    /** How far the GPS distance may be from the steps distance before the steps are trusted instead (a third). */
+    const val DISAGREE = 0.35
+
+    /** A step length used until the app has learned yours or knows your height, in metres. */
+    const val DEFAULT_STRIDE_M = 0.70
+
+    /** Step length from height: 0.415 of it. */
+    fun strideFromHeightCm(heightCm: Int): Double = heightCm / 100.0 * 0.415
+
+    /** Steps taken during a trip: the counter at its last reading minus at its first, or null when not known (or the phone restarted in between). */
+    fun stepsBetween(points: List<TripPointEntity>): Int? {
+        val known = points.filter { it.steps >= 0L }.sortedBy { it.ms }
+        if (known.size < 2) return null
+        val taken = known.last().steps - known.first().steps
+        return if (taken in 0..Int.MAX_VALUE.toLong()) taken.toInt() else null
+    }
+
+    /**
+     * The distance to show for a trip. For a trip made on foot (walk or run) with known [steps], the steps times [strideM] is
+     * trusted when the GPS distance differs from it by more than a third (GPS drift nearly always adds distance). Then the
+     * speed is checked against the way you travelled: a walk cannot be faster than 8 km/h, so 823 m in 2 minutes is cut to what
+     * 2 minutes of walking allows.
+     */
+    fun adjust(gpsM: Int, durationMs: Long, mode: String, steps: Int?, strideM: Double): Int {
+        var m = gpsM.toDouble()
+        val onFoot = mode == "walk" || mode == "run"
+        if (onFoot && steps != null && steps >= MIN_STEPS) {
+            val byStep = steps * strideM
+            if (Math.abs(m - byStep) > DISAGREE * byStep) m = byStep
+        }
+        val limit = maxKmh(mode)
+        if (limit != null && durationMs > 0L) m = minOf(m, limit / 3.6 * durationMs / 1000.0)
+        return m.toInt()
+    }
+
+    /**
+     * One measurement of your step length, from a walk where the GPS and the steps can be compared: a real walking pace, enough
+     * steps and enough distance. Null when the walk is not good enough to learn from.
+     */
+    fun strideSample(gpsM: Int, steps: Int?, medianKmh: Int, mode: String): Double? {
+        if (mode != "walk" || steps == null || steps < 400 || gpsM < 400 || medianKmh > 7) return null
+        val sample = gpsM.toDouble() / steps
+        return if (sample in 0.45..0.95) sample else null
+    }
+
+    /** Moves the learned step length a fifth of the way towards a new measurement, starting from [old] (0 when nothing is learned yet). */
+    fun learnStride(old: Double, sample: Double, fallback: Double): Double {
+        val base = if (old > 0.0) old else fallback
+        return (base * 0.8 + sample * 0.2).coerceIn(0.45, 0.95)
+    }
+
     /** "4.2 km" or "850 m". */
     fun distanceText(m: Int): String =
         if (m < 1000) "$m m" else String.format(java.util.Locale.ENGLISH, "%.1f km", m / 1000.0)

@@ -149,4 +149,78 @@ class TripRulesTest {
         assertEquals("Auto-rickshaw", TripModes.label("auto"))
         assertEquals("Vehicle (not sure which)", TripModes.label("nonsense"))
     }
+
+    // ---- steps, step length and the speed check
+
+    private fun pt(ms: Long, steps: Long) = TripPointEntity("t", ms, 28.6, 77.2, 10f, steps)
+
+    @Test
+    fun stepsOfATripAreTheCounterAtTheEndMinusAtTheStart() {
+        assertEquals(500, TripRules.stepsBetween(listOf(pt(0, 10_000), pt(60_000, 10_300), pt(120_000, 10_500))))
+    }
+
+    @Test
+    fun stepsAreNotKnownWithoutTwoReadingsOrAfterARestart() {
+        assertEquals(null, TripRules.stepsBetween(listOf(pt(0, -1), pt(60_000, -1))))
+        assertEquals(null, TripRules.stepsBetween(listOf(pt(0, 500))))
+        // The counter started again from zero in between.
+        assertEquals(null, TripRules.stepsBetween(listOf(pt(0, 9_000), pt(60_000, 120))))
+        // Readings without a counter are skipped over.
+        assertEquals(200, TripRules.stepsBetween(listOf(pt(0, 1_000), pt(30_000, -1), pt(60_000, 1_200))))
+    }
+
+    @Test
+    fun aWalkWhereGpsDriftedUsesTheSteps() {
+        // 1,000 steps at 0.70 m is 700 m, but the GPS drifted to 1,400 m over 12 minutes.
+        assertEquals(700, TripRules.adjust(1400, 12 * 60_000L, "walk", 1000, 0.70))
+    }
+
+    @Test
+    fun aWalkWhereGpsAndStepsAgreeKeepsTheGps() {
+        assertEquals(760, TripRules.adjust(760, 10 * 60_000L, "walk", 1000, 0.70))
+    }
+
+    @Test
+    fun aVehicleTripIsNotChangedBySteps() {
+        assertEquals(8000, TripRules.adjust(8000, 15 * 60_000L, "car", 30, 0.70))
+        assertEquals(8000, TripRules.adjust(8000, 15 * 60_000L, "vehicle", null, 0.70))
+    }
+
+    @Test
+    fun aWalkCannotBeFasterThanAWalk() {
+        // 823 m in 2 minutes is 24.7 km/h: at most 8 km/h is a walk, which is 266 m in 2 minutes.
+        assertEquals(266, TripRules.adjust(823, 120_000L, "walk", null, 0.70))
+        assertEquals(823, TripRules.adjust(823, 120_000L, "cycle", null, 0.70))
+        assertEquals(823, TripRules.adjust(823, 120_000L, "car", null, 0.70))
+    }
+
+    @Test
+    fun fewStepsAreNotTrusted() {
+        assertEquals(1400, TripRules.adjust(1400, 30 * 60_000L, "walk", 10, 0.70))
+    }
+
+    @Test
+    fun yourStepLengthIsLearnedFromAGoodWalk() {
+        // 1,000 m in 1,300 steps is 0.77 m, at a walking pace.
+        val sample = TripRules.strideSample(1000, 1300, 5, "walk")
+        assertEquals(0.769, sample!!, 0.001)
+        assertEquals(null, TripRules.strideSample(1000, 1300, 12, "walk"))
+        assertEquals(null, TripRules.strideSample(1000, 100, 5, "walk"))
+        assertEquals(null, TripRules.strideSample(300, 400, 5, "walk"))
+        assertEquals(null, TripRules.strideSample(1000, 1300, 5, "car"))
+        // 3 m per step cannot be right.
+        assertEquals(null, TripRules.strideSample(1200, 400, 5, "walk"))
+    }
+
+    @Test
+    fun theLearnedStepLengthMovesSlowly() {
+        assertEquals(0.714, TripRules.learnStride(0.0, 0.77, 0.70), 0.001)
+        assertEquals(0.726, TripRules.learnStride(0.72, 0.75, 0.70), 0.001)
+        assertEquals(0.95, TripRules.learnStride(0.95, 2.0, 0.70), 0.001)
+    }
+
+    @Test
+    fun stepLengthFromHeight() {
+        assertEquals(0.7055, TripRules.strideFromHeightCm(170), 0.0001)
+    }
 }

@@ -235,8 +235,14 @@ object PlacesTracker {
             }
             val step = PlaceEngine.onFix(settings.engine, fix, dao.activePlaces(), recent, now, settings.recordTrips)
             if (step.saves.isNotEmpty()) dao.upsertVisits(step.saves)
-            if (step.points.isNotEmpty()) db.tripDao().addPoints(step.points)
-            step.finish?.let { finishTrip(db, it) }
+            if (step.points.isNotEmpty()) {
+                // Note the step counter on the readings taken now (not on one placed back at the start of a stay).
+                val counter = StepCounterSync.counterNow(context)
+                db.tripDao().addPoints(
+                    if (counter == null) step.points else step.points.map { if (it.ms >= fix.timeMs - 90_000L) it.copy(steps = counter) else it },
+                )
+            }
+            step.finish?.let { finishTrip(db, it, settings) }
             settings.engine = step.state
             settings.lastFixMs = now
             Watch(
@@ -248,7 +254,7 @@ object PlacesTracker {
     }
 
     /** Works out the distance and speeds of a trip that has ended and saves it, unless it was only GPS drift. */
-    private suspend fun finishTrip(db: AppDatabase, f: TripFinish) {
+    private suspend fun finishTrip(db: AppDatabase, f: TripFinish, settings: PlacesSettings) {
         val dao = db.tripDao()
         val points = dao.points(f.id)
         val stats = TripRules.stats(points, f.startMs, f.endMs)
@@ -257,6 +263,12 @@ object PlacesTracker {
             return
         }
         val guess = TripModes.guess(stats, f.acts, f.fromPlaceId, f.toPlaceId, dao.corrected().map { TripModes.learned(it) })
+        val steps = TripRules.stepsBetween(points)
+        // Learn your step length from walks where the GPS and the steps can be compared, before the distance is settled.
+        TripRules.strideSample(stats.distanceM, steps, stats.medianKmh, guess)?.let {
+            settings.learnedStrideM = TripRules.learnStride(settings.learnedStrideM.toDouble(), it, settings.strideM()).toFloat()
+        }
+        val distance = TripRules.adjust(stats.distanceM, stats.durationMs, guess, steps, settings.strideM())
         dao.upsertTrip(
             TripEntity(
                 id = f.id,
@@ -264,7 +276,7 @@ object PlacesTracker {
                 endMs = f.endMs,
                 fromPlaceId = f.fromPlaceId,
                 toPlaceId = f.toPlaceId,
-                distanceM = stats.distanceM,
+                distanceM = distance,
                 medianKmh = stats.medianKmh,
                 topKmh = stats.topKmh,
                 activity = TripModes.activityText(f.acts),
@@ -342,7 +354,7 @@ object PlacesTracker {
 
                 var trips = 0
                 for (t in db.tripDao().tripsIn(fromMs, end)) {
-                    val fixed = PlaceCleanup.refreshTrip(t, db.tripDao().points(t.id)) ?: continue
+                    val fixed = PlaceCleanup.refreshTrip(t, db.tripDao().points(t.id), PlacesSettings(context).strideM()) ?: continue
                     db.tripDao().setStats(fixed.id, fixed.distanceM, fixed.medianKmh, fixed.topKmh)
                     trips++
                 }
