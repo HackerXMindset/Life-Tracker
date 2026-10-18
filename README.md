@@ -35,7 +35,7 @@
 <p>
   <a href="CHANGELOG.md">What's new</a> ·
   <a href="#current-status">Current status</a> ·
-  <a href="#roadmap">Roadmap</a> ·
+  <a href="#the-roadmap">Roadmap</a> ·
   <a href="#how-your-data-is-stored-and-protected">Privacy and data</a>
 </p>
 
@@ -50,7 +50,7 @@
 - [What it tracks](#what-it-tracks)
 - [Current status](#current-status)
 - [Feature tour](#feature-tour)
-- [Roadmap](#roadmap)
+- [Roadmap](#the-roadmap)
 - [How the app is organised](#how-the-app-is-organised)
 - [The file architecture](#the-file-architecture)
 - [How your data is stored and protected](#how-your-data-is-stored-and-protected)
