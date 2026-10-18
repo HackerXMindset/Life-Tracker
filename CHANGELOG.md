@@ -2,6 +2,23 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧹 A clean Timeline
+
+### 🔧 Fixed
+
+- **The hour labels no longer drift away from the rows.** Before, a busy day pushed the cards down while the lines stayed put, so a 2:04 am row sat beside the 9:00 label. Now the rows, their lines and the hour labels all share one map. Where nothing is crowded it is exactly 1 hour = 60 dp; where many short things happen close together the hours sit a little further apart to make room, and the labels move with them.
+- **One time per row.** The separate time column is gone; each row says "10:21–10:51 pm" once, under its title.
+
+### ✨ New
+
+- **Small rows that open in place.** Every thing, place and journey is one tidy row (title, time and category, length). Tap it to open it inside the timeline: every app with its time and how many times it was opened, the category, and an Edit button. Tap again to close. Rows with nothing more to show still open their edit pop-up straight away.
+- **Soft grey Offline, Phone off and No data** — one small grey line, no outline and no button. Opening one shows what it is and the Fill in button.
+- **Unknown journeys** show a small orange row; open it to answer "How did you go?".
+
+### 🔧 Unchanged
+
+- Same data, same edits, same Fill in. Nothing saved is touched; this is only how a day is drawn.
+
 ## 🍽️ Food in the paper look
 
 ### ✨ New

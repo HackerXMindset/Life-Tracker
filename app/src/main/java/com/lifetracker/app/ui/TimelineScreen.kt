@@ -407,7 +407,7 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
                 item(key = "pie") { DayPieView(whatSegs, whereSegs, if (showTrips) tripsEff else emptyList()) }
             } else {
                 item(key = "activity-pills") { ActivityPills(DaySegments.byLabel(flatAll)) }
-                if (rows.isNotEmpty()) item(key = "in-order-heading") { PaperSection("In order", "tap a row to edit it") }
+                if (rows.isNotEmpty()) item(key = "in-order-heading") { PaperSection("In order", "tap a row to open it") }
             }
             if (pie) {
                 // Only the pie is shown.
