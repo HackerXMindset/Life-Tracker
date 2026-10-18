@@ -484,10 +484,14 @@ private fun ThingCard(item: DayLayout.Item, look: Look) {
     val shape = Wobble.Small
     var open by remember { mutableStateOf(false) }
     val details = look.lines.filter { it.isNotBlank() }
-    val hasMore = details.isNotEmpty() || look.chip != null
+    // A to-do opens (ticks off) in one tap, as before.
+    val hasMore = item.kind != DayLayout.Kind.TODO && (details.isNotEmpty() || look.chip != null)
     val moment = !item.showEnd || item.endMs <= item.startMs
-    val meta = (if (moment) clock(item.startMs) else range(item.startMs, item.endMs)) +
-        (if (look.chip != null && !look.hint) " · " + look.chip else "")
+    val meta = listOfNotNull(
+        look.trailing,
+        if (moment) clock(item.startMs) else range(item.startMs, item.endMs),
+        if (look.chip != null && !look.hint) look.chip else null,
+    ).joinToString(" · ")
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -519,9 +523,6 @@ private fun ThingCard(item: DayLayout.Item, look: Look) {
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(text = meta, fontSize = 11.sp, lineHeight = 14.sp, color = paper.ink2, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-            if (look.trailing != null) {
-                Text(text = look.trailing, fontSize = 12.sp, lineHeight = 16.sp, fontWeight = FontWeight.Bold, color = paper.ink2, maxLines = 1)
             }
             if (hasMore) {
                 Icon(
@@ -582,7 +583,7 @@ private fun GapCard(gap: DayLayout.Gap, a: DayActions) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = name + " · " + range(gap.startMs, gap.endMs) + " · " + lengthText(gap.endMs - gap.startMs),
+                text = name + " · " + lengthText(gap.endMs - gap.startMs) + " · " + range(gap.startMs, gap.endMs),
                 modifier = Modifier.weight(1f),
                 fontSize = 12.sp,
                 lineHeight = 16.sp,
@@ -618,10 +619,10 @@ private fun TravelCard(t: DayLayout.Travel, a: DayActions) {
     var open by remember { mutableStateOf(false) }
     val length = lengthText(t.endMs - t.startMs)
     val title = when {
-        trip == null -> "Unknown way of travel · $length"
-        unknown -> "Unknown way of travel · $length · " + TripRules.distanceText(trip.distanceM)
-        else -> TripModes.label(trip.mode) + (if (trip.modeSource == "you") "" else " (guess)") + " · $length · " + TripRules.distanceText(trip.distanceM)
+        trip == null || unknown -> "Unknown way of travel"
+        else -> TripModes.label(trip.mode) + (if (trip.modeSource == "you") "" else " (guess)")
     }
+    val numbers = if (trip != null) length + " · " + TripRules.distanceText(trip.distanceM) else length
     val shape = Wobble.Small
     val asks = a.askHowTravelled && unknown && (trip != null || (t.from != null && t.to != null))
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -647,7 +648,7 @@ private fun TravelCard(t: DayLayout.Travel, a: DayActions) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(text = title, fontSize = 14.sp, lineHeight = 18.sp, fontWeight = FontWeight.Bold, color = paper.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(
-                        text = range(t.startMs, t.endMs) + " · " + tripEnd(t.fromName) + " to " + tripEnd(t.toName),
+                        text = numbers + " · " + range(t.startMs, t.endMs) + " · " + tripEnd(t.fromName) + " to " + tripEnd(t.toName),
                         fontSize = 11.sp,
                         lineHeight = 14.sp,
                         color = paper.ink2,

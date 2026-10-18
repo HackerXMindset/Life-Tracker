@@ -2,6 +2,14 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧹 Timeline tidy-up
+
+### 🔧 Fixed
+
+- **Numbers are no longer cut off.** A row's title now has the whole width, and the length comes first in the line under it ("24m · 12:42–1:07 pm · Screen and leisure"). A journey shows its way of travel as the title and "2m · 120 m · 6:04–6:06 pm · Home to Maths" under it. Offline, Phone off and No data put the length before the times.
+- **To-dos tick off in one tap again.**
+- **The note under the list** now says how rows work now (tap to open, Edit inside).
+
 ## 🧹 A clean Timeline
 
 ### 🔧 Fixed
