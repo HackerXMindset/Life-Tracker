@@ -451,7 +451,7 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
                 if (entries.isNotEmpty() || rows.isNotEmpty()) {
                     item {
                         Text(
-                            text = "Tap anything to change its time or category, or to hide it. Tap a to-do to tick it off.",
+                            text = "Tap a row to open it; inside, Edit changes its time or category, or hides it. Tap a to-do to tick it off.",
                             fontSize = 11.5.sp,
                             color = LocalPaper.current.ink2,
                         )
