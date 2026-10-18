@@ -51,6 +51,11 @@ object StepCounterSync {
         }
     }
 
+    /** The step counter right now, for noting on the readings of a trip, or null without permission, a sensor or a reading. */
+    suspend fun counterNow(context: Context): Long? = withContext(Dispatchers.IO) {
+        if (!hasPermission(context) || !hasSensor(context)) null else readCounter(context)
+    }
+
     /**
      * Adds the steps since the last reading to today. When Health Connect already has steps for today it is
      * trusted instead, but the reading is still noted so the next one starts from the right place.

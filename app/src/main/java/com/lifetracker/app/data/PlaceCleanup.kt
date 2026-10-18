@@ -62,15 +62,19 @@ object PlaceCleanup {
         return Plan(adds, updates.values.toList())
     }
 
-    /** The trip with its distance and speeds worked out again from its readings with the bad ones removed, or null if nothing changed. */
-    fun refreshTrip(trip: TripEntity, points: List<TripPointEntity>): TripEntity? {
+    /**
+     * The trip with its distance and speeds worked out again from its readings with the bad ones removed, or null if nothing
+     * changed. The distance follows the way you travelled: on foot it is checked against the steps and the speed limit of a walk.
+     */
+    fun refreshTrip(trip: TripEntity, points: List<TripPointEntity>, strideM: Double = TripRules.DEFAULT_STRIDE_M): TripEntity? {
         if (points.size < 2) return null
         val clean = FixFilter.clean(points.map { RawFixEntity(it.ms, it.lat, it.lng, it.acc) })
             .map { TripPointEntity(trip.id, it.ms, it.lat, it.lng, it.acc) }
         if (clean.size < 2) return null
         val stats = TripRules.stats(clean, trip.startMs, trip.endMs)
-        if (stats.distanceM == trip.distanceM && stats.medianKmh == trip.medianKmh && stats.topKmh == trip.topKmh) return null
-        return trip.copy(distanceM = stats.distanceM, medianKmh = stats.medianKmh, topKmh = stats.topKmh)
+        val distance = TripRules.adjust(stats.distanceM, stats.durationMs, trip.mode, TripRules.stepsBetween(points), strideM)
+        if (distance == trip.distanceM && stats.medianKmh == trip.medianKmh && stats.topKmh == trip.topKmh) return null
+        return trip.copy(distanceM = distance, medianKmh = stats.medianKmh, topKmh = stats.topKmh)
     }
 }
 

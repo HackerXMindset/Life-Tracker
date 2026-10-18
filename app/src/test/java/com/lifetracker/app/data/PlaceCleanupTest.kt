@@ -131,7 +131,7 @@ class PlaceCleanupTest {
     fun aTripThatIsAlreadyRightIsLeftAlone() {
         val points = routePoints()
         val stats = TripRules.stats(points, t0, t0 + 300_000L)
-        val trip = TripEntity("t1", t0, t0 + 300_000L, "", "", stats.distanceM, stats.medianKmh, stats.topKmh, "", "walk", "you")
+        val trip = TripEntity("t1", t0, t0 + 300_000L, "", "", stats.distanceM, stats.medianKmh, stats.topKmh, "", "cycle", "you")
         assertNull(PlaceCleanup.refreshTrip(trip, points))
         assertNull(PlaceCleanup.refreshTrip(trip, points.take(1)))
     }
@@ -158,5 +158,16 @@ class PlaceCleanupTest {
         assertFalse(PlacesWatchdog.shouldStart(true, false, false, false, 0L, now, 60))
         assertTrue(PlacesWatchdog.shouldStart(true, false, true, false, 0L, now, 60))
         assertFalse(PlacesWatchdog.shouldStart(true, false, true, true, now - 1 * min, now, 60))
+    }
+
+    @Test
+    fun aWalkIsCheckedAgainstTheStepsAndTheSpeedOfAWalk() {
+        // Readings drifted to 13 km/h but the phone counted only 380 steps: that is about 266 m.
+        val points = routePoints().mapIndexed { i, p -> p.copy(steps = 5_000L + i * 38) }
+        val trip = TripEntity("t1", t0, t0 + 300_000L, "", "", 1112, 13, 13, "", "walk", "you")
+        val fixed = PlaceCleanup.refreshTrip(trip, points, 0.70)
+        assertNotNull(fixed)
+        assertEquals(266.0, fixed!!.distanceM.toDouble(), 2.0)
+        assertEquals("walk", fixed.mode)
     }
 }

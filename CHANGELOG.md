@@ -2,6 +2,21 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🚶 Walking distance you can trust
+
+### ✨ New
+
+- **Steps are noted during a trip** — while a trip is being recorded, each position reading also notes the phone's step counter. A walk's steps are the counter at its end minus at its start.
+- **Steps beat GPS drift** — for a walk or run, when the GPS distance is more than a third away from steps times your step length, the steps are trusted. GPS drift nearly always adds distance, which is why walks looked too long.
+- **A walk cannot be a car** — the distance is checked against the speed of the way you travelled: at most 8 km/h on foot, 20 km/h running, 35 km/h cycling. 823 m in 2 minutes is no longer shown as a walk's distance.
+- **Your step length is learned** — it starts at 0.70 m (or your height × 0.415, once there is a place to enter your height) and moves slowly towards what your own long walks show, where the GPS and the steps agree.
+- **Changing how you travelled** — works the distance out again at once, and so does the daily tidy-up. Nothing is deleted: only the stored distance and speeds change, and the readings stay.
+- **Backups** — each trip reading keeps its step counter (backup version 18).
+
+### Not yet
+
+- The box for your height comes with the Places settings page (T-H). Moving a trip's start and end to the last and first reading at a place also waits for that page.
+
 ## ✦ Offline, Phone off, No data
 
 ### ✨ New

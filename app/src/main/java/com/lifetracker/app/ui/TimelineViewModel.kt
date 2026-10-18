@@ -18,6 +18,8 @@ import com.lifetracker.app.data.PlaceVisitEntity
 import com.lifetracker.app.data.SleepNightEntity
 import com.lifetracker.app.data.StepDayEntity
 import com.lifetracker.app.data.TodoEntity
+import com.lifetracker.app.data.PlacesSettings
+import com.lifetracker.app.data.TripAdjust
 import com.lifetracker.app.data.TripEntity
 import com.lifetracker.app.data.UsageAppEntity
 import com.lifetracker.app.data.UsageComboEntity
@@ -232,7 +234,10 @@ class TimelineViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Sets how a trip was made; it counts as your own answer, so later guesses learn from it. */
     fun setTripMode(trip: TripEntity, mode: String) {
-        viewModelScope.launch { db.tripDao().setMode(trip.id, mode, "you") }
+        viewModelScope.launch {
+            db.tripDao().setMode(trip.id, mode, "you")
+            TripAdjust.refresh(db, trip.id, PlacesSettings(getApplication<android.app.Application>()).strideM())
+        }
     }
 
     /** What you changed about things on the Timeline, by [TimelineEdits.key]. */

@@ -140,7 +140,7 @@ object BackupManager {
     )
 
     /**
-     * A version 17 backup replaces everything except the phone usage, call, charging, step, sleep, place, trip and position-reading history, your Timeline edits, the app combinations you named and the times the phone was off, which are only ever added to. Older backups never held some of
+     * A version 18 backup replaces everything except the phone usage, call, charging, step, sleep, place, trip and position-reading history, your Timeline edits, the app combinations you named and the times the phone was off, which are only ever added to. Older backups never held some of
      * the data (version 1: only Timeline entries; version 2: no food or water),
      * so they replace only what they hold and leave the rest alone; the import record is cleared so the next Streak import can
      * bring back any focus sessions the old backup did not have.

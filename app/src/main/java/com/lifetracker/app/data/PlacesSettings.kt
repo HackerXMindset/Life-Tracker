@@ -12,6 +12,27 @@ class PlacesSettings(context: Context) {
         get() = prefs.getBoolean("enabled", false)
         set(value) = prefs.edit { putBoolean("enabled", value) }
 
+    /** Your height in cm, or 0 when you have not said. Step length starts from it. */
+    var heightCm: Int
+        get() = prefs.getInt("height_cm", 0)
+        set(value) = prefs.edit {
+            putInt("height_cm", value)
+            // A new height starts the step length again.
+            putFloat("stride_m", 0f)
+        }
+
+    /** The step length learned from your own walks, in metres, or 0 when nothing is learned yet. */
+    var learnedStrideM: Float
+        get() = prefs.getFloat("stride_m", 0f)
+        set(value) = prefs.edit { putFloat("stride_m", value) }
+
+    /** The step length to use now: the learned one, else from your height, else a typical 0.70 m. */
+    fun strideM(): Double = when {
+        learnedStrideM > 0f -> learnedStrideM.toDouble()
+        heightCm > 0 -> TripRules.strideFromHeightCm(heightCm)
+        else -> TripRules.DEFAULT_STRIDE_M
+    }
+
     /** Seconds between position readings while the app is checking where you are. */
     var intervalSec: Int
         get() = prefs.getInt("interval_sec", 60)
