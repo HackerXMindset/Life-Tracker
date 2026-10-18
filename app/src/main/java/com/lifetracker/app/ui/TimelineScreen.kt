@@ -92,6 +92,7 @@ import com.lifetracker.app.data.UsageCollector
 import com.lifetracker.app.data.UsageAppEntity
 import com.lifetracker.app.data.UsageCombos
 import com.lifetracker.app.data.UsageDays
+import com.lifetracker.app.data.UsageStateEntity
 import com.lifetracker.app.data.UsageSettings
 import androidx.compose.ui.platform.LocalContext
 import java.time.Instant
@@ -116,6 +117,7 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
     val datesWithEntries by vm.datesWithEntries.collectAsState()
     val types by vm.activityTypes.collectAsState()
     val usageDay by vm.usageDay.collectAsState()
+    val usageOffs by vm.usageOffs.collectAsState()
     val calls by vm.calls.collectAsState()
     val charges by vm.charges.collectAsState()
     val steps by vm.steps.collectAsState()
@@ -282,7 +284,8 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
     val nowMarker = if (nowMs in dayStartMs until dayEndMs) nowMs else null
     var pie by rememberSaveable { mutableStateOf(false) }
 
-    val rows = DayLayout.build(items, visitsEff, tripsEff, placeNames, dayStartMs, dayEndMs, nowMs, showPlaces, showTrips)
+    val offs = usageOffs.map { DayLayout.Off(it.startMs, it.endMs, it.kind == UsageStateEntity.SHUTDOWN) }
+    val rows = DayLayout.build(items, visitsEff, tripsEff, placeNames, dayStartMs, dayEndMs, nowMs, showPlaces, showTrips, offs = offs)
 
     // The "Where" line: each stay at a place, and each journey between places.
     val whereSegs = rows.mapNotNull { r ->

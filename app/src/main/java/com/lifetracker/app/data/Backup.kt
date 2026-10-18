@@ -26,6 +26,7 @@ data class BackupData(
     val usageSessions: List<UsageSessionEntity> = emptyList(),
     val usageApps: List<UsageAppEntity> = emptyList(),
     val usageCombos: List<UsageComboEntity> = emptyList(),
+    val usageStates: List<UsageStateEntity> = emptyList(),
     val calls: List<CallEntity> = emptyList(),
     val chargeSessions: List<ChargeSessionEntity> = emptyList(),
     val stepDays: List<StepDayEntity> = emptyList(),
@@ -42,7 +43,7 @@ data class BackupData(
             todoTags.isEmpty() && todos.isEmpty() && notes.isEmpty() && meals.isEmpty() && water.isEmpty() &&
             moneyItems.isEmpty() && moneyEntries.isEmpty() && usageSessions.isEmpty() && calls.isEmpty() &&
             chargeSessions.isEmpty() && stepDays.isEmpty() && sleepNights.isEmpty() && places.isEmpty() && placeVisits.isEmpty() &&
-            trips.isEmpty() && tripPoints.isEmpty() && rawFixes.isEmpty() && timelineEdits.isEmpty() && usageCombos.isEmpty()
+            trips.isEmpty() && tripPoints.isEmpty() && rawFixes.isEmpty() && timelineEdits.isEmpty() && usageCombos.isEmpty() && usageStates.isEmpty()
 }
 
 /**
@@ -50,12 +51,12 @@ data class BackupData(
  *
  * `version` lets later steps add more data without breaking old backups.
  * Version 1 held only Timeline entries; version 2 adds habits, to-dos, notes
- * and the record of what was imported; version 3 adds meals, food goals and water; version 4 adds your own activities and their goals; version 5 adds money (categories, saved items and entries); version 6 adds phone usage (sessions are stored compactly as [app, start, end]); version 7 adds phone calls (each stored as [number, name, type, start, seconds]); version 8 adds charging sessions (each stored as [start, end, startLevel, endLevel, plug, source, samples, currentSamples, sumMa, sumMv, ongoing]); version 9 adds steps (each day stored as [date, steps, source]) and sleep (each night stored as [date, start, end, source]); version 10 adds places (the ones you named) and place visits (each stored as [id, place, start, end, lat, lng, source, ongoing, ignored]); version 11 adds trips (each stored as [id, start, end, from, to, distance, medianKmh, topKmh, activity, mode, modeSource]) and the position readings of each trip (each stored as [trip, time, lat, lng, accuracy]); version 12 adds every position reading, stored compactly one day at a time (see rawFixesJson); version 13 adds the speed the phone measured to each reading; version 14 adds how sure the app is of each visit (a tenth value in each visit list); version 15 adds what you changed on the Timeline (each stored as [kind, id, start, end, category, hidden, changedAt, label]); version 16 adds the app combinations you named (each stored as an object with id, name, pkgs, activityId and updatedMs). A file from a newer version of the app
+ * and the record of what was imported; version 3 adds meals, food goals and water; version 4 adds your own activities and their goals; version 5 adds money (categories, saved items and entries); version 6 adds phone usage (sessions are stored compactly as [app, start, end]); version 7 adds phone calls (each stored as [number, name, type, start, seconds]); version 8 adds charging sessions (each stored as [start, end, startLevel, endLevel, plug, source, samples, currentSamples, sumMa, sumMv, ongoing]); version 9 adds steps (each day stored as [date, steps, source]) and sleep (each night stored as [date, start, end, source]); version 10 adds places (the ones you named) and place visits (each stored as [id, place, start, end, lat, lng, source, ongoing, ignored]); version 11 adds trips (each stored as [id, start, end, from, to, distance, medianKmh, topKmh, activity, mode, modeSource]) and the position readings of each trip (each stored as [trip, time, lat, lng, accuracy]); version 12 adds every position reading, stored compactly one day at a time (see rawFixesJson); version 13 adds the speed the phone measured to each reading; version 14 adds how sure the app is of each visit (a tenth value in each visit list); version 15 adds what you changed on the Timeline (each stored as [kind, id, start, end, category, hidden, changedAt, label]); version 16 adds the app combinations you named (each stored as an object with id, name, pkgs, activityId and updatedMs); version 17 adds the stretches when the phone was off or its screen stayed off (each stored as [kind, start, end]). A file from a newer version of the app
  * is refused rather than half-read.
  */
 object BackupCodec {
     const val APP_NAME = "life-tracker"
-    const val FORMAT_VERSION = 16
+    const val FORMAT_VERSION = 17
 
     fun encode(data: BackupData): String =
         JSONObject()
@@ -90,6 +91,7 @@ object BackupCodec {
             .put("rawFixes", rawFixesJson(data.rawFixes))
             .put("timelineEdits", editsJson(data.timelineEdits))
             .put("usageCombos", array(data.usageCombos, ::usageComboJson))
+            .put("usageStates", statesJson(data.usageStates))
             .toString(2)
 
     /** Reads a backup. Throws [IllegalArgumentException] with a readable reason if it is not usable. */
@@ -132,6 +134,7 @@ object BackupCodec {
                 rawFixes = rawFixes(root),
                 timelineEdits = edits(root),
                 usageCombos = list(root, "usageCombos", required = false, ::usageCombo),
+                usageStates = states(root),
             )
         } catch (e: JSONException) {
             throw IllegalArgumentException("This file is damaged or is not a backup.")
@@ -396,6 +399,23 @@ object BackupCodec {
         activityId = o.getString("activityId"),
         ignored = o.getBoolean("ignored"),
     )
+
+    // Off periods are one short list each: [kind, start, end].
+    private fun statesJson(list: List<UsageStateEntity>): JSONArray {
+        val out = JSONArray()
+        for (s in list) out.put(JSONArray().put(s.kind).put(s.startMs).put(s.endMs))
+        return out
+    }
+
+    private fun states(root: JSONObject): List<UsageStateEntity> {
+        val array = root.optJSONArray("usageStates") ?: return emptyList()
+        return (0 until array.length()).map {
+            val r = array.getJSONArray(it)
+            val kind = r.getString(0)
+            val start = r.getLong(1)
+            UsageStateEntity(UsageStateEntity.idFor(kind, start), kind, start, r.getLong(2))
+        }
+    }
 
     private fun usageComboJson(c: UsageComboEntity) = JSONObject()
         .put("id", c.id).put("name", c.name).put("pkgs", c.pkgs).put("activityId", c.activityId).put("updatedMs", c.updatedMs)

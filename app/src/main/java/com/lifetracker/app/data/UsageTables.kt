@@ -67,6 +67,25 @@ data class UsageComboEntity(
     }
 }
 
+/**
+ * A stretch when the phone was not in use, saved so the Timeline can say why nothing was recorded (added in database
+ * version 17). [kind] is "off" (the screen stayed off) or "shutdown" (the phone was switched off). The id is "kind|start",
+ * so a stretch that was still going is extended by the next sync and never doubled.
+ */
+@Entity(tableName = "usage_states", indices = [Index("startMs")])
+data class UsageStateEntity(
+    @PrimaryKey val id: String,
+    val kind: String,
+    val startMs: Long,
+    val endMs: Long,
+) {
+    companion object {
+        const val OFF = "off"
+        const val SHUTDOWN = "shutdown"
+        fun idFor(kind: String, startMs: Long) = "$kind|$startMs"
+    }
+}
+
 @Dao
 interface UsageDao {
     /** Sessions that overlap [from, to). */
@@ -124,4 +143,20 @@ interface UsageDao {
     /** Removes only the rule. Every saved session stays, and the days are simply drawn without it. */
     @Query("DELETE FROM usage_combos WHERE id = :id")
     suspend fun deleteCombo(id: String)
+
+    @Query("SELECT * FROM usage_states WHERE endMs > :from AND startMs < :to ORDER BY startMs")
+    fun statesBetween(from: Long, to: Long): Flow<List<UsageStateEntity>>
+
+    @Query("SELECT * FROM usage_states ORDER BY startMs")
+    suspend fun allStates(): List<UsageStateEntity>
+
+    @Query("SELECT MAX(startMs) FROM usage_states")
+    suspend fun latestStateStart(): Long?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertStates(states: List<UsageStateEntity>)
+
+    /** Restoring a backup only adds off periods; one already on this phone is kept as it is. */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertMissingStates(states: List<UsageStateEntity>)
 }

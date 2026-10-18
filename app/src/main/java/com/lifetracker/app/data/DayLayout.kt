@@ -71,13 +71,60 @@ object DayLayout {
         override val endMs: Long get() = item.endMs
     }
 
-    /** Time with nothing known. [note] says what is missing. */
+    /** Why a stretch has nothing in it. */
+    enum class GapKind { NO_DATA, OFFLINE, PHONE_OFF }
+
+    /** Time with nothing known. [note] says what is missing; [kind] says whether the phone was off or its screen stayed off. */
     class Gap(
         override val key: String,
         override val startMs: Long,
         override val endMs: Long,
         val note: String,
+        val kind: GapKind = GapKind.NO_DATA,
     ) : Row
+
+    /** A stretch when the phone was off ([shutdown] true) or its screen stayed off. */
+    class Off(val startMs: Long, val endMs: Long, val shutdown: Boolean)
+
+    /**
+     * Cuts the stretch [from, to) at the [offs]: the part inside a phone-off period is [GapKind.PHONE_OFF], the part inside
+     * a screen-off period is [GapKind.OFFLINE], and the rest is [GapKind.NO_DATA]. Pieces shorter than [minMs] are dropped.
+     */
+    fun cutGap(from: Long, to: Long, offs: List<Off>, minMs: Long, noDataNote: String): List<Gap> {
+        val points = sortedSetOf(from, to)
+        for (o in offs) {
+            if (o.endMs > from && o.startMs < to) {
+                points += max(o.startMs, from)
+                points += min(o.endMs, to)
+            }
+        }
+        val list = points.toList()
+        val out = ArrayList<Gap>()
+        var i = 0
+        while (i < list.size - 1) {
+            val a = list[i]
+            val b = list[i + 1]
+            val covering = offs.filter { it.startMs <= a && it.endMs >= b }
+            val kind = when {
+                covering.any { it.shutdown } -> GapKind.PHONE_OFF
+                covering.isNotEmpty() -> GapKind.OFFLINE
+                else -> GapKind.NO_DATA
+            }
+            val last = out.lastOrNull()
+            if (last != null && last.kind == kind && last.endMs == a) {
+                out[out.size - 1] = Gap(last.key, last.startMs, b, last.note, kind)
+            } else {
+                val note = when (kind) {
+                    GapKind.PHONE_OFF -> "The phone was switched off"
+                    GapKind.OFFLINE -> "The screen stayed off"
+                    GapKind.NO_DATA -> noDataNote
+                }
+                out += Gap("gap$a", a, b, note, kind)
+            }
+            i++
+        }
+        return out.filter { it.endMs - it.startMs >= minMs }
+    }
 
     fun build(
         items: List<Item>,
@@ -90,6 +137,7 @@ object DayLayout {
         showPlaces: Boolean = true,
         showTrips: Boolean = true,
         minGapMs: Long = MIN_GAP_MS,
+        offs: List<Off> = emptyList(),
     ): List<Row> {
         // On today nothing after now can be missing yet.
         val limit = if (nowMs in dayStartMs until dayEndMs) nowMs else dayEndMs
@@ -125,7 +173,7 @@ object DayLayout {
         val places = stays.mapIndexed { i, s ->
             val things = inside[i].map { Thing(it) }
             val holes = holes(inside[i].map { it.startMs to min(it.coveredEndMs, s.endMs) }, s.startMs, s.endMs, minGapMs)
-                .map { (a, b) -> Gap("gap$a", a, b, "Phone not used") }
+                .flatMap { (a, b) -> cutGap(a, b, offs, minGapMs, "Phone not used") }
             val id = s.visit.placeId
             Place(
                 key = "place" + s.visit.id,
@@ -159,13 +207,13 @@ object DayLayout {
         for (row in ordered) {
             val before = frontierRow
             if (before != null && row.startMs - frontier >= minGapMs) {
-                out += if (showTrips && before is Place && row is Place && before.placeId != row.placeId) {
-                    Travel(
+                if (showTrips && before is Place && row is Place && before.placeId != row.placeId) {
+                    out += Travel(
                         "unknown$frontier", frontier, row.startMs, null, before.name, row.name,
                         from = before.visit, to = row.visit, straightLineM = PlaceTrail.straightLineM(before.visit, row.visit),
                     )
                 } else {
-                    Gap("gap$frontier", frontier, row.startMs, "no place and no phone data")
+                    out += cutGap(frontier, row.startMs, offs, minGapMs, "no place and no phone data")
                 }
             }
             out += row

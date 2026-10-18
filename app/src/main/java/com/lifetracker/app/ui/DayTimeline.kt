@@ -112,7 +112,9 @@ private fun clock(ms: Long): String =
 
 private fun lengthText(ms: Long): String = formatDuration(((ms + 30_000L) / 60_000L).toInt().coerceAtLeast(1))
 
-private enum class Bar { PLACE, LINE, LINE_UNKNOWN, THING, MOMENT, GAP }
+private enum class Bar { PLACE, LINE, LINE_UNKNOWN, THING, MOMENT, GAP, QUIET }
+
+private fun gapBar(g: DayLayout.Gap) = if (g.kind == DayLayout.GapKind.NO_DATA) Bar.GAP else Bar.QUIET
 
 /** One thing on the calendar: where its line goes, and the card that sits beside it. */
 private class Slot(
@@ -166,7 +168,7 @@ fun DayCalendar(rows: List<DayLayout.Row>, a: DayActions) {
                 for (child in row.children) {
                     when (child) {
                         is DayLayout.Thing -> packed += thingSlot(child.item)
-                        is DayLayout.Gap -> packed += Slot(child.startMs, child.endMs, Bar.GAP, paper.ink2) { GapCard(child, a) }
+                        is DayLayout.Gap -> packed += Slot(child.startMs, child.endMs, gapBar(child), paper.ink2) { GapCard(child, a) }
                         else -> Unit
                     }
                 }
@@ -177,7 +179,7 @@ fun DayCalendar(rows: List<DayLayout.Row>, a: DayActions) {
                 fixed += Slot(row.startMs, row.endMs, if (unknown) Bar.LINE_UNKNOWN else Bar.LINE, if (unknown) paper.sun else paper.ink2) { TravelCard(row, a) }
             }
             is DayLayout.Thing -> packed += thingSlot(row.item)
-            is DayLayout.Gap -> fixed += Slot(row.startMs, row.endMs, Bar.GAP, paper.ink2) { GapCard(row, a) }
+            is DayLayout.Gap -> fixed += Slot(row.startMs, row.endMs, gapBar(row), paper.ink2) { GapCard(row, a) }
         }
     }
     if (fixed.isEmpty() && packed.isEmpty()) return
@@ -217,6 +219,10 @@ fun DayCalendar(rows: List<DayLayout.Row>, a: DayActions) {
                         Bar.LINE, Bar.LINE_UNKNOWN -> drawLine(
                             s.color, Offset(x + BAR_WIDTH.toPx() / 2, top), Offset(x + BAR_WIDTH.toPx() / 2, top + height), 2.5.dp.toPx(),
                         )
+                        Bar.QUIET -> {
+                            drawRect(hatch.copy(alpha = 0.08f), Offset(x, top), androidx.compose.ui.geometry.Size(BAR_WIDTH.toPx(), height))
+                            drawRect(outline, Offset(x, top), androidx.compose.ui.geometry.Size(BAR_WIDTH.toPx(), height), style = Stroke(1.dp.toPx()))
+                        }
                         Bar.GAP -> {
                             val w = BAR_WIDTH.toPx()
                             clipRect(x, top, x + w, top + height) {
@@ -533,7 +539,16 @@ private fun GapCard(gap: DayLayout.Gap, a: DayActions) {
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 9.dp, vertical = 7.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                Text(text = "No data", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = paper.ink)
+                Text(
+                    text = when (gap.kind) {
+                        DayLayout.GapKind.OFFLINE -> "Offline"
+                        DayLayout.GapKind.PHONE_OFF -> "Phone off"
+                        DayLayout.GapKind.NO_DATA -> "No data"
+                    },
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = paper.ink,
+                )
                 Text(text = gap.note, fontSize = 11.sp, color = paper.ink2)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(text = lengthText(gap.endMs - gap.startMs), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = paper.ink2)

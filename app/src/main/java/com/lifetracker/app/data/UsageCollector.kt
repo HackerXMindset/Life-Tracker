@@ -22,6 +22,7 @@ object UsageCollector {
     // Android's event numbers, written out so this builds on every Android version the app supports.
     private const val ACTIVITY_RESUMED = 1
     private const val ACTIVITY_PAUSED = 2
+    private const val SCREEN_INTERACTIVE = 15
     private const val SCREEN_NON_INTERACTIVE = 16
     private const val ACTIVITY_STOPPED = 23
     private const val DEVICE_SHUTDOWN = 26
@@ -32,7 +33,7 @@ object UsageCollector {
      * Raise this when the rules that turn events into sessions change. The next sync then builds the days Android still
      * remembers again, so they are counted the new way. Days Android no longer remembers are left exactly as they are.
      */
-    private const val REBUILD_VERSION = 2
+    private const val REBUILD_VERSION = 3
 
     private const val FIRST_LOOKBACK_MS = 14L * 24 * 60 * 60 * 1000
     private const val MAX_LOOKBACK_MS = 30L * 24 * 60 * 60 * 1000
@@ -79,13 +80,17 @@ object UsageCollector {
         val settings = UsageSettings(context)
         val rebuild = settings.rebuiltVersion < REBUILD_VERSION
         val latest = dao.latestStart()
+        val latestState = dao.latestStateStart()
         val from = when {
             rebuild || latest == null -> now - FIRST_LOOKBACK_MS
-            else -> maxOf(latest - 5_000L, now - MAX_LOOKBACK_MS)
+            // Also read back to where the newest off period began, so one that was still going is extended.
+            else -> maxOf(minOf(latest, latestState ?: latest) - 5_000L, now - MAX_LOOKBACK_MS)
         }
 
+        val skip = skipPackages(context)
         val events = readEvents(context, from, now)
-        val sessions = UsageSessions.build(events, now, skipPackages(context))
+        val sessions = UsageSessions.build(events, now, skip)
+        val states = UsageStates.build(events, now, skip)
         val known = dao.allApps().associateBy { it.pkg }
         val pm = context.packageManager
         val apps = sessions.map { it.pkg }.distinct().mapNotNull { pkg ->
@@ -103,6 +108,7 @@ object UsageCollector {
             // old rules, so it is replaced. Anything before the first event is not touched.
             if (rebuild && events.isNotEmpty()) dao.deleteSessionsFrom(events.first().time)
             dao.upsertSessions(sessions)
+            dao.upsertStates(states)
         }
         if (rebuild && events.isNotEmpty()) settings.rebuiltVersion = REBUILD_VERSION
         sessions.size
@@ -132,7 +138,9 @@ object UsageCollector {
                 ACTIVITY_RESUMED -> RawType.RESUME
                 ACTIVITY_PAUSED -> RawType.PAUSE
                 ACTIVITY_STOPPED -> RawType.STOP
-                SCREEN_NON_INTERACTIVE, KEYGUARD_SHOWN -> RawType.SCREEN_OFF
+                SCREEN_NON_INTERACTIVE -> RawType.SCREEN_OFF
+                SCREEN_INTERACTIVE -> RawType.SCREEN_ON
+                KEYGUARD_SHOWN -> RawType.LOCK
                 DEVICE_SHUTDOWN -> RawType.SHUTDOWN
                 DEVICE_STARTUP -> RawType.STARTUP
                 else -> null
