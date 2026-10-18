@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -98,8 +99,6 @@ class DayActions(
     val onEditTrip: (TripEntity) -> Unit,
 )
 
-private val RAIL_WIDTH = 12.dp
-private val GAP = 10.dp
 private val TIME_WIDTH = 58.dp
 private val PLACE_COLORS = listOf(
     Color(0xFF8E94E8), Color(0xFF4FB38A), Color(0xFFE0A84A), Color(0xFFE08A5F), Color(0xFFD27BA8), Color(0xFF62A9D6),
@@ -113,20 +112,154 @@ private fun clock(ms: Long): String =
 
 private fun lengthText(ms: Long): String = formatDuration(((ms + 30_000L) / 60_000L).toInt().coerceAtLeast(1))
 
-/** One top-level row of the day: a place block, a journey, a loose item or a gap. */
-@Composable
-fun DayRow(row: DayLayout.Row, a: DayActions) {
-    when (row) {
-        is DayLayout.Place -> PlaceBlock(row, a)
-        is DayLayout.Travel -> TravelCard(row, a)
-        is DayLayout.Thing -> Indented { ThingRow(row.item, a) }
-        is DayLayout.Gap -> Indented { GapRow(row, a) }
-    }
+private enum class Bar { PLACE, LINE, LINE_UNKNOWN, THING, MOMENT, GAP }
+
+/** One thing on the calendar: where its line goes, and the card that sits beside it. */
+private class Slot(
+    val startMs: Long,
+    val endMs: Long,
+    val bar: Bar,
+    val color: Color,
+    val card: @Composable () -> Unit,
+) {
+    var lane: Int = 0
 }
 
+private val RULER_WIDTH = 40.dp
+private val LANE_WIDTH = 10.dp
+private val BAR_WIDTH = 7.dp
+private const val HOUR_MS = 3_600_000L
+
+private fun hourFloor(ms: Long): Long =
+    Instant.ofEpochMilli(ms).atZone(ZoneId.systemDefault()).truncatedTo(java.time.temporal.ChronoUnit.HOURS).toInstant().toEpochMilli()
+
+/**
+ * The whole day as a calendar: an hour line every 60 dp (one minute is one dp, with no minimum and no maximum), a line for
+ * every place, journey, phone period, call and so on that starts and ends at its real time, and a card beside it at its
+ * start time. Things that overlap in time sit side by side. A card that would touch the one above it moves down just enough,
+ * and the times written on every card are always the real ones.
+ */
 @Composable
-private fun Indented(content: @Composable () -> Unit) {
-    Box(modifier = Modifier.fillMaxWidth().padding(start = RAIL_WIDTH + GAP)) { content() }
+fun DayCalendar(rows: List<DayLayout.Row>, a: DayActions) {
+    val paper = LocalPaper.current
+    val fixed = ArrayList<Slot>()
+    val packed = ArrayList<Slot>()
+
+    @Composable
+    fun thingSlot(item: DayLayout.Item): Slot {
+        val look = describe(item, a)
+        val moment = !item.showEnd || item.endMs <= item.startMs
+        return Slot(
+            startMs = item.startMs,
+            endMs = if (moment) item.coveredEndMs else item.endMs,
+            bar = if (moment) Bar.MOMENT else Bar.THING,
+            color = look.color,
+            card = { ThingCard(item, look) },
+        )
+    }
+
+    for (row in rows) {
+        when (row) {
+            is DayLayout.Place -> {
+                val chosen = TimelineEdits.category(a.edits[TimelineEdits.key(TimelineEdits.VISIT, row.visit.id)])?.let { a.types.byId(it) }
+                fixed += Slot(row.startMs, row.endMs, Bar.PLACE, chosen?.displayColor() ?: placeColorOf(row.name)) { PlaceCard(row, chosen, a) }
+                for (child in row.children) {
+                    when (child) {
+                        is DayLayout.Thing -> packed += thingSlot(child.item)
+                        is DayLayout.Gap -> packed += Slot(child.startMs, child.endMs, Bar.GAP, paper.ink2) { GapCard(child, a) }
+                        else -> Unit
+                    }
+                }
+            }
+            is DayLayout.Travel -> {
+                val trip = row.trip
+                val unknown = trip == null || (trip.mode == "vehicle" && trip.modeSource != "you")
+                fixed += Slot(row.startMs, row.endMs, if (unknown) Bar.LINE_UNKNOWN else Bar.LINE, if (unknown) paper.sun else paper.ink2) { TravelCard(row, a) }
+            }
+            is DayLayout.Thing -> packed += thingSlot(row.item)
+            is DayLayout.Gap -> fixed += Slot(row.startMs, row.endMs, Bar.GAP, paper.ink2) { GapCard(row, a) }
+        }
+    }
+    if (fixed.isEmpty() && packed.isEmpty()) return
+
+    val packedLanes = DayLayout.lanes(packed.map { it.startMs to maxOf(it.endMs, it.startMs + 60_000L) })
+    packed.forEachIndexed { i, s -> s.lane = packedLanes[i] + 1 }
+    val slots = (fixed + packed).sortedBy { it.startMs }
+    val laneCount = (slots.maxOf { it.lane } + 1).coerceAtLeast(1)
+    val from = hourFloor(slots.minOf { it.startMs })
+    val to = maxOf(hourFloor(slots.maxOf { it.endMs } - 1) + HOUR_MS, from + HOUR_MS)
+    val hours = generateSequence(from) { it + HOUR_MS }.takeWhile { it <= to }.toList()
+    val labelColor = paper.ink2
+    val hourLine = paper.line.copy(alpha = 0.6f)
+    val outline = paper.line
+    val hatch = paper.ink2.copy(alpha = 0.18f)
+
+    androidx.compose.ui.layout.Layout(
+        modifier = Modifier
+            .fillMaxWidth()
+            .drawBehind {
+                val perMin = 1.dp.toPx()
+                fun y(ms: Long) = (ms - from) / 60_000f * perMin
+                val railLeft = RULER_WIDTH.toPx()
+                hours.forEach { h ->
+                    drawLine(hourLine, Offset(railLeft, y(h)), Offset(size.width, y(h)), 1.dp.toPx())
+                }
+                for (s in slots) {
+                    val x = railLeft + s.lane * LANE_WIDTH.toPx() + (LANE_WIDTH.toPx() - BAR_WIDTH.toPx()) / 2
+                    val top = y(s.startMs)
+                    val height = (s.endMs - s.startMs) / 60_000f * perMin
+                    when (s.bar) {
+                        Bar.PLACE, Bar.THING -> drawRoundRect(
+                            s.color, Offset(x, top), androidx.compose.ui.geometry.Size(BAR_WIDTH.toPx(), height),
+                            CornerRadius(BAR_WIDTH.toPx() / 2),
+                        )
+                        Bar.MOMENT -> drawCircle(s.color, 4.dp.toPx(), Offset(x + BAR_WIDTH.toPx() / 2, top))
+                        Bar.LINE, Bar.LINE_UNKNOWN -> drawLine(
+                            s.color, Offset(x + BAR_WIDTH.toPx() / 2, top), Offset(x + BAR_WIDTH.toPx() / 2, top + height), 2.5.dp.toPx(),
+                        )
+                        Bar.GAP -> {
+                            val w = BAR_WIDTH.toPx()
+                            clipRect(x, top, x + w, top + height) {
+                                var k = -w
+                                while (k < height + w) {
+                                    drawLine(hatch, Offset(x, top + k + w), Offset(x + w, top + k), 1.dp.toPx())
+                                    k += 5.dp.toPx()
+                                }
+                            }
+                            drawRect(outline, Offset(x, top), androidx.compose.ui.geometry.Size(w, height), style = Stroke(1.dp.toPx()))
+                        }
+                    }
+                }
+            },
+        content = {
+            hours.forEach { Text(text = clock(it), fontSize = 9.sp, color = labelColor, maxLines = 1) }
+            slots.forEach { s -> Box { s.card() } }
+        },
+    ) { measurables, constraints ->
+        val perMin = 1.dp.toPx()
+        val cardX = (RULER_WIDTH + LANE_WIDTH * laneCount + 6.dp).roundToPx()
+        val cardWidth = (constraints.maxWidth - cardX).coerceAtLeast(0)
+        val labels = measurables.take(hours.size).map { it.measure(androidx.compose.ui.unit.Constraints(maxWidth = RULER_WIDTH.roundToPx())) }
+        val cards = measurables.drop(hours.size).map {
+            it.measure(androidx.compose.ui.unit.Constraints(minWidth = cardWidth, maxWidth = cardWidth))
+        }
+        val ys = ArrayList<Int>()
+        var previousBottom = 0
+        cards.forEachIndexed { i, card ->
+            val wanted = ((slots[i].startMs - from) / 60_000f * perMin).toInt()
+            val y = maxOf(wanted, previousBottom)
+            ys += y
+            previousBottom = y + card.height
+        }
+        val barsHeight = ((to - from) / 60_000f * perMin).toInt()
+        layout(constraints.maxWidth, maxOf(barsHeight, previousBottom)) {
+            labels.forEachIndexed { i, label ->
+                val y = ((hours[i] - from) / 60_000f * perMin).toInt() - label.height / 2
+                label.place(0, y.coerceAtLeast(0))
+            }
+            cards.forEachIndexed { i, card -> card.place(cardX, ys[i]) }
+        }
+    }
 }
 
 /** A hand-drawn outline in pen, always drawn as one continuous stroke. */
@@ -136,67 +269,42 @@ private fun Modifier.penOutline(shape: Shape, color: Color, width: Dp = 1.25.dp)
 }
 
 @Composable
-private fun PlaceBlock(p: DayLayout.Place, a: DayActions) {
+private fun PlaceCard(p: DayLayout.Place, chosen: ActivityTypeEntity?, a: DayActions) {
     val paper = LocalPaper.current
-    val chosen = TimelineEdits.category(a.edits[TimelineEdits.key(TimelineEdits.VISIT, p.visit.id)])?.let { a.types.byId(it) }
-    val color = chosen?.displayColor() ?: placeColorOf(p.name)
     val shape = Wobble.Small
-    Row(
-        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
-        horizontalArrangement = Arrangement.spacedBy(GAP),
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 3.dp)
+            .background(paper.surface.copy(alpha = 0.55f), shape)
+            .penOutline(shape, paper.line)
+            .padding(start = 10.dp, end = 10.dp, top = 4.dp, bottom = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        // A tall bar the length of the stay.
-        Box(
-            modifier = Modifier
-                .width(RAIL_WIDTH)
-                .fillMaxHeight()
-                .pencilShadow(shape, paper.pencil, 1.dp, 2.dp)
-                .background(color, shape),
-        )
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .heightIn(min = 64.dp)
-                .background(paper.surface.copy(alpha = 0.55f), shape)
-                .penOutline(shape, paper.line)
-                .padding(start = 10.dp, end = 10.dp, top = 4.dp, bottom = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+        Row(
+            modifier = Modifier.fillMaxWidth().clickable { a.onEditPlace(p) }.padding(top = 5.dp, bottom = 2.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().clickable { a.onEditPlace(p) }.padding(top = 5.dp, bottom = 2.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(text = p.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = paper.ink)
-                    Text(
-                        text = clock(p.startMs) + " to " + (if (p.ongoing) "now" else clock(p.endMs)) +
-                            (if (chosen != null) " · " + chosen.name else "") +
-                            (if (!p.named) " · tap to edit or name it" else ""),
-                        fontSize = 11.sp,
-                        color = paper.ink2,
-                    )
-                }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = p.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = paper.ink)
                 Text(
-                    text = PlaceRules.durationText(p.endMs - p.startMs),
-                    modifier = Modifier.padding(start = 8.dp),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = paper.ink,
+                    text = clock(p.startMs) + " to " + (if (p.ongoing) "now" else clock(p.endMs)) +
+                        (if (chosen != null) " · " + chosen.name else "") +
+                        (if (!p.named) " · tap to edit or name it" else ""),
+                    fontSize = 11.sp,
+                    color = paper.ink2,
                 )
             }
-            if (p.children.isEmpty()) {
-                Text(text = "Nothing else recorded here.", fontSize = 12.sp, color = paper.ink2, modifier = Modifier.padding(vertical = 6.dp))
-            }
-            p.children.forEach { child ->
-                when (child) {
-                    is DayLayout.Thing -> ThingRow(child.item, a)
-                    is DayLayout.Gap -> GapRow(child, a)
-                    else -> Unit
-                }
-            }
-            if (p.ongoing) NowRow()
+            Text(
+                text = PlaceRules.durationText(p.endMs - p.startMs),
+                modifier = Modifier.padding(start = 8.dp),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = paper.ink,
+            )
         }
+        if (p.ongoing) NowRow()
     }
 }
 
@@ -340,38 +448,18 @@ private fun TimeColumn(startMs: Long, endMs: Long?) {
     }
 }
 
-/** The coloured line beside every card, always drawn as one continuous stroke. */
 @Composable
-private fun SegmentLine(color: Color) {
-    Box(
-        modifier = Modifier
-            .width(8.dp)
-            .fillMaxHeight()
-            .padding(top = 8.dp, bottom = 4.dp)
-            .drawBehind {
-                drawRoundRect(color, cornerRadius = CornerRadius(4.dp.toPx()))
-            },
-    )
-}
-
-@Composable
-private fun ThingRow(item: DayLayout.Item, a: DayActions) {
+private fun ThingCard(item: DayLayout.Item, look: Look) {
     val paper = LocalPaper.current
-    val look = describe(item, a)
     val shape = Wobble.Small
-    // The taller the stretch, the taller its row (half a dp per minute, between 46 and 150).
-    val minutes = ((item.endMs - item.startMs) / 60_000L).toInt()
-    val minHeight = (minutes * 0.5f).coerceIn(46f, 150f).dp
     Row(
-        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min).heightIn(min = minHeight),
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         TimeColumn(item.startMs, if (item.showEnd) item.endMs else null)
-        SegmentLine(look.color)
         Box(
             modifier = Modifier
                 .weight(1f)
-                .fillMaxHeight()
                 .padding(vertical = 4.dp)
                 .background(paper.surface, shape)
                 .penOutline(shape, paper.line)
@@ -425,44 +513,32 @@ private fun ThingRow(item: DayLayout.Item, a: DayActions) {
 }
 
 @Composable
-private fun GapRow(gap: DayLayout.Gap, a: DayActions) {
+private fun GapCard(gap: DayLayout.Gap, a: DayActions) {
     val paper = LocalPaper.current
     val shape = Wobble.Small
-    val hatch = paper.ink2.copy(alpha = 0.14f)
     Row(
-        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         TimeColumn(gap.startMs, gap.endMs)
-        Spacer(Modifier.width(8.dp))
         Box(
             modifier = Modifier
                 .weight(1f)
                 .padding(vertical = 4.dp)
                 .penOutline(shape, paper.line)
                 .clip(shape)
-                .drawBehind {
-                    // Faint slanted pencil lines, the way the demo marks "no data".
-                    val step = 7.dp.toPx()
-                    var x = -size.height
-                    while (x < size.width) {
-                        drawLine(hatch, Offset(x, size.height), Offset(x + size.height, 0f), 1.dp.toPx())
-                        x += step
-                    }
-                }
                 .clickable { a.onFillIn(gap.startMs, gap.endMs) },
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().heightIn(min = 40.dp).padding(horizontal = 9.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 9.dp, vertical = 7.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(text = "No data", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = paper.ink)
-                    Text(text = gap.note, fontSize = 11.sp, color = paper.ink2)
+                Text(text = "No data", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = paper.ink)
+                Text(text = gap.note, fontSize = 11.sp, color = paper.ink2)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(text = lengthText(gap.endMs - gap.startMs), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = paper.ink2)
+                    PaperPill("+ Fill in", false, { a.onFillIn(gap.startMs, gap.endMs) })
                 }
-                Text(text = lengthText(gap.endMs - gap.startMs), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = paper.ink2)
-                PaperPill("+ Fill in", false, { a.onFillIn(gap.startMs, gap.endMs) })
             }
         }
     }
@@ -487,27 +563,8 @@ private fun TravelCard(t: DayLayout.Travel, a: DayActions) {
         else -> TripModes.label(trip.mode) + (if (trip.modeSource == "you") "" else " (guess)") + " · $length · " + TripRules.distanceText(trip.distanceM)
     }
     val shape = Wobble.Small
-    val lineColor = if (unknown) paper.sun else paper.ink2
-    Row(
-        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
-        horizontalArrangement = Arrangement.spacedBy(GAP),
-    ) {
-        // A continuous line under the place bars: the way from one place to the next.
-        Box(
-            modifier = Modifier
-                .width(RAIL_WIDTH)
-                .fillMaxHeight()
-                .heightIn(min = 46.dp)
-                .drawBehind {
-                    drawLine(
-                        color = lineColor,
-                        start = Offset(size.width / 2, 0f),
-                        end = Offset(size.width / 2, size.height),
-                        strokeWidth = 2.5.dp.toPx(),
-                    )
-                },
-        )
-        Column(modifier = Modifier.weight(1f).padding(vertical = 3.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    run {
+        Column(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()

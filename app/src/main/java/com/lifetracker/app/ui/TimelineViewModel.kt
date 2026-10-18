@@ -20,6 +20,7 @@ import com.lifetracker.app.data.StepDayEntity
 import com.lifetracker.app.data.TodoEntity
 import com.lifetracker.app.data.TripEntity
 import com.lifetracker.app.data.UsageAppEntity
+import com.lifetracker.app.data.UsageComboEntity
 import com.lifetracker.app.data.UsageDays
 import java.time.ZoneId
 import java.time.LocalDate
@@ -70,8 +71,8 @@ class TimelineViewModel(app: Application) : AndroidViewModel(app) {
             val zone = ZoneId.systemDefault()
             val start = d.atStartOfDay(zone).toInstant().toEpochMilli()
             val end = d.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
-            combine(db.usageDao().sessionsBetween(start, end), db.usageDao().observeApps()) { sessions, apps ->
-                UsageDays.build(sessions, apps.associateBy { it.pkg }, start, end)
+            combine(db.usageDao().sessionsBetween(start, end), db.usageDao().observeApps(), db.usageDao().observeCombos()) { sessions, apps, combos ->
+                UsageDays.build(sessions, apps.associateBy { it.pkg }, start, end, combos = combos.map { it.toCombo() })
             }
         },
     )
@@ -193,6 +194,19 @@ class TimelineViewModel(app: Application) : AndroidViewModel(app) {
     /** Every app the phone-usage copy has seen, by package name, so a block on the Timeline can be edited. */
     val usageApps: StateFlow<Map<String, UsageAppEntity>> =
         share(emptyMap(), db.usageDao().observeApps().map { list -> list.associateBy { it.pkg } })
+
+    /** The combinations of apps you named. */
+    val usageCombos: StateFlow<List<UsageComboEntity>> = share(emptyList(), db.usageDao().observeCombos())
+
+    /** Saves a combination (a new one, or a changed one with the same id). It applies to every day. */
+    fun saveCombo(combo: UsageComboEntity) {
+        viewModelScope.launch { db.usageDao().upsertCombo(combo.copy(updatedMs = System.currentTimeMillis())) }
+    }
+
+    /** Stops counting apps together; only the rule goes, every saved session stays. */
+    fun deleteCombo(id: String) {
+        viewModelScope.launch { db.usageDao().deleteCombo(id) }
+    }
 
     /** Files an app under a category ("" for none); it applies to every day, past and future. */
     fun linkApp(app: UsageAppEntity, activityId: String) {

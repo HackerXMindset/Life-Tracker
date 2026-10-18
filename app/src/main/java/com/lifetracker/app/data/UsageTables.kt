@@ -45,6 +45,28 @@ data class UsageAppEntity(
     val ignored: Boolean,
 )
 
+/**
+ * A combination of apps you named (added in database version 16). When these apps are used together, the whole period
+ * counts as [activityId]. [pkgs] holds the package names joined by commas. Nothing in the saved sessions changes: the
+ * rule is applied each time a day is drawn, so naming one also changes the past days.
+ */
+@Entity(tableName = "usage_combos")
+data class UsageComboEntity(
+    @PrimaryKey val id: String,
+    val name: String,
+    val pkgs: String,
+    val activityId: String,
+    val updatedMs: Long,
+) {
+    val pkgSet: Set<String> get() = pkgs.split(',').filter { it.isNotEmpty() }.toSet()
+
+    fun toCombo() = UsageDays.Combo(id, pkgSet, activityId)
+
+    companion object {
+        fun joinPkgs(set: Collection<String>) = set.toSortedSet().joinToString(",")
+    }
+}
+
 @Dao
 interface UsageDao {
     /** Sessions that overlap [from, to). */
@@ -85,4 +107,21 @@ interface UsageDao {
 
     @Query("DELETE FROM usage_apps")
     suspend fun deleteAllApps()
+
+    @Query("SELECT * FROM usage_combos ORDER BY name COLLATE NOCASE")
+    fun observeCombos(): Flow<List<UsageComboEntity>>
+
+    @Query("SELECT * FROM usage_combos ORDER BY id")
+    suspend fun allCombos(): List<UsageComboEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertCombo(combo: UsageComboEntity)
+
+    /** Restoring a backup only adds combinations; one already on this phone is kept as it is. */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertMissingCombos(combos: List<UsageComboEntity>)
+
+    /** Removes only the rule. Every saved session stays, and the days are simply drawn without it. */
+    @Query("DELETE FROM usage_combos WHERE id = :id")
+    suspend fun deleteCombo(id: String)
 }

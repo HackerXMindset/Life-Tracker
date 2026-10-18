@@ -31,4 +31,9 @@ class UsageSettings(context: Context) {
     var promptDismissed: Boolean
         get() = prefs.getBoolean("prompt_dismissed", false)
         set(value) = prefs.edit { putBoolean("prompt_dismissed", value) }
+
+    /** Combination suggestions you tapped "Not now" on, as app sets (see UsageCombos.keyOf). */
+    var dismissedCombos: Set<String>
+        get() = prefs.getStringSet("dismissed_combos", emptySet()) ?: emptySet()
+        set(value) = prefs.edit { putStringSet("dismissed_combos", value) }
 }

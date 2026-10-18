@@ -90,6 +90,7 @@ import com.lifetracker.app.data.TripModes
 import com.lifetracker.app.data.TripRules
 import com.lifetracker.app.data.UsageCollector
 import com.lifetracker.app.data.UsageAppEntity
+import com.lifetracker.app.data.UsageCombos
 import com.lifetracker.app.data.UsageDays
 import com.lifetracker.app.data.UsageSettings
 import androidx.compose.ui.platform.LocalContext
@@ -204,10 +205,12 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
     var toDelete by remember { mutableStateOf<EntryEntity?>(null) }
     var editEntry by remember { mutableStateOf<EntryEntity?>(null) }
     var editApp by remember { mutableStateOf<UsageAppEntity?>(null) }
+    var comboFor by remember { mutableStateOf<UsageDays.Block?>(null) }
     var fillIn by remember { mutableStateOf<Pair<Long, Long>?>(null) }
     var editTarget by remember { mutableStateOf<EditTarget?>(null) }
     var showHidden by remember { mutableStateOf(false) }
     val usageApps by vm.usageApps.collectAsState()
+    val combos by vm.usageCombos.collectAsState()
 
     // The three numbers at the top: steps, time on the phone, and time studying (what you logged plus apps linked to Study).
     val stepCount = steps?.steps ?: 0
@@ -344,9 +347,14 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
                 DayLayout.Kind.PHONE -> (item.ref as UsageDays.Block).let { b ->
                     editTarget = target(
                         TimelineEdits.APP, TimelineEdits.appRef(b.pkg, b.refStartMs), b.label, b.startMs, b.endMs,
-                        extraLabel = if (b.apps.size > 1) null else "Set this app's category on every day",
-                        onExtra = if (b.apps.size > 1) null else {
-                            { editApp = usageApps[b.pkg] ?: UsageAppEntity(b.pkg, b.label, "", false) }
+                        extraLabel = when {
+                            b.apps.size < 2 -> "Set this app's category on every day"
+                            b.comboId.isEmpty() -> "Always count this combination as..."
+                            else -> "Change this combination"
+                        },
+                        onExtra = {
+                            if (b.apps.size > 1) comboFor = b
+                            else editApp = usageApps[b.pkg] ?: UsageAppEntity(b.pkg, b.label, "", false)
                         },
                     )
                 }
@@ -408,7 +416,7 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
                     }
                 }
             } else {
-                items(rows, key = { it.key }) { row -> DayRow(row, actions) }
+                item(key = "calendar") { DayCalendar(rows, actions) }
                 if (anyTimeTodos.isNotEmpty()) {
                     item(key = "todos-header") {
                         PaperSection("To do on this day", if (plannedMinutes > 0) "${formatDuration(plannedMinutes)} planned" else null)
@@ -570,6 +578,24 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
             onLink = { vm.linkApp(app, it) },
             onIgnore = { vm.setAppIgnored(app, it) },
             onDismiss = { editApp = null },
+        )
+    }
+
+    comboFor?.let { b ->
+        val existing = combos.firstOrNull { it.id == b.comboId }
+        val (suggestedName, suggestedActivity) = UsageCombos.suggestionFor(b, types)
+        val choices = (b.apps.map { it.pkg to it.label } + (existing?.pkgSet.orEmpty().map { it to (usageApps[it]?.label ?: it) })).distinctBy { it.first }
+        ComboDialog(
+            existing = existing,
+            apps = choices,
+            initialPkgs = existing?.pkgSet ?: UsageCombos.mainApps(b).map { it.pkg }.toSet(),
+            initialName = existing?.name ?: suggestedName,
+            initialActivityId = existing?.activityId ?: suggestedActivity,
+            note = if (existing == null && suggestedActivity.isNotEmpty()) "Suggested from a built-in example. Change anything you like." else null,
+            types = types,
+            onSave = vm::saveCombo,
+            onDelete = existing?.let { e -> { vm.deleteCombo(e.id) } },
+            onDismiss = { comboFor = null },
         )
     }
 

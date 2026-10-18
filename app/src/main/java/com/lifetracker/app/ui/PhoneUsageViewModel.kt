@@ -7,8 +7,11 @@ import com.lifetracker.app.data.ActivityTypeEntity
 import com.lifetracker.app.data.AppDatabase
 import com.lifetracker.app.data.UsageAppEntity
 import com.lifetracker.app.data.UsageCollector
+import com.lifetracker.app.data.UsageComboEntity
+import com.lifetracker.app.data.UsageCombos
 import com.lifetracker.app.data.UsageDays
 import com.lifetracker.app.data.UsageSettings
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.LocalDateTime
@@ -64,6 +67,48 @@ class PhoneUsageViewModel(private val app: Application) : AndroidViewModel(app) 
             }
         },
     )
+
+    /** The combinations you named. */
+    val combos: StateFlow<List<UsageComboEntity>> = share(emptyList(), dao.observeCombos())
+
+    private val dismissedFlow = MutableStateFlow(settings.dismissedCombos)
+
+    /** Combinations worth naming, from the last days of use and the built-in examples. */
+    val suggestions: StateFlow<List<UsageCombos.Suggestion>> = share(
+        emptyList(),
+        run {
+            val zone = ZoneId.systemDefault()
+            val today = LocalDate.now(zone)
+            val from = today.minusDays(UsageCombos.LOOKBACK_DAYS.toLong() - 1).atStartOfDay(zone).toInstant().toEpochMilli()
+            val to = today.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+            combine(dao.sessionsBetween(from, to), dao.observeApps(), dao.observeCombos(), db.activityDao().observeAll(), dismissedFlow) { sessions, list, named, types, dismissed ->
+                val byPkg = list.associateBy { it.pkg }
+                val rules = named.map { it.toCombo() }
+                val days = (0 until UsageCombos.LOOKBACK_DAYS).map { back ->
+                    val day = today.minusDays(back.toLong())
+                    val s = day.atStartOfDay(zone).toInstant().toEpochMilli()
+                    val e = day.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+                    UsageDays.build(sessions.filter { it.endMs > s && it.startMs < e }, byPkg, s, e, combos = rules)
+                }
+                UsageCombos.suggest(days, named, types, dismissed)
+            }
+        },
+    )
+
+    fun saveCombo(combo: UsageComboEntity) {
+        viewModelScope.launch { dao.upsertCombo(combo.copy(updatedMs = System.currentTimeMillis())) }
+    }
+
+    fun deleteCombo(id: String) {
+        viewModelScope.launch { dao.deleteCombo(id) }
+    }
+
+    /** "Not now" on a suggestion: it is not shown again. Naming it later from the Timeline still works. */
+    fun dismissSuggestion(key: String) {
+        val next = settings.dismissedCombos + key
+        settings.dismissedCombos = next
+        dismissedFlow.value = next
+    }
 
     /** Android's own total for the chosen days, for the "check against Android" line. Null while loading or without access. */
     @OptIn(ExperimentalCoroutinesApi::class)

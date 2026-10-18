@@ -177,4 +177,26 @@ class DayLayoutTest {
         val rows = build(items = listOf(item("far", 300, 330)), visits = listOf(visit("v1", "home", 0, 60)))
         assertTrue(rows.any { it is DayLayout.Thing })
     }
+
+    @Test
+    fun stretchesThatOverlapSitInSeparateLanes() {
+        val m = 60_000L
+        val lanes = DayLayout.lanes(listOf(0L to 30 * m, 10 * m to 40 * m, 20 * m to 25 * m))
+        assertEquals(listOf(0, 1, 2), lanes)
+    }
+
+    @Test
+    fun stretchesOneAfterAnotherShareALane() {
+        val m = 60_000L
+        val lanes = DayLayout.lanes(listOf(0L to 10 * m, 10 * m to 20 * m, 25 * m to 30 * m))
+        assertEquals(listOf(0, 0, 0), lanes)
+    }
+
+    @Test
+    fun aFreedLaneIsUsedAgainAndTheOrderOfTheInputIsKept() {
+        val m = 60_000L
+        // Given out of order: the second starts first.
+        val lanes = DayLayout.lanes(listOf(30 * m to 50 * m, 0L to 20 * m, 10 * m to 40 * m))
+        assertEquals(listOf(0, 0, 1), lanes)
+    }
 }

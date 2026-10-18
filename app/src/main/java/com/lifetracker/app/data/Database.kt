@@ -76,6 +76,7 @@ interface EntryDao {
         MoneyEntryEntity::class,
         UsageSessionEntity::class,
         UsageAppEntity::class,
+        UsageComboEntity::class,
         CallEntity::class,
         ChargeSessionEntity::class,
         StepDayEntity::class,
@@ -87,7 +88,7 @@ interface EntryDao {
         TripPointEntity::class,
         TimelineEditEntity::class,
     ],
-    version = 15,
+    version = 16,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -119,7 +120,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "life-tracker.db",
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16)
                     .addCallback(object : RoomDatabase.Callback() {
                         // A brand new database starts with the built-in activities and money categories.
                         override fun onCreate(db: SupportSQLiteDatabase) {
@@ -366,6 +367,16 @@ val MIGRATION_11_12: Migration = object : Migration(11, 12) {
         db.execSQL(
             "CREATE TABLE IF NOT EXISTS `raw_fixes` (`ms` INTEGER NOT NULL, `lat` REAL NOT NULL, " +
                 "`lng` REAL NOT NULL, `acc` REAL NOT NULL, PRIMARY KEY(`ms`))",
+        )
+    }
+}
+
+/** Version 15 -> 16: a table for the app combinations you name. Nothing existing is touched. */
+val MIGRATION_15_16: Migration = object : Migration(15, 16) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `usage_combos` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `pkgs` TEXT NOT NULL, " +
+                "`activityId` TEXT NOT NULL, `updatedMs` INTEGER NOT NULL, PRIMARY KEY(`id`))",
         )
     }
 }

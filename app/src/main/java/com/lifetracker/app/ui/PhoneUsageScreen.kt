@@ -49,6 +49,8 @@ import android.content.ContextWrapper
 import com.lifetracker.app.data.ActivityStats
 import com.lifetracker.app.data.UsageAppEntity
 import com.lifetracker.app.data.UsageCollector
+import com.lifetracker.app.data.UsageComboEntity
+import com.lifetracker.app.data.UsageCombos
 
 internal fun Context.findLifecycleOwner(): LifecycleOwner? {
     var c: Context? = this
@@ -60,6 +62,15 @@ internal fun Context.findLifecycleOwner(): LifecycleOwner? {
 }
 
 private fun msToMinutes(ms: Long): Int = (ms / 60_000L).toInt()
+
+/** What the naming pop-up opens with: a combination you already named, or a suggestion to confirm. */
+private class ComboRequest(
+    val existing: UsageComboEntity?,
+    val pkgs: Set<String>,
+    val name: String,
+    val activityId: String,
+    val note: String?,
+)
 
 /** Settings and totals for app usage: allow access, sync, link apps to activities, choose what the Timeline shows. */
 @Composable
@@ -91,6 +102,9 @@ fun PhoneUsageScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PhoneUsageV
     androidx.compose.runtime.LaunchedEffect(hasAccess) { if (hasAccess) vm.sync() }
 
     var editing by remember { mutableStateOf<UsageAppEntity?>(null) }
+    val combos by vm.combos.collectAsState()
+    val suggestions by vm.suggestions.collectAsState()
+    var comboRequest by remember { mutableStateOf<ComboRequest?>(null) }
     val byPkg = apps.associateBy { it.pkg }
     val biggest = summary.perApp.firstOrNull()?.second ?: 1L
     val hidden = apps.filter { it.ignored }
@@ -267,6 +281,44 @@ fun PhoneUsageScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PhoneUsageV
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            item { PaperSection("Combinations", "apps used together count as one activity") }
+            items(suggestions, key = { "s" + it.key }) { s ->
+                PaperCard(modifier = Modifier.fillMaxWidth(), padding = 12.dp, shadow = false) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(s.name, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+                        Text(
+                            s.pkgs.joinToString(" + ") { byPkg[it]?.label ?: it } + " · " + s.why,
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(
+                                onClick = { comboRequest = ComboRequest(null, s.pkgs, s.name, s.activityId, "Suggested for you. Change anything you like.") },
+                            ) { Text("Name it") }
+                            TextButton(onClick = { vm.dismissSuggestion(s.key) }) { Text("Not now") }
+                        }
+                    }
+                }
+            }
+            items(combos, key = { "c" + it.id }) { c ->
+                val activity = c.activityId.takeIf { it.isNotEmpty() }?.let { types.byId(it) }
+                SettingsRow(
+                    R.drawable.ic_p_link,
+                    c.name,
+                    c.pkgSet.joinToString(" + ") { byPkg[it]?.label ?: it } + " · " + (activity?.let { "counts as ${it.name}" } ?: "no category"),
+                    onClick = { comboRequest = ComboRequest(c, c.pkgSet, c.name, c.activityId, null) },
+                )
+            }
+            if (combos.isEmpty() && suggestions.isEmpty()) {
+                item {
+                    Text(
+                        "None yet. Open an app period on the Timeline and choose \"Always count this combination as...\" to name one. " +
+                            "Suggestions appear here when the same apps are used together often.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
             if (hidden.isNotEmpty()) {
                 item { PaperSection("Apps") }
                 items(hidden, key = { "h" + it.pkg }) { app ->
@@ -280,6 +332,22 @@ fun PhoneUsageScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PhoneUsageV
                 )
             }
         }
+    }
+
+    comboRequest?.let { r ->
+        val choices = r.pkgs.map { it to (byPkg[it]?.label ?: it) }
+        ComboDialog(
+            existing = r.existing,
+            apps = (choices + apps.filter { !it.ignored && it.pkg !in r.pkgs }.map { it.pkg to it.label }.take(12)).distinctBy { it.first },
+            initialPkgs = r.pkgs,
+            initialName = r.name,
+            initialActivityId = r.activityId,
+            note = r.note,
+            types = types,
+            onSave = vm::saveCombo,
+            onDelete = r.existing?.let { e -> { vm.deleteCombo(e.id) } },
+            onDismiss = { comboRequest = null },
+        )
     }
 
     editing?.let { app ->
