@@ -14,7 +14,7 @@
 
 <p>
   <img alt="Android API 26+" src="https://img.shields.io/badge/Android-API%2026%2B-3DDC84?style=flat&logo=android&logoColor=white" />
-  <img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-7F52FF?style=flat&logo=kotlin&logoColor=white" />
+  <img alt="Kotlin" src="https://img.shields.io/badge/Language-Kotlin-7F52FF?style=flat&logo=kotlin&logoColor=white" />
   <img alt="Jetpack Compose" src="https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4?style=flat&logo=jetpackcompose&logoColor=white" />
   <img alt="On-device database" src="https://img.shields.io/badge/Storage-Room%20%2B%20SQLite-003B57?style=flat&logo=sqlite&logoColor=white" />
   <img alt="Offline first" src="https://img.shields.io/badge/Approach-Offline--first-1F6FEB?style=flat&logo=android&logoColor=white" />
@@ -85,10 +85,10 @@ Life Tracker combines a manually edited diary with records collected by Android 
 | **OpenNutriTracker** | Imports meal, nutrition-goal and activity data from its export files. |
 | **Android** | Supplies app-usage events, phone-call records, charging state and step-sensor readings, subject to the relevant permissions. |
 | **Health Connect** | Supplies steps and sleep data when another app has written those records. |
-| **OpenStreetMap** | Provides optional name hints for unnamed stops; no place is named automatically without the user choosing to use the suggestion. |
+| **OpenStreetMap** | Supplies name hints for unnamed stops when automatic tidy-up runs; suggestions are never applied without a tap. |
 | **LifeXP and Simkl** | Product inspirations only. There is no LifeXP or Simkl account sync in the current implementation. |
 
-**Core principle:** there is no Life Tracker account, subscription, or app backend. Most records are kept on the phone. The one network-based tracking helper is OpenStreetMap name lookup for unnamed places; details are in [How your data is stored and protected](#how-your-data-is-stored-and-protected).
+**Core principle:** there is no Life Tracker account, subscription, or app backend. Most records are kept on the phone. The one network-based helper is OpenStreetMap name lookup for unnamed places; details are in [How your data is stored and protected](#how-your-data-is-stored-and-protected).
 
 ---
 
@@ -249,7 +249,7 @@ Each step is small enough to build, install and try before the next begins. The 
 - the **OpenNutriTracker folder** (`Internal shared storage/OpenNutritracker`);
 - a **backup folder** on the phone, such as `Documents/LifeTracker`.
 
-Android remembers each choice, so you never pick them again. This step also adds **Back up now** and **Restore**, plus a daily automatic backup when the app is opened, with the 5 most recent copies kept. Backups stay on the device. Nothing is uploaded anywhere. (Built; the Streak and OpenNutriTracker folders are only checked in this step, and the imports follow in Steps 4 and 5.)
+Android remembers each choice, so you never pick them again. This step also adds **Back up now** and **Restore**, plus a daily automatic backup when the app is opened, with the 5 most recent copies kept. Backups stay on the device; the documented OpenStreetMap name-hint lookup is the only network-based tracking helper. (Built; the Streak and OpenNutriTracker folders are only checked in this step, and the imports follow in Steps 4 and 5.)
 
 **Step 4: Habits.** On opening, the app finds the newest Streak backup in the Streak folder and imports it: habits and their history, categories, focus sessions (as Timeline entries), to-dos and notes. The Habits tab shows streaks, totals and a 14-day row for each habit, and handles all three of your habit kinds: yes or no, the "Relap" kind, and counted habits. This was the first change to the database layout, done with a proper migration so nothing you had logged was touched.
 
@@ -652,10 +652,6 @@ These optional cards show public GitHub profile signals for the maintainer, **no
 <summary>Open GitHub activity, streak and profile cards</summary>
 
 <p align="center">
-  <img alt="HackerXMindset profile views" src="https://komarev.com/ghpvc/?username=HackerXMindset&label=profile%20views&color=7C3AED&style=flat" />
-</p>
-
-<p align="center">
   <a href="https://github.com/ashutosh00710/github-readme-activity-graph">
     <img alt="HackerXMindset GitHub activity graph" src="https://github-readme-activity-graph.vercel.app/graph?username=HackerXMindset&theme=github-compact&hide_border=true&area=true&custom_title=Maintainer%20activity" />
   </a>
@@ -679,7 +675,7 @@ These optional cards show public GitHub profile signals for the maintainer, **no
 
 ## Rules the project lives by
 
-1. **Your data stays on your phone.** No accounts, no servers, no tracking.
+1. **Your diary stays on your phone by default.** There is no account or app backend. When place tracking is active, OpenStreetMap name hints send coordinates for unnamed stops; optional README cards contact third-party image services but cannot access app records.
 2. **No data is ever lost by an update.** Every change to the database structure ships with a proper migration. Wiping and rebuilding the database is never allowed.
 3. **Small steps you can try.** Each roadmap step ends with something you can install and use.
 4. **Plain and quiet.** No ads, subscription prompts or nagging. Android-required status notifications may appear for background tracking and charging features.
