@@ -118,6 +118,7 @@ fun LifeTrackerApp() {
                     Page.Activities -> ActivitiesScreen(onBack = back)
                     Page.Timeline -> TimelineSettingsScreen(onBack = back)
                     Page.Apps -> AppsScreen(onBack = back)
+                    Page.PlaceCategories -> PlaceCategoriesScreen(onBack = back)
                     Page.Habits -> HabitsSettingsScreen(onBack = back)
                     Page.Phone -> PhoneUsageScreen(onBack = back, part = part)
                     Page.Calls -> CallsScreen(onBack = back, part = part)

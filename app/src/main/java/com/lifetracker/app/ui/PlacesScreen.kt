@@ -57,6 +57,7 @@ import java.time.ZoneId
 fun PlacesScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PlacesViewModel = viewModel()) {
     val context = LocalContext.current
     val data by vm.data.collectAsState()
+    val placeCategories by vm.categories.collectAsState()
     val clusters by vm.clusters.collectAsState()
     val range by vm.range.collectAsState()
     val trail by vm.trail.collectAsState()
@@ -355,7 +356,7 @@ fun PlacesScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PlacesViewModel
                     SettingsRow(
                         icon = null,
                         title = row.place.name + if (row.place.archived) "  (not watched)" else "",
-                        hint = "${row.place.radiusM} m circle · " + PlaceKinds.label(row.place.kind),
+                        hint = "${row.place.radiusM} m circle · " + (placeCategories.firstOrNull { it.id == row.place.kind }?.name ?: PlaceKinds.label(row.place.kind)),
                         onClick = { editing = row.place },
                     )
                 }
@@ -411,6 +412,7 @@ fun PlacesScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PlacesViewModel
             title = "Add a place",
             initial = null,
             cluster = null,
+            categories = placeCategories,
             onFetchHere = vm::fetchHere,
             onSave = { name, kind, radius, lat, lng -> vm.addPlace(name, kind, radius, lat, lng) },
             onArchiveToggle = null,
@@ -423,6 +425,7 @@ fun PlacesScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PlacesViewModel
             initial = null,
             cluster = cluster,
             suggestion = suggestions[vm.suggestionKey(cluster)],
+            categories = placeCategories,
             onFetchHere = vm::fetchHere,
             onSave = { name, kind, radius, lat, lng -> vm.addPlace(name, kind, radius, lat, lng) },
             onArchiveToggle = null,
@@ -434,6 +437,7 @@ fun PlacesScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PlacesViewModel
             title = "Edit place",
             initial = place,
             cluster = null,
+            categories = placeCategories,
             onFetchHere = vm::fetchHere,
             onSave = { name, kind, radius, lat, lng ->
                 vm.updatePlace(place.copy(name = name.trim(), kind = kind, radiusM = radius, lat = lat, lng = lng))
@@ -452,6 +456,7 @@ private fun PlaceDialog(
     initial: PlaceEntity?,
     cluster: PlaceRules.Cluster?,
     suggestion: String? = null,
+    categories: List<com.lifetracker.app.data.PlaceCategoryEntity>,
     onFetchHere: ((com.lifetracker.app.data.Fix?) -> Unit) -> Unit,
     onSave: (String, String, Int, Double, Double) -> Unit,
     onArchiveToggle: (() -> Unit)?,
@@ -488,8 +493,8 @@ private fun PlaceDialog(
                     modifier = Modifier.horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    PlaceKinds.list.forEach { k ->
-                        FilterChip(selected = kind == k.id, onClick = { kind = k.id }, label = { Text(k.label) })
+                    categories.filter { !it.archived || it.id == kind }.forEach { k ->
+                        FilterChip(selected = kind == k.id, onClick = { kind = k.id }, label = { Text(k.name) })
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

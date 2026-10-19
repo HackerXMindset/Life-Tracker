@@ -114,6 +114,8 @@ class DayActions(
     val appIcons: Map<String, String> = emptyMap(),
     /** When the phone was on charge (start, end), to show the small bolt on rows that overlap it. */
     val chargeSpans: List<Pair<Long, Long>> = emptyList(),
+    /** Each place's category look (colour, icon, name) by place id. */
+    val placeLooks: Map<String, com.lifetracker.app.data.PlaceLook> = emptyMap(),
 )
 
 private val PLACE_COLORS = listOf(
@@ -220,10 +222,12 @@ fun DayCalendar(rows: List<DayLayout.Row>, a: DayActions) {
             is DayLayout.Place -> {
                 val chosen = TimelineEdits.category(a.edits[TimelineEdits.key(TimelineEdits.VISIT, row.visit.id)])?.let { a.types.byId(it) }
                 val placeCharged = ChargeOverlap.overlapMs(row.startMs, row.endMs, a.chargeSpans).takeIf { ChargeOverlap.during(row.startMs, row.endMs, a.chargeSpans) } ?: 0L
+                val look = a.placeLooks[row.placeId]
                 val placeSlot = Slot(
-                    "p|" + row.key, row.startMs, row.endMs, Bar.PLACE, chosen?.displayColor() ?: placeColorOf(row.name),
+                    "p|" + row.key, row.startMs, row.endMs, Bar.PLACE,
+                    chosen?.displayColor() ?: look?.let { argbColor(it.color) } ?: placeColorOf(row.name),
                     label = row.name,
-                    card = { PlaceCard(row, chosen, a, placeCharged) },
+                    card = { PlaceCard(row, chosen, a, placeCharged, look) },
                 )
                 fixed += placeSlot
                 val inside = ArrayList<Slot>()
@@ -391,7 +395,7 @@ private fun Modifier.penOutline(shape: Shape, color: Color, width: Dp = 1.25.dp)
 }
 
 @Composable
-private fun PlaceCard(p: DayLayout.Place, chosen: ActivityTypeEntity?, a: DayActions, chargedMs: Long) {
+private fun PlaceCard(p: DayLayout.Place, chosen: ActivityTypeEntity?, a: DayActions, chargedMs: Long, look: com.lifetracker.app.data.PlaceLook?) {
     val paper = LocalPaper.current
     val shape = Wobble.Small
     Column(
@@ -407,11 +411,12 @@ private fun PlaceCard(p: DayLayout.Place, chosen: ActivityTypeEntity?, a: DayAct
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            if (look != null && look.icon.isNotEmpty()) IconGlyph(icon = look.icon, tint = chosen?.displayColor() ?: argbColor(look.color), size = 20.dp)
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = p.name, fontSize = 14.sp, lineHeight = 18.sp, fontWeight = FontWeight.Bold, color = paper.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(
                     text = range(p.startMs, if (p.ongoing) null else p.endMs) +
-                        (if (chosen != null) " · " + chosen.name else "") +
+                        (if (chosen != null) " · " + chosen.name else if (look != null && p.named) " · " + look.category else "") +
                         (if (!p.named) " · tap to name it" else ""),
                     fontSize = 11.sp,
                     lineHeight = 14.sp,
