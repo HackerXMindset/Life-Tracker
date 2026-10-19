@@ -147,9 +147,9 @@ private class Slot(
     val endMs: Long,
     val bar: Bar,
     val color: Color,
-    val card: @Composable () -> Unit,
     /** A place's name, written sideways on its thick bar. */
     val label: String? = null,
+    val card: @Composable () -> Unit,
 ) {
     var lane: Int = 0
 }
