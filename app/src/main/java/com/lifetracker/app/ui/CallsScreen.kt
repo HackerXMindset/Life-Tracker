@@ -60,10 +60,6 @@ fun CallsScreen(onBack: () -> Unit, part: Part = Part.Data, vm: CallsViewModel =
     BackHandler(onBack = onBack)
     StartOnToday(vm::setRange)
 
-    val askPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
-        vm.refreshAccess()
-    }
-
     // When you come back from Android's settings, check again.
     DisposableEffect(context) {
         val owner = context.findLifecycleOwner()
@@ -96,31 +92,7 @@ fun CallsScreen(onBack: () -> Unit, part: Part = Part.Data, vm: CallsViewModel =
         }
 
         if (!hasAccess) {
-            item {
-                PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text(
-                            "Allow call log access",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        Text(
-                            "The app copies your phone's call log (who, when and for how long) into its own database on this phone, so calls appear on the Timeline. " +
-                                "It also asks for contacts, only to show names instead of numbers. Nothing leaves the phone. " +
-                                "Only normal phone calls are in the call log, not WhatsApp or Telegram calls.",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Button(onClick = { askPermission.launch(CallsCollector.PERMISSIONS) }) { Text("Allow") }
-                        Text(
-                            "If nothing appears when you tap Allow, open this app's settings, choose Permissions, and allow Call logs there.",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        TextButton(onClick = { CallsCollector.openAppSettings(context) }) { Text("Open this app's settings") }
-                    }
-                }
-            }
+            item { SetupNote("Needs call log access. Allow it in Settings > Permissions, where it also says why and how.") }
             return@LazyColumn
         }
 

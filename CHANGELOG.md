@@ -2,6 +2,18 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🔐 Permissions in one place
+
+### ✨ New
+
+- **Settings > Permissions.** One page with a card for every permission: usage access, location, location all the time, physical activity, calls and contacts, notifications, unrestricted battery, Health Connect and your backup, Streak and OpenNutriTracker folders. Each card says **Allowed** or **Not allowed**, **why** the app needs it, **how** to switch it on, and has the button that opens the right Android screen. The page checks again each time you come back from Android's settings.
+- **Allow restricted settings guide.** Under Usage access, a fold-out explains the extra step Android asks for: on Android 17 open the app's page in Android Settings and use the three dots at the top right; on earlier versions it is at the very bottom of that page.
+- The Settings row says how many permissions are still off.
+
+### 🔧 Changed
+
+- Phone and usage, Calls, Charging, Steps and sleep and Places and trips no longer carry their own permission cards; each keeps one small line pointing to Settings > Permissions. Nothing is switched off and no data is touched.
+
 ## 📍 Place categories with colours
 
 ### ✨ New
