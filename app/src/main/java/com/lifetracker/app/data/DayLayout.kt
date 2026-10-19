@@ -81,7 +81,15 @@ object DayLayout {
         override val endMs: Long,
         val note: String,
         val kind: GapKind = GapKind.NO_DATA,
-    ) : Row
+        /** When several back-to-back stretches of the same kind were joined, each one (start, end); empty for a single stretch. */
+        val pieces: List<Pair<Long, Long>> = emptyList(),
+    ) : Row {
+        /** The time with nothing known: the stretches added up (the joined row also spans the small bits between them). */
+        val knownMs: Long get() = if (pieces.isEmpty()) endMs - startMs else pieces.sumOf { it.second - it.first }
+
+        /** Each stretch, whether this is one or several joined. */
+        val parts: List<Pair<Long, Long>> get() = pieces.ifEmpty { listOf(startMs to endMs) }
+    }
 
     /** A stretch when the phone was off ([shutdown] true) or its screen stayed off. */
     class Off(val startMs: Long, val endMs: Long, val shutdown: Boolean)
@@ -185,7 +193,7 @@ object DayLayout {
                 named = id.isNotEmpty(),
                 ongoing = s.visit.ongoing,
                 visit = s.visit,
-                children = (things + holes).sortedBy { it.startMs },
+                children = joinGaps((things + holes).sortedBy { it.startMs }),
             )
         }
 
@@ -221,6 +229,23 @@ object DayLayout {
             if (row.endMs > frontier) {
                 frontier = row.endMs
                 frontierRow = row
+            }
+        }
+        return joinGaps(out)
+    }
+
+    /**
+     * Back-to-back stretches of the same kind (No data, then another No data a few minutes later with nothing between)
+     * become one row that remembers each piece, so a day does not show a list of "No data" lines.
+     */
+    fun joinGaps(rows: List<Row>): List<Row> {
+        val out = ArrayList<Row>()
+        for (row in rows) {
+            val last = out.lastOrNull()
+            if (row is Gap && last is Gap && last.kind == row.kind) {
+                out[out.size - 1] = Gap(last.key, last.startMs, maxOf(last.endMs, row.endMs), last.note, last.kind, last.parts + row.parts)
+            } else {
+                out += row
             }
         }
         return out

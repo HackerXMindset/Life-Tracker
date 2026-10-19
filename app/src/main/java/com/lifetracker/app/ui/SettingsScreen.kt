@@ -23,7 +23,7 @@ import com.lifetracker.app.data.UsageCollector
 import com.lifetracker.app.ui.theme.LocalPaper
 
 /** Everything that can be opened from the Settings tab. The numbers for each live under Stats. */
-enum class Page { Phone, Steps, Places, Calls, Charging, Activities, Habits, Appearance, Backup, Timeline, Apps }
+enum class Page { Phone, Steps, Places, Calls, Charging, Activities, Habits, Appearance, Backup, Timeline, Apps, PlaceCategories, Permissions }
 
 /**
  * The Settings tab, laid out like the demo: a big title, then four groups of rows. Each row has an icon, a name, one small
@@ -38,6 +38,8 @@ fun SettingsScreen(onOpen: (Page) -> Unit) {
     val callsOn = CallsCollector.hasAccess(context)
     val chargingOn = ChargeSettings(context).track
     val fromStreak = HabitsSettings(context).source == HabitSource.Streak
+    val permStates = quickPermissionStates(context)
+    val permSummary = com.lifetracker.app.data.PermissionGuide.summary(permStates.count { it.value }, permStates.size)
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -69,6 +71,14 @@ fun SettingsScreen(onOpen: (Page) -> Unit) {
             SettingsRow(R.drawable.ic_p_link, "Apps and categories", "Which category each app counts as") { onOpen(Page.Apps) }
         }
 
+        item { PaperSection("Allowed on this phone") }
+        item {
+            SettingsRow(
+                R.drawable.ic_p_check, "Permissions",
+                "$permSummary · Why each is needed and how to switch it on",
+            ) { onOpen(Page.Permissions) }
+        }
+
         item { PaperSection("Collected from your phone") }
         item {
             SettingsRow(
@@ -82,6 +92,9 @@ fun SettingsScreen(onOpen: (Page) -> Unit) {
                 R.drawable.ic_p_pin, "Places and trips",
                 (if (places.enabled) "" else "Switched off · ") + "Permissions, battery and recording",
             ) { onOpen(Page.Places) }
+        }
+        item {
+            SettingsRow(R.drawable.ic_p_pin, "Place categories", "Colour and icon for Home, Study, Gym and your own") { onOpen(Page.PlaceCategories) }
         }
         item {
             SettingsRow(

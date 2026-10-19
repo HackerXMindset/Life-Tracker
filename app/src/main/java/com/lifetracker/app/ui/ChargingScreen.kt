@@ -55,10 +55,6 @@ fun ChargingScreen(onBack: () -> Unit, part: Part = Part.Data, vm: ChargingViewM
     BackHandler(onBack = onBack)
     StartOnToday(vm::setRange)
 
-    val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-        vm.refreshNotifications()
-    }
-
     DisposableEffect(context) {
         val owner = context.findLifecycleOwner()
         val observer = LifecycleEventObserver { _, event ->
@@ -92,30 +88,7 @@ fun ChargingScreen(onBack: () -> Unit, part: Part = Part.Data, vm: ChargingViewM
                 }
             }
             if (showBanner && !notificationsOn) {
-                item {
-                    InfoCard(
-                        title = "Allow notifications",
-                        text = "The banner is a notification. Without permission the app still records charging, but cannot ask what you plugged into.",
-                    ) {
-                        Button(onClick = {
-                            if (Build.VERSION.SDK_INT >= 33) {
-                                askNotifications.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-                            } else {
-                                context.startActivity(
-                                    Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-                                        .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                                )
-                            }
-                        }) { Text("Allow") }
-                        TextButton(onClick = {
-                            context.startActivity(
-                                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))
-                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                            )
-                        }) { Text("Open this app's settings") }
-                    }
-                }
+                item { SetupNote("The banner needs notifications. Allow them in Settings > Permissions.") }
             }
 
         }
@@ -227,17 +200,6 @@ fun ChargingScreen(onBack: () -> Unit, part: Part = Part.Data, vm: ChargingViewM
             },
             confirmButton = { TextButton(onClick = { editing = null }) { Text("Close") } },
         )
-    }
-}
-
-@Composable
-private fun InfoCard(title: String, text: String, actions: @Composable () -> Unit) {
-    PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-            Text(text, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            actions()
-        }
     }
 }
 
