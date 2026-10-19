@@ -2,6 +2,17 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📍 Place categories with colours
+
+### ✨ New
+
+- **Place categories.** Home, Study, Gym, Work, Food, Shop, Friends and family and Other now each have a colour and an icon, and you can add your own (Friend's house, Library...). Settings > **Place categories** lists them and edits them with the same colour and icon pickers.
+- **The place line takes its category's colour.** On the Timeline a stay's thick line and its icon use the category's colour; a category you pick for one particular stay still wins. The place editor lets you pick any of the categories.
+
+### 🔧 Changed
+
+- **Database 21, backups 21.** One new table. Every place keeps its category (the new table uses the old ids), nothing is removed, and older backups still restore.
+
 ## 🎨 Colours and icons the Streak way
 
 ### ✨ New

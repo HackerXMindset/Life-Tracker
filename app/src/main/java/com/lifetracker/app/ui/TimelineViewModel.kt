@@ -22,6 +22,8 @@ import com.lifetracker.app.data.TodoEntity
 import com.lifetracker.app.data.PlacesSettings
 import com.lifetracker.app.data.TripAdjust
 import com.lifetracker.app.data.TripEntity
+import com.lifetracker.app.data.PlaceLook
+import com.lifetracker.app.data.PlaceLooks
 import com.lifetracker.app.data.UsageAppEntity
 import com.lifetracker.app.data.UsageComboEntity
 import com.lifetracker.app.data.UsageDays
@@ -163,6 +165,13 @@ class TimelineViewModel(app: Application) : AndroidViewModel(app) {
     /** Place name by id, for labelling visits. */
     val placeNames: StateFlow<Map<String, String>> =
         share(emptyMap(), db.placeDao().observePlaces().map { list -> list.associate { it.id to it.name } })
+
+    /** How each place looks (its category's colour and icon), by place id. */
+    val placeLooks: StateFlow<Map<String, PlaceLook>> =
+        share(
+            emptyMap(),
+            combine(db.placeDao().observePlaces(), db.placeCategoryDao().observeAll()) { places, cats -> PlaceLooks.resolve(places, cats) },
+        )
 
     /** To-dos planned for the selected day (only to-dos with a date ever appear on the Timeline). */
     @OptIn(ExperimentalCoroutinesApi::class)

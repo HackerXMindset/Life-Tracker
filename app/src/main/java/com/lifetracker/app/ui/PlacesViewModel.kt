@@ -9,6 +9,8 @@ import com.lifetracker.app.data.FixStats
 import com.lifetracker.app.data.Gpx
 import com.lifetracker.app.data.KeepAlive
 import com.lifetracker.app.data.Fix
+import com.lifetracker.app.data.PlaceCategoryEntity
+import com.lifetracker.app.data.DefaultPlaceCategories
 import com.lifetracker.app.data.PlaceEntity
 import com.lifetracker.app.data.PlaceLookup
 import com.lifetracker.app.data.PlaceRules
@@ -467,6 +469,18 @@ class PlacesViewModel(private val app: Application) : AndroidViewModel(app) {
             if (inside.isNotEmpty()) dao.assign(inside.map { it.id }, place.id, lat, lng)
             runCatching { PlacesTracker.syncAll(app) }
             statusFlow.value = readStatus()
+        }
+    }
+
+    /** Every place category, hidden ones last. */
+    val categories: StateFlow<List<PlaceCategoryEntity>> =
+        share(DefaultPlaceCategories.list, db.placeCategoryDao().observeAll())
+
+    /** Saves a place category. A new one (sortOrder -1) goes to the end of the list. */
+    fun saveCategory(category: PlaceCategoryEntity) {
+        viewModelScope.launch {
+            val dao = db.placeCategoryDao()
+            dao.upsert(if (category.sortOrder < 0) category.copy(sortOrder = dao.maxSortOrder() + 1) else category)
         }
     }
 

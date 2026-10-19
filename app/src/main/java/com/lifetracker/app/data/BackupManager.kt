@@ -132,6 +132,7 @@ object BackupManager {
         stepDays = db.stepDao().allDays(),
         sleepNights = db.sleepDao().allNights(),
         places = db.placeDao().allPlaces(),
+        placeCategories = db.placeCategoryDao().all(),
         placeVisits = db.placeDao().allVisits(),
         trips = db.tripDao().allTrips(),
         tripPoints = db.tripDao().allPoints(),
@@ -208,6 +209,8 @@ object BackupManager {
             if (data.version >= 10) {
                 // Places are never removed, and visits only grow: restoring adds to them and keeps what you decided about a stop.
                 db.placeDao().upsertPlaces(data.places)
+                // Place categories only ever grow: restoring adds or updates them and never removes one you made since.
+                db.placeCategoryDao().upsertAll(data.placeCategories)
                 db.placeDao().insertMissingVisits(data.placeVisits)
             }
             if (data.version >= 11) {

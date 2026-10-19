@@ -37,6 +37,7 @@ data class BackupData(
     val tripPoints: List<TripPointEntity> = emptyList(),
     val rawFixes: List<RawFixEntity> = emptyList(),
     val timelineEdits: List<TimelineEditEntity> = emptyList(),
+    val placeCategories: List<PlaceCategoryEntity> = emptyList(),
 ) {
     val isEmpty: Boolean
         get() = entries.isEmpty() && habits.isEmpty() && completions.isEmpty() && categories.isEmpty() &&
@@ -51,12 +52,12 @@ data class BackupData(
  *
  * `version` lets later steps add more data without breaking old backups.
  * Version 1 held only Timeline entries; version 2 adds habits, to-dos, notes
- * and the record of what was imported; version 3 adds meals, food goals and water; version 4 adds your own activities and their goals; version 5 adds money (categories, saved items and entries); version 6 adds phone usage (sessions are stored compactly as [app, start, end]); version 7 adds phone calls (each stored as [number, name, type, start, seconds]); version 8 adds charging sessions (each stored as [start, end, startLevel, endLevel, plug, source, samples, currentSamples, sumMa, sumMv, ongoing]); version 9 adds steps (each day stored as [date, steps, source]) and sleep (each night stored as [date, start, end, source]); version 10 adds places (the ones you named) and place visits (each stored as [id, place, start, end, lat, lng, source, ongoing, ignored]); version 11 adds trips (each stored as [id, start, end, from, to, distance, medianKmh, topKmh, activity, mode, modeSource]) and the position readings of each trip (each stored as [trip, time, lat, lng, accuracy]); version 12 adds every position reading, stored compactly one day at a time (see rawFixesJson); version 13 adds the speed the phone measured to each reading; version 14 adds how sure the app is of each visit (a tenth value in each visit list); version 15 adds what you changed on the Timeline (each stored as [kind, id, start, end, category, hidden, changedAt, label]); version 16 adds the app combinations you named (each stored as an object with id, name, pkgs, activityId and updatedMs); version 17 adds the stretches when the phone was off or its screen stayed off (each stored as [kind, start, end]); version 18 adds the step counter to each trip reading (a sixth value, -1 when not known); version 19 adds an icon to each activity and each app (an "icon" text, left out when there is none). A file from a newer version of the app
+ * and the record of what was imported; version 3 adds meals, food goals and water; version 4 adds your own activities and their goals; version 5 adds money (categories, saved items and entries); version 6 adds phone usage (sessions are stored compactly as [app, start, end]); version 7 adds phone calls (each stored as [number, name, type, start, seconds]); version 8 adds charging sessions (each stored as [start, end, startLevel, endLevel, plug, source, samples, currentSamples, sumMa, sumMv, ongoing]); version 9 adds steps (each day stored as [date, steps, source]) and sleep (each night stored as [date, start, end, source]); version 10 adds places (the ones you named) and place visits (each stored as [id, place, start, end, lat, lng, source, ongoing, ignored]); version 11 adds trips (each stored as [id, start, end, from, to, distance, medianKmh, topKmh, activity, mode, modeSource]) and the position readings of each trip (each stored as [trip, time, lat, lng, accuracy]); version 12 adds every position reading, stored compactly one day at a time (see rawFixesJson); version 13 adds the speed the phone measured to each reading; version 14 adds how sure the app is of each visit (a tenth value in each visit list); version 15 adds what you changed on the Timeline (each stored as [kind, id, start, end, category, hidden, changedAt, label]); version 16 adds the app combinations you named (each stored as an object with id, name, pkgs, activityId and updatedMs); version 17 adds the stretches when the phone was off or its screen stayed off (each stored as [kind, start, end]); version 18 adds the step counter to each trip reading (a sixth value, -1 when not known); version 19 adds an icon to each activity and each app (an "icon" text, left out when there is none); version 21 adds the place categories (each stored as an object with id, name, color, icon, sortOrder and archived). A file from a newer version of the app
  * is refused rather than half-read.
  */
 object BackupCodec {
     const val APP_NAME = "life-tracker"
-    const val FORMAT_VERSION = 19
+    const val FORMAT_VERSION = 21
 
     fun encode(data: BackupData): String =
         JSONObject()
@@ -85,6 +86,7 @@ object BackupCodec {
             .put("stepDays", stepsJson(data.stepDays))
             .put("sleepNights", sleepJson(data.sleepNights))
             .put("places", array(data.places, ::placeJson))
+            .put("placeCategories", array(data.placeCategories, ::placeCategoryJson))
             .put("placeVisits", visitsJson(data.placeVisits))
             .put("trips", tripsJson(data.trips))
             .put("tripPoints", tripPointsJson(data.tripPoints))
@@ -128,6 +130,7 @@ object BackupCodec {
                 stepDays = stepDays(root),
                 sleepNights = sleepNights(root),
                 places = list(root, "places", required = false, ::place),
+                placeCategories = list(root, "placeCategories", required = false, ::placeCategory),
                 placeVisits = placeVisits(root),
                 trips = trips(root),
                 tripPoints = tripPoints(root),
@@ -509,6 +512,19 @@ object BackupCodec {
             SleepNightEntity(r.getString(0), r.getLong(1), r.getLong(2), r.getString(3))
         }
     }
+
+    private fun placeCategoryJson(c: PlaceCategoryEntity) = JSONObject()
+        .put("id", c.id).put("name", c.name).put("color", c.color).put("icon", c.icon)
+        .put("sortOrder", c.sortOrder).put("archived", c.archived)
+
+    private fun placeCategory(o: JSONObject) = PlaceCategoryEntity(
+        id = o.getString("id"),
+        name = o.getString("name"),
+        color = o.getLong("color"),
+        icon = o.optString("icon", ""),
+        sortOrder = o.getInt("sortOrder"),
+        archived = o.getBoolean("archived"),
+    )
 
     private fun placeJson(p: PlaceEntity) = JSONObject()
         .put("id", p.id).put("name", p.name).put("kind", p.kind).put("lat", p.lat).put("lng", p.lng)

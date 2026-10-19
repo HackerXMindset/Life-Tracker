@@ -215,6 +215,7 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
     var editTarget by remember { mutableStateOf<EditTarget?>(null) }
     var showHidden by remember { mutableStateOf(false) }
     val usageApps by vm.usageApps.collectAsState()
+    val placeLooks by vm.placeLooks.collectAsState()
     val combos by vm.usageCombos.collectAsState()
 
     // The three numbers at the top: steps, time on the phone, and time studying (what you logged plus apps linked to Study).
@@ -295,7 +296,7 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
         when (r) {
             is DayLayout.Place -> StripSeg(
                 r.startMs, r.endMs,
-                typeOf(TimelineEdits.VISIT, r.visit.id)?.displayColor() ?: placeColorOf(r.name), r.name,
+                typeOf(TimelineEdits.VISIT, r.visit.id)?.displayColor() ?: placeLooks[r.placeId]?.let { argbColor(it.color) } ?: placeColorOf(r.name), r.name,
             )
             is DayLayout.Travel -> {
                 val unknown = r.trip == null || (r.trip.mode == "vehicle" && r.trip.modeSource != "you")
@@ -339,6 +340,7 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
         onUnknownJourney = vm::setUnknownJourney,
         edits = edits,
         appIcons = usageApps.mapValues { it.value.icon }.filterValues { it.isNotEmpty() },
+        placeLooks = placeLooks,
         chargeSpans = chargesEff.map { it.startMs to (if (it.ongoing) maxOf(nowMs, it.startMs) else it.endMs) },
         onEditItem = { item ->
             when (item.kind) {
