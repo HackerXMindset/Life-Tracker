@@ -89,7 +89,7 @@ interface EntryDao {
         TripPointEntity::class,
         TimelineEditEntity::class,
     ],
-    version = 19,
+    version = 20,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -121,7 +121,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "life-tracker.db",
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20)
                     .addCallback(object : RoomDatabase.Callback() {
                         // A brand new database starts with the built-in activities and money categories.
                         override fun onCreate(db: SupportSQLiteDatabase) {
@@ -369,6 +369,13 @@ val MIGRATION_11_12: Migration = object : Migration(11, 12) {
             "CREATE TABLE IF NOT EXISTS `raw_fixes` (`ms` INTEGER NOT NULL, `lat` REAL NOT NULL, " +
                 "`lng` REAL NOT NULL, `acc` REAL NOT NULL, PRIMARY KEY(`ms`))",
         )
+    }
+}
+
+/** Version 19 -> 20: the eight built-in activities get icons and more built-in activities are added. Nothing is renamed or removed. */
+val MIGRATION_19_20: Migration = object : Migration(19, 20) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        DefaultActivities.upgrade(db)
     }
 }
 

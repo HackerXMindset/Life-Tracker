@@ -16,16 +16,21 @@ Every release page shows the sections below that were added since the last relea
 - **The activity editor is a full page** with a preview, the name, the colour picker and the icon picker.
 - **Database 19, backups 19.** One new text column (icon) on activities and apps, empty for everything that already exists. Nothing is removed; older backups still restore.
 
-## 🪟 Edit anything in its own window
+## 🪟 Timeline: rows open in place, holding a row edits it
 
 ### ✨ New
 
-- **A full-screen edit window.** Tapping a row on the Timeline now opens a page of its own (back arrow, title, **Save** at the top, one scrolling body), like editing a habit in Streak, instead of a small pop-up. A phone period lists every app inside it with its time and how many times it was opened. Changing the time and category, setting the app's category for every day, hiding it and "Back to as recorded" are all on that page.
-- **Entries you logged use the same window.** Changing something you logged shows the same fields on a full page with **Delete** at the bottom. Adding a new one is still the quick sheet from the bottom.
+- **Hold a row to edit it.** Tap a row on the Timeline to open it in place (as before); press and hold to open a full-screen edit page (back arrow, title, **Save** at the top). A phone period lists every app inside it with its time and how many times it was opened. Changing the time and category, setting the app's category for every day, hiding it and "Back to as recorded" are all on that page. Changing something you logged uses the same page, with **Delete** at the bottom.
+- **Activities sit inside their place.** Each stay at a place is a soft box with its name, time and length on top and the things that happened there inside. The place line is now a **thick rounded bar with the place name written sideways**.
+- **Stretches with no data show up together.** Back-to-back No data, Offline or Phone off stretches are one row ("No data · 55m · 12:00–1:01"); open it to see each stretch and fill any of them in.
+- **A small bolt when the phone was charging.** Rows that overlap a charge show a quiet bolt at the right; open the row to see for how long.
+- **Unknown ways of travel show suggestions at once** (Walked, Cycled, Bus, Drove, Auto, Metro, Train) under the journey.
+- **Icons on every kind of row by default.** Calls get a phone, charging a bolt, sleep a moon, meals a fork and knife, apps a phone, unless you picked another.
+- **20 more built-in activities, each with an icon** (Work, Chores, Cooking, Reading, Meditation, Friends, Family, Shopping, Creative, Movies and shows, Gaming, Music, Outdoors, Self-care, Errands, Coding, Writing, Rest, Travel, Money), and icons for the original eight. An activity you already have with the same name is left alone.
 
 ### 🔧 Changed
 
-- **No more opening a row in place.** The panel that grew open under a row on the Timeline is gone. A row opens its window, Offline and No data lines still offer to fill the time in, and a journey with an unknown way of travel asks "How did you go?" in a small question box.
+- **Database 20.** Only adds activities and icons. Nothing is renamed or removed.
 
 ## 🧵 Thicker lines, no phone-maker text
 
