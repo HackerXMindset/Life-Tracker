@@ -339,6 +339,7 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
         onUnknownJourney = vm::setUnknownJourney,
         edits = edits,
         appIcons = usageApps.mapValues { it.value.icon }.filterValues { it.isNotEmpty() },
+        chargeSpans = chargesEff.map { it.startMs to (if (it.ongoing) maxOf(nowMs, it.startMs) else it.endMs) },
         onEditItem = { item ->
             when (item.kind) {
                 DayLayout.Kind.CALL -> (item.ref as CallEntity).let { c ->

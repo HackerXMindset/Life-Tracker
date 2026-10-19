@@ -2,7 +2,9 @@ package com.lifetracker.app.ui
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,6 +45,11 @@ import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -53,6 +60,7 @@ import androidx.compose.ui.unit.sp
 import com.lifetracker.app.R
 import com.lifetracker.app.data.ActivityTypeEntity
 import com.lifetracker.app.data.CallEntity
+import com.lifetracker.app.data.ChargeOverlap
 import com.lifetracker.app.data.CallStats
 import com.lifetracker.app.data.ChargeSessionEntity
 import com.lifetracker.app.data.ChargeStats
@@ -104,6 +112,8 @@ class DayActions(
     val askHowTravelled: Boolean = true,
     /** The icon you gave an app, by its package name (apps without one are left out). */
     val appIcons: Map<String, String> = emptyMap(),
+    /** When the phone was on charge (start, end), to show the small bolt on rows that overlap it. */
+    val chargeSpans: List<Pair<Long, Long>> = emptyList(),
 )
 
 private val PLACE_COLORS = listOf(
@@ -138,13 +148,23 @@ private class Slot(
     val bar: Bar,
     val color: Color,
     val card: @Composable () -> Unit,
+    /** A place's name, written sideways on its thick bar. */
+    val label: String? = null,
 ) {
     var lane: Int = 0
 }
 
+/** The box round a stay at a place: the stay's own row and the things that happened during it. */
+private class Frame(val first: Slot, val members: List<Slot>)
+
 private val RULER_WIDTH = 36.dp
 private val LANE_WIDTH = 13.dp
 private val BAR_WIDTH = 9.dp
+
+/** The first lane holds places and journeys: a thick rounded bar for a stay, with its name written down it. */
+private val PLACE_LANE = 26.dp
+private val PLACE_BAR = 20.dp
+private val FRAME_PAD = 5.dp
 
 /** The space between two rows, and the smallest a row is: a thing, place or journey, and an Offline / No data line. */
 private val ROW_GAP = 6.dp
@@ -158,6 +178,10 @@ private fun hourFloor(ms: Long): Long =
 /** Where the page put things this time: the one map lines, rows and hour labels all use (see TimeWarp). */
 private class WarpHolder {
     var warp: TimeWarp.Warp? = null
+    var tops: List<Float> = emptyList()
+    var heights: List<Int> = emptyList()
+    var cardX: Float = 0f
+    var cardWidth: Float = 0f
 }
 
 /**
@@ -172,18 +196,22 @@ fun DayCalendar(rows: List<DayLayout.Row>, a: DayActions) {
     val paper = LocalPaper.current
     val fixed = ArrayList<Slot>()
     val packed = ArrayList<Slot>()
+    val frames = ArrayList<Frame>()
 
     @Composable
     fun thingSlot(item: DayLayout.Item): Slot {
         val look = describe(item, a)
         val moment = !item.showEnd || item.endMs <= item.startMs
+        // The charging rows themselves do not need the bolt.
+        val chargedMs = if (item.kind == DayLayout.Kind.CHARGE || !ChargeOverlap.during(item.startMs, item.endMs, a.chargeSpans)) 0L
+        else ChargeOverlap.overlapMs(item.startMs, item.endMs, a.chargeSpans)
         return Slot(
             key = "i|" + item.key,
             startMs = item.startMs,
             endMs = if (moment) item.coveredEndMs else item.endMs,
             bar = if (moment) Bar.MOMENT else Bar.THING,
             color = look.color,
-            card = { ThingCard(item, look) },
+            card = { ThingCard(item, look, chargedMs) },
         )
     }
 
@@ -191,14 +219,23 @@ fun DayCalendar(rows: List<DayLayout.Row>, a: DayActions) {
         when (row) {
             is DayLayout.Place -> {
                 val chosen = TimelineEdits.category(a.edits[TimelineEdits.key(TimelineEdits.VISIT, row.visit.id)])?.let { a.types.byId(it) }
-                fixed += Slot("p|" + row.key, row.startMs, row.endMs, Bar.PLACE, chosen?.displayColor() ?: placeColorOf(row.name)) { PlaceCard(row, chosen, a) }
+                val placeCharged = ChargeOverlap.overlapMs(row.startMs, row.endMs, a.chargeSpans).takeIf { ChargeOverlap.during(row.startMs, row.endMs, a.chargeSpans) } ?: 0L
+                val placeSlot = Slot(
+                    "p|" + row.key, row.startMs, row.endMs, Bar.PLACE, chosen?.displayColor() ?: placeColorOf(row.name),
+                    label = row.name,
+                    card = { PlaceCard(row, chosen, a, placeCharged) },
+                )
+                fixed += placeSlot
+                val inside = ArrayList<Slot>()
                 for (child in row.children) {
                     when (child) {
-                        is DayLayout.Thing -> packed += thingSlot(child.item)
-                        is DayLayout.Gap -> packed += Slot("g|" + child.key, child.startMs, child.endMs, gapBar(child), paper.ink2) { GapCard(child, a) }
+                        is DayLayout.Thing -> inside += thingSlot(child.item)
+                        is DayLayout.Gap -> inside += Slot("g|" + child.key, child.startMs, child.endMs, gapBar(child), paper.ink2) { GapCard(child, a) }
                         else -> Unit
                     }
                 }
+                packed += inside
+                frames += Frame(placeSlot, inside)
             }
             is DayLayout.Travel -> {
                 val trip = row.trip
@@ -223,6 +260,14 @@ fun DayCalendar(rows: List<DayLayout.Row>, a: DayActions) {
     val hatch = paper.ink2.copy(alpha = 0.22f)
     val quietBar = paper.ink2.copy(alpha = 0.32f)
     val holder = remember { WarpHolder() }
+    val measurer = rememberTextMeasurer()
+    val labelStyle = LocalTextStyle.current.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+    val frameFill = paper.surface.copy(alpha = 0.35f)
+    val frameLine = paper.line
+    val frameRanges = frames.map { f ->
+        val i = slots.indexOf(f.first)
+        i to maxOf(i, f.members.maxOfOrNull { slots.indexOf(it) } ?: i)
+    }
 
     androidx.compose.ui.layout.Layout(
         modifier = Modifier
@@ -232,17 +277,60 @@ fun DayCalendar(rows: List<DayLayout.Row>, a: DayActions) {
                 val railLeft = RULER_WIDTH.toPx()
                 val laneW = LANE_WIDTH.toPx()
                 val barW = BAR_WIDTH.toPx()
+                val placeLane = PLACE_LANE.toPx()
+                val placeBar = PLACE_BAR.toPx()
+                // The boxes round each stay and what happened in it, behind everything else.
+                val tops = holder.tops
+                val heights = holder.heights
+                if (tops.size == slots.size && heights.size == slots.size) {
+                    val pad = FRAME_PAD.toPx()
+                    val grow = 3.dp.toPx()
+                    frameRanges.forEach { (i, j) ->
+                        if (i < 0) return@forEach
+                        val y0 = tops[i] - grow
+                        val y1 = tops[j] + heights[j] + grow
+                        val tl = Offset(holder.cardX - pad, y0)
+                        val sz = androidx.compose.ui.geometry.Size(holder.cardWidth + pad * 2, y1 - y0)
+                        drawRoundRect(frameFill, tl, sz, CornerRadius(12.dp.toPx()))
+                        drawRoundRect(frameLine, tl, sz, CornerRadius(12.dp.toPx()), style = Stroke(1.25.dp.toPx()))
+                    }
+                }
                 // Hour ticks only across the lines, so nothing cuts through the rows.
+                val railRight = railLeft + placeLane + laneW * (laneCount - 1)
                 hours.forEach { h ->
                     val y = warp.y(h)
-                    drawLine(hourLine, Offset(railLeft, y), Offset(railLeft + laneW * laneCount, y), 1.dp.toPx())
+                    drawLine(hourLine, Offset(railLeft, y), Offset(railRight, y), 1.dp.toPx())
                 }
                 for (s in slots) {
-                    val x = railLeft + s.lane * laneW + (laneW - barW) / 2
+                    // Lane 0 is the wide one for places; the others are narrow.
+                    val laneLeft = if (s.lane == 0) railLeft else railLeft + placeLane + (s.lane - 1) * laneW
+                    val laneSpan = if (s.lane == 0) placeLane else laneW
+                    val centre = laneLeft + laneSpan / 2
+                    val x = centre - barW / 2
                     val top = warp.y(s.startMs)
                     val height = warp.y(s.endMs) - top
                     when (s.bar) {
-                        Bar.PLACE, Bar.THING -> drawRoundRect(
+                        Bar.PLACE -> {
+                            val px = centre - placeBar / 2
+                            drawRoundRect(s.color, Offset(px, top), androidx.compose.ui.geometry.Size(placeBar, height), CornerRadius(placeBar / 2))
+                            val name = s.label
+                            if (name != null && height > 44.dp.toPx()) {
+                                val light = s.color.red * 0.299f + s.color.green * 0.587f + s.color.blue * 0.114f > 0.6f
+                                val text = measurer.measure(
+                                    text = name.uppercase(),
+                                    style = labelStyle.copy(color = if (light) Color(0xFF1C1C1E) else Color.White),
+                                    overflow = TextOverflow.Ellipsis,
+                                    softWrap = false,
+                                    maxLines = 1,
+                                    constraints = Constraints(maxWidth = (height - 14.dp.toPx()).toInt().coerceAtLeast(1)),
+                                )
+                                val cy = top + 8.dp.toPx() + text.size.width / 2f
+                                rotate(90f, Offset(centre, cy)) {
+                                    drawText(text, topLeft = Offset(centre - text.size.width / 2f, cy - text.size.height / 2f))
+                                }
+                            }
+                        }
+                        Bar.THING -> drawRoundRect(
                             s.color, Offset(x, top), androidx.compose.ui.geometry.Size(barW, height),
                             CornerRadius(barW / 2),
                         )
@@ -272,8 +360,8 @@ fun DayCalendar(rows: List<DayLayout.Row>, a: DayActions) {
         },
     ) { measurables, constraints ->
         val perMin = 1.dp.toPx()
-        val cardX = (RULER_WIDTH + LANE_WIDTH * laneCount + 8.dp).roundToPx()
-        val cardWidth = (constraints.maxWidth - cardX).coerceAtLeast(0)
+        val cardX = (RULER_WIDTH + PLACE_LANE + LANE_WIDTH * (laneCount - 1) + 8.dp + FRAME_PAD).roundToPx()
+        val cardWidth = (constraints.maxWidth - cardX - FRAME_PAD.roundToPx()).coerceAtLeast(0)
         val labels = measurables.take(hours.size).map { it.measure(androidx.compose.ui.unit.Constraints(maxWidth = RULER_WIDTH.roundToPx())) }
         val cards = measurables.drop(hours.size).map {
             it.measure(androidx.compose.ui.unit.Constraints(minWidth = cardWidth, maxWidth = cardWidth))
@@ -281,6 +369,10 @@ fun DayCalendar(rows: List<DayLayout.Row>, a: DayActions) {
         val gapPx = ROW_GAP.toPx()
         val built = TimeWarp.build(slots.map { it.startMs }, cards.map { it.height + gapPx }, from, perMin)
         holder.warp = built.warp
+        holder.tops = built.tops
+        holder.heights = cards.map { it.height }
+        holder.cardX = cardX.toFloat()
+        holder.cardWidth = cardWidth.toFloat()
         val bottom = maxOf(built.warp.y(to), built.tops.last() + cards.last().height)
         layout(constraints.maxWidth, bottom.toInt()) {
             labels.forEachIndexed { i, label ->
@@ -299,14 +391,13 @@ private fun Modifier.penOutline(shape: Shape, color: Color, width: Dp = 1.25.dp)
 }
 
 @Composable
-private fun PlaceCard(p: DayLayout.Place, chosen: ActivityTypeEntity?, a: DayActions) {
+private fun PlaceCard(p: DayLayout.Place, chosen: ActivityTypeEntity?, a: DayActions, chargedMs: Long) {
     val paper = LocalPaper.current
     val shape = Wobble.Small
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(paper.surface.copy(alpha = 0.55f), shape)
-            .penOutline(shape, paper.line)
+            // The box round the stay is drawn by the calendar, so this row is only its heading.
             .clip(shape)
             .clickable { a.onEditPlace(p) }
             .padding(horizontal = 10.dp, vertical = 6.dp),
@@ -329,6 +420,7 @@ private fun PlaceCard(p: DayLayout.Place, chosen: ActivityTypeEntity?, a: DayAct
                     overflow = TextOverflow.Ellipsis,
                 )
             }
+            if (chargedMs > 0L) ChargeBolt()
             Text(
                 text = PlaceRules.durationText(p.endMs - p.startMs),
                 fontSize = 12.sp,
@@ -407,7 +499,7 @@ private fun describe(item: DayLayout.Item, a: DayActions): Look {
                 } else {
                     listOfNotNull(if (b.opens > 1) "opened ${b.opens} times" else null)
                 },
-                icon = (if (b.apps.size <= 1) a.appIcons[b.pkg] else null).orEmpty().ifEmpty { type?.icon.orEmpty() },
+                icon = (if (b.apps.size <= 1) a.appIcons[b.pkg] else null).orEmpty().ifEmpty { type?.icon.orEmpty() }.ifEmpty { "smartphone" },
                 chip = type?.name ?: "no category yet",
                 hint = type == null,
                 trailing = formatDuration(((b.activeMs + 30_000L) / 60_000L).toInt().coerceAtLeast(1)),
@@ -420,7 +512,7 @@ private fun describe(item: DayLayout.Item, a: DayActions): Look {
             Look(
                 color = (over ?: a.types.byId("Food")).displayColor(), title = m.name,
                 lines = listOf(mealTypeLabel(m.mealType) + " · " + Math.round(m.kcal) + " kcal · " + Math.round(m.grams) + " g"),
-                icon = (over ?: a.types.byId("Food")).icon,
+                icon = (over ?: a.types.byId("Food")).icon.ifEmpty { "utensils" },
                 chip = over?.name ?: "Food", trailing = null, editable = true, onClick = { a.onEditItem(item) },
             )
         }
@@ -430,7 +522,7 @@ private fun describe(item: DayLayout.Item, a: DayActions): Look {
             Look(
                 color = over?.displayColor() ?: MaterialTheme.colorScheme.primary, title = CallStats.title(c),
                 lines = listOf("Call · " + CallStats.detail(c)),
-                icon = over?.icon.orEmpty(),
+                icon = over?.icon.orEmpty().ifEmpty { "phoneCall" },
                 chip = over?.name ?: "Calls and people",
                 trailing = if (c.durationSec > 0) CallStats.durationText(c.durationSec) else null,
                 editable = true, onClick = { a.onEditItem(item) },
@@ -442,7 +534,7 @@ private fun describe(item: DayLayout.Item, a: DayActions): Look {
             Look(
                 color = over?.displayColor() ?: MaterialTheme.colorScheme.tertiary, title = "Charging · " + ChargeStats.title(s),
                 lines = listOf(ChargeStats.detail(s)),
-                icon = over?.icon.orEmpty(),
+                icon = over?.icon.orEmpty().ifEmpty { "zap" },
                 chip = over?.name, trailing = lengthText(item.endMs - item.startMs), editable = true, onClick = { a.onEditItem(item) },
             )
         }
@@ -452,7 +544,7 @@ private fun describe(item: DayLayout.Item, a: DayActions): Look {
             Look(
                 color = (over ?: a.types.byId("Sleep")).displayColor(), title = "Slept " + formatDuration(SleepStats.minutes(n)),
                 lines = listOf(clock(n.startMs) + " → " + clock(n.endMs) + " · " + SleepStats.label(n.source)),
-                icon = (over ?: a.types.byId("Sleep")).icon,
+                icon = (over ?: a.types.byId("Sleep")).icon.ifEmpty { "moon" },
                 chip = over?.name ?: "Sleep", trailing = null, editable = true, onClick = { a.onEditItem(item) },
             )
         }
@@ -482,72 +574,172 @@ private fun describe(item: DayLayout.Item, a: DayActions): Look {
     }
 }
 
+/** A thin line across a row that has been opened. */
 @Composable
-private fun ThingCard(item: DayLayout.Item, look: Look) {
+private fun OpenDivider() {
+    Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(LocalPaper.current.line.copy(alpha = 0.6f)))
+}
+
+/** The small quiet bolt that says the phone was charging during a row. */
+@Composable
+private fun ChargeBolt() {
+    Icon(
+        painter = painterResource(R.drawable.ic_p_bolt),
+        contentDescription = "Phone was charging",
+        modifier = Modifier.size(12.dp),
+        tint = LocalPaper.current.ink2.copy(alpha = 0.75f),
+    )
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun ThingCard(item: DayLayout.Item, look: Look, chargedMs: Long) {
     val paper = LocalPaper.current
     val shape = Wobble.Small
+    var open by remember { mutableStateOf(false) }
+    val details = look.lines.filter { it.isNotBlank() }
+    // A to-do opens (ticks off) in one tap, as before.
+    val hasMore = item.kind != DayLayout.Kind.TODO && (details.isNotEmpty() || look.chip != null)
     val moment = !item.showEnd || item.endMs <= item.startMs
     val meta = listOfNotNull(
         look.trailing,
         if (moment) clock(item.startMs) else range(item.startMs, item.endMs),
         if (look.chip != null && !look.hint) look.chip else null,
     ).joinToString(" · ")
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(paper.surface, shape)
             .penOutline(shape, paper.line)
             .clip(shape)
-            .clickable(enabled = look.onClick != null) { look.onClick?.invoke() }
-            .heightIn(min = ROW_MIN)
-            .padding(horizontal = 10.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .combinedClickable(
+                onClick = {
+                    if (hasMore) {
+                        open = !open
+                    } else {
+                        look.onClick?.invoke()
+                    }
+                },
+                // Holding a row opens the full edit page.
+                onLongClick = { if (look.editable) look.onClick?.invoke() },
+            ),
     ) {
-        if (look.icon.isNotEmpty()) IconGlyph(icon = look.icon, tint = look.color, size = 20.dp)
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = look.title,
-                fontSize = 14.sp,
-                lineHeight = 18.sp,
-                fontWeight = FontWeight.Bold,
-                textDecoration = if (look.struck) TextDecoration.LineThrough else null,
-                color = if (look.struck) paper.ink2 else paper.ink,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(text = meta, fontSize = 11.sp, lineHeight = 14.sp, color = paper.ink2, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Row(
+            modifier = Modifier.fillMaxWidth().heightIn(min = ROW_MIN).padding(horizontal = 10.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (look.icon.isNotEmpty()) IconGlyph(icon = look.icon, tint = look.color, size = 20.dp)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = look.title,
+                    fontSize = 14.sp,
+                    lineHeight = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    textDecoration = if (look.struck) TextDecoration.LineThrough else null,
+                    color = if (look.struck) paper.ink2 else paper.ink,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(text = meta, fontSize = 11.sp, lineHeight = 14.sp, color = paper.ink2, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            if (chargedMs > 0L) ChargeBolt()
+            if (hasMore) {
+                Icon(
+                    painter = painterResource(if (open) R.drawable.ic_chevrons_downup else R.drawable.ic_chevrons_updown),
+                    contentDescription = if (open) "Close" else "Open",
+                    modifier = Modifier.size(14.dp),
+                    tint = paper.ink2,
+                )
+            }
+        }
+        if (open) {
+            OpenDivider()
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                details.forEach { Text(text = it, fontSize = 11.sp, lineHeight = 15.sp, color = paper.ink2) }
+                if (chargedMs > 0L) {
+                    Text(text = "Phone was charging for " + lengthText(chargedMs) + " of this", fontSize = 11.sp, lineHeight = 15.sp, color = paper.ink2)
+                }
+                Row(
+                    modifier = Modifier.padding(top = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (look.chip != null) {
+                        Text(
+                            text = look.chip,
+                            modifier = Modifier
+                                .background(look.color.copy(alpha = 0.18f), RoundedCornerShape(50))
+                                .padding(horizontal = 8.dp, vertical = 2.dp),
+                            fontSize = 11.sp,
+                            lineHeight = 14.sp,
+                            color = paper.ink,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    if (look.onClick != null) {
+                        PaperPill(if (look.editable) "Edit" else "Open", false, { look.onClick.invoke() })
+                    }
+                }
+            }
         }
     }
 }
 
-/** Offline, Phone off and No data: one small soft grey line, no outline and no button. Tapping it offers to fill it in. */
+/** Offline, Phone off and No data: one small soft grey line, no outline and no button. Opening it shows Fill in. */
 @Composable
 private fun GapCard(gap: DayLayout.Gap, a: DayActions) {
     val paper = LocalPaper.current
+    var open by remember { mutableStateOf(false) }
     val name = when (gap.kind) {
         DayLayout.GapKind.OFFLINE -> "Offline"
         DayLayout.GapKind.PHONE_OFF -> "Phone off"
         DayLayout.GapKind.NO_DATA -> "No data"
     }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(Wobble.Small)
-            .clickable { a.onFillIn(gap.startMs, gap.endMs) }
-            .heightIn(min = GAP_MIN)
-            .padding(horizontal = 4.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = name + " · " + lengthText(gap.endMs - gap.startMs) + " · " + range(gap.startMs, gap.endMs),
-            modifier = Modifier.weight(1f),
-            fontSize = 12.sp,
-            lineHeight = 16.sp,
-            color = paper.ink2.copy(alpha = 0.85f),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+    Column(modifier = Modifier.fillMaxWidth().clip(Wobble.Small).clickable { open = !open }) {
+        Row(
+            modifier = Modifier.fillMaxWidth().heightIn(min = GAP_MIN).padding(horizontal = 4.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = name + " · " + lengthText(gap.knownMs) + " · " + range(gap.startMs, gap.endMs),
+                modifier = Modifier.weight(1f),
+                fontSize = 12.sp,
+                lineHeight = 16.sp,
+                color = paper.ink2.copy(alpha = 0.85f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        if (open) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, bottom = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Text(text = gap.note, fontSize = 11.sp, lineHeight = 15.sp, color = paper.ink2)
+                val parts = gap.parts
+                if (parts.size > 1) {
+                    parts.forEach { (s, e) ->
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                text = lengthText(e - s) + " · " + range(s, e),
+                                modifier = Modifier.weight(1f),
+                                fontSize = 11.sp,
+                                lineHeight = 15.sp,
+                                color = paper.ink2,
+                            )
+                            PaperPill("+ Fill in", false, { a.onFillIn(s, e) })
+                        }
+                    }
+                } else {
+                    PaperPill("+ Fill in", false, { a.onFillIn(gap.startMs, gap.endMs) })
+                }
+            }
+        }
     }
 }
 
@@ -563,6 +755,7 @@ private fun TravelCard(t: DayLayout.Travel, a: DayActions) {
     val trip = t.trip
     val unknown = trip == null || (trip.mode == "vehicle" && trip.modeSource != "you")
     var picking by remember { mutableStateOf(false) }
+    var open by remember { mutableStateOf(false) }
     val length = lengthText(t.endMs - t.startMs)
     val title = when {
         trip == null || unknown -> "Unknown way of travel"
@@ -570,61 +763,96 @@ private fun TravelCard(t: DayLayout.Travel, a: DayActions) {
     }
     val numbers = if (trip != null) length + " · " + TripRules.distanceText(trip.distanceM) else length
     val shape = Wobble.Small
-    // A journey the app has no record of can only be answered when you are asked how you went.
-    val canTap = trip != null || (a.askHowTravelled && t.from != null && t.to != null)
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(if (unknown) paper.sun.copy(alpha = 0.14f).compositeOver(paper.surface) else paper.surface, shape)
-            .penOutline(shape, if (unknown) paper.sun else paper.line, width = if (unknown) 1.5.dp else 1.25.dp)
-            .clip(shape)
-            .clickable(enabled = canTap) { picking = true }
-            .heightIn(min = ROW_MIN)
-            .padding(horizontal = 10.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, fontSize = 14.sp, lineHeight = 18.sp, fontWeight = FontWeight.Bold, color = paper.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(
-                text = numbers + " · " + range(t.startMs, t.endMs) + " · " + tripEnd(t.fromName) + " to " + tripEnd(t.toName),
-                fontSize = 11.sp,
-                lineHeight = 14.sp,
-                color = paper.ink2,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-    }
-    if (picking) {
-        PaperDialog(
-            title = if (unknown) "How did you go?" else "How did you travel?",
-            onDismiss = { picking = false },
-            confirmText = if (trip != null) "Edit time and category" else null,
-            onConfirm = if (trip != null) ({ picking = false; a.onEditTrip(trip) }) else null,
-            dismissText = "Close",
+    val asks = a.askHowTravelled && unknown && (trip != null || (t.from != null && t.to != null))
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(if (unknown) paper.sun.copy(alpha = 0.14f).compositeOver(paper.surface) else paper.surface, shape)
+                .penOutline(shape, if (unknown) paper.sun else paper.line, width = if (unknown) 1.5.dp else 1.25.dp)
+                .clip(shape)
+                .clickable {
+                    if (!unknown && trip != null) {
+                        picking = true
+                    } else if (trip != null) {
+                        open = !open
+                    }
+                },
         ) {
-            if (trip == null) {
-                Text(
-                    text = "The phone has no record of the way, so the distance is a straight line" +
-                        (if (t.straightLineM > 0) " of " + TripRules.distanceText(t.straightLineM) else "") + ".",
-                    fontSize = 12.sp,
-                    color = paper.ink2,
-                )
-                Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    QUICK_MODES.forEach { (label, mode) ->
-                        PaperPill(label, false, { a.onUnknownJourney(t, mode); picking = false })
+            Row(
+                modifier = Modifier.fillMaxWidth().heightIn(min = ROW_MIN).padding(horizontal = 10.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = title, fontSize = 14.sp, lineHeight = 18.sp, fontWeight = FontWeight.Bold, color = paper.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        text = numbers + " · " + range(t.startMs, t.endMs) + " · " + tripEnd(t.fromName) + " to " + tripEnd(t.toName),
+                        fontSize = 11.sp,
+                        lineHeight = 14.sp,
+                        color = paper.ink2,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                // A journey with an unknown way of travel shows its suggestions at once (as in the demo), so there is nothing to open.
+                if (trip != null) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_edit),
+                        contentDescription = "Change how you travelled",
+                        modifier = Modifier.size(14.dp),
+                        tint = paper.ink2,
+                    )
+                }
+            }
+            if (open || asks) {
+                OpenDivider()
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    if (asks) {
+                        Text(
+                            text = if (trip == null) {
+                                "How did you go? The phone has no record of the way, so the distance is a straight line" +
+                                    (if (t.straightLineM > 0) " of " + TripRules.distanceText(t.straightLineM) else "") + "."
+                            } else {
+                                "How did you go? Distance is worked out from the position readings."
+                            },
+                            fontSize = 11.sp,
+                            lineHeight = 15.sp,
+                            color = paper.ink2,
+                        )
+                        Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            QUICK_MODES.forEach { (label, mode) ->
+                                PaperPill(label, false, {
+                                    if (trip == null) a.onUnknownJourney(t, mode) else a.onTripMode(trip, mode)
+                                })
+                            }
+                        }
+                    }
+                    if (trip != null) {
+                        PaperPill("Edit time and category", false, { open = false; a.onEditTrip(trip) })
                     }
                 }
-            } else {
-                Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    TripModes.list.filter { it.id != "vehicle" }.forEach { m ->
-                        PaperPill(
-                            m.label,
-                            trip.mode == m.id && trip.modeSource == "you",
-                            { a.onTripMode(trip, m.id); picking = false },
-                        )
-                    }
+            }
+        }
+    }
+    if (picking && trip != null) {
+        PaperDialog(
+            title = "How did you travel?",
+            onDismiss = { picking = false },
+            confirmText = "Edit time and category",
+            onConfirm = { picking = false; a.onEditTrip(trip) },
+            dismissText = "Close",
+        ) {
+            Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                TripModes.list.filter { it.id != "vehicle" }.forEach { m ->
+                    PaperPill(
+                        m.label,
+                        trip.mode == m.id && trip.modeSource == "you",
+                        { a.onTripMode(trip, m.id); picking = false },
+                    )
                 }
             }
         }
