@@ -128,9 +128,11 @@ class HabitEditorTest {
     }
 
     @Test
-    fun aNamedIconIsNotShownAsEmojiInTheForm() {
-        val old = HabitEntity("h", "x", "book", "", 0, 0, 0, "", 1.0, 1.0, false, -1, 0, "2026-10-01", false, 0, "{}")
-        assertEquals("", HabitEditor.formFrom(old).icon)
+    fun aNamedIconIsKeptInTheFormButTheDefaultIsNot() {
+        val named = HabitEntity("h", "x", "book", "", 0, 0, 0, "", 1.0, 1.0, false, -1, 0, "2026-10-01", false, 0, "{}")
+        assertEquals("book", HabitEditor.formFrom(named).icon)
+        val none = named.copy(icon = "target")
+        assertEquals("", HabitEditor.formFrom(none).icon)
     }
 
     @Test

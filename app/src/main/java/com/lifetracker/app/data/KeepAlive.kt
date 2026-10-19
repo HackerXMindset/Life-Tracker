@@ -1,7 +1,6 @@
 package com.lifetracker.app.data
 
 import android.content.ActivityNotFoundException
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -9,8 +8,8 @@ import android.os.PowerManager
 import android.provider.Settings
 
 /**
- * Helps the phone let the app keep running. Xiaomi's HyperOS stops background apps to save battery, and these
- * are the screens where you switch that off for this app.
+ * Helps the phone let the app keep running. Phones stop background apps to save battery, and these
+ * are the Android screens where you switch that off for this app.
  */
 object KeepAlive {
     fun isExempt(context: Context): Boolean =
@@ -24,21 +23,6 @@ object KeepAlive {
     fun exemptionIntents(context: Context): List<Intent> = listOf(
         Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, packageUri(context)),
         Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS),
-        appDetails(context),
-    )
-
-    /** Xiaomi's Autostart list, then this app's settings page. */
-    fun autostartIntents(context: Context): List<Intent> = listOf(
-        Intent().setComponent(ComponentName("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity")),
-        appDetails(context),
-    )
-
-    /** Xiaomi's battery saver choice for this app (set it to "No restrictions"), then this app's settings page. */
-    fun batterySaverIntents(context: Context): List<Intent> = listOf(
-        Intent()
-            .setComponent(ComponentName("com.miui.powerkeeper", "com.miui.powerkeeper.ui.HiddenAppsConfigActivity"))
-            .putExtra("package_name", context.packageName)
-            .putExtra("package_label", "Life Tracker"),
         appDetails(context),
     )
 

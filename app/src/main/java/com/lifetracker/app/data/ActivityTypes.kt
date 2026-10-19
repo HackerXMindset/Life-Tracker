@@ -35,6 +35,8 @@ data class ActivityTypeEntity(
     val goalKind: Int,
     val archived: Boolean,
     val sortOrder: Int,
+    /** A picture name or emoji (see IconCatalog); empty for none. Added in database version 19. */
+    val icon: String = "",
 ) {
     companion object {
         const val GOAL_AT_LEAST = 0

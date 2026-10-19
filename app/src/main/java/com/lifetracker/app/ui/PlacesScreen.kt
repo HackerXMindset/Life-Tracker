@@ -239,15 +239,11 @@ fun PlacesScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PlacesViewModel
                 PlacesCard(
                     title = "Stop the phone putting the app to sleep",
                     text = "Battery: " + (if (access.battery) "no restrictions ✓" else "restricted, not yet allowed") + "\n\n" +
-                        "Xiaomi's HyperOS stops background apps to save battery, which is the main reason places and trips get missed. " +
-                        "Allow unrestricted battery, turn Autostart on, and set this app's battery saver to \"No restrictions\". " +
-                        "If a button opens the wrong page, use \"Open this app's settings\" above.",
+                        "Android stops background apps to save battery, which is the main reason places and trips get missed. " +
+                        "Allow unrestricted battery for this app. " +
+                        "If the button opens the wrong page, use \"Open this app's settings\" above.",
                 ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = { KeepAlive.open(context, KeepAlive.exemptionIntents(context)) }) { Text("Allow unrestricted") }
-                        OutlinedButton(onClick = { KeepAlive.open(context, KeepAlive.autostartIntents(context)) }) { Text("Autostart") }
-                    }
-                    OutlinedButton(onClick = { KeepAlive.open(context, KeepAlive.batterySaverIntents(context)) }) { Text("Battery saver: No restrictions") }
+                    Button(onClick = { KeepAlive.open(context, KeepAlive.exemptionIntents(context)) }) { Text("Allow unrestricted") }
                 }
             }
 
@@ -384,9 +380,9 @@ fun PlacesScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PlacesViewModel
             }
             item {
                 PlacesCard(
-                    title = "If visits never appear (Xiaomi / HyperOS)",
-                    text = "Open Android Settings > Apps > this app and turn on Autostart, set Battery saver to No restrictions, " +
-                        "and set Location to Allow all the time. HyperOS otherwise stops background work to save battery. " +
+                    title = "If visits never appear",
+                    text = "Open Android Settings > Apps > this app, set Battery to No restrictions, " +
+                        "and set Location to Allow all the time. Android otherwise stops background work to save battery. " +
                         "The status above shows when Android last told the app something, so you can tell whether it works.",
                 ) {}
             }

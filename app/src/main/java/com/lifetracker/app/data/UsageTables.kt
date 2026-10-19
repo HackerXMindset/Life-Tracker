@@ -43,6 +43,8 @@ data class UsageAppEntity(
     val label: String,
     val activityId: String,
     val ignored: Boolean,
+    /** A picture name or emoji for this app; empty for none. Added in database version 19. */
+    val icon: String = "",
 )
 
 /**

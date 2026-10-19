@@ -2,6 +2,41 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🎨 Colours and icons the Streak way
+
+### ✨ New
+
+- **Streak's colour picker.** Making or changing an activity (and a habit) now shows Streak's grid of swatches, eight in a row, and a **Custom** tab with a hue ring around a square for how strong and how bright, plus the colour's code.
+- **Streak's icon picker.** An **Icons | Emojis** switch, category chips (Fitness, Study, Home, Mind, Food, Work, Social, Finance, Nature, Tech, Art) and a grid of tiles. All 293 of Streak's picture names and its emoji lists are there. The pictures come from the free Material Design Icons set, because Streak's own icon font could not be downloaded here.
+- **Icons for activities and apps.** Every activity and every app can wear an icon. Pick it where you set the activity, or where you set the app's category (that is now a full page too). Icons show on the Timeline rows, in the Activities list and on the Apps page.
+- **Habit icons from Streak show up.** The habits you imported from Streak used to show a first letter; their named pictures are drawn now, and the habit editor uses the same two pickers.
+
+### 🔧 Changed
+
+- **The activity editor is a full page** with a preview, the name, the colour picker and the icon picker.
+- **Database 19, backups 19.** One new text column (icon) on activities and apps, empty for everything that already exists. Nothing is removed; older backups still restore.
+
+## 🪟 Edit anything in its own window
+
+### ✨ New
+
+- **A full-screen edit window.** Tapping a row on the Timeline now opens a page of its own (back arrow, title, **Save** at the top, one scrolling body), like editing a habit in Streak, instead of a small pop-up. A phone period lists every app inside it with its time and how many times it was opened. Changing the time and category, setting the app's category for every day, hiding it and "Back to as recorded" are all on that page.
+- **Entries you logged use the same window.** Changing something you logged shows the same fields on a full page with **Delete** at the bottom. Adding a new one is still the quick sheet from the bottom.
+
+### 🔧 Changed
+
+- **No more opening a row in place.** The panel that grew open under a row on the Timeline is gone. A row opens its window, Offline and No data lines still offer to fill the time in, and a journey with an unknown way of travel asks "How did you go?" in a small question box.
+
+## 🧵 Thicker lines, no phone-maker text
+
+### ✨ New
+
+- **Thicker Timeline lines.** The lines for things, places and journeys are thicker and the dots for moments bigger, so they are easier to see and tap near.
+
+### 🔧 Changed
+
+- **Plain Android wording for battery help.** The "Keep it running" card on Places and the help rows on Places and Charging no longer name one phone maker, and the Autostart and Battery saver buttons (which only opened that maker's screens) are gone. "Allow unrestricted" and "Open this app's settings" stay.
+
 ## 🧹 Timeline tidy-up
 
 ### 🔧 Fixed
@@ -186,7 +221,7 @@ Every release page shows the sections below that were added since the last relea
 ### ✨ New features
 
 - **Calls** — the "Show calls on the Timeline" card, "Only show calls longer than" as a connected strip (shorter ones stay in Stats) and the tilted orange note about missed calls; "Older calls" stays below.
-- **Charging** — one card with Record charging, Banner when I plug in and Show charging on the Timeline (each with its hint), then "How it works" and the Xiaomi / HyperOS help as open-and-close rows, like the demo.
+- **Charging** — one card with Record charging, Banner when I plug in and Show charging on the Timeline (each with its hint), then "How it works" and the battery help as open-and-close rows, like the demo.
 
 ## 📜 Settings like your demo (part 3: Places and trips)
 
