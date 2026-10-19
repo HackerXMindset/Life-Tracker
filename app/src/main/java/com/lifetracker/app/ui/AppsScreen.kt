@@ -3,6 +3,9 @@ package com.lifetracker.app.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.Alignment
+import com.lifetracker.app.ui.theme.LocalPaper
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -59,7 +62,13 @@ fun AppsScreen(onBack: () -> Unit, vm: PhoneUsageViewModel = viewModel()) {
                 icon = null,
                 title = app.label,
                 hint = if (type != null) "Every use counts as ${type.name}" else "No category yet",
-                trailing = { PaperPill(type?.name ?: "Set", type != null, { editing = app }) },
+                trailing = {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        val glyph = app.icon.ifEmpty { type?.icon.orEmpty() }
+                        if (glyph.isNotEmpty()) IconGlyph(icon = glyph, tint = type?.displayColor() ?: LocalPaper.current.ink2, size = 20.dp)
+                        PaperPill(type?.name ?: "Set", type != null, { editing = app })
+                    }
+                },
                 onClick = { editing = app },
             )
         }
@@ -82,7 +91,7 @@ fun AppsScreen(onBack: () -> Unit, vm: PhoneUsageViewModel = viewModel()) {
         AppCategoryDialog(
             app = app,
             types = types,
-            onLink = { vm.link(app, it) },
+            onSave = { activityId, icon -> vm.saveApp(app, activityId, icon) },
             onIgnore = { vm.setIgnored(app, it) },
             onDismiss = { editing = null },
         )

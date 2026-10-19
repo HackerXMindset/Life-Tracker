@@ -2,6 +2,20 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🎨 Colours and icons the Streak way
+
+### ✨ New
+
+- **Streak's colour picker.** Making or changing an activity (and a habit) now shows Streak's grid of swatches, eight in a row, and a **Custom** tab with a hue ring around a square for how strong and how bright, plus the colour's code.
+- **Streak's icon picker.** An **Icons | Emojis** switch, category chips (Fitness, Study, Home, Mind, Food, Work, Social, Finance, Nature, Tech, Art) and a grid of tiles. All 293 of Streak's picture names and its emoji lists are there. The pictures come from the free Material Design Icons set, because Streak's own icon font could not be downloaded here.
+- **Icons for activities and apps.** Every activity and every app can wear an icon. Pick it where you set the activity, or where you set the app's category (that is now a full page too). Icons show on the Timeline rows, in the Activities list and on the Apps page.
+- **Habit icons from Streak show up.** The habits you imported from Streak used to show a first letter; their named pictures are drawn now, and the habit editor uses the same two pickers.
+
+### 🔧 Changed
+
+- **The activity editor is a full page** with a preview, the name, the colour picker and the icon picker.
+- **Database 19, backups 19.** One new text column (icon) on activities and apps, empty for everything that already exists. Nothing is removed; older backups still restore.
+
 ## 🪟 Edit anything in its own window
 
 ### ✨ New

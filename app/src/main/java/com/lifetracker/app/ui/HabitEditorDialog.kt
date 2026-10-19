@@ -134,37 +134,10 @@ fun HabitEditorDialog(
             )
 
             MonoLabel("Icon")
-            Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                HabitEditor.QUICK_ICONS.forEach { e ->
-                    PaperPill(e, icon == e, { icon = if (icon == e) "" else e })
-                }
-            }
-            PaperField(
-                value = icon,
-                onValueChange = { icon = it.take(8) },
-                modifier = Modifier.fillMaxWidth(),
-                label = "Or type any emoji",
-                singleLine = true,
-            )
+            IconPickerPanel(selected = icon, tint = Color(color.toInt()), onSelected = { icon = it })
 
             MonoLabel("Colour")
-            HabitEditor.PALETTE.chunked(8).forEach { rowColors ->
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    rowColors.forEach { c ->
-                        Box(
-                            modifier = Modifier
-                                .size(30.dp)
-                                .clip(CircleShape)
-                                .background(Color(c.toInt()))
-                                .then(
-                                    if (c == color) Modifier.border(3.dp, paper.ink, CircleShape)
-                                    else Modifier,
-                                )
-                                .clickable { color = c },
-                        )
-                    }
-                }
-            }
+            ColorPickerPanel(selected = color, onSelected = { color = it })
 
             MonoLabel("Category")
             Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {

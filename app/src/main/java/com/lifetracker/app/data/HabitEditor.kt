@@ -42,7 +42,8 @@ object HabitEditor {
         val o = parse(habit.raw)
         return HabitForm(
             name = habit.name,
-            icon = habit.icon.takeIf { icon -> icon.any { it.code > 127 } }.orEmpty(),
+            // "target" is only what is stored when no icon was picked.
+            icon = habit.icon.takeIf { it != "target" }.orEmpty(),
             color = habit.color,
             category = habit.category,
             kind = habit.kind,

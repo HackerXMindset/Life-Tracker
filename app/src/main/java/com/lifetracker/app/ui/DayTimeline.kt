@@ -102,6 +102,8 @@ class DayActions(
     val onEditTrip: (TripEntity) -> Unit,
     /** Whether to show the quick buttons that ask how you travelled (Timeline settings). */
     val askHowTravelled: Boolean = true,
+    /** The icon you gave an app, by its package name (apps without one are left out). */
+    val appIcons: Map<String, String> = emptyMap(),
 )
 
 private val PLACE_COLORS = listOf(
@@ -368,6 +370,8 @@ private class Look(
     val struck: Boolean = false,
     /** True when [chip] only tells you to set a category, so it is not part of the one-line summary. */
     val hint: Boolean = false,
+    /** A picture name or emoji drawn before the title; empty for none. */
+    val icon: String = "",
     val onClick: (() -> Unit)?,
 )
 
@@ -384,6 +388,7 @@ private fun describe(item: DayLayout.Item, a: DayActions): Look {
             Look(
                 color = type.displayColor(), title = e.title,
                 lines = listOfNotNull(e.note.trim().ifEmpty { null }),
+                icon = type.icon,
                 chip = type.name,
                 trailing = if (e.endMinute != null) formatDuration(minutes.coerceAtLeast(1)) else "moment",
                 editable = true, onClick = { a.onEntry(e) },
@@ -402,6 +407,7 @@ private fun describe(item: DayLayout.Item, a: DayActions): Look {
                 } else {
                     listOfNotNull(if (b.opens > 1) "opened ${b.opens} times" else null)
                 },
+                icon = (if (b.apps.size <= 1) a.appIcons[b.pkg] else null).orEmpty().ifEmpty { type?.icon.orEmpty() },
                 chip = type?.name ?: "no category yet",
                 hint = type == null,
                 trailing = formatDuration(((b.activeMs + 30_000L) / 60_000L).toInt().coerceAtLeast(1)),
@@ -414,6 +420,7 @@ private fun describe(item: DayLayout.Item, a: DayActions): Look {
             Look(
                 color = (over ?: a.types.byId("Food")).displayColor(), title = m.name,
                 lines = listOf(mealTypeLabel(m.mealType) + " · " + Math.round(m.kcal) + " kcal · " + Math.round(m.grams) + " g"),
+                icon = (over ?: a.types.byId("Food")).icon,
                 chip = over?.name ?: "Food", trailing = null, editable = true, onClick = { a.onEditItem(item) },
             )
         }
@@ -423,6 +430,7 @@ private fun describe(item: DayLayout.Item, a: DayActions): Look {
             Look(
                 color = over?.displayColor() ?: MaterialTheme.colorScheme.primary, title = CallStats.title(c),
                 lines = listOf("Call · " + CallStats.detail(c)),
+                icon = over?.icon.orEmpty(),
                 chip = over?.name ?: "Calls and people",
                 trailing = if (c.durationSec > 0) CallStats.durationText(c.durationSec) else null,
                 editable = true, onClick = { a.onEditItem(item) },
@@ -434,6 +442,7 @@ private fun describe(item: DayLayout.Item, a: DayActions): Look {
             Look(
                 color = over?.displayColor() ?: MaterialTheme.colorScheme.tertiary, title = "Charging · " + ChargeStats.title(s),
                 lines = listOf(ChargeStats.detail(s)),
+                icon = over?.icon.orEmpty(),
                 chip = over?.name, trailing = lengthText(item.endMs - item.startMs), editable = true, onClick = { a.onEditItem(item) },
             )
         }
@@ -443,6 +452,7 @@ private fun describe(item: DayLayout.Item, a: DayActions): Look {
             Look(
                 color = (over ?: a.types.byId("Sleep")).displayColor(), title = "Slept " + formatDuration(SleepStats.minutes(n)),
                 lines = listOf(clock(n.startMs) + " → " + clock(n.endMs) + " · " + SleepStats.label(n.source)),
+                icon = (over ?: a.types.byId("Sleep")).icon,
                 chip = over?.name ?: "Sleep", trailing = null, editable = true, onClick = { a.onEditItem(item) },
             )
         }
@@ -494,6 +504,7 @@ private fun ThingCard(item: DayLayout.Item, look: Look) {
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (look.icon.isNotEmpty()) IconGlyph(icon = look.icon, tint = look.color, size = 20.dp)
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = look.title,
