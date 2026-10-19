@@ -354,7 +354,7 @@ fun PhoneUsageScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PhoneUsageV
         AppCategoryDialog(
             app = app,
             types = types,
-            onLink = { vm.link(app, it) },
+            onSave = { activityId, icon -> vm.saveApp(app, activityId, icon) },
             onIgnore = { vm.setIgnored(app, it) },
             onDismiss = { editing = null },
         )

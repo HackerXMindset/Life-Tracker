@@ -526,8 +526,8 @@ private fun HabitCardView(
 
 @Composable
 private fun GlyphTile(habit: HabitEntity, accent: Color, size: Dp) {
-    // Streak draws a named icon; this app shows the emoji if the habit has one, otherwise its first letter.
-    val emoji = habit.icon.takeIf { icon -> icon.isNotEmpty() && icon.any { it.code > 127 } }
+    // The picked icon (a picture or an emoji); "target" is only what is stored when none was picked, so the first letter shows then.
+    val picked = habit.icon.takeIf { it != "target" }.orEmpty()
     Box(
         modifier = Modifier
             .size(size)
@@ -536,11 +536,11 @@ private fun GlyphTile(habit: HabitEntity, accent: Color, size: Dp) {
             .clip(Wobble.Small),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = emoji ?: habit.name.trim().take(1).uppercase(),
-            fontSize = if (size < 40.dp) 16.sp else 22.sp,
-            fontWeight = FontWeight.ExtraBold,
-            color = accent,
+        IconGlyph(
+            icon = picked,
+            tint = accent,
+            size = if (size < 40.dp) 20.dp else 28.dp,
+            fallback = habit.name.trim().take(1),
         )
     }
 }

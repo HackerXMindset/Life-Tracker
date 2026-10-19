@@ -115,7 +115,12 @@ private fun ActivityRow(type: ActivityTypeEntity, hiddenRow: Boolean, onClick: (
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(modifier = Modifier.size(30.dp).clip(RoundedCornerShape(10.dp)).background(type.displayColor()))
+        Box(
+            modifier = Modifier.size(30.dp).clip(RoundedCornerShape(10.dp)).background(type.displayColor()),
+            contentAlignment = androidx.compose.ui.Alignment.Center,
+        ) {
+            if (type.icon.isNotEmpty()) IconGlyph(icon = type.icon, tint = androidx.compose.ui.graphics.Color.White, size = 20.dp)
+        }
         Text(
             text = type.name,
             modifier = Modifier.weight(1f),

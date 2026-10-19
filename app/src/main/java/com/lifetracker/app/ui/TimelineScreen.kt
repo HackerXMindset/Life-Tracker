@@ -338,6 +338,7 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
         onTripMode = vm::setTripMode,
         onUnknownJourney = vm::setUnknownJourney,
         edits = edits,
+        appIcons = usageApps.mapValues { it.value.icon }.filterValues { it.isNotEmpty() },
         onEditItem = { item ->
             when (item.kind) {
                 DayLayout.Kind.CALL -> (item.ref as CallEntity).let { c ->
@@ -596,7 +597,7 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
         AppCategoryDialog(
             app = app,
             types = types,
-            onLink = { vm.linkApp(app, it) },
+            onSave = { activityId, icon -> vm.saveApp(app, activityId, icon) },
             onIgnore = { vm.setAppIgnored(app, it) },
             onDismiss = { editApp = null },
         )

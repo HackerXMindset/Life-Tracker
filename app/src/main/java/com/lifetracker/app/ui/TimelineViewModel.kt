@@ -238,6 +238,10 @@ class TimelineViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { db.usageDao().upsertApp(app.copy(activityId = activityId)) }
     }
 
+    fun saveApp(app: UsageAppEntity, activityId: String, icon: String) {
+        viewModelScope.launch { db.usageDao().upsertApp(app.copy(activityId = activityId, icon = icon)) }
+    }
+
     fun setAppIgnored(app: UsageAppEntity, ignored: Boolean) {
         viewModelScope.launch { db.usageDao().upsertApp(app.copy(ignored = ignored)) }
     }

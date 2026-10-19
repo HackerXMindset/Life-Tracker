@@ -162,6 +162,11 @@ class PhoneUsageViewModel(private val app: Application) : AndroidViewModel(app) 
         viewModelScope.launch { dao.upsertApp(app.copy(activityId = activityId)) }
     }
 
+    /** Saves the category and the icon of an app together (two separate saves of the same old row would overwrite each other). */
+    fun saveApp(app: UsageAppEntity, activityId: String, icon: String) {
+        viewModelScope.launch { dao.upsertApp(app.copy(activityId = activityId, icon = icon)) }
+    }
+
     fun setIgnored(app: UsageAppEntity, ignored: Boolean) {
         viewModelScope.launch { dao.upsertApp(app.copy(ignored = ignored)) }
     }
