@@ -472,135 +472,71 @@ private fun describe(item: DayLayout.Item, a: DayActions): Look {
     }
 }
 
-/** A thin line across a row that has been opened. */
-@Composable
-private fun OpenDivider() {
-    Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(LocalPaper.current.line.copy(alpha = 0.6f)))
-}
-
 @Composable
 private fun ThingCard(item: DayLayout.Item, look: Look) {
     val paper = LocalPaper.current
     val shape = Wobble.Small
-    var open by remember { mutableStateOf(false) }
-    val details = look.lines.filter { it.isNotBlank() }
-    // A to-do opens (ticks off) in one tap, as before.
-    val hasMore = item.kind != DayLayout.Kind.TODO && (details.isNotEmpty() || look.chip != null)
     val moment = !item.showEnd || item.endMs <= item.startMs
     val meta = listOfNotNull(
         look.trailing,
         if (moment) clock(item.startMs) else range(item.startMs, item.endMs),
         if (look.chip != null && !look.hint) look.chip else null,
     ).joinToString(" · ")
-    Column(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(paper.surface, shape)
             .penOutline(shape, paper.line)
             .clip(shape)
-            .clickable {
-                if (hasMore) {
-                    open = !open
-                } else {
-                    look.onClick?.invoke()
-                }
-            },
+            .clickable(enabled = look.onClick != null) { look.onClick?.invoke() }
+            .heightIn(min = ROW_MIN)
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().heightIn(min = ROW_MIN).padding(horizontal = 10.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = look.title,
-                    fontSize = 14.sp,
-                    lineHeight = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    textDecoration = if (look.struck) TextDecoration.LineThrough else null,
-                    color = if (look.struck) paper.ink2 else paper.ink,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(text = meta, fontSize = 11.sp, lineHeight = 14.sp, color = paper.ink2, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-            if (hasMore) {
-                Icon(
-                    painter = painterResource(if (open) R.drawable.ic_chevrons_downup else R.drawable.ic_chevrons_updown),
-                    contentDescription = if (open) "Close" else "Open",
-                    modifier = Modifier.size(14.dp),
-                    tint = paper.ink2,
-                )
-            }
-        }
-        if (open) {
-            OpenDivider()
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                details.forEach { Text(text = it, fontSize = 11.sp, lineHeight = 15.sp, color = paper.ink2) }
-                Row(
-                    modifier = Modifier.padding(top = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    if (look.chip != null) {
-                        Text(
-                            text = look.chip,
-                            modifier = Modifier
-                                .background(look.color.copy(alpha = 0.18f), RoundedCornerShape(50))
-                                .padding(horizontal = 8.dp, vertical = 2.dp),
-                            fontSize = 11.sp,
-                            lineHeight = 14.sp,
-                            color = paper.ink,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                    if (look.onClick != null) {
-                        PaperPill(if (look.editable) "Edit" else "Open", false, { look.onClick.invoke() })
-                    }
-                }
-            }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = look.title,
+                fontSize = 14.sp,
+                lineHeight = 18.sp,
+                fontWeight = FontWeight.Bold,
+                textDecoration = if (look.struck) TextDecoration.LineThrough else null,
+                color = if (look.struck) paper.ink2 else paper.ink,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(text = meta, fontSize = 11.sp, lineHeight = 14.sp, color = paper.ink2, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
 
-/** Offline, Phone off and No data: one small soft grey line, no outline and no button. Opening it shows Fill in. */
+/** Offline, Phone off and No data: one small soft grey line, no outline and no button. Tapping it offers to fill it in. */
 @Composable
 private fun GapCard(gap: DayLayout.Gap, a: DayActions) {
     val paper = LocalPaper.current
-    var open by remember { mutableStateOf(false) }
     val name = when (gap.kind) {
         DayLayout.GapKind.OFFLINE -> "Offline"
         DayLayout.GapKind.PHONE_OFF -> "Phone off"
         DayLayout.GapKind.NO_DATA -> "No data"
     }
-    Column(modifier = Modifier.fillMaxWidth().clip(Wobble.Small).clickable { open = !open }) {
-        Row(
-            modifier = Modifier.fillMaxWidth().heightIn(min = GAP_MIN).padding(horizontal = 4.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = name + " · " + lengthText(gap.endMs - gap.startMs) + " · " + range(gap.startMs, gap.endMs),
-                modifier = Modifier.weight(1f),
-                fontSize = 12.sp,
-                lineHeight = 16.sp,
-                color = paper.ink2.copy(alpha = 0.85f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        if (open) {
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, bottom = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Text(text = gap.note, fontSize = 11.sp, lineHeight = 15.sp, color = paper.ink2)
-                PaperPill("+ Fill in", false, { a.onFillIn(gap.startMs, gap.endMs) })
-            }
-        }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(Wobble.Small)
+            .clickable { a.onFillIn(gap.startMs, gap.endMs) }
+            .heightIn(min = GAP_MIN)
+            .padding(horizontal = 4.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = name + " · " + lengthText(gap.endMs - gap.startMs) + " · " + range(gap.startMs, gap.endMs),
+            modifier = Modifier.weight(1f),
+            fontSize = 12.sp,
+            lineHeight = 16.sp,
+            color = paper.ink2.copy(alpha = 0.85f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -616,7 +552,6 @@ private fun TravelCard(t: DayLayout.Travel, a: DayActions) {
     val trip = t.trip
     val unknown = trip == null || (trip.mode == "vehicle" && trip.modeSource != "you")
     var picking by remember { mutableStateOf(false) }
-    var open by remember { mutableStateOf(false) }
     val length = lengthText(t.endMs - t.startMs)
     val title = when {
         trip == null || unknown -> "Unknown way of travel"
@@ -624,102 +559,61 @@ private fun TravelCard(t: DayLayout.Travel, a: DayActions) {
     }
     val numbers = if (trip != null) length + " · " + TripRules.distanceText(trip.distanceM) else length
     val shape = Wobble.Small
-    val asks = a.askHowTravelled && unknown && (trip != null || (t.from != null && t.to != null))
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(if (unknown) paper.sun.copy(alpha = 0.14f).compositeOver(paper.surface) else paper.surface, shape)
-                .penOutline(shape, if (unknown) paper.sun else paper.line, width = if (unknown) 1.5.dp else 1.25.dp)
-                .clip(shape)
-                .clickable {
-                    if (!unknown && trip != null) {
-                        picking = true
-                    } else if (asks || trip != null) {
-                        open = !open
-                    }
-                },
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().heightIn(min = ROW_MIN).padding(horizontal = 10.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(text = title, fontSize = 14.sp, lineHeight = 18.sp, fontWeight = FontWeight.Bold, color = paper.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(
-                        text = numbers + " · " + range(t.startMs, t.endMs) + " · " + tripEnd(t.fromName) + " to " + tripEnd(t.toName),
-                        fontSize = 11.sp,
-                        lineHeight = 14.sp,
-                        color = paper.ink2,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                if (unknown && asks) {
-                    Icon(
-                        painter = painterResource(if (open) R.drawable.ic_chevrons_downup else R.drawable.ic_chevrons_updown),
-                        contentDescription = if (open) "Close" else "How did you go?",
-                        modifier = Modifier.size(14.dp),
-                        tint = paper.ink2,
-                    )
-                } else if (trip != null) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_edit),
-                        contentDescription = "Change how you travelled",
-                        modifier = Modifier.size(14.dp),
-                        tint = paper.ink2,
-                    )
-                }
-            }
-            if (open) {
-                OpenDivider()
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    if (asks) {
-                        Text(
-                            text = if (trip == null) {
-                                "How did you go? The phone has no record of the way, so the distance is a straight line" +
-                                    (if (t.straightLineM > 0) " of " + TripRules.distanceText(t.straightLineM) else "") + "."
-                            } else {
-                                "How did you go? Distance is worked out from the position readings."
-                            },
-                            fontSize = 11.sp,
-                            lineHeight = 15.sp,
-                            color = paper.ink2,
-                        )
-                        Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            QUICK_MODES.forEach { (label, mode) ->
-                                PaperPill(label, false, {
-                                    if (trip == null) a.onUnknownJourney(t, mode) else a.onTripMode(trip, mode)
-                                })
-                            }
-                        }
-                    }
-                    if (trip != null) {
-                        PaperPill("Edit time and category", false, { open = false; a.onEditTrip(trip) })
-                    }
-                }
-            }
+    // A journey the app has no record of can only be answered when you are asked how you went.
+    val canTap = trip != null || (a.askHowTravelled && t.from != null && t.to != null)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(if (unknown) paper.sun.copy(alpha = 0.14f).compositeOver(paper.surface) else paper.surface, shape)
+            .penOutline(shape, if (unknown) paper.sun else paper.line, width = if (unknown) 1.5.dp else 1.25.dp)
+            .clip(shape)
+            .clickable(enabled = canTap) { picking = true }
+            .heightIn(min = ROW_MIN)
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = title, fontSize = 14.sp, lineHeight = 18.sp, fontWeight = FontWeight.Bold, color = paper.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                text = numbers + " · " + range(t.startMs, t.endMs) + " · " + tripEnd(t.fromName) + " to " + tripEnd(t.toName),
+                fontSize = 11.sp,
+                lineHeight = 14.sp,
+                color = paper.ink2,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
-    if (picking && trip != null) {
+    if (picking) {
         PaperDialog(
-            title = "How did you travel?",
+            title = if (unknown) "How did you go?" else "How did you travel?",
             onDismiss = { picking = false },
-            confirmText = "Edit time and category",
-            onConfirm = { picking = false; a.onEditTrip(trip) },
+            confirmText = if (trip != null) "Edit time and category" else null,
+            onConfirm = if (trip != null) ({ picking = false; a.onEditTrip(trip) }) else null,
             dismissText = "Close",
         ) {
-            Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                TripModes.list.filter { it.id != "vehicle" }.forEach { m ->
-                    PaperPill(
-                        m.label,
-                        trip.mode == m.id && trip.modeSource == "you",
-                        { a.onTripMode(trip, m.id); picking = false },
-                    )
+            if (trip == null) {
+                Text(
+                    text = "The phone has no record of the way, so the distance is a straight line" +
+                        (if (t.straightLineM > 0) " of " + TripRules.distanceText(t.straightLineM) else "") + ".",
+                    fontSize = 12.sp,
+                    color = paper.ink2,
+                )
+                Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    QUICK_MODES.forEach { (label, mode) ->
+                        PaperPill(label, false, { a.onUnknownJourney(t, mode); picking = false })
+                    }
+                }
+            } else {
+                Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    TripModes.list.filter { it.id != "vehicle" }.forEach { m ->
+                        PaperPill(
+                            m.label,
+                            trip.mode == m.id && trip.modeSource == "you",
+                            { a.onTripMode(trip, m.id); picking = false },
+                        )
+                    }
                 }
             }
         }

@@ -163,8 +163,8 @@ Each step is small enough to build, install and try before the next begins. The 
   DONE         Timeline T-H Apps and categories page, Timeline settings page, Cleaner readings (Walking)
   DONE         Timeline T-I Clean Timeline: one time map, small rows that open in place, soft grey Offline
   DONE         R1 Thicker Timeline lines; remove every phone-maker mention
-  NEXT ──►    R2 Full-screen edit window for everything on the Timeline (like editing a habit in Streak); the open-in-place panel goes
-              R3 Colours and icons like Streak's (swatches + custom colour ring; icons + emoji) for apps and activities
+  DONE         R2 Full-screen edit window for everything on the Timeline (like editing a habit in Streak); the open-in-place panel goes
+  NEXT ──►    R3 Colours and icons like Streak's (swatches + custom colour ring; icons + emoji) for apps and activities
               R4 Place categories with colours you can add (the location lines take the colour)
               R5 Settings > Permissions: every permission in one place, why it is needed, how to switch it on
               R6 Money rework: "Deduct it from", separate expense and income categories, edit anything, paper look (includes Paper P5)

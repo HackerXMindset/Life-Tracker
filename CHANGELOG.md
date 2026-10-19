@@ -2,6 +2,17 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🪟 Edit anything in its own window
+
+### ✨ New
+
+- **A full-screen edit window.** Tapping a row on the Timeline now opens a page of its own (back arrow, title, **Save** at the top, one scrolling body), like editing a habit in Streak, instead of a small pop-up. A phone period lists every app inside it with its time and how many times it was opened. Changing the time and category, setting the app's category for every day, hiding it and "Back to as recorded" are all on that page.
+- **Entries you logged use the same window.** Changing something you logged shows the same fields on a full page with **Delete** at the bottom. Adding a new one is still the quick sheet from the bottom.
+
+### 🔧 Changed
+
+- **No more opening a row in place.** The panel that grew open under a row on the Timeline is gone. A row opens its window, Offline and No data lines still offer to fill the time in, and a journey with an unknown way of travel asks "How did you go?" in a small question box.
+
 ## 🧵 Thicker lines, no phone-maker text
 
 ### ✨ New

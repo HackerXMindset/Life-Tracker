@@ -313,11 +313,13 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
     fun target(
         kind: String, ref: String, title: String, startMs: Long, endMs: Long?,
         extraLabel: String? = null, onExtra: (() -> Unit)? = null, openLabel: String? = null, onOpen: (() -> Unit)? = null,
+        details: List<String> = emptyList(), detailsTitle: String = "Inside",
     ): EditTarget {
         val e = edits[TimelineEdits.key(kind, ref)]
         return EditTarget(
             kind, ref, title, startMs, endMs, TimelineEdits.category(e).orEmpty(), e != null && !e.hidden, dayStartOf(startMs),
             extraLabel = extraLabel, onExtra = onExtra, openLabel = openLabel, onOpen = onOpen,
+            details = details, detailsTitle = detailsTitle,
         )
     }
     val actions = DayActions(
@@ -353,6 +355,11 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
                 DayLayout.Kind.PHONE -> (item.ref as UsageDays.Block).let { b ->
                     editTarget = target(
                         TimelineEdits.APP, TimelineEdits.appRef(b.pkg, b.refStartMs), b.label, b.startMs, b.endMs,
+                        details = b.apps.map { u ->
+                            u.label + " · " + formatDuration(((u.activeMs + 30_000L) / 60_000L).toInt().coerceAtLeast(1)) +
+                                (if (u.opens > 1) " · opened ${u.opens} times" else "")
+                        },
+                        detailsTitle = if (b.apps.size > 1) "Apps in this period" else "Opened",
                         extraLabel = when {
                             b.apps.size < 2 -> "Set this app's category on every day"
                             b.comboId.isEmpty() -> "Always count this combination as..."
@@ -522,7 +529,7 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
     editTarget?.let { t ->
         val key = TimelineEdits.key(t.kind, t.refId)
         val now = System.currentTimeMillis()
-        EditItemDialog(
+        EditItemWindow(
             target = t,
             types = types,
             onSave = { startMs, endMs, activityId ->

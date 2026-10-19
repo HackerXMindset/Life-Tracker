@@ -1,18 +1,14 @@
 package com.lifetracker.app.ui
 
 import android.app.TimePickerDialog
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -26,7 +22,7 @@ import androidx.compose.ui.unit.sp
 import com.lifetracker.app.ui.theme.LocalPaper
 import com.lifetracker.app.ui.theme.PaperButton
 import com.lifetracker.app.ui.theme.PaperButtonStyle
-import com.lifetracker.app.ui.theme.PaperDialog
+import com.lifetracker.app.ui.theme.PaperCard
 import com.lifetracker.app.ui.theme.PaperPill
 import com.lifetracker.app.data.ActivityTypeEntity
 import com.lifetracker.app.data.TimelineEdits
@@ -52,11 +48,15 @@ class EditTarget(
     /** A button that opens the full screen for this kind of item. */
     val openLabel: String? = null,
     val onOpen: (() -> Unit)? = null,
+    /** Lines of what is inside this thing (every app in a phone period, with its time), shown under [detailsTitle]. */
+    val details: List<String> = emptyList(),
+    val detailsTitle: String = "Inside",
 )
 
 /** Change when something happened and which category it counts as, hide it, or put it back the way the phone recorded it. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun EditItemDialog(
+fun EditItemWindow(
     target: EditTarget,
     types: List<ActivityTypeEntity>,
     onSave: (startMs: Long, endMs: Long?, activityId: String) -> Unit,
@@ -74,11 +74,11 @@ fun EditItemDialog(
     }
 
     val paper = LocalPaper.current
-    PaperDialog(
+    EditWindow(
         title = target.title,
-        onDismiss = onDismiss,
-        confirmText = "Save",
-        onConfirm = {
+        sub = formatMinute(startMinute) + (if (target.endMs != null) " to " + formatMinute(endMinute) else ""),
+        onClose = onDismiss,
+        onSave = {
             val end = target.endMs
             if (end == null) {
                 onSave(target.baseDayStartMs + startMinute * 60_000L, null, activityId)
@@ -92,37 +92,50 @@ fun EditItemDialog(
             onDismiss()
         },
     ) {
-        Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                PaperButton("Started  " + formatMinute(startMinute), { pick(startMinute) { startMinute = it } }, style = PaperButtonStyle.Ghost, small = true)
-                if (target.endMs != null) {
-                    PaperButton("Ended  " + formatMinute(endMinute), { pick(endMinute) { endMinute = it } }, style = PaperButtonStyle.Ghost, small = true)
-                }
+        MonoLabel("When")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PaperButton("Started  " + formatMinute(startMinute), { pick(startMinute) { startMinute = it } }, style = PaperButtonStyle.Ghost, small = true)
+            if (target.endMs != null) {
+                PaperButton("Ended  " + formatMinute(endMinute), { pick(endMinute) { endMinute = it } }, style = PaperButtonStyle.Ghost, small = true)
             }
-            if (target.canChangeCategory) {
-                Text("Category", fontSize = 12.sp, color = paper.ink2)
-                Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    PaperPill("As recorded", activityId.isEmpty(), { activityId = "" })
-                    types.filter { !it.archived }.forEach { t ->
-                        PaperPill(t.name, activityId == t.id, { activityId = t.id }, dot = t.displayColor())
-                    }
-                }
-            }
-            Text(
-                "The phone's own record is never changed. Your change sits on top of it, and \"Back to as recorded\" removes it.",
-                fontSize = 11.5.sp,
-                color = paper.ink2,
-            )
-            if (target.extraLabel != null && target.onExtra != null) {
-                PaperButton(target.extraLabel, { target.onExtra.invoke(); onDismiss() }, style = PaperButtonStyle.Ghost, small = true)
-            }
-            if (target.openLabel != null && target.onOpen != null) {
-                PaperButton(target.openLabel, { target.onOpen.invoke(); onDismiss() }, style = PaperButtonStyle.Ghost, small = true)
-            }
-            if (target.edited) {
-                PaperButton("Back to as recorded", { onReset(); onDismiss() }, style = PaperButtonStyle.Ghost, small = true)
-            }
-            PaperButton("Hide from the Timeline", { onHide(); onDismiss() }, style = PaperButtonStyle.Ghost, small = true)
         }
+        if (target.details.isNotEmpty()) {
+            MonoLabel(target.detailsTitle)
+            PaperCard(modifier = Modifier.fillMaxWidth(), padding = 12.dp, shadow = false) {
+                target.details.forEachIndexed { i, line ->
+                    Text(
+                        text = line,
+                        modifier = Modifier.padding(top = if (i == 0) 0.dp else 6.dp),
+                        fontSize = 13.sp,
+                        lineHeight = 17.sp,
+                        color = paper.ink,
+                    )
+                }
+            }
+        }
+        if (target.canChangeCategory) {
+            MonoLabel("Category")
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                PaperPill("As recorded", activityId.isEmpty(), { activityId = "" })
+                types.filter { !it.archived }.forEach { t ->
+                    PaperPill(t.name, activityId == t.id, { activityId = t.id }, dot = t.displayColor())
+                }
+            }
+        }
+        Text(
+            "The phone's own record is never changed. Your change sits on top of it, and \"Back to as recorded\" removes it.",
+            fontSize = 11.5.sp,
+            color = paper.ink2,
+        )
+        if (target.extraLabel != null && target.onExtra != null) {
+            PaperButton(target.extraLabel, { target.onExtra.invoke(); onDismiss() }, style = PaperButtonStyle.Ghost, small = true)
+        }
+        if (target.openLabel != null && target.onOpen != null) {
+            PaperButton(target.openLabel, { target.onOpen.invoke(); onDismiss() }, style = PaperButtonStyle.Ghost, small = true)
+        }
+        if (target.edited) {
+            PaperButton("Back to as recorded", { onReset(); onDismiss() }, style = PaperButtonStyle.Ghost, small = true)
+        }
+        PaperButton("Hide from the Timeline", { onHide(); onDismiss() }, style = PaperButtonStyle.Ghost, small = true)
     }
 }

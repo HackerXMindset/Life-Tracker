@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -109,108 +110,119 @@ fun LogSheet(
     }
 
     val paper = LocalPaper.current
-    PaperSheet(onDismiss = onDismiss) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .navigationBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+
+    fun trySave() {
+        when {
+            category == null -> error = "Pick an activity first."
+            title.isBlank() -> error = "Give it a short name."
+            !moment && end <= start -> error = "End time must be after the start time."
+            else -> onSave(
+                EntryEntity(
+                    id = initial?.id ?: 0,
+                    date = initial?.date ?: date.toString(),
+                    startMinute = start,
+                    endMinute = if (moment) null else end,
+                    category = category!!.id,
+                    title = title.trim(),
+                    note = note.trim(),
+                ),
+            )
+        }
+    }
+
+    // The fields are the same for adding (a bottom sheet) and for changing (a full-screen window).
+    val fields: @Composable ColumnScope.() -> Unit = {
+        Text("What did you do?", fontSize = 12.sp, color = paper.ink2)
+        Row(
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                text = if (initial == null) "Log something" else "Edit entry",
-                fontSize = 26.sp,
-                fontWeight = FontWeight.Bold,
-                color = paper.ink,
-            )
-
-            Text("What did you do?", fontSize = 12.sp, color = paper.ink2)
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                choices.forEach { c ->
-                    PaperPill(c.name, category?.id == c.id, { chosenId = c.id }, dot = c.displayColor())
-                }
-                PaperPill("+ New", false, { showNewType = true })
+            choices.forEach { c ->
+                PaperPill(c.name, category?.id == c.id, { chosenId = c.id }, dot = c.displayColor())
             }
+            PaperPill("+ New", false, { showNewType = true })
+        }
 
-            PaperField(
-                value = title,
-                onValueChange = { title = it; error = null },
-                label = "Name",
-                placeholder = "e.g. Polity revision",
-                singleLine = true,
-            )
+        PaperField(
+            value = title,
+            onValueChange = { title = it; error = null },
+            label = "Name",
+            placeholder = "e.g. Polity revision",
+            singleLine = true,
+        )
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Start", fontSize = 12.sp, color = paper.ink2)
+                PaperButton(
+                    text = formatMinute(start),
+                    onClick = { pickTime(start) { start = it; error = null } },
+                    modifier = Modifier.fillMaxWidth(),
+                    style = PaperButtonStyle.Ghost,
+                )
+            }
+            if (!moment) {
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("Start", fontSize = 12.sp, color = paper.ink2)
+                    Text("End", fontSize = 12.sp, color = paper.ink2)
                     PaperButton(
-                        text = formatMinute(start),
-                        onClick = { pickTime(start) { start = it; error = null } },
+                        text = formatMinute(end),
+                        onClick = { pickTime(end) { end = it; error = null } },
                         modifier = Modifier.fillMaxWidth(),
                         style = PaperButtonStyle.Ghost,
                     )
                 }
-                if (!moment) {
-                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("End", fontSize = 12.sp, color = paper.ink2)
-                        PaperButton(
-                            text = formatMinute(end),
-                            onClick = { pickTime(end) { end = it; error = null } },
-                            modifier = Modifier.fillMaxWidth(),
-                            style = PaperButtonStyle.Ghost,
-                        )
-                    }
-                }
             }
+        }
 
-            SwitchRow("Just a moment, no end time", moment) { moment = it; error = null }
+        SwitchRow("Just a moment, no end time", moment) { moment = it; error = null }
 
-            PaperField(value = note, onValueChange = { note = it }, label = "Note (optional)", minLines = 3)
+        PaperField(value = note, onValueChange = { note = it }, label = "Note (optional)", minLines = 3)
 
-            error?.let {
-                Text(text = it, color = paper.bad, fontSize = 13.sp)
-            }
+        error?.let {
+            Text(text = it, color = paper.bad, fontSize = 13.sp)
+        }
+    }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.CenterVertically,
+    if (initial != null) {
+        EditWindow(
+            title = initial.title.ifBlank { "Edit entry" },
+            sub = "Something you logged",
+            onClose = onDismiss,
+            onSave = { trySave() },
+        ) {
+            fields()
+            if (onDelete != null) PaperButton("Delete", onDelete, modifier = Modifier.fillMaxWidth(), style = PaperButtonStyle.Danger)
+        }
+    } else {
+        PaperSheet(onDismiss = onDismiss) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .navigationBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                if (initial != null && onDelete != null) {
-                    PaperButton("Delete", onDelete, modifier = Modifier.weight(1f), style = PaperButtonStyle.Danger)
-                }
-                PaperButton("Cancel", onDismiss, modifier = Modifier.weight(1f), style = PaperButtonStyle.Ghost)
-                PaperButton(
-                    text = if (initial == null) "Add to timeline" else "Save",
-                    onClick = {
-                        when {
-                            category == null -> error = "Pick an activity first."
-                            title.isBlank() -> error = "Give it a short name."
-                            !moment && end <= start -> error = "End time must be after the start time."
-                            else -> onSave(
-                                EntryEntity(
-                                    id = initial?.id ?: 0,
-                                    date = initial?.date ?: date.toString(),
-                                    startMinute = start,
-                                    endMinute = if (moment) null else end,
-                                    category = category!!.id,
-                                    title = title.trim(),
-                                    note = note.trim(),
-                                ),
-                            )
-                        }
-                    },
-                    modifier = Modifier.weight(if (initial != null && onDelete != null) 1.4f else 1f),
+                Text(
+                    text = "Log something",
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = paper.ink,
                 )
+                fields()
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    PaperButton("Cancel", onDismiss, modifier = Modifier.weight(1f), style = PaperButtonStyle.Ghost)
+                    PaperButton(text = "Add to timeline", onClick = { trySave() }, modifier = Modifier.weight(1f))
+                }
+                Spacer(Modifier.height(12.dp))
             }
-            Spacer(Modifier.height(12.dp))
         }
     }
 
