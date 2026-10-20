@@ -270,7 +270,7 @@ object PlaceEngine {
             val stillInsideCurrentPlace = currentPlace != null && (
                 detectedPlace?.id == currentPlace.id ||
                     (detectedPlace == null &&
-                        PlaceRules.awayM(currentPlace.lat, currentPlace.lng, fix.lat, fix.lng, fix.accuracyM) <= currentPlace.radiusM)
+                        PlaceRules.awayM(currentPlace.lat, currentPlace.lng, fix.lat, fix.lng, fix.accuracyM) <= currentPlace.radiusM.toDouble())
                 )
             val remainsAtStay = if (currentPlace != null) stillInsideCurrentPlace else closeToCentre
             if (remainsAtStay) {
