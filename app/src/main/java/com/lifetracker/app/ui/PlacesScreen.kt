@@ -85,9 +85,6 @@ fun PlacesScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PlacesViewModel
     BackHandler(onBack = onBack)
     StartOnToday(vm::setRange)
 
-    val askLocation = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { vm.refresh() }
-    val askBackground = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { vm.refresh() }
-    val askActivity = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { vm.refresh() }
 
     DisposableEffect(context) {
         val owner = context.findLifecycleOwner()
@@ -196,55 +193,14 @@ fun PlacesScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PlacesViewModel
                 }
             }
 
-            if (!access.all) {
+            if (!access.all || !access.battery) {
                 item {
-                    PlacesCard(
-                        title = "Three permissions, one after the other",
-                        text = "1. Location: " + tick(access.location) + "\n" +
-                            "2. Location \"Allow all the time\": " + tick(access.background) + "\n" +
-                            "3. Physical activity (notices when the phone stays still): " + tick(access.activity) + "\n\n" +
-                            "Without \"all the time\", Android only tells the app about places while it is open. " +
-                            "Nothing leaves the phone.",
-                    ) {
-                        if (!access.location) {
-                            Button(onClick = {
-                                askLocation.launch(
-                                    arrayOf(
-                                        android.Manifest.permission.ACCESS_FINE_LOCATION,
-                                        android.Manifest.permission.ACCESS_COARSE_LOCATION,
-                                    ),
-                                )
-                            }) { Text("Allow location") }
-                        } else if (!access.background) {
-                            Button(onClick = {
-                                if (Build.VERSION.SDK_INT >= 29) askBackground.launch(android.Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-                            }) { Text("Allow all the time") }
-                        } else if (!access.activity) {
-                            Button(onClick = {
-                                if (Build.VERSION.SDK_INT >= 29) askActivity.launch(android.Manifest.permission.ACTIVITY_RECOGNITION)
-                            }) { Text("Allow physical activity") }
-                        }
-                        TextButton(onClick = {
-                            context.startActivity(
-                                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))
-                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                            )
-                        }) { Text("Open this app's settings") }
-                    }
-                }
-            }
-
-
-            item { PaperSection("Keep it running", "keeps recording alive") }
-            item {
-                PlacesCard(
-                    title = "Stop the phone putting the app to sleep",
-                    text = "Battery: " + (if (access.battery) "no restrictions ✓" else "restricted, not yet allowed") + "\n\n" +
-                        "Android stops background apps to save battery, which is the main reason places and trips get missed. " +
-                        "Allow unrestricted battery for this app. " +
-                        "If the button opens the wrong page, use \"Open this app's settings\" above.",
-                ) {
-                    Button(onClick = { KeepAlive.open(context, KeepAlive.exemptionIntents(context)) }) { Text("Allow unrestricted") }
+                    SetupNote(
+                        "Needs location all the time, physical activity and unrestricted battery" +
+                            " (location " + tick(access.location) + ", all the time " + tick(access.background) +
+                            ", activity " + tick(access.activity) + ", battery " + tick(access.battery) + ")." +
+                            " Allow them in Settings > Permissions, where each says why and how.",
+                    )
                 }
             }
 

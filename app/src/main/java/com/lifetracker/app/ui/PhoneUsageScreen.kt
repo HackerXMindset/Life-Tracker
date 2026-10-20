@@ -127,28 +127,7 @@ fun PhoneUsageScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PhoneUsageV
         }
 
         if (!hasAccess) {
-            item {
-                PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text(
-                            "Allow usage access",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        Text(
-                            "Android keeps a record of which app was on screen and for how long. This is where Digital Wellbeing gets its numbers. " +
-                                "The app copies that record into its own database on your phone, so you can see exact times on the Timeline. Nothing leaves the phone.",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            "Tap the button, find Life Tracker in the list, and switch it on. Then come back.",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Button(onClick = { UsageCollector.openAccessSettings(context) }) { Text("Open usage access settings") }
-                    }
-                }
-            }
+            item { SetupNote("Needs usage access. Allow it in Settings > Permissions, where it also says why and how.") }
             return@LazyColumn
         }
 

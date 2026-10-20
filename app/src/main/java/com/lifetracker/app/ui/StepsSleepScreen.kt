@@ -174,26 +174,8 @@ fun StepsSleepScreen(onBack: () -> Unit, part: Part = Part.Data, vm: StepsSleepV
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    HcState.NeedsPermission -> HealthCard(
-                        title = "Allow Health Connect",
-                        text = "The app reads your steps and any sleep other apps saved there, and keeps its own copy on this phone. Nothing leaves the phone.",
-                    ) {
-                        Button(onClick = { askHealth.launch(HealthConnectSync.REQUEST) }) { Text("Allow") }
-                        TextButton(onClick = ::openSettings) { Text("Open Health Connect settings") }
-                    }
-                    HcState.NeedsUpdate -> HealthCard(
-                        title = "Update Health Connect",
-                        text = "Health Connect needs an update from the Play Store before the app can read it.",
-                    ) {
-                        Button(onClick = {
-                            runCatching {
-                                context.startActivity(
-                                    Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=${HealthConnectSync.PACKAGE}"))
-                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                                )
-                            }
-                        }) { Text("Open Play Store") }
-                    }
+                    HcState.NeedsPermission -> SetupNote("Health Connect is not allowed yet. Allow it in Settings > Permissions, where it also says why and how.")
+                    HcState.NeedsUpdate -> SetupNote("Health Connect needs an update from the Play Store. Settings > Permissions has the button.")
                     HcState.Unavailable -> HealthCard(
                         title = "Health Connect is not available",
                         text = "This phone does not have Health Connect. Switch on the phone's step counter below to count steps.",
