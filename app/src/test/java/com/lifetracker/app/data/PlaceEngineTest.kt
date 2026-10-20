@@ -259,4 +259,51 @@ class PlaceEngineTest {
         assertEquals(WatchState(), WatchState.fromJson(""))
         assertEquals(WatchState(), WatchState.fromJson("{not json"))
     }
+
+    @Test
+    fun walkingAroundInsideAConfiguredPlaceDoesNotCreateATrip() {
+        val park = PlaceEntity("park", "Park", "other", 28.6100, 77.2100, 150, false, 0L)
+        val run = Run(listOf(park))
+
+        for (m in 0..3) run.feed(fix(m, park.lat, park.lng))
+        // About 100 m from the first point: outside the small stay-centre radius but inside the park circle.
+        for (m in 4..8) run.feed(fix(m, 28.6109, park.lng))
+
+        assertNull(run.state.trip)
+        assertEquals("park", run.state.stay?.placeId)
+        assertEquals(1, run.rows.size)
+        assertTrue(run.rows.values.single().ongoing)
+        assertEquals(t0, run.rows.values.single().startMs)
+    }
+
+    @Test
+    fun leavingAConfiguredPlaceStartsATripOnlyAfterLeavingItsCircle() {
+        val park = PlaceEntity("park", "Park", "other", 28.6100, 77.2100, 150, false, 0L)
+        val run = Run(listOf(park))
+        for (m in 0..5) run.feed(fix(m, 28.6109, park.lng))
+        run.state = PlaceEngine.onMoving(run.state, t0 + 5 * min, t0 + 5 * min)
+
+        run.feed(fix(6, 28.6122, park.lng))
+        assertEquals("park", run.state.trip?.fromPlaceId)
+        assertFalse(run.rows.values.single().ongoing)
+        assertEquals(t0 + 5 * min, run.rows.values.single().endMs)
+    }
+
+    @Test
+    fun onTheMoveRequiresMovementOutsideAPlaceAndFreshLocationEvidence() {
+        val outsideStay = Stay(t0, 28.7000, 77.3000, 2, t0 + min, placeId = "")
+        val moving = WatchState(
+            stay = outsideStay,
+            moving = true,
+            triggerMs = t0 + min,
+            moveStartMs = t0,
+            trip = Trip("t1", t0, "park", t0 + min),
+        )
+        assertTrue(PlaceEngine.isOnTheMove(moving, t0 + 2 * min))
+        assertFalse(PlaceEngine.isOnTheMove(moving.copy(stay = outsideStay.copy(placeId = "park")), t0 + 2 * min))
+        assertFalse(PlaceEngine.isOnTheMove(moving.copy(moving = false), t0 + 2 * min))
+        assertFalse(PlaceEngine.isOnTheMove(moving.copy(trip = null, stay = null), t0 + 2 * min))
+        assertFalse(PlaceEngine.isOnTheMove(moving, t0 + TripRules.TRIP_GAP_MS))
+    }
+
 }
