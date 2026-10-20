@@ -192,6 +192,22 @@ object PlaceEngine {
             triggerMs = nowMs,
         )
 
+    /**
+     * Whether the Timeline should show its temporary "On the move" row right now.
+     * Movement alone is not enough: the latest position must be outside named places, and the
+     * movement/position state must still be fresh. The row is not a saved activity or trip.
+     */
+    fun isOnTheMove(state: WatchState, nowMs: Long): Boolean {
+        if (!state.moving) return false
+        val stay = state.stay ?: return false
+        if (stay.placeId.isNotEmpty()) return false
+
+        val latestEvidenceMs = maxOf(state.triggerMs, stay.lastSeenMs, state.trip?.lastPointMs ?: 0L)
+        val maxAgeMs = if (state.trip != null) TripRules.TRIP_GAP_MS else MOVE_CHECK_MS
+        val ageMs = nowMs - latestEvidenceMs
+        return ageMs in 0 until maxAgeMs
+    }
+
     /** Seconds between readings right now: the quicker trip pace while you are on the move or on a trip. */
     fun intervalSec(state: WatchState, stayIntervalSec: Int, tripIntervalSec: Int): Int =
         if (state.trip != null || state.moving) min(stayIntervalSec, tripIntervalSec) else stayIntervalSec
@@ -246,17 +262,29 @@ object PlaceEngine {
         val stay = s.stay
         if (stay != null) {
             val d = PlaceRules.distanceM(stay.lat, stay.lng, fix.lat, fix.lng)
-            if (d <= STAY_RADIUS_M + min(fix.accuracyM.toDouble(), 50.0)) {
+            val closeToCentre = d <= STAY_RADIUS_M + min(fix.accuracyM.toDouble(), 50.0)
+            val currentPlace = places.firstOrNull { it.id == stay.placeId && !it.archived }
+            val detectedPlace = PlaceRules.placeAt(places, fix.lat, fix.lng)
+            // A named place is the whole configured circle, not just the small area around the stay's averaged centre.
+            // This keeps a walk around a park, campus or other large place from becoming a false journey.
+            val stillInsideCurrentPlace = currentPlace != null && (
+                detectedPlace?.id == currentPlace.id ||
+                    (detectedPlace == null &&
+                        PlaceRules.awayM(currentPlace.lat, currentPlace.lng, fix.lat, fix.lng, fix.accuracyM) <= currentPlace.radiusM)
+                )
+            val remainsAtStay = if (currentPlace != null) stillInsideCurrentPlace else closeToCentre
+            if (remainsAtStay) {
                 val n = stay.n + 1
-                val lat = stay.lat + (fix.lat - stay.lat) / n
-                val lng = stay.lng + (fix.lng - stay.lng) / n
+                // If wandering around the place, retain its centre; only average nearby readings as before.
+                val lat = if (closeToCentre) stay.lat + (fix.lat - stay.lat) / n else stay.lat
+                val lng = if (closeToCentre) stay.lng + (fix.lng - stay.lng) / n else stay.lng
                 s = s.copy(
                     stay = stay.copy(
                         lat = lat,
                         lng = lng,
                         n = n,
                         lastSeenMs = max(stay.lastSeenMs, fix.timeMs),
-                        placeId = PlaceRules.placeAt(places, lat, lng)?.id ?: "",
+                        placeId = if (currentPlace != null) stay.placeId else PlaceRules.placeAt(places, lat, lng)?.id ?: "",
                     ),
                 )
             } else {
