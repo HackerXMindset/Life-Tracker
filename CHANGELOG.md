@@ -2,6 +2,17 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧭 Place-aware movement on the Timeline
+
+### ✨ New
+
+- **On the move.** The Timeline shows a temporary live row while movement is detected outside a configured place, and removes it when movement stops or a known place becomes the current location. It is display-only and is not saved as a separate activity or trip.
+
+### 🔧 Changed
+
+- Walking around inside a configured place's circle keeps one continuous visit instead of splitting it into false trips when the phone moves more than 50 m from the stay's averaged centre.
+- The existing place-radius choices, database, backup format and completed-trip travel-mode logic are unchanged.
+
 ## 🔐 Permissions in one place
 
 ### ✨ New
