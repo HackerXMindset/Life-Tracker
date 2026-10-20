@@ -52,12 +52,12 @@ data class BackupData(
  *
  * `version` lets later steps add more data without breaking old backups.
  * Version 1 held only Timeline entries; version 2 adds habits, to-dos, notes
- * and the record of what was imported; version 3 adds meals, food goals and water; version 4 adds your own activities and their goals; version 5 adds money (categories, saved items and entries); version 6 adds phone usage (sessions are stored compactly as [app, start, end]); version 7 adds phone calls (each stored as [number, name, type, start, seconds]); version 8 adds charging sessions (each stored as [start, end, startLevel, endLevel, plug, source, samples, currentSamples, sumMa, sumMv, ongoing]); version 9 adds steps (each day stored as [date, steps, source]) and sleep (each night stored as [date, start, end, source]); version 10 adds places (the ones you named) and place visits (each stored as [id, place, start, end, lat, lng, source, ongoing, ignored]); version 11 adds trips (each stored as [id, start, end, from, to, distance, medianKmh, topKmh, activity, mode, modeSource]) and the position readings of each trip (each stored as [trip, time, lat, lng, accuracy]); version 12 adds every position reading, stored compactly one day at a time (see rawFixesJson); version 13 adds the speed the phone measured to each reading; version 14 adds how sure the app is of each visit (a tenth value in each visit list); version 15 adds what you changed on the Timeline (each stored as [kind, id, start, end, category, hidden, changedAt, label]); version 16 adds the app combinations you named (each stored as an object with id, name, pkgs, activityId and updatedMs); version 17 adds the stretches when the phone was off or its screen stayed off (each stored as [kind, start, end]); version 18 adds the step counter to each trip reading (a sixth value, -1 when not known); version 19 adds an icon to each activity and each app (an "icon" text, left out when there is none); version 21 adds the place categories (each stored as an object with id, name, color, icon, sortOrder and archived). A file from a newer version of the app
+ * and the record of what was imported; version 3 adds meals, food goals and water; version 4 adds your own activities and their goals; version 5 adds money (categories, saved items and entries); version 6 adds phone usage (sessions are stored compactly as [app, start, end]); version 7 adds phone calls (each stored as [number, name, type, start, seconds]); version 8 adds charging sessions (each stored as [start, end, startLevel, endLevel, plug, source, samples, currentSamples, sumMa, sumMv, ongoing]); version 9 adds steps (each day stored as [date, steps, source]) and sleep (each night stored as [date, start, end, source]); version 10 adds places (the ones you named) and place visits (each stored as [id, place, start, end, lat, lng, source, ongoing, ignored]); version 11 adds trips (each stored as [id, start, end, from, to, distance, medianKmh, topKmh, activity, mode, modeSource]) and the position readings of each trip (each stored as [trip, time, lat, lng, accuracy]); version 12 adds every position reading, stored compactly one day at a time (see rawFixesJson); version 13 adds the speed the phone measured to each reading; version 14 adds how sure the app is of each visit (a tenth value in each visit list); version 15 adds what you changed on the Timeline (each stored as [kind, id, start, end, category, hidden, changedAt, label]); version 16 adds the app combinations you named (each stored as an object with id, name, pkgs, activityId and updatedMs); version 17 adds the stretches when the phone was off or its screen stayed off (each stored as [kind, start, end]); version 18 adds the step counter to each trip reading (a sixth value, -1 when not known); version 19 adds an icon to each activity and each app (an "icon" text, left out when there is none); version 21 adds the place categories (each stored as an object with id, name, color, icon, sortOrder and archived); version 22 adds "deduct it from" to money entries and saved items ("source" 0 mine, 1 someone else, 2 not sure, and "paidBy"; left out when it is mine) and an icon to money categories. A file from a newer version of the app
  * is refused rather than half-read.
  */
 object BackupCodec {
     const val APP_NAME = "life-tracker"
-    const val FORMAT_VERSION = 21
+    const val FORMAT_VERSION = 22
 
     fun encode(data: BackupData): String =
         JSONObject()
@@ -330,7 +330,7 @@ object BackupCodec {
 
     private fun moneyCategoryJson(c: MoneyCategoryEntity) = JSONObject()
         .put("id", c.id).put("name", c.name).put("color", c.color).put("kind", c.kind)
-        .put("sortOrder", c.sortOrder).put("archived", c.archived)
+        .put("sortOrder", c.sortOrder).put("archived", c.archived).also { if (c.icon.isNotEmpty()) it.put("icon", c.icon) }
 
     private fun moneyCategory(o: JSONObject) = MoneyCategoryEntity(
         id = o.getString("id"),
@@ -339,6 +339,7 @@ object BackupCodec {
         kind = o.getInt("kind"),
         sortOrder = o.getInt("sortOrder"),
         archived = o.getBoolean("archived"),
+        icon = o.optString("icon", ""),
     )
 
     private fun moneyItemJson(i: MoneyItemEntity) = JSONObject()
@@ -346,6 +347,7 @@ object BackupCodec {
         .put("amount", i.amount).put("type", i.type).put("chargeDay", i.chargeDay)
         .put("startDate", i.startDate).put("endDate", i.endDate).put("lastPosted", i.lastPosted)
         .put("archived", i.archived).put("sortOrder", i.sortOrder)
+        .also { if (i.source != SOURCE_MINE) it.put("source", i.source); if (i.paidBy.isNotEmpty()) it.put("paidBy", i.paidBy) }
 
     private fun moneyItem(o: JSONObject) = MoneyItemEntity(
         id = o.getString("id"),
@@ -360,11 +362,14 @@ object BackupCodec {
         lastPosted = o.getString("lastPosted"),
         archived = o.getBoolean("archived"),
         sortOrder = o.getInt("sortOrder"),
+        source = o.optInt("source", SOURCE_MINE),
+        paidBy = o.optString("paidBy", ""),
     )
 
     private fun moneyEntryJson(e: MoneyEntryEntity) = JSONObject()
         .put("id", e.id).put("date", e.date).put("kind", e.kind).put("categoryId", e.categoryId)
         .put("name", e.name).put("amount", e.amount).put("note", e.note).put("itemId", e.itemId)
+        .also { if (e.source != SOURCE_MINE) it.put("source", e.source); if (e.paidBy.isNotEmpty()) it.put("paidBy", e.paidBy) }
 
     private fun moneyEntry(o: JSONObject) = MoneyEntryEntity(
         id = o.getString("id"),
@@ -375,6 +380,8 @@ object BackupCodec {
         amount = o.getDouble("amount"),
         note = o.getString("note"),
         itemId = o.getString("itemId"),
+        source = o.optInt("source", SOURCE_MINE),
+        paidBy = o.optString("paidBy", ""),
     )
 
     // Sessions are the biggest part of a backup, so each is one short list: [app, start, end].
