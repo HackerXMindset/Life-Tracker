@@ -63,6 +63,8 @@ object DayLayout {
         val from: PlaceVisitEntity? = null,
         val to: PlaceVisitEntity? = null,
         val straightLineM: Int = 0,
+        /** True only for the temporary current "On the move" status; it is never saved as a trip. */
+        val liveMovement: Boolean = false,
     ) : Row
 
     class Thing(val item: Item) : Row {
