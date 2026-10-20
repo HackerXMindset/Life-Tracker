@@ -76,4 +76,24 @@ class TimeWarpTest {
         assertEquals(90f, r.tops[0], 0.001f)
         assertEquals(60f, r.warp.y(60 * minute), 0.001f)
     }
+
+    @Test
+    fun compactRowsStackWithNoGapsForEmptyHours() {
+        // Rows at 0, 60 and 600 minutes: ten hours between the last two must not leave blank space.
+        val r = TimeWarp.compact(listOf(0, 60 * minute, 600 * minute), listOf(40f, 50f, 60f), 700 * minute)
+        assertEquals(listOf(0f, 40f, 90f), r.tops)
+    }
+
+    @Test
+    fun compactLinesRunFromTheirRowToTheRowWhereTheyEnd() {
+        val r = TimeWarp.compact(listOf(0, 60 * minute, 120 * minute), listOf(40f, 40f, 40f), 180 * minute)
+        assertEquals(40f, r.warp.y(60 * minute), 0.001f)
+        // Halfway between the first two rows' start times is halfway down the first row.
+        assertEquals(20f, r.warp.y(30 * minute), 0.001f)
+        // Ending after the last row stops at the bottom of the list, however late.
+        assertEquals(120f, r.warp.y(180 * minute), 0.001f)
+        assertEquals(120f, r.warp.y(900 * minute), 0.001f)
+        // Before the first row it stays at the top.
+        assertEquals(0f, r.warp.y(-50 * minute), 0.001f)
+    }
 }

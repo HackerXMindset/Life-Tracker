@@ -2,6 +2,13 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧹 The hour ruler is gone
+
+### 🔧 Changed
+
+- **No more hour labels or hour lines on the Timeline.** The 12:00, 1:00, 2:00 ... column down the left and the lines across the lanes are removed, and the day is no longer drawn to scale, so a long sleep or a long stay no longer leaves hours of empty space. Rows stack one under the other; the thick coloured lines stay, each running from its own row down to the row where it ended. Every row still shows its real time.
+- **Last phone-maker names removed.** The home screen is found by asking Android which app it is, instead of a list of names.
+
 ## 🔐 Permissions in one place
 
 ### ✨ New
