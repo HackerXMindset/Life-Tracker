@@ -269,8 +269,7 @@ object PlaceEngine {
             // This keeps a walk around a park, campus or other large place from becoming a false journey.
             val stillInsideCurrentPlace = currentPlace != null && (
                 detectedPlace?.id == currentPlace.id ||
-                    (detectedPlace == null &&
-                        PlaceRules.awayM(currentPlace.lat, currentPlace.lng, fix.lat, fix.lng, fix.accuracyM) <= currentPlace.radiusM.toDouble())
+                    PlaceRules.awayM(currentPlace.lat, currentPlace.lng, fix.lat, fix.lng, fix.accuracyM) <= currentPlace.radiusM.toDouble()
                 )
             val remainsAtStay = if (currentPlace != null) stillInsideCurrentPlace else closeToCentre
             if (remainsAtStay) {
