@@ -58,6 +58,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.delay
 import com.lifetracker.app.R
 import com.lifetracker.app.data.ActivityStats
 import com.lifetracker.app.data.ActivityTypeEntity
@@ -75,6 +76,7 @@ import com.lifetracker.app.data.ChargeStats
 import com.lifetracker.app.data.DayLayout
 import com.lifetracker.app.data.DaySegments
 import com.lifetracker.app.data.HealthSettings
+import com.lifetracker.app.data.PlaceEngine
 import com.lifetracker.app.data.PlaceRules
 import com.lifetracker.app.data.PlaceVisitEntity
 import com.lifetracker.app.data.StayConfidence
@@ -136,8 +138,17 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
     val callsSettings = remember { CallsSettings(context) }
     val showCharging = remember { ChargeSettings(context) }.showOnTimeline
     val showHealth = remember { HealthSettings(context) }.showOnTimeline
-    val showPlaces = remember { PlacesSettings(context) }.showOnTimeline
-    val showTrips = remember { PlacesSettings(context) }.showTripsOnTimeline
+    val placeSettings = remember(context) { PlacesSettings(context) }
+    val showPlaces = placeSettings.showOnTimeline
+    val showTrips = placeSettings.showTripsOnTimeline
+    var liveWatchState by remember(placeSettings) { mutableStateOf(placeSettings.engine) }
+    LaunchedEffect(placeSettings) {
+        // SharedPreferences is also updated by the background place service. Poll only while this screen is composed.
+        while (true) {
+            liveWatchState = placeSettings.engine
+            delay(1_000L)
+        }
+    }
     val zone = ZoneId.systemDefault()
     val dayStartMs = date.atStartOfDay(zone).toInstant().toEpochMilli()
     val dayEndMs = date.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
@@ -289,7 +300,28 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
     var pie by rememberSaveable { mutableStateOf(false) }
 
     val offs = usageOffs.map { DayLayout.Off(it.startMs, it.endMs, it.kind == UsageStateEntity.SHUTDOWN) }
-    val rows = DayLayout.build(items, visitsEff, tripsEff, placeNames, dayStartMs, dayEndMs, nowMs, showPlaces, showTrips, offs = offs, showGaps = timelineSettings.showGaps)
+    val arrangedRows = DayLayout.build(items, visitsEff, tripsEff, placeNames, dayStartMs, dayEndMs, nowMs, showPlaces, showTrips, offs = offs, showGaps = timelineSettings.showGaps)
+    val activeTrip = liveWatchState.trip
+    val showLiveMovement = date == LocalDate.now() &&
+        showTrips && placeSettings.enabled &&
+        PlaceEngine.isOnTheMove(liveWatchState, nowMs)
+    val liveMoveStartMs = activeTrip?.startMs?.takeIf { it > 0L } ?: liveWatchState.moveStartMs
+    val rows = if (showLiveMovement && liveMoveStartMs > 0L) {
+        val liveRow = DayLayout.Travel(
+            key = "live-move-$liveMoveStartMs",
+            startMs = maxOf(liveMoveStartMs, dayStartMs),
+            endMs = maxOf(nowMs, liveMoveStartMs),
+            trip = null,
+            fromName = activeTrip?.fromPlaceId?.let { placeNames[it] }.orEmpty(),
+            toName = "",
+            liveMovement = true,
+        )
+        (arrangedRows + liveRow).sortedWith(
+            compareBy<DayLayout.Row> { it.startMs }.thenBy { if (it is DayLayout.Place) 0 else 1 },
+        )
+    } else {
+        arrangedRows
+    }
 
     // The "Where" line: each stay at a place, and each journey between places.
     val whereSegs = rows.mapNotNull { r ->
@@ -299,10 +331,14 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
                 typeOf(TimelineEdits.VISIT, r.visit.id)?.displayColor() ?: placeLooks[r.placeId]?.let { argbColor(it.color) } ?: placeColorOf(r.name), r.name,
             )
             is DayLayout.Travel -> {
-                val unknown = r.trip == null || (r.trip.mode == "vehicle" && r.trip.modeSource != "you")
+                val unknown = !r.liveMovement && (r.trip == null || (r.trip.mode == "vehicle" && r.trip.modeSource != "you"))
                 StripSeg(
                     r.startMs, r.endMs, Color(0xFF4A5568),
-                    if (unknown) "Unknown way of travel" else TripModes.label(r.trip!!.mode),
+                    when {
+                        r.liveMovement -> "On the move"
+                        unknown -> "Unknown way of travel"
+                        else -> TripModes.label(r.trip!!.mode)
+                    },
                     hatch = true, unknown = unknown,
                 )
             }
