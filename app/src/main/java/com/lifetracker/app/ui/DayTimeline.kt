@@ -159,7 +159,7 @@ private class Slot(
 /** The box round a stay at a place: the stay's own row and the things that happened during it. */
 private class Frame(val first: Slot, val members: List<Slot>)
 
-private val RULER_WIDTH = 36.dp
+private val RULER_WIDTH = 0.dp
 private val LANE_WIDTH = 13.dp
 private val BAR_WIDTH = 9.dp
 
@@ -172,12 +172,7 @@ private val FRAME_PAD = 5.dp
 private val ROW_GAP = 6.dp
 private val ROW_MIN = 44.dp
 private val GAP_MIN = 26.dp
-private const val HOUR_MS = 3_600_000L
-
-private fun hourFloor(ms: Long): Long =
-    Instant.ofEpochMilli(ms).atZone(ZoneId.systemDefault()).truncatedTo(java.time.temporal.ChronoUnit.HOURS).toInstant().toEpochMilli()
-
-/** Where the page put things this time: the one map lines, rows and hour labels all use (see TimeWarp). */
+/** Where the page put things this time: the one map the lines and rows use (see TimeWarp). */
 private class WarpHolder {
     var warp: TimeWarp.Warp? = null
     var tops: List<Float> = emptyList()
@@ -187,11 +182,9 @@ private class WarpHolder {
 }
 
 /**
- * The whole day as a calendar. Every place, journey, phone period, call and so on has a line that starts and ends at its real
- * time and one small row beside it. A row is at least [ROW_MIN] tall (an Offline or No data line [GAP_MIN]); when that is
- * more than its real time, the page stretches that stretch of time to make room, and the lines and the hour labels follow,
- * so they can never disagree with the rows. Where nothing is crowded the scale is exactly 1 hour = 60 dp. Tap a row to open
- * it in place.
+ * The whole day as one list. Every place, journey, phone period, call and so on has a thick line and one small row beside it.
+ * There is no hour ruler: rows stack one under the other, and a line runs from its own row down to the row where it ended.
+ * Tap a row to open it in place, long-press to edit.
  */
 @Composable
 fun DayCalendar(rows: List<DayLayout.Row>, a: DayActions) {
@@ -256,11 +249,7 @@ fun DayCalendar(rows: List<DayLayout.Row>, a: DayActions) {
     packed.forEachIndexed { i, s -> s.lane = packedLanes[i] + 1 }
     val slots = (fixed + packed).sortedBy { it.startMs }
     val laneCount = (slots.maxOf { it.lane } + 1).coerceAtLeast(1)
-    val from = hourFloor(slots.minOf { it.startMs })
-    val to = maxOf(hourFloor(slots.maxOf { it.endMs } - 1) + HOUR_MS, from + HOUR_MS)
-    val hours = generateSequence(from) { it + HOUR_MS }.takeWhile { it <= to }.toList()
-    val labelColor = paper.ink2
-    val hourLine = paper.line.copy(alpha = 0.7f)
+    val to = slots.maxOf { it.endMs }
     val hatch = paper.ink2.copy(alpha = 0.22f)
     val quietBar = paper.ink2.copy(alpha = 0.32f)
     val holder = remember { WarpHolder() }
@@ -298,12 +287,6 @@ fun DayCalendar(rows: List<DayLayout.Row>, a: DayActions) {
                         drawRoundRect(frameFill, tl, sz, CornerRadius(12.dp.toPx()))
                         drawRoundRect(frameLine, tl, sz, CornerRadius(12.dp.toPx()), style = Stroke(1.25.dp.toPx()))
                     }
-                }
-                // Hour ticks only across the lines, so nothing cuts through the rows.
-                val railRight = railLeft + placeLane + laneW * (laneCount - 1)
-                hours.forEach { h ->
-                    val y = warp.y(h)
-                    drawLine(hourLine, Offset(railLeft, y), Offset(railRight, y), 1.dp.toPx())
                 }
                 for (s in slots) {
                     // Lane 0 is the wide one for places; the others are narrow.
@@ -359,30 +342,23 @@ fun DayCalendar(rows: List<DayLayout.Row>, a: DayActions) {
                 }
             },
         content = {
-            hours.forEach { Text(text = clock(it), fontSize = 9.sp, lineHeight = 11.sp, color = labelColor, maxLines = 1) }
             slots.forEach { s -> key(s.key) { Box { s.card() } } }
         },
     ) { measurables, constraints ->
-        val perMin = 1.dp.toPx()
         val cardX = (RULER_WIDTH + PLACE_LANE + LANE_WIDTH * (laneCount - 1) + 8.dp + FRAME_PAD).roundToPx()
         val cardWidth = (constraints.maxWidth - cardX - FRAME_PAD.roundToPx()).coerceAtLeast(0)
-        val labels = measurables.take(hours.size).map { it.measure(androidx.compose.ui.unit.Constraints(maxWidth = RULER_WIDTH.roundToPx())) }
-        val cards = measurables.drop(hours.size).map {
+        val cards = measurables.map {
             it.measure(androidx.compose.ui.unit.Constraints(minWidth = cardWidth, maxWidth = cardWidth))
         }
         val gapPx = ROW_GAP.toPx()
-        val built = TimeWarp.build(slots.map { it.startMs }, cards.map { it.height + gapPx }, from, perMin)
+        val built = TimeWarp.compact(slots.map { it.startMs }, cards.map { it.height + gapPx }, to)
         holder.warp = built.warp
         holder.tops = built.tops
         holder.heights = cards.map { it.height }
         holder.cardX = cardX.toFloat()
         holder.cardWidth = cardWidth.toFloat()
-        val bottom = maxOf(built.warp.y(to), built.tops.last() + cards.last().height)
+        val bottom = built.tops.last() + cards.last().height
         layout(constraints.maxWidth, bottom.toInt()) {
-            labels.forEachIndexed { i, label ->
-                val y = (built.warp.y(hours[i]) - label.height / 2f).toInt()
-                label.place(0, y.coerceAtLeast(0))
-            }
             cards.forEachIndexed { i, card -> card.place(cardX, built.tops[i].toInt()) }
         }
     }

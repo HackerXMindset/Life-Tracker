@@ -51,4 +51,23 @@ object TimeWarp {
         }
         return Result(Warp(startsMs.toLongArray(), tops.toFloatArray(), perMs), tops)
     }
+
+    /**
+     * The Timeline page: no hour scale at all. Rows simply stack one under the other ([heightsPx] include the space after
+     * each), and a line for [startsMs] to [endMs] runs from the row it starts at down to the point between rows that matches
+     * its end time. Anything ending after the last row stops at the bottom of the list.
+     */
+    fun compact(startsMs: List<Long>, heightsPx: List<Float>, endMs: Long): Result {
+        require(startsMs.size == heightsPx.size) { "one height per row" }
+        val tops = ArrayList<Float>(startsMs.size)
+        var y = 0f
+        for (h in heightsPx) {
+            tops += y
+            y += h
+        }
+        if (startsMs.isEmpty()) return Result(Warp(LongArray(0), FloatArray(0), 0f), tops)
+        val times = LongArray(startsMs.size + 1) { if (it < startsMs.size) startsMs[it] else maxOf(endMs, startsMs.last() + 1L) }
+        val ys = FloatArray(startsMs.size + 1) { if (it < startsMs.size) tops[it] else y }
+        return Result(Warp(times, ys, 0f), tops)
+    }
 }
