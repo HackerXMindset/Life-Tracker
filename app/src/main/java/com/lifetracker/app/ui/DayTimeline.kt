@@ -243,8 +243,12 @@ fun DayCalendar(rows: List<DayLayout.Row>, a: DayActions) {
             }
             is DayLayout.Travel -> {
                 val trip = row.trip
-                val unknown = trip == null || (trip.mode == "vehicle" && trip.modeSource != "you")
-                fixed += Slot("t|" + row.key, row.startMs, row.endMs, if (unknown) Bar.LINE_UNKNOWN else Bar.LINE, if (unknown) paper.sun else paper.ink2) { TravelCard(row, a) }
+                val unknown = !row.liveMovement && (trip == null || (trip.mode == "vehicle" && trip.modeSource != "you"))
+                fixed += Slot(
+                    "t|" + row.key, row.startMs, row.endMs,
+                    if (unknown) Bar.LINE_UNKNOWN else Bar.LINE,
+                    if (unknown) paper.sun else paper.ink2,
+                ) { TravelCard(row, a) }
             }
             is DayLayout.Thing -> packed += thingSlot(row.item)
             is DayLayout.Gap -> fixed += Slot("g|" + row.key, row.startMs, row.endMs, gapBar(row), paper.ink2) { GapCard(row, a) }
@@ -758,17 +762,18 @@ internal val QUICK_MODES = listOf(
 private fun TravelCard(t: DayLayout.Travel, a: DayActions) {
     val paper = LocalPaper.current
     val trip = t.trip
-    val unknown = trip == null || (trip.mode == "vehicle" && trip.modeSource != "you")
+    val unknown = !t.liveMovement && (trip == null || (trip.mode == "vehicle" && trip.modeSource != "you"))
     var picking by remember { mutableStateOf(false) }
     var open by remember { mutableStateOf(false) }
     val length = lengthText(t.endMs - t.startMs)
     val title = when {
+        t.liveMovement -> "On the move"
         trip == null || unknown -> "Unknown way of travel"
         else -> TripModes.label(trip.mode) + (if (trip.modeSource == "you") "" else " (guess)")
     }
     val numbers = if (trip != null) length + " · " + TripRules.distanceText(trip.distanceM) else length
     val shape = Wobble.Small
-    val asks = a.askHowTravelled && unknown && (trip != null || (t.from != null && t.to != null))
+    val asks = !t.liveMovement && a.askHowTravelled && unknown && (trip != null || (t.from != null && t.to != null))
     Column(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier
@@ -777,7 +782,9 @@ private fun TravelCard(t: DayLayout.Travel, a: DayActions) {
                 .penOutline(shape, if (unknown) paper.sun else paper.line, width = if (unknown) 1.5.dp else 1.25.dp)
                 .clip(shape)
                 .clickable {
-                    if (!unknown && trip != null) {
+                    if (t.liveMovement) {
+                        // The current state is informational, not a completed trip to edit.
+                    } else if (!unknown && trip != null) {
                         picking = true
                     } else if (trip != null) {
                         open = !open
@@ -792,7 +799,11 @@ private fun TravelCard(t: DayLayout.Travel, a: DayActions) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(text = title, fontSize = 14.sp, lineHeight = 18.sp, fontWeight = FontWeight.Bold, color = paper.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(
-                        text = numbers + " · " + range(t.startMs, t.endMs) + " · " + tripEnd(t.fromName) + " to " + tripEnd(t.toName),
+                        text = if (t.liveMovement) {
+                            "Since " + clock(t.startMs)
+                        } else {
+                            numbers + " · " + range(t.startMs, t.endMs) + " · " + tripEnd(t.fromName) + " to " + tripEnd(t.toName)
+                        },
                         fontSize = 11.sp,
                         lineHeight = 14.sp,
                         color = paper.ink2,
