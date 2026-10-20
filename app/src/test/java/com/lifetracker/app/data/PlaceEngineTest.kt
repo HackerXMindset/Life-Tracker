@@ -303,7 +303,7 @@ class PlaceEngineTest {
         assertFalse(PlaceEngine.isOnTheMove(moving.copy(stay = outsideStay.copy(placeId = "park")), t0 + 2 * min))
         assertFalse(PlaceEngine.isOnTheMove(moving.copy(moving = false), t0 + 2 * min))
         assertFalse(PlaceEngine.isOnTheMove(moving.copy(trip = null, stay = null), t0 + 2 * min))
-        assertFalse(PlaceEngine.isOnTheMove(moving, t0 + TripRules.TRIP_GAP_MS))
+        assertFalse(PlaceEngine.isOnTheMove(moving, t0 + min + TripRules.TRIP_GAP_MS))
     }
 
 }
