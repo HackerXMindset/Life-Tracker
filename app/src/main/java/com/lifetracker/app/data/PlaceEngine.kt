@@ -205,7 +205,7 @@ object PlaceEngine {
         val latestEvidenceMs = maxOf(state.triggerMs, stay.lastSeenMs, state.trip?.lastPointMs ?: 0L)
         val maxAgeMs = if (state.trip != null) TripRules.TRIP_GAP_MS else MOVE_CHECK_MS
         val ageMs = nowMs - latestEvidenceMs
-        return ageMs in 0 until maxAgeMs
+        return ageMs >= 0L && ageMs < maxAgeMs
     }
 
     /** Seconds between readings right now: the quicker trip pace while you are on the move or on a trip. */
