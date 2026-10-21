@@ -232,6 +232,7 @@ fun HabitsScreen(vm: HabitsViewModel = viewModel()) {
                 noteDraft = null
             },
             onDismiss = { noteDraft = null },
+            onDelete = draft.note?.let { note -> { vm.deleteNote(note); noteDraft = null } },
         )
     }
     if (adding) {

@@ -22,7 +22,7 @@ data class StreakData(
     val changes: Map<String, Long> = emptyMap(),
 ) {
     val isEmpty: Boolean
-        get() = habits.isEmpty() && notes.isEmpty() && focus.isEmpty() && todos.isEmpty()
+        get() = habits.isEmpty() && notes.isEmpty() && focus.isEmpty() && todos.isEmpty() && deleted.isEmpty() && cleared.isEmpty()
 }
 
 data class StreakCompletion(val date: LocalDate, val count: Double, val minuteOfDay: Int?)
