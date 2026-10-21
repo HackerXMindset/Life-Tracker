@@ -30,7 +30,22 @@ object StreakParser {
             focus = records(root, "focus").mapNotNull { guarded { focus(it) } },
             todos = records(root, "todos").mapNotNull { guarded { todo(it) } },
             todoTags = records(root, "todoTags").mapNotNull { guarded { todoTag(it) } },
+            device = root.optString("device"),
+            deleted = stamps(root, "deleted"),
+            cleared = stamps(root, "cleared"),
+            changes = stamps(root, "changes"),
         )
+    }
+
+    /** A list of id to time in milliseconds. Anything else in it is ignored. */
+    private fun stamps(root: JSONObject, key: String): Map<String, Long> {
+        val o = root.optJSONObject(key) ?: return emptyMap()
+        val out = LinkedHashMap<String, Long>()
+        for (id in o.keys()) {
+            val at = o.optLong(id, -1L)
+            if (at >= 0L) out[id] = at
+        }
+        return out
     }
 
     /** Streak writes dates as day-month-year, for example "04-10-2026". Returns null if it is not one. */

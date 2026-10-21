@@ -200,6 +200,8 @@ fun HabitsScreen(vm: HabitsViewModel = viewModel()) {
             onEditNote = { noteDraft = NoteDraft(it.habitId, ui.today, it) },
             onEdit = { editing = row.habit; detailsId = null },
             onArchive = { vm.setArchived(row.habit, true); detailsId = null },
+            onDelete = { vm.deleteHabit(row.habit); detailsId = null },
+            onClearProgress = { vm.clearAllProgress(row.habit); detailsId = null },
             onDismiss = { detailsId = null },
         )
     }
@@ -230,6 +232,7 @@ fun HabitsScreen(vm: HabitsViewModel = viewModel()) {
                 noteDraft = null
             },
             onDismiss = { noteDraft = null },
+            onDelete = draft.note?.let { note -> { vm.deleteNote(note); noteDraft = null } },
         )
     }
     if (adding) {

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -24,6 +25,7 @@ import com.lifetracker.app.ui.theme.PaperChip
 import com.lifetracker.app.ui.theme.PaperSegmented
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,10 +48,32 @@ import com.lifetracker.app.data.streak.StreakFolderWriter
 import com.lifetracker.app.data.streak.StreakImporter
 import kotlinx.coroutines.launch
 
+private fun deletedOn(ms: Long): String =
+    java.time.Instant.ofEpochMilli(ms).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+        .format(java.time.format.DateTimeFormatter.ofPattern("d MMM"))
+
+/** One deleted habit or note, with its Restore button. */
+@Composable
+private fun DeletedRow(title: String, line: String, onRestore: () -> Unit) {
+    val paper = LocalPaper.current
+    PaperCard(modifier = Modifier.fillMaxWidth(), padding = 12.dp, shadow = false) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(title, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = paper.ink, maxLines = 2)
+                Text(line, fontSize = 12.sp, color = paper.ink2)
+            }
+            com.lifetracker.app.ui.theme.PaperButton("Restore", onRestore, small = true)
+        }
+    }
+}
+
 /** Settings for the Habits tab: where your habits come from. */
 @Composable
-fun HabitsSettingsScreen(onBack: () -> Unit) {
+fun HabitsSettingsScreen(onBack: () -> Unit, vm: HabitsViewModel = androidx.lifecycle.viewmodel.compose.viewModel()) {
     val context = LocalContext.current
+    val deletedHabits by vm.deletedHabits.collectAsState()
+    val deletedNotes by vm.deletedNotes.collectAsState()
+    val names by vm.habitNames.collectAsState()
     val settings = remember { HabitsSettings(context) }
     var source by remember { mutableStateOf(settings.source) }
     var confirm by remember { mutableStateOf(false) }
@@ -185,6 +209,28 @@ fun HabitsSettingsScreen(onBack: () -> Unit) {
         }
         sendMessage?.let { item { SetupNote(it) } }
         item { LockNote("A day you un-tick here stays ticked in Streak, because Streak only ever adds days.", R.drawable.ic_p_note) }
+
+        item { PaperSection("Deleted habits and notes", "hidden, not erased") }
+        // A note deleted together with its habit comes back with the habit, so it is not listed on its own.
+        val habitDeletedAt = deletedHabits.associate { it.id to it.deletedAt }
+        val loneNotes = deletedNotes.filter { habitDeletedAt[it.habitId] != it.deletedAt }
+        if (deletedHabits.isEmpty() && loneNotes.isEmpty()) {
+            item { SetupNote("Nothing deleted. A habit you delete, or a note, waits here until you restore it.") }
+        }
+        items(deletedHabits, key = { "h" + it.id }) { habit ->
+            DeletedRow(
+                title = habit.name,
+                line = "Habit, deleted ${deletedOn(habit.deletedAt)}. Its notes and days come back with it.",
+                onRestore = { vm.restoreHabit(habit) },
+            )
+        }
+        items(loneNotes, key = { "n" + it.id }) { note ->
+            DeletedRow(
+                title = note.text.lineSequence().firstOrNull().orEmpty().take(80).ifBlank { "Note" },
+                line = "Note on ${names[note.habitId] ?: "a habit"}, deleted ${deletedOn(note.deletedAt)}",
+                onRestore = { vm.restoreNote(note) },
+            )
+        }
     }
 
     if (confirm) {

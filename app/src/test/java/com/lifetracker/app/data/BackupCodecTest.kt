@@ -122,6 +122,22 @@ class BackupCodecTest {
     }
 
     @Test
+    fun deletedAndClearedTimesSurviveTheRoundTrip() {
+        val data = full.copy(
+            habits = full.habits.map { it.copy(deletedAt = 1_760_000_000_000L, clearedAt = 1_760_000_500_000L) },
+            notes = full.notes.map { it.copy(deletedAt = 1_760_000_100_000L) },
+        )
+        val back = BackupCodec.decode(BackupCodec.encode(data))
+        assertEquals(1_760_000_000_000L, back.habits.single().deletedAt)
+        assertEquals(1_760_000_500_000L, back.habits.single().clearedAt)
+        assertEquals(1_760_000_100_000L, back.notes.single().deletedAt)
+        // Left out when zero, and read back as zero by an older file.
+        val plain = BackupCodec.decode(BackupCodec.encode(full))
+        assertEquals(0L, plain.habits.single().deletedAt)
+        assertEquals(0L, plain.notes.single().deletedAt)
+    }
+
+    @Test
     fun momentKeepsNullEndTime() {
         val back = BackupCodec.decode(BackupCodec.encode(full))
         assertNull(back.entries[1].endMinute)

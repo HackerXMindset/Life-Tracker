@@ -12,9 +12,17 @@ data class StreakData(
     val focus: List<StreakFocus>,
     val todos: List<StreakTodo>,
     val todoTags: List<StreakTodoTag>,
+    /** Which of Streak's devices wrote the file (empty for a file made by hand). */
+    val device: String = "",
+    /** What was deleted, id to milliseconds (Streak 2.4 and later). */
+    val deleted: Map<String, Long> = emptyMap(),
+    /** Habits whose progress was cleared, id to milliseconds (Streak 2.4 and later). */
+    val cleared: Map<String, Long> = emptyMap(),
+    /** When each habit or note was last changed in Streak, id to milliseconds (Streak 2.4 and later). */
+    val changes: Map<String, Long> = emptyMap(),
 ) {
     val isEmpty: Boolean
-        get() = habits.isEmpty() && notes.isEmpty() && focus.isEmpty() && todos.isEmpty()
+        get() = habits.isEmpty() && notes.isEmpty() && focus.isEmpty() && todos.isEmpty() && deleted.isEmpty() && cleared.isEmpty()
 }
 
 data class StreakCompletion(val date: LocalDate, val count: Double, val minuteOfDay: Int?)
