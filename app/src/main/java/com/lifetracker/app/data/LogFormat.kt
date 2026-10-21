@@ -81,4 +81,13 @@ object LogFormat {
 
     fun asText(lines: List<LogLine>, zone: ZoneId = ZoneId.systemDefault()): String =
         lines.joinToString("\n") { readable(it, zone) }
+
+    /** A line for a saved file, with the date too: "2026-10-21 10:16:04 W Places  text". */
+    fun fileLine(line: LogLine, zone: ZoneId = ZoneId.systemDefault()): String = "${dayOf(line.ms, zone)} ${readable(line, zone)}"
+
+    fun asFileText(lines: List<LogLine>, zone: ZoneId = ZoneId.systemDefault()): String =
+        lines.joinToString("\n", postfix = "\n") { fileLine(it, zone) }
+
+    fun saveName(day: LocalDate?, today: LocalDate): String =
+        if (day == null) "life-tracker-logs-all-$today.txt" else "life-tracker-logs-$day.txt"
 }

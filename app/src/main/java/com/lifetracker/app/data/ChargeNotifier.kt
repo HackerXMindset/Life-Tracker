@@ -116,10 +116,11 @@ class ChargePowerReceiver : BroadcastReceiver() {
         val unplugged = intent.action == Intent.ACTION_POWER_DISCONNECTED
         if (!unplugged && intent.action != Intent.ACTION_POWER_CONNECTED) return
         val app = context.applicationContext
+        AppLog.i("Charging", if (unplugged) "Unplugged" else "Plugged in")
         val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                ChargeTracker.sample(app, sawUnplug = unplugged)
+                AppLog.track("Charging", "Sample") { ChargeTracker.sample(app, sawUnplug = unplugged) }
             } finally {
                 pending.finish()
             }

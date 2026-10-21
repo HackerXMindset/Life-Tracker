@@ -49,6 +49,7 @@ object BackupManager {
             ?: throw IOException("Choose a backup folder first.")
         val name = write(context, folder, BACKUP_PREFIX, KEEP_BACKUPS)
         sources.lastBackupText = DISPLAY.format(LocalDateTime.now())
+        AppLog.i("Backup", "Backup written: $name")
         name
     }
 
@@ -97,6 +98,7 @@ object BackupManager {
             write(context, folder, SAFETY_PREFIX, KEEP_SAFETY)
         }
         replaceAll(db, data)
+        AppLog.w("Backup", "Restored everything from ${file.name}")
         // Let the next open import the newest Streak backup again, to catch up on anything newer.
         DataSources(context).apply {
             streakSeenExportedAt = null

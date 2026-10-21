@@ -401,6 +401,35 @@ object PlacesTracker {
         }
     }
 
+    /**
+     * The safety net (see [PlacesHeartbeat]): one position, checked by the 15-minute check when the continuous readings are not
+     * running. It goes through the same rules as any reading, so a stay is confirmed or a move is noticed even when Android sent
+     * no message. If the rules then want continuous readings, they start.
+     */
+    suspend fun heartbeat(context: Context, now: Long = System.currentTimeMillis()) {
+        val settings = PlacesSettings(context)
+        val running = PlacesWatchdog.alive(
+            settings.watching,
+            settings.lastBeatMs,
+            now,
+            PlaceEngine.intervalSec(settings.engine, baseIntervalSec(settings), settings.tripIntervalSec),
+        )
+        if (!PlacesHeartbeat.due(settings.enabled, settings.heartbeat, hasLocation(context), running, now, settings.lastHeartbeatMs)) return
+        settings.lastHeartbeatMs = now
+        val fix = currentFix(context, 20_000L)
+        if (fix == null) {
+            AppLog.w("Heartbeat", "No usable position within 20 s (indoors, location off, no signal, or too inaccurate)")
+            return
+        }
+        if (!PlacesHeartbeat.usable(fix.timeMs, now)) {
+            AppLog.w("Heartbeat", "Only an old position (${(now - fix.timeMs) / 60_000L} min old); not used")
+            return
+        }
+        AppLog.i("Heartbeat", "Position check: accuracy ${fix.accuracyM.toInt()} m")
+        val watch = onFix(context, fix)
+        if (watch.keep && hasLocation(context)) PlaceWatchService.start(context)
+    }
+
     /** Called after a restart: Android forgot the geofences. */
     suspend fun afterRestart(context: Context) {
         AppLog.i("App", "Phone restarted or app updated: handing the places to Android again")

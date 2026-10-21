@@ -2,6 +2,18 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🛟 A safety net for places, and the diary for the whole app
+
+### ✨ New
+
+- **Check once every 15 minutes** (Settings > Places and trips, under Always on; on by default). When the continuous readings are not running, the app now asks the phone for one position every 15 minutes (up to 20 seconds). That position goes through the same rules as any other, so a stay is saved even if Android never sent its "arrived" or "left" message, and a move is noticed (the stay ends and the continuous readings start). A position older than 5 minutes is not used. This is for days like 21 October, when nothing was read between 9:17 and 10:22 and the app believed you never left Home.
+- **Save day** and **Save all** on the Live logs page. Android's own "save as" screen opens, you pick Downloads, Drive or any folder, and the file is plain text with the date and time on every line.
+- **The diary now covers the whole app**, not only places: phone usage sync, calls, steps and sleep, charging (plugged in, unplugged), money entries added from monthly items, backups made and restored, sending changes to Streak, and the 15-minute check. Background work that used to fail silently now writes why.
+
+### 🔧 Changed
+
+- Nothing already saved is changed. Visits and trips you have are left as they are; edit a wrong one from the Timeline.
+
 ## 🪵 Live logs: a diary of what the app does
 
 ### ✨ New

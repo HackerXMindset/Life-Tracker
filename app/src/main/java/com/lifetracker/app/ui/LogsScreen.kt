@@ -5,6 +5,8 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -23,6 +25,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -46,6 +49,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /** The most lines drawn at once; Copy and Share carry the same lines. */
@@ -74,6 +78,24 @@ fun LogsScreen(onBack: () -> Unit) {
     var sizeText by remember { mutableStateOf("") }
     val revision by AppLog.revision.collectAsState()
     val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    var saveAll by remember { mutableStateOf(false) }
+    var savedNote by remember { mutableStateOf<String?>(null) }
+    // Android's own "save as" screen: you pick where the file goes (Downloads, Drive, any folder).
+    val saver = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
+        if (uri != null) {
+            scope.launch {
+                savedNote = withContext(Dispatchers.IO) {
+                    runCatching {
+                        val text = LogFormat.asFileText(if (saveAll) AppLog.readAll() else AppLog.read(day))
+                        context.contentResolver.openOutputStream(uri)?.use { it.write(text.toByteArray(Charsets.UTF_8)) }
+                            ?: error("Android would not open that place")
+                        "Saved."
+                    }.getOrElse { "Could not save: ${it.message ?: it.javaClass.simpleName}" }
+                }
+            }
+        }
+    }
 
     // Today reloads a moment after each new line; an earlier day is read once.
     LaunchedEffect(day, if (day == today) revision else 0) {
@@ -167,10 +189,13 @@ fun LogsScreen(onBack: () -> Unit) {
             fontSize = 11.sp,
             color = paper.ink2,
         )
+        savedNote?.let { Text(it, fontSize = 12.sp, color = paper.ink) }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
             PaperButton(if (follow) "Following" else "Follow end", { follow = true }, small = true, style = if (follow) PaperButtonStyle.Dark else PaperButtonStyle.Ghost)
             PaperButton("Copy", { copyText(context, LogFormat.asText(shown)) }, small = true, style = PaperButtonStyle.Ghost, enabled = shown.isNotEmpty())
             PaperButton("Share", { shareText(context, LogFormat.asText(shown)) }, small = true, style = PaperButtonStyle.Ghost, enabled = shown.isNotEmpty())
+            PaperButton("Save day", { saveAll = false; savedNote = null; saver.launch(LogFormat.saveName(day, today)) }, small = true, style = PaperButtonStyle.Ghost)
+            PaperButton("Save all", { saveAll = true; savedNote = null; saver.launch(LogFormat.saveName(null, today)) }, small = true, style = PaperButtonStyle.Ghost)
             PaperButton("Clear logs", { askClear = true }, small = true, style = PaperButtonStyle.Danger)
         }
     }

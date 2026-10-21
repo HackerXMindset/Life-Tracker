@@ -46,9 +46,11 @@ object CallsCollector {
         val calls = try {
             read(context, since)
         } catch (e: SecurityException) {
+            AppLog.w("Calls", "Sync failed: Android refused access to the call log")
             return@withContext null
         }
         dao.upsertCalls(calls)
+        if (calls.isNotEmpty()) AppLog.i("Calls", "Copied ${calls.size} call(s)")
         calls.size
     }
 

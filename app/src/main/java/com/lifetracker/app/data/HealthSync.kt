@@ -11,9 +11,9 @@ object HealthSync {
     private const val ESTIMATE_DAYS = 6L
 
     suspend fun run(context: Context, today: LocalDate = LocalDate.now()) {
-        runCatching { HealthConnectSync.sync(context) }
-        runCatching { StepCounterSync.sync(context, today) }
-        if (HealthSettings(context).estimateSleep) runCatching { estimateSleep(context, today) }
+        AppLog.track("Health", "Health Connect", { if (it) "read" else "not available or not allowed" }) { HealthConnectSync.sync(context) }
+        AppLog.track("Health", "Step counter", { if (it) "read" else "off, no permission or no sensor" }) { StepCounterSync.sync(context, today) }
+        if (HealthSettings(context).estimateSleep) AppLog.track("Health", "Sleep estimate") { estimateSleep(context, today) }
         HealthSettings(context).lastSync = LocalDateTime.now().format(DateTimeFormatter.ofPattern("d MMM, h:mm a"))
     }
 

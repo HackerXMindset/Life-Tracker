@@ -62,6 +62,7 @@ fun PlacesScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PlacesViewModel
     val range by vm.range.collectAsState()
     val trail by vm.trail.collectAsState()
     val recordTrips by vm.recordTrips.collectAsState()
+    val heartbeat by vm.heartbeat.collectAsState()
     val heightCm by vm.heightCm.collectAsState()
     val strideM by vm.strideM.collectAsState()
     val strideLearned by vm.strideLearned.collectAsState()
@@ -224,6 +225,7 @@ fun PlacesScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PlacesViewModel
                 SetCard {
                     ToggleRow("Use GPS", useGps, vm::setUseGps, hint = "Most exact, more battery", first = true)
                     ToggleRow("Always on", alwaysOn, vm::setAlwaysOn, hint = "More complete, more battery")
+                    ToggleRow("Check once every 15 minutes", heartbeat, vm::setHeartbeat, hint = "A safety net: one position now and then, so a stop is not missed")
                 }
             }
             if (alwaysOn) {

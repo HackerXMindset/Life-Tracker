@@ -35,6 +35,22 @@ object AppLog {
     fun e(tag: String, text: String, error: Throwable? = null) =
         add(LogLevel.Error, tag, if (error == null) text else "$text: ${error.javaClass.simpleName} ${error.message.orEmpty()}")
 
+    /**
+     * Runs [block] and writes how it went: "label: [describe result]", or the error. A failure is written and swallowed
+     * (as `runCatching` does) and gives null, so background work that used to fail silently now says why.
+     */
+    inline fun <T> track(tag: String, label: String, describe: (T) -> String = { "done" }, block: () -> T): T? =
+        try {
+            val result = block()
+            i(tag, "$label: ${describe(result)}")
+            result
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            e(tag, "$label failed", error)
+            null
+        }
+
     /** Called once when the app process starts. */
     fun init(context: Context) {
         if (dir != null) return
@@ -160,6 +176,9 @@ object AppLog {
         // Lines about earlier events (why the last run ended) are written late, so they are put back in time order.
         return runCatching { file.readLines().mapNotNull { LogFormat.decode(it) }.sortedBy { it.ms } }.getOrDefault(emptyList())
     }
+
+    /** Every line of every day, oldest first. */
+    fun readAll(): List<LogLine> = days().sorted().flatMap { read(it) }
 
     /** How much room the diary takes, in bytes. */
     fun sizeBytes(): Long = dir?.listFiles().orEmpty().sumOf { it.length() }

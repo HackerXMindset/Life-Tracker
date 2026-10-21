@@ -68,7 +68,10 @@ object UsageCollector {
 
     /** Copies new app history into the database. Returns how many sessions were read, or null without access. */
     suspend fun sync(context: Context, now: Long = System.currentTimeMillis()): Int? = withContext(Dispatchers.IO) {
-        if (!hasAccess(context)) return@withContext null
+        if (!hasAccess(context)) {
+            AppLog.w("Phone usage", "Sync skipped: no usage access")
+            return@withContext null
+        }
         val db = AppDatabase.get(context)
         val dao = db.usageDao()
 
@@ -107,6 +110,7 @@ object UsageCollector {
             dao.upsertStates(states)
         }
         if (rebuild && events.isNotEmpty()) settings.rebuiltVersion = REBUILD_VERSION
+        AppLog.i("Phone usage", "Read ${events.size} Android events since ${LogFormat.clock(from)}: ${sessions.size} sessions, ${states.size} screen-off or phone-off periods")
         sessions.size
     }
 

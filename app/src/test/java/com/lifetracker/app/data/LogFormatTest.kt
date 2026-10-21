@@ -68,4 +68,17 @@ class LogFormatTest {
         assertEquals(LocalDate.of(2026, 10, 21), LogFormat.dayOf(ms, zone))
         assertEquals("10:16:04 W Places  hi", LogFormat.readable(LogLine(ms, LogLevel.Warn, "Places", "hi"), zone))
     }
+
+    @Test fun savedFileHasDateAndTime() {
+        val ms = java.time.ZonedDateTime.of(2026, 10, 21, 4, 46, 4, 0, ZoneId.of("UTC")).toInstant().toEpochMilli()
+        val line = LogLine(ms, LogLevel.Info, "Heartbeat", "Position check")
+        assertEquals("2026-10-21 10:16:04 I Heartbeat  Position check", LogFormat.fileLine(line, zone))
+        assertEquals("2026-10-21 10:16:04 I Heartbeat  Position check\n", LogFormat.asFileText(listOf(line), zone))
+    }
+
+    @Test fun saveNames() {
+        val today = LocalDate.of(2026, 10, 22)
+        assertEquals("life-tracker-logs-2026-10-21.txt", LogFormat.saveName(LocalDate.of(2026, 10, 21), today))
+        assertEquals("life-tracker-logs-all-2026-10-22.txt", LogFormat.saveName(null, today))
+    }
 }
