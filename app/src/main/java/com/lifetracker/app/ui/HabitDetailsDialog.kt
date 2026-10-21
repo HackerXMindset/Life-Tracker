@@ -60,8 +60,8 @@ fun HabitDetailsDialog(
     }
     val kind = when (habit.kind) {
         HabitStats.KIND_RELAPSE -> "Avoid (days without a relapse)"
-        HabitStats.KIND_COUNTED -> if (habit.anyAmount || habit.target <= 0) "Counted, any amount" else "Counted, goal ${amount(habit.target)}$unit a day"
-        else -> "Yes / no"
+        HabitStats.KIND_COUNTED -> if (row.tracking) "Counted, tracking only" else if (habit.target <= 0) "Counted, no goal" else if (habit.anyAmount) "Counted, any amount" else "Counted, goal ${amount(habit.target)}$unit a day"
+        else -> if (row.tracking) "Yes / no, tracking only" else "Yes / no"
     }
     val totalLabel = if (habit.kind == HabitStats.KIND_RELAPSE) "Relapses" else "Days done"
 
@@ -77,15 +77,22 @@ fun HabitDetailsDialog(
             modifier = Modifier.verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
-            Line("Current streak", "${row.rules.currentStreak()} $streakWord")
-            Line("Best streak", "${row.rules.longestStreak()} $streakWord")
-            Line(totalLabel, streaks.totalDays.toString())
-            Line("Strength", "${row.consistency}%")
+            if (row.tracking) {
+                // Tracking only: no streak, no strength, no missed days.
+                Line("Last check", row.lastCheck)
+                Line("This week", amount(row.weekTotal))
+                Line("This month", amount(row.monthTotal))
+            } else {
+                Line("Current streak", "${row.rules.currentStreak()} $streakWord")
+                Line("Best streak", "${row.rules.longestStreak()} $streakWord")
+                Line(totalLabel, streaks.totalDays.toString())
+                Line("Strength", "${row.consistency}%")
+            }
             Line("How often", HabitEditor.describe(plan))
             Line("Type", kind)
             if (habit.category.isNotEmpty()) Line("Category", habit.category)
             Text(
-                text = "Tap a day on the card to tick it. Press and hold a day for more: an exact amount, why you missed it, or clearing it.",
+                text = "Tap a day on the card to tick it. Press and hold a day for more: the time of each check, an amount, why you missed it, or clearing it.",
                 modifier = Modifier.padding(top = 8.dp, bottom = 8.dp),
                 fontSize = 11.5.sp,
                 color = paper.ink2,

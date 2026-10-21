@@ -123,6 +123,28 @@ class StreakBackupWriterTest {
     }
 
     @Test
+    fun theTimesOfEveryCheckTravelAsStreaksMarks() {
+        val days = listOf(
+            CompletionEntity("h1", "2026-10-13", 3.0, 905, "480,600,905"),
+            CompletionEntity("h1", "2026-10-12", 1.0, null),
+        )
+        val text = build(mapOf("h1" to 1L), days)!!
+        val c = JSONObject(text).getJSONArray("habits").getJSONObject(0).getJSONObject("completions")
+        val withTimes = c.getJSONObject("13-10-2026")
+        assertEquals(3, withTimes.getJSONArray("marks").length())
+        assertEquals(600, withTimes.getJSONArray("marks").getInt(1))
+        // The last time is also written the way Streak always has.
+        assertEquals(15, withTimes.getInt("hour"))
+        assertEquals(5, withTimes.getInt("minute"))
+        // A day with no times has no marks.
+        assertFalse(c.getJSONObject("12-10-2026").has("marks"))
+        // And our own reader gets them back.
+        val back = StreakParser.parse(text).habits.single().completions.associateBy { it.date }
+        assertEquals(listOf(480, 600, 905), back.getValue(LocalDate.of(2026, 10, 13)).marks)
+        assertEquals(emptyList<Int>(), back.getValue(LocalDate.of(2026, 10, 12)).marks)
+    }
+
+    @Test
     fun deviceIsReadFromTheFileName() {
         assertEquals("ab12cd34", StreakBackupWriter.deviceOf("streak_backup_2026-10-14_21-30-05_ab12cd34.json"))
         assertEquals("", StreakBackupWriter.deviceOf("streak_backup_2026-10-14_21-30-05.json"))

@@ -52,7 +52,7 @@ object HabitCalendar {
 
     /** Habits that are due today and not paused are counted; one is finished when done or covered. */
     fun todayProgress(rules: List<HabitRules>, today: LocalDate): TodayProgress {
-        val counted = rules.filter { !it.isPaused(today) && it.isScheduled(today) }
+        val counted = rules.filter { !it.tracking && !it.isPaused(today) && it.isScheduled(today) }
         return TodayProgress(counted.count { it.isCompleted(today) || it.isCovered(today) }, counted.size)
     }
 

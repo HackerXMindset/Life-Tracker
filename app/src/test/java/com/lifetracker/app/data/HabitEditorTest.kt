@@ -139,7 +139,9 @@ class HabitEditorTest {
     fun validationExplainsWhatIsWrong() {
         assertNotNull(HabitEditor.validate(HabitForm(name = " ")))
         assertNull(HabitEditor.validate(HabitForm(name = "x")))
-        assertNotNull(HabitEditor.validate(HabitForm(name = "x", kind = HabitStats.KIND_COUNTED, target = 0.0)))
+        // A goal of 0 means no goal, which is allowed; a goal below 0 is not.
+        assertNull(HabitEditor.validate(HabitForm(name = "x", kind = HabitStats.KIND_COUNTED, target = 0.0)))
+        assertNotNull(HabitEditor.validate(HabitForm(name = "x", kind = HabitStats.KIND_COUNTED, target = -1.0)))
         assertNull(HabitEditor.validate(HabitForm(name = "x", kind = HabitStats.KIND_COUNTED, target = 0.0, anyAmount = true)))
         assertNotNull(HabitEditor.validate(HabitForm(name = "x", kind = HabitStats.KIND_COUNTED, step = 0.0)))
         assertNotNull(HabitEditor.validate(HabitForm(name = "x", plan = HabitPlan(interval = HabitPlan.WEEKDAYS))))

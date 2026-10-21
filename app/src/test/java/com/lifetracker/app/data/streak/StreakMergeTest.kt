@@ -1,9 +1,11 @@
 package com.lifetracker.app.data.streak
 
+import com.lifetracker.app.data.CompletionEntity
 import com.lifetracker.app.data.HabitTombstones
 import com.lifetracker.app.data.streak.StreakMerge.LocalHabit
 import com.lifetracker.app.data.streak.StreakMerge.LocalNote
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -87,5 +89,41 @@ class StreakMergeTest {
         assertEquals(mapOf("h1" to 500L), plan(cleared = mapOf("h1" to 500L)).clears)
         assertTrue(plan(cleared = mapOf("h1" to 500L), habits = listOf(LocalHabit("h1", 0, 600))).clears.isEmpty())
         assertTrue(plan(cleared = mapOf("unknown" to 500L)).clears.isEmpty())
+    }
+
+    // ---- days and their times (H7)
+
+    private val oct4 = java.time.LocalDate.of(2026, 10, 4)
+
+    @Test fun aDayOnlyStreakHasIsTakenWithItsTimes() {
+        val day = StreakMerge.day(null, "h", StreakCompletion(oct4, 2.0, 600, listOf(480, 600)))!!
+        assertEquals(2.0, day.count, 0.0)
+        assertEquals("480,600", day.marks)
+        assertEquals(600, day.minuteOfDay)
+    }
+
+    @Test fun aBiggerAmountInStreakBringsItsTimesAndKeepsOursIfItHadNone() {
+        val ours = CompletionEntity("h", "2026-10-04", 1.0, 480, "480")
+        val withTimes = StreakMerge.day(ours, "h", StreakCompletion(oct4, 3.0, 900, listOf(480, 700, 900)))!!
+        assertEquals("480,700,900", withTimes.marks)
+        val noTimes = StreakMerge.day(ours, "h", StreakCompletion(oct4, 3.0, null, emptyList()))!!
+        assertEquals(3.0, noTimes.count, 0.0)
+        assertEquals("480", noTimes.marks)
+        assertEquals(480, noTimes.minuteOfDay)
+    }
+
+    @Test fun aSmallerAmountInStreakChangesNothingHere() {
+        val ours = CompletionEntity("h", "2026-10-04", 3.0, 900, "480,700,900")
+        assertNull(StreakMerge.day(ours, "h", StreakCompletion(oct4, 1.0, 480, listOf(480))))
+    }
+
+    @Test fun theSameAmountTakesStreaksTimesOnlyWhenWeHaveNone() {
+        val bare = CompletionEntity("h", "2026-10-04", 2.0, null, "")
+        val taken = StreakMerge.day(bare, "h", StreakCompletion(oct4, 2.0, 700, listOf(600, 700)))!!
+        assertEquals("600,700", taken.marks)
+        assertEquals(2.0, taken.count, 0.0)
+        // Times set here are never overwritten by an equal day.
+        val mine = CompletionEntity("h", "2026-10-04", 2.0, 615, "500,615")
+        assertNull(StreakMerge.day(mine, "h", StreakCompletion(oct4, 2.0, 700, listOf(600, 700))))
     }
 }
