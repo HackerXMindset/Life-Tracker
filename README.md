@@ -171,7 +171,7 @@ Each step is small enough to build, install and try before the next begins. The 
   DONE         R5 Settings > Permissions: every permission in one place, why it is needed, how to switch it on
   DONE         R6a Money data: Deduct it from, category icons (database 22)
   DONE         Habits H6 Sync catch-up with Streak 2.4: deletions and progress-clears both ways, delete and restore here (database 23)
-  NEXT ──►    Habits H7 Check times, many checks a day, amounts without a goal, tracking-only habits
+  NEXT ──►    Habits H7 Check times, many checks a day, amounts without a goal, tracking-only habits (database 24)
               Habits H8 Checklist habits (steps)
               Habits H9 Pause (vacation) and rest days
               Habits H10 Schedule extras (monthly weekday, from last done) and difficulty
@@ -293,7 +293,13 @@ Not part of Polish 4, and not built: **Step 13e** (fixing trips and visits by ha
   - **H6b Send.** Built. The file for Streak now carries `deleted` and `cleared` (with the habit's notes) and `device`, `changes` as before. A restored item is sent as changed again, which Streak treats as bringing it back.
   - **H6c Receive.** Built. Streak's newest file **from each device** is read (not only the newest one overall). Its `deleted` list hides the same habits and notes here (only if you did not change that item after the deletion time), and its `cleared` list sets the same "cleared at". All kept restorable.
   - Tests: a deletion older or newer than an edit, restoring, the cleared date, which files are read.
-- **H7 Check times and amounts.** Each tick keeps its time and a habit can have several ticks in a day (several relapses for an avoid habit); the time of any tick can be changed; an amount can be added to or replaced; a counted habit may have no goal; **tracking-only** habits have no streak and show the last time and this week's and month's totals.
+- **H7 Check times and amounts (database 24, backups 24).** Streak keeps, on each day's record, a list of the times (minute of the day) of every check, called **marks**. This app now does the same, so times travel both ways. Still one record per day; no new table.
+  - **H7a Times and many checks. Planned.** `habit_completions` gets a `marks` column (the minutes of the day of each check, in order; empty for days from before). Ticking **today** notes the time; ticking a past day notes no time (the app does not know it), and you can set one. A counted habit adds one tick (one step) each tap, and an Avoid habit can have several relapses in a day (the card asks once for the first, the day window adds or removes more). The **day window** (press and hold a day) lists each check with its time; **change** any time with the clock, **add a check at a time**, or **undo the last check**. A day from before this change shows its one old time (or "no time").
+  - **H7b Amounts.** In the day window a counted habit has **Add** (adds an amount as a new check) and **Replace total** (sets the day's total; the times stay). Zero clears the day, as before.
+  - **H7c No goal.** A counted habit can have a goal of **0 = no goal**: any amount counts the day, nothing is "short". (The form no longer refuses 0.)
+  - **H7d Tracking only.** A switch on the habit form for Yes/no and Counted habits (the same `tracking` flag Streak uses, so it travels). Such a habit has **no streak, no strength, no missed days and is left out of the Today ring**. The card shows **Last: Today · 14:05**, **this week** and **this month**; every tap adds a check (so "Coke zero" can be ticked five times a day). Totals add up the amounts of the days (a deliberate small difference from Streak, which counts days).
+  - Sync: Streak's `marks` are read and written; where both sides have a day the bigger amount wins as before, and the times come from the side that won. A backup made before this version restores as it was (no times). Never erased: undoing a check only changes the day's list, like Streak; clearing a day is still the one way a day goes.
+  - Tests: marks text in and out, add/undo/change time, old single time, tracking totals and last check, no-goal days, the Streak writer and reader with `marks`, backup round trip.
 - **H8 Checklist habits.** A habit made of steps; the day is done when every step (or at least N) is ticked; the card shows progress; steps and ticks are stored and sent in Streak's own format.
 - **H9 Pause and rest days.** Pause a habit for a stretch from its long-press menu (paused days count as neither done nor missed) and choose weekly rest days; both are stored and sent.
 - **H10 Schedule extras and difficulty.** A fixed day each month, the same weekday each month (first Monday, last Friday), "every X days counted from the last time done", the schedule's start day, and difficulty (easy to hard) for the strength score.
@@ -477,6 +483,7 @@ life-tracker/
         │   │   ├── HabitStats.kt      Streak arithmetic
         │   │   ├── HabitRules.kt      Streak's schedules, streaks, goals, day colours (Habits H1)
         │   │   ├── HabitCalendar.kt   Week, month and year grids, Today ring maths (H2)
+        │   │   ├── HabitTicks.kt      Check times (marks) of a day: add, undo, change a time, last check (H7)
         │   │   ├── HabitsSettings.kt  Which calendar, card size, category
         │   │   ├── HabitEditor.kt     Makes and changes habits in Streak's record format (H3a)
         │   │   ├── StreakLink.kt      Opens the Streak app on a habit (H4)
