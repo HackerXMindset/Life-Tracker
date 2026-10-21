@@ -20,6 +20,7 @@ class PlacesWorker(context: Context, params: WorkerParameters) : CoroutineWorker
         val settings = PlacesSettings(context)
         if (!settings.enabled) return Result.success()
         val now = System.currentTimeMillis()
+        AppLog.i("Watchdog", "Background check ran")
         if (now - settings.lastRegisterMs > SIX_HOURS_MS) runCatching { PlacesTracker.syncAll(context) }
         runCatching { PlacesTracker.watchdog(context, now) }
         if (now - settings.lastCleanupMs > SIX_HOURS_MS) {

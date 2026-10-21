@@ -1,10 +1,12 @@
 package com.lifetracker.app.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,7 +25,7 @@ import com.lifetracker.app.data.UsageCollector
 import com.lifetracker.app.ui.theme.LocalPaper
 
 /** Everything that can be opened from the Settings tab. The numbers for each live under Stats. */
-enum class Page { Phone, Steps, Places, Calls, Charging, Activities, Habits, Appearance, Backup, Timeline, Apps, PlaceCategories, Permissions }
+enum class Page { Phone, Steps, Places, Calls, Charging, Activities, Habits, Appearance, Backup, Timeline, Apps, PlaceCategories, Permissions, Logs }
 
 /**
  * The Settings tab, laid out like the demo: a big title, then four groups of rows. Each row has an icon, a name, one small
@@ -123,6 +125,20 @@ fun SettingsScreen(onOpen: (Page) -> Unit) {
         }
         item {
             SettingsRow(R.drawable.ic_p_cloud, "Backups and imports", "Back up, restore, or import tracker data") { onOpen(Page.Backup) }
+        }
+        // One quiet line, no icon and no card: where the app's diary is.
+        item {
+            Text(
+                text = "Live logs",
+                fontSize = 12.sp,
+                color = paper.ink2.copy(alpha = 0.7f),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 28.dp)
+                    .clickable { onOpen(Page.Logs) }
+                    .padding(vertical = 12.dp),
+            )
         }
 
     }

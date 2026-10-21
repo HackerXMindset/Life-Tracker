@@ -85,9 +85,11 @@ object PlacesTracker {
         if (!settings.enabled) {
             runCatching { geofences.removeGeofences(geofenceIntent(context)) }
             runCatching { recognition.removeActivityTransitionUpdates(transitionIntent(context)) }
+            AppLog.i("Places", "Hand-over to Android skipped: places are switched off")
             return@withContext "Off"
         }
         if (!hasLocation(context)) {
+            AppLog.w("Places", "Hand-over to Android failed: no location permission")
             return@withContext remember(settings, now, "Needs location permission")
         }
 
@@ -134,6 +136,7 @@ object PlacesTracker {
             runCatching { recognition.removeActivityTransitionUpdates(transitionIntent(context)) }
             status.append("; stops need the Physical activity permission")
         }
+        AppLog.i("Places", "Handed the places to Android: $status")
         remember(settings, now, status.toString())
     }
 
@@ -143,32 +146,61 @@ object PlacesTracker {
         return text
     }
 
+    /** One short line saying what the app believes right now, for the diary. */
+    fun describe(s: WatchState, names: Map<String, String> = emptyMap()): String = buildString {
+        val stay = s.stay
+        if (stay == null) {
+            append("no stay")
+        } else {
+            append("stay since ").append(LogFormat.clock(stay.startMs))
+            append(if (stay.placeId.isEmpty()) " at an unknown spot" else " at ${names[stay.placeId] ?: stay.placeId.take(6)}")
+            if (stay.ignored) append(" (ignored)")
+        }
+        append("; ").append(if (s.moving) "moving" else "still")
+        s.trip?.let { append("; trip since ").append(LogFormat.clock(it.startMs)).append(" (").append(it.farthestM.toInt()).append(" m from the start)") }
+        if (s.activity.isNotEmpty()) append("; Android says ").append(s.activity)
+    }
+
     /** Android said you came near, or went away from, one of the rings around your places. */
-    suspend fun onGeofence(context: Context, now: Long = System.currentTimeMillis()) = trigger(context, now) { state ->
+    suspend fun onGeofence(context: Context, now: Long = System.currentTimeMillis()) = trigger(context, now, "geofence") { state ->
         PlaceEngine.onTrigger(state, now)
     }
 
     /** The phone went still at [atMs]. */
-    suspend fun onStillStart(context: Context, atMs: Long) = trigger(context, atMs) { state ->
+    suspend fun onStillStart(context: Context, atMs: Long) = trigger(context, atMs, "Android: went still") { state ->
         PlaceEngine.onStill(state, atMs, System.currentTimeMillis())
     }
 
     /** The phone started moving at [atMs]. */
-    suspend fun onMoving(context: Context, atMs: Long) = trigger(context, atMs) { state ->
+    suspend fun onMoving(context: Context, atMs: Long) = trigger(context, atMs, "Android: started moving") { state ->
         PlaceEngine.onMoving(state, atMs, System.currentTimeMillis())
     }
 
-    private suspend fun trigger(context: Context, at: Long, change: (WatchState) -> WatchState) =
+    private suspend fun trigger(context: Context, at: Long, what: String, change: (WatchState) -> WatchState) =
         withContext(Dispatchers.IO) {
             val settings = PlacesSettings(context)
-            if (!settings.enabled) return@withContext
+            if (!settings.enabled) {
+                AppLog.w("Places", "$what at ${LogFormat.clock(at)} ignored: places are switched off")
+                return@withContext
+            }
+            val names = runCatching { AppDatabase.get(context).placeDao().activePlaces().associate { it.id to it.name } }.getOrDefault(emptyMap())
+            var before = ""
+            var after = ""
             val watch = lock.withLock {
                 settings.lastEventMs = System.currentTimeMillis()
+                before = describe(settings.engine, names)
                 val next = change(settings.engine)
                 settings.engine = next
+                after = describe(next, names)
                 PlaceEngine.keepWatching(next, System.currentTimeMillis())
             }
-            if ((watch || settings.alwaysOn) && hasLocation(context)) PlaceWatchService.start(context)
+            val start = (watch || settings.alwaysOn) && hasLocation(context)
+            AppLog.i(
+                "Places",
+                "$what (at ${LogFormat.clock(at)}): $after" + (if (before != after) " [was: $before]" else "") +
+                    "; readings " + (if (start) "needed, starting them" else "not needed"),
+            )
+            if (start) PlaceWatchService.start(context)
         }
 
     /** What the watch service should do after a reading: keep going or stop, how often to read, and whether to use GPS. */
@@ -191,7 +223,7 @@ object PlacesTracker {
         settings.motionState = if (still) "still" else "moving"
         settings.motionSinceMs = atMs
         settings.motionChanges = settings.motionChanges + 1
-        trigger(context, atMs) { state ->
+        trigger(context, atMs, "Motion sensor: " + (if (still) "still" else "moving")) { state ->
             when {
                 still && state.moving && state.trip == null -> PlaceEngine.onStill(state, atMs, System.currentTimeMillis())
                 !still && !state.moving -> PlaceEngine.onMoving(state, atMs, System.currentTimeMillis())
@@ -201,7 +233,7 @@ object PlacesTracker {
     }
 
     /** Android says you are now walking, running, cycling or in a vehicle. */
-    suspend fun onActivity(context: Context, name: String, atMs: Long) = trigger(context, atMs) { state ->
+    suspend fun onActivity(context: Context, name: String, atMs: Long) = trigger(context, atMs, "Android: $name") { state ->
         PlaceEngine.onActivity(state, name, atMs, System.currentTimeMillis())
     }
 
@@ -213,6 +245,9 @@ object PlacesTracker {
             val dao = db.placeDao()
             val now = System.currentTimeMillis()
             val recent = dao.visitsAround(fix.timeMs - 12 * 60 * 60_000L, fix.timeMs)
+            if (fix.accuracyM > PlaceRules.MAX_ACCURACY_M) {
+                AppLog.w("Fixes", "Reading at ${LogFormat.clock(fix.timeMs)} ignored: accuracy ${fix.accuracyM.toInt()} m is worse than ${PlaceRules.MAX_ACCURACY_M.toInt()} m")
+            }
             if (fix.accuracyM <= PlaceRules.MAX_ACCURACY_M) {
                 // Every reading is kept for good, glitches too: the tidy-up filters them again when it looks back.
                 val raw = RawFixEntity(fix.timeMs, fix.lat, fix.lng, fix.accuracyM, fix.speedMs)
@@ -223,6 +258,7 @@ object PlacesTracker {
                     // A jump the phone's own speed does not explain: do not let it end a stay or start a trip.
                     settings.glitchRun = settings.glitchRun + 1
                     settings.glitches = settings.glitches + 1
+                    AppLog.w("Fixes", "Reading at ${LogFormat.clock(fix.timeMs)} looks like a jump and was not used (${settings.glitchRun} in a row)")
                     settings.lastFixMs = now
                     return@withLock Watch(
                         PlaceEngine.keepWatching(settings.engine, now) || settings.alwaysOn,
@@ -233,7 +269,18 @@ object PlacesTracker {
                 settings.glitchRun = 0
                 settings.lastGood = raw
             }
-            val step = PlaceEngine.onFix(settings.engine, fix, dao.activePlaces(), recent, now, settings.recordTrips)
+            val places = dao.activePlaces()
+            val names = places.associate { it.id to it.name }
+            val beforeState = describe(settings.engine, names)
+            val step = PlaceEngine.onFix(settings.engine, fix, places, recent, now, settings.recordTrips)
+            val afterState = describe(step.state, names)
+            AppLog.i(
+                "Fixes",
+                "Reading ${LogFormat.clock(fix.timeMs)}: accuracy ${fix.accuracyM.toInt()} m" +
+                    (if (fix.speedMs >= 0f) ", speed ${"%.1f".format(fix.speedMs * 3.6f)} km/h" else "") +
+                    (if (step.saves.isNotEmpty()) "; saved ${step.saves.size} visit row(s)" else ""),
+            )
+            if (beforeState != afterState) AppLog.i("Places", "Now: $afterState [was: $beforeState]")
             if (step.saves.isNotEmpty()) dao.upsertVisits(step.saves)
             if (step.points.isNotEmpty()) {
                 // Note the step counter on the readings taken now (not on one placed back at the start of a stay).
@@ -243,6 +290,7 @@ object PlacesTracker {
                 )
             }
             step.finish?.let { finishTrip(db, it, settings) }
+            if (!step.keepWatching && !settings.alwaysOn) AppLog.i("Service", "Readings no longer needed: $afterState")
             settings.engine = step.state
             settings.lastFixMs = now
             Watch(
@@ -259,6 +307,11 @@ object PlacesTracker {
         val points = dao.points(f.id)
         val stats = TripRules.stats(points, f.startMs, f.endMs)
         if (!TripRules.isRealTrip(stats)) {
+            AppLog.w(
+                "Trips",
+                "Trip ${LogFormat.clock(f.startMs)}-${LogFormat.clock(f.endMs)} DROPPED, not a real trip: farthest ${stats.farthestM.toInt()} m " +
+                    "(needs ${TripRules.MIN_FARTHEST_M} m), lasted ${stats.durationMs / 1000} s (needs 60 s), ${points.size} readings",
+            )
             dao.dropPoints(f.id)
             return
         }
@@ -269,6 +322,10 @@ object PlacesTracker {
             settings.learnedStrideM = TripRules.learnStride(settings.learnedStrideM.toDouble(), it, settings.strideM()).toFloat()
         }
         val distance = TripRules.adjust(stats.distanceM, stats.durationMs, guess, steps, settings.strideM())
+        AppLog.i(
+            "Trips",
+            "Trip ${LogFormat.clock(f.startMs)}-${LogFormat.clock(f.endMs)} saved: ${distance.toInt()} m, guess $guess, ${points.size} readings, $steps steps",
+        )
         dao.upsertTrip(
             TripEntity(
                 id = f.id,
@@ -310,15 +367,27 @@ object PlacesTracker {
      */
     fun watchdog(context: Context, now: Long = System.currentTimeMillis()) {
         val settings = PlacesSettings(context)
-        if (!hasLocation(context) || !needsStarting(settings, now)) return
+        if (!hasLocation(context)) {
+            AppLog.w("Watchdog", "15-minute check: no location permission")
+            return
+        }
+        if (!needsStarting(settings, now)) {
+            AppLog.i(
+                "Watchdog",
+                "15-minute check: fine (readings " + (if (settings.watching) "running, last one ${(now - settings.lastBeatMs) / 1000} s ago" else "not needed right now") + ")",
+            )
+            return
+        }
         if (PlaceWatchService.start(context)) {
             settings.watchdogStarts = settings.watchdogStarts + 1
             settings.lastWatchdogMs = now
+            AppLog.w("Watchdog", "15-minute check: the readings had stopped (last one ${(now - settings.lastBeatMs) / 1000} s ago), started them again")
         }
     }
 
     /** Called after a restart: Android forgot the geofences. */
     suspend fun afterRestart(context: Context) {
+        AppLog.i("App", "Phone restarted or app updated: handing the places to Android again")
         runCatching { syncAll(context) }
         val settings = PlacesSettings(context)
         if (settings.enabled && settings.alwaysOn && hasLocation(context)) PlaceWatchService.start(context)
@@ -401,6 +470,7 @@ object PlacesTracker {
         val settings = PlacesSettings(context)
         settings.lastCleanupMs = now
         settings.lastCleanupNote = note
+        AppLog.i("Cleanup", "Tidy-up of the last three days: $note")
     }
 
     /** Tidies everything the readings cover, a week at a time. Returns a line saying what it did. */

@@ -15,6 +15,7 @@ import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.ServiceCompat
+import com.google.android.gms.location.LocationAvailability
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
@@ -45,7 +46,11 @@ class PlaceWatchService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         // Must come first: Android crashes the app if a started foreground service does not announce itself quickly.
-        showNotification()
+        AppLog.i(
+            "Service",
+            "Readings service started" + (if (intent == null) " by Android after it had been stopped" else "") + (if (callback != null) " (already running)" else ""),
+        )
+        runCatching { showNotification() }.onFailure { AppLog.e("Service", "Could not show the notification Android needs for the readings", it) }
         beginUpdates()
         // In always-on mode Android brings the service back by itself if it is stopped.
         return if (PlacesSettings(this).alwaysOn) START_STICKY else START_NOT_STICKY
@@ -54,7 +59,9 @@ class PlaceWatchService : Service() {
     /** You swiped the app away: ask Android to start the readings again in a few seconds, if they should be running. */
     override fun onTaskRemoved(rootIntent: Intent?) {
         val settings = PlacesSettings(this)
-        if (settings.enabled && (settings.alwaysOn || settings.watching)) scheduleRestart(this)
+        val again = settings.enabled && (settings.alwaysOn || settings.watching)
+        AppLog.w("Service", "The app was swiped away" + (if (again) "; asked Android to start the readings again in 5 seconds" else ""))
+        if (again) scheduleRestart(this)
         super.onTaskRemoved(rootIntent)
     }
 
@@ -86,6 +93,7 @@ class PlaceWatchService : Service() {
         if (callback != null) return
         val settings = PlacesSettings(this)
         if (!settings.enabled || !PlacesTracker.hasLocation(this)) {
+            AppLog.w("Service", "Readings not started: " + (if (!settings.enabled) "places are switched off" else "no location permission"))
             stopSelf()
             return
         }
@@ -112,6 +120,7 @@ class PlaceWatchService : Service() {
             settings.motionSensor = "yes"
         } else {
             settings.motionSensor = "no"
+            AppLog.w("Motion", "This phone has no usable motion sensor; only Android's own still/moving messages are used")
         }
     }
 
@@ -136,9 +145,17 @@ class PlaceWatchService : Service() {
             .setMinUpdateIntervalMillis(interval / 2)
             .setWaitForAccurateLocation(false)
             .build()
+        AppLog.i("Service", "Asking for a reading every ${interval / 1000} s using " + (if (highAccuracy) "GPS and network" else "network only"))
         val cb = object : LocationCallback() {
+            override fun onLocationAvailability(availability: LocationAvailability) {
+                if (!availability.isLocationAvailable) {
+                    AppLog.w("Service", "Android says no position is available right now (location off, no signal, or indoors)")
+                }
+            }
+
             override fun onLocationResult(result: LocationResult) {
                 PlacesSettings(applicationContext).lastBeatMs = System.currentTimeMillis()
+                if (result.locations.isEmpty()) AppLog.w("Service", "A position update arrived with no readings in it")
                 for (location in result.locations) {
                     val fix = Fix(
                         location.latitude,
@@ -148,7 +165,9 @@ class PlaceWatchService : Service() {
                         if (location.hasSpeed()) location.speed else -1f,
                     )
                     scope.launch {
-                        val watch = runCatching { PlacesTracker.onFix(applicationContext, fix) }.getOrNull()
+                        val watch = runCatching { PlacesTracker.onFix(applicationContext, fix) }
+                            .onFailure { AppLog.e("Fixes", "Could not process the reading at ${LogFormat.clock(fix.timeMs)}", it) }
+                            .getOrNull()
                         withContext(Dispatchers.Main) {
                             when {
                                 watch == null -> Unit
@@ -162,10 +181,14 @@ class PlaceWatchService : Service() {
             }
         }
         callback = cb
-        runCatching { client.requestLocationUpdates(request, cb, Looper.getMainLooper()) }.onFailure { stopWatching() }
+        runCatching { client.requestLocationUpdates(request, cb, Looper.getMainLooper()) }.onFailure {
+            AppLog.e("Service", "Android refused the position request", it)
+            stopWatching()
+        }
     }
 
     private fun stopWatching() {
+        AppLog.i("Service", "Readings stopped: not needed any more")
         stopMotion()
         callback?.let { runCatching { LocationServices.getFusedLocationProviderClient(this).removeLocationUpdates(it) } }
         callback = null
@@ -174,6 +197,7 @@ class PlaceWatchService : Service() {
     }
 
     override fun onDestroy() {
+        AppLog.i("Service", "Readings service destroyed")
         stopMotion()
         callback?.let { runCatching { LocationServices.getFusedLocationProviderClient(this).removeLocationUpdates(it) } }
         callback = null
@@ -198,6 +222,8 @@ class PlaceWatchService : Service() {
         fun start(context: Context): Boolean =
             runCatching {
                 androidx.core.content.ContextCompat.startForegroundService(context, Intent(context, PlaceWatchService::class.java))
+            }.onFailure {
+                AppLog.e("Service", "Android would NOT let the readings start", it)
             }.isSuccess
 
         /**
