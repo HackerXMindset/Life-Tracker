@@ -146,6 +146,22 @@ object PlacesTracker {
         return text
     }
 
+    /** What was last written to the diary about each saved visit, so only a start, a change of place or an end is written. */
+    private val loggedVisits = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    private fun logVisits(saves: List<PlaceVisitEntity>, names: Map<String, String>) {
+        for (v in saves) {
+            val where = if (v.placeId.isEmpty()) "an unknown spot" else names[v.placeId] ?: v.placeId
+            val sig = "${v.placeId}|${v.startMs}|${v.ongoing}"
+            if (loggedVisits.put(v.id, sig) == sig) continue
+            AppLog.i(
+                "Visits",
+                (if (v.ongoing) "Visit at $where is going on since ${LogFormat.clock(v.startMs)}" else "Visit at $where ended: ${LogFormat.clock(v.startMs)} to ${LogFormat.clock(v.endMs)}") +
+                    " (${(maxOf(v.endMs, v.startMs) - v.startMs) / 60_000L} min saved so far)",
+            )
+        }
+    }
+
     /** One short line saying what the app believes right now, for the diary. */
     fun describe(s: WatchState, names: Map<String, String> = emptyMap()): String = buildString {
         val stay = s.stay
@@ -277,9 +293,9 @@ object PlacesTracker {
             AppLog.i(
                 "Fixes",
                 "Reading ${LogFormat.clock(fix.timeMs)}: accuracy ${fix.accuracyM.toInt()} m" +
-                    (if (fix.speedMs >= 0f) ", speed ${"%.1f".format(fix.speedMs * 3.6f)} km/h" else "") +
-                    (if (step.saves.isNotEmpty()) "; saved ${step.saves.size} visit row(s)" else ""),
+                    (if (fix.speedMs >= 0f) ", speed ${"%.1f".format(fix.speedMs * 3.6f)} km/h" else ""),
             )
+            logVisits(step.saves, names)
             if (beforeState != afterState) AppLog.i("Places", "Now: $afterState [was: $beforeState]")
             if (step.saves.isNotEmpty()) dao.upsertVisits(step.saves)
             if (step.points.isNotEmpty()) {
@@ -383,6 +399,35 @@ object PlacesTracker {
             settings.lastWatchdogMs = now
             AppLog.w("Watchdog", "15-minute check: the readings had stopped (last one ${(now - settings.lastBeatMs) / 1000} s ago), started them again")
         }
+    }
+
+    /**
+     * The safety net (see [PlacesHeartbeat]): one position, checked by the 15-minute check when the continuous readings are not
+     * running. It goes through the same rules as any reading, so a stay is confirmed or a move is noticed even when Android sent
+     * no message. If the rules then want continuous readings, they start.
+     */
+    suspend fun heartbeat(context: Context, now: Long = System.currentTimeMillis()) {
+        val settings = PlacesSettings(context)
+        val running = PlacesWatchdog.alive(
+            settings.watching,
+            settings.lastBeatMs,
+            now,
+            PlaceEngine.intervalSec(settings.engine, baseIntervalSec(settings), settings.tripIntervalSec),
+        )
+        if (!PlacesHeartbeat.due(settings.enabled, settings.heartbeat, hasLocation(context), running, now, settings.lastHeartbeatMs)) return
+        settings.lastHeartbeatMs = now
+        val fix = currentFix(context, 20_000L)
+        if (fix == null) {
+            AppLog.w("Heartbeat", "No usable position within 20 s (indoors, location off, no signal, or too inaccurate)")
+            return
+        }
+        if (!PlacesHeartbeat.usable(fix.timeMs, now)) {
+            AppLog.w("Heartbeat", "Only an old position (${(now - fix.timeMs) / 60_000L} min old); not used")
+            return
+        }
+        AppLog.i("Heartbeat", "Position check: accuracy ${fix.accuracyM.toInt()} m")
+        val watch = onFix(context, fix)
+        if (watch.keep && hasLocation(context)) PlaceWatchService.start(context)
     }
 
     /** Called after a restart: Android forgot the geofences. */

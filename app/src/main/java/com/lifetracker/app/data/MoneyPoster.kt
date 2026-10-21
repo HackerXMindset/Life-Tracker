@@ -21,6 +21,7 @@ object MoneyPoster {
                     db.moneyDao().upsertItem(item.copy(lastPosted = plan.lastPosted))
                 }
             }
+            if (added > 0) AppLog.i("Money", "Added $added due entr${if (added == 1) "y" else "ies"} from your monthly items")
             added
         }
     }

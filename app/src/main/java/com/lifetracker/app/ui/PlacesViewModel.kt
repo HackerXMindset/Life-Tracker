@@ -178,6 +178,14 @@ class PlacesViewModel(private val app: Application) : AndroidViewModel(app) {
     private val recordTripsFlow = MutableStateFlow(settings.recordTrips)
     val recordTrips: StateFlow<Boolean> = recordTripsFlow
 
+    private val heartbeatFlow = MutableStateFlow(settings.heartbeat)
+    val heartbeat: StateFlow<Boolean> = heartbeatFlow
+
+    fun setHeartbeat(on: Boolean) {
+        settings.heartbeat = on
+        heartbeatFlow.value = on
+    }
+
     private val tripPaceFlow = MutableStateFlow(settings.tripIntervalSec)
     val tripIntervalSec: StateFlow<Int> = tripPaceFlow
 

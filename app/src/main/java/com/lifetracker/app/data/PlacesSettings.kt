@@ -53,6 +53,15 @@ class PlacesSettings(context: Context) {
         get() = prefs.getBoolean("always_on", false)
         set(value) = prefs.edit { putBoolean("always_on", value) }
 
+    /** The safety-net check: one position every 15 minutes while the continuous readings are not running. On unless switched off. */
+    var heartbeat: Boolean
+        get() = prefs.getBoolean("heartbeat", true)
+        set(value) = prefs.edit { putBoolean("heartbeat", value) }
+
+    var lastHeartbeatMs: Long
+        get() = prefs.getLong("last_heartbeat", 0L)
+        set(value) = prefs.edit { putLong("last_heartbeat", value) }
+
     /** Seconds between readings in always-on mode while you are not moving. */
     var alwaysOnIntervalSec: Int
         get() = prefs.getInt("always_on_interval_sec", 120)

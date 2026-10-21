@@ -16,7 +16,7 @@ import java.util.concurrent.TimeUnit
  */
 class ChargeWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
-        runCatching { ChargeTracker.sample(applicationContext) }
+        AppLog.track("Charging", "Sample while charging") { ChargeTracker.sample(applicationContext) }
         return Result.success()
     }
 

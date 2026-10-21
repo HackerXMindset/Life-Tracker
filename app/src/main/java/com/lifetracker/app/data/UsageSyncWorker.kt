@@ -11,8 +11,9 @@ import java.util.concurrent.TimeUnit
 /** Copies app usage history into the database every few hours, so Android's short memory never loses any. */
 class UsageSyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
-        runCatching { UsageCollector.sync(applicationContext) }
-        runCatching { HealthSync.run(applicationContext) }
+        AppLog.i("Phone usage", "Background sync started")
+        AppLog.track("Phone usage", "Sync", { if (it == null) "no usage access" else "$it app sessions read" }) { UsageCollector.sync(applicationContext) }
+        AppLog.track("Health", "Steps and sleep sync") { HealthSync.run(applicationContext) }
         return Result.success()
     }
 

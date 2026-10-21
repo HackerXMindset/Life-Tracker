@@ -30,11 +30,16 @@ class GeofenceReceiver : BroadcastReceiver() {
             return
         }
         val enter = event.geofenceTransition == Geofence.GEOFENCE_TRANSITION_ENTER
-        val ids = event.triggeringGeofences.orEmpty().joinToString { it.requestId.take(6) }
-        AppLog.i("Geofence", "Android says you " + (if (enter) "ARRIVED near" else "LEFT") + " a place ring ($ids)")
+        val rings = event.triggeringGeofences.orEmpty().map { it.requestId }.distinct()
         val pending = goAsync()
         receiverScope.launch {
             try {
+                val names = runCatching { AppDatabase.get(context.applicationContext).placeDao().activePlaces().associate { it.id to it.name } }
+                    .getOrDefault(emptyMap())
+                AppLog.i(
+                    "Geofence",
+                    "Android says you " + (if (enter) "ARRIVED near" else "LEFT") + " the ring of " + rings.joinToString { names[it] ?: it },
+                )
                 PlacesTracker.onGeofence(context.applicationContext)
             } finally {
                 pending.finish()

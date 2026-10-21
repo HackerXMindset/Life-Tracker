@@ -74,6 +74,7 @@ object StepCounterSync {
         if (existing != null && existing.source == StepStats.HEALTH_CONNECT && existing.steps > 0) return@withContext true
         val total = ((existing?.steps ?: 0).toLong() + delta).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
         dao.upsertAll(listOf(StepDayEntity(key, total, StepStats.SENSOR)))
+        AppLog.i("Steps", "Step counter: +$delta steps, $total today")
         true
     }
 }

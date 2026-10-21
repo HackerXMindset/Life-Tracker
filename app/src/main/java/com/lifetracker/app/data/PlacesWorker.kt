@@ -23,6 +23,13 @@ class PlacesWorker(context: Context, params: WorkerParameters) : CoroutineWorker
         AppLog.i("Watchdog", "Background check ran")
         if (now - settings.lastRegisterMs > SIX_HOURS_MS) runCatching { PlacesTracker.syncAll(context) }
         runCatching { PlacesTracker.watchdog(context, now) }
+        try {
+            PlacesTracker.heartbeat(context, now)
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            AppLog.e("Heartbeat", "Safety-net check failed", error)
+        }
         if (now - settings.lastCleanupMs > SIX_HOURS_MS) {
             PlacesTracker.cleanupRecent(context, now)
             runCatching { PlacesTracker.prefetchNames(context) }

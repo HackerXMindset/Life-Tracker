@@ -21,6 +21,7 @@ class StreakSendWorker(context: Context, params: WorkerParameters) : CoroutineWo
         if (!sync.autoSend) return Result.success()
         return try {
             val result = StreakFolderWriter.send(applicationContext)
+            AppLog.i("Streak", "Send to Streak: ${result.message}")
             // "Nothing to send" and "Already sent" are normal and not worth a line of their own.
             if (result.wrote) sync.lastSendNote = "${LocalDateTime.now().toString().take(16).replace('T', ' ')}: ${result.message}"
             else if (!result.message.startsWith("Already") && !result.message.startsWith("Nothing")) {
@@ -28,6 +29,7 @@ class StreakSendWorker(context: Context, params: WorkerParameters) : CoroutineWo
             }
             Result.success()
         } catch (e: Exception) {
+            AppLog.e("Streak", "Send to Streak failed (try ${runAttemptCount + 1} of $MAX_TRIES)", e)
             if (runAttemptCount < MAX_TRIES) {
                 Result.retry()
             } else {

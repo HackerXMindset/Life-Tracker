@@ -46,10 +46,9 @@ class PlaceWatchService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         // Must come first: Android crashes the app if a started foreground service does not announce itself quickly.
-        AppLog.i(
-            "Service",
-            "Readings service started" + (if (intent == null) " by Android after it had been stopped" else "") + (if (callback != null) " (already running)" else ""),
-        )
+        if (callback == null) {
+            AppLog.i("Service", "Readings service started" + (if (intent == null) " by Android after it had been stopped" else ""))
+        }
         runCatching { showNotification() }.onFailure { AppLog.e("Service", "Could not show the notification Android needs for the readings", it) }
         beginUpdates()
         // In always-on mode Android brings the service back by itself if it is stopped.
