@@ -20,6 +20,7 @@ class GeofenceReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val event = GeofencingEvent.fromIntent(intent) ?: return
         if (event.hasError()) {
+            AppLog.e("Geofence", "Android reported a geofence problem (code ${event.errorCode})")
             PlacesSettings(context).lastStatus = "Android reported a geofence problem (code ${event.errorCode}). It will be set up again soon."
             return
         }
@@ -28,6 +29,9 @@ class GeofenceReceiver : BroadcastReceiver() {
         ) {
             return
         }
+        val enter = event.geofenceTransition == Geofence.GEOFENCE_TRANSITION_ENTER
+        val ids = event.triggeringGeofences.orEmpty().joinToString { it.requestId.take(6) }
+        AppLog.i("Geofence", "Android says you " + (if (enter) "ARRIVED near" else "LEFT") + " a place ring ($ids)")
         val pending = goAsync()
         receiverScope.launch {
             try {
@@ -46,6 +50,7 @@ class ActivityTransitionReceiver : BroadcastReceiver() {
         val result = ActivityTransitionResult.extractResult(intent) ?: return
         val events = result.transitionEvents.sortedBy { it.elapsedRealTimeNanos }
         if (events.isEmpty()) return
+        AppLog.i("Activity", "Android sent ${events.size} activity message(s)")
         val pending = goAsync()
         receiverScope.launch {
             try {
@@ -77,6 +82,7 @@ class ActivityTransitionReceiver : BroadcastReceiver() {
 /** After the phone restarts or the app is updated Android has forgotten the geofences, so they are set up again. */
 class PlacesBootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        AppLog.i("App", "Broadcast received: ${intent.action}")
         val pending = goAsync()
         receiverScope.launch {
             try {

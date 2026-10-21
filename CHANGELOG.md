@@ -2,6 +2,18 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🪵 Live logs: a diary of what the app does
+
+### ✨ New
+
+- **Settings > Live logs** (the small quiet line at the very bottom of Settings). The app now writes a diary of what it does in the background, one line per event with the time to the second, and the page shows it live: newest at the bottom, a day picker, filters (All, Warnings, Errors), a row of parts (Places, Service, Fixes, Trips, Geofence, Activity, Watchdog, App...), a search box, and Copy and Share.
+- **What is in it.** Android's "arrived near / left a place" and "went still / started moving" messages, the motion sensor, every position reading (and why one was thrown away), stays and journeys starting and ending, journeys that were **dropped** with how far and how long they were, the readings service starting, stopping or being refused by Android, the 15-minute check, restarts and crashes. When the app starts it also writes why Android ended the last run, whether battery saving applies to the app, and its standby group.
+- The diary stays on the phone, one text file per day. Days older than 30 are removed from the diary only. **Clear logs** (with a question first) empties it. No tracked data, habit, entry or backup is touched.
+
+### 🔧 Changed
+
+- Nothing about how places, trips or the Timeline are tracked changed in this build; it only adds the diary, so the next missed journey can be explained from real lines.
+
 ## 🧹 The hour ruler is gone
 
 ### 🔧 Changed

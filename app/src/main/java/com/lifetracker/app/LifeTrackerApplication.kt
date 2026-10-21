@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Intent
 import android.content.IntentFilter
 import androidx.core.content.ContextCompat
+import com.lifetracker.app.data.AppLog
 import com.lifetracker.app.data.ChargePowerReceiver
 import com.lifetracker.app.data.ChargeSettings
 
@@ -11,6 +12,7 @@ import com.lifetracker.app.data.ChargeSettings
 class LifeTrackerApplication : Application() {
     override fun onCreate() {
         super.onCreate()
+        AppLog.init(this)
         if (ChargeSettings(this).track) {
             val filter = IntentFilter().apply {
                 addAction(Intent.ACTION_POWER_CONNECTED)
