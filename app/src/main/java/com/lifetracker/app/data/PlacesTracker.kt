@@ -146,6 +146,22 @@ object PlacesTracker {
         return text
     }
 
+    /** What was last written to the diary about each saved visit, so only a start, a change of place or an end is written. */
+    private val loggedVisits = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    private fun logVisits(saves: List<PlaceVisitEntity>, names: Map<String, String>) {
+        for (v in saves) {
+            val where = if (v.placeId.isEmpty()) "an unknown spot" else names[v.placeId] ?: v.placeId
+            val sig = "${v.placeId}|${v.startMs}|${v.ongoing}"
+            if (loggedVisits.put(v.id, sig) == sig) continue
+            AppLog.i(
+                "Visits",
+                (if (v.ongoing) "Visit at $where is going on since ${LogFormat.clock(v.startMs)}" else "Visit at $where ended: ${LogFormat.clock(v.startMs)} to ${LogFormat.clock(v.endMs)}") +
+                    " (${(maxOf(v.endMs, v.startMs) - v.startMs) / 60_000L} min saved so far)",
+            )
+        }
+    }
+
     /** One short line saying what the app believes right now, for the diary. */
     fun describe(s: WatchState, names: Map<String, String> = emptyMap()): String = buildString {
         val stay = s.stay
@@ -277,9 +293,9 @@ object PlacesTracker {
             AppLog.i(
                 "Fixes",
                 "Reading ${LogFormat.clock(fix.timeMs)}: accuracy ${fix.accuracyM.toInt()} m" +
-                    (if (fix.speedMs >= 0f) ", speed ${"%.1f".format(fix.speedMs * 3.6f)} km/h" else "") +
-                    (if (step.saves.isNotEmpty()) "; saved ${step.saves.size} visit row(s)" else ""),
+                    (if (fix.speedMs >= 0f) ", speed ${"%.1f".format(fix.speedMs * 3.6f)} km/h" else ""),
             )
+            logVisits(step.saves, names)
             if (beforeState != afterState) AppLog.i("Places", "Now: $afterState [was: $beforeState]")
             if (step.saves.isNotEmpty()) dao.upsertVisits(step.saves)
             if (step.points.isNotEmpty()) {

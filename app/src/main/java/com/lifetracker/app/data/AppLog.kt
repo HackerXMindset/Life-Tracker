@@ -86,9 +86,9 @@ object AppLog {
                 .sortedBy { it.timestamp }
             for (x in exits) {
                 add(
-                    LogLevel.Warn,
+                    exitLevel(x.reason),
                     "App",
-                    "The last run ended: ${exitReason(x.reason)}${x.description?.let { " ($it)" }.orEmpty()}",
+                    "The last run ended: ${exitReason(x.reason)}${x.description?.takeIf { it.isNotBlank() }?.let { " [$it]" }.orEmpty()}",
                     x.timestamp,
                 )
             }
@@ -96,22 +96,32 @@ object AppLog {
         }
     }
 
+    /** Android's own numbers (ApplicationExitInfo.REASON_*), in words. */
     private fun exitReason(code: Int): String = when (code) {
-        1 -> "the app exited by itself"
-        2 -> "killed by Android for a normal reason (for example the app was swiped away or its permission changed)"
-        3 -> "the app crashed (a Java exception)"
-        4 -> "the app crashed (native code)"
-        5 -> "the app stopped answering (ANR)"
-        6 -> "Android killed it because the app was not following its rules"
-        7 -> "killed to free memory (low memory)"
-        8 -> "killed because the app asked for too much (permission)"
-        9 -> "killed to save battery or by the phone's own cleaner (excessive resource use)"
-        10 -> "killed by you from the app list (user request)"
-        11 -> "stopped by you (force stop)"
-        12 -> "killed because the app's service stopped being needed"
-        13 -> "killed by another app"
-        14 -> "killed because the app was frozen"
+        1 -> "the app closed itself"
+        2 -> "ended by Android with a signal"
+        3 -> "Android closed the idle app to free memory (normal for an app not on screen; Android's messages start it again)"
+        4 -> "CRASH: a Java exception"
+        5 -> "CRASH: native code"
+        6 -> "the app stopped answering (ANR)"
+        7 -> "the app failed while starting"
+        8 -> "closed because a permission was changed"
+        9 -> "closed for using too many resources"
+        10 -> "closed by you from the app list (user request)"
+        11 -> "force-stopped"
+        12 -> "closed because something it depended on ended"
+        13 -> "closed by the system or the phone's own cleaner (for example swiping the app away)"
+        14 -> "frozen by Android"
+        15 -> "closed because the app was changed (disabled or its data cleared)"
+        16 -> "closed because the app was updated"
         else -> "other reason ($code)"
+    }
+
+    /** Only real trouble is a warning or an error; the ordinary ways Android ends an idle app are plain lines. */
+    private fun exitLevel(code: Int): LogLevel = when (code) {
+        4, 5, 6, 7 -> LogLevel.Error
+        3, 10, 13, 16 -> LogLevel.Info
+        else -> LogLevel.Warn
     }
 
     private fun add(level: LogLevel, tag: String, text: String, ms: Long = System.currentTimeMillis()) {
@@ -136,7 +146,7 @@ object AppLog {
     }
 
     /** The newest lines written since the app started, oldest first. */
-    fun recentLines(): List<LogLine> = synchronized(recent) { recent.toList() }
+    fun recentLines(): List<LogLine> = synchronized(recent) { recent.toList() }.sortedBy { it.ms }
 
     /** Days that have a diary file, newest first. */
     fun days(): List<LocalDate> =
@@ -147,7 +157,8 @@ object AppLog {
     fun read(day: LocalDate): List<LogLine> {
         val file = dir?.let { File(it, LogFormat.fileName(day)) } ?: return emptyList()
         if (!file.exists()) return emptyList()
-        return runCatching { file.readLines().mapNotNull { LogFormat.decode(it) } }.getOrDefault(emptyList())
+        // Lines about earlier events (why the last run ended) are written late, so they are put back in time order.
+        return runCatching { file.readLines().mapNotNull { LogFormat.decode(it) }.sortedBy { it.ms } }.getOrDefault(emptyList())
     }
 
     /** How much room the diary takes, in bytes. */
