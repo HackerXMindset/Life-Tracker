@@ -6,14 +6,39 @@ import java.util.UUID
 
 /** Money arithmetic, kept free of Android so it can be tested. */
 object MoneyStats {
-    data class Totals(val income: Double, val spent: Double) {
+    /**
+     * [spent] is only what came out of your own allowance, so [net] ("Left") ignores what someone else paid and what you are
+     * not sure about; those have their own totals, [paidByOthers] and [toDecide].
+     */
+    data class Totals(val income: Double, val spent: Double, val paidByOthers: Double = 0.0, val toDecide: Double = 0.0) {
         val net: Double get() = income - spent
     }
 
+    /** True when an entry reduces your allowance: an expense that is yours (anything saved before "Deduct it from" is). */
+    fun countsAgainstAllowance(e: MoneyEntryEntity): Boolean = e.kind == KIND_EXPENSE && e.source != SOURCE_OTHER && e.source != SOURCE_UNSURE
+
     fun totals(entries: List<MoneyEntryEntity>): Totals = Totals(
         income = entries.filter { it.kind == KIND_INCOME }.sumOf { it.amount },
-        spent = entries.filter { it.kind == KIND_EXPENSE }.sumOf { it.amount },
+        spent = entries.filter(::countsAgainstAllowance).sumOf { it.amount },
+        paidByOthers = entries.filter { it.kind == KIND_EXPENSE && it.source == SOURCE_OTHER }.sumOf { it.amount },
+        toDecide = entries.filter { it.kind == KIND_EXPENSE && it.source == SOURCE_UNSURE }.sumOf { it.amount },
     )
+
+    /** "Paid by Maa", "Someone else paid" or "Not sure yet"; null for your own money. */
+    fun sourceNote(source: Int, paidBy: String): String? = when (source) {
+        SOURCE_OTHER -> if (paidBy.isBlank()) "Someone else paid" else "Paid by ${paidBy.trim()}"
+        SOURCE_UNSURE -> "Not sure yet"
+        else -> null
+    }
+
+    /** Orders for the list: newest first (the default), oldest first, or biggest first. */
+    enum class Sort(val label: String) { Newest("Newest"), Oldest("Oldest"), Biggest("Biggest") }
+
+    fun sorted(entries: List<MoneyEntryEntity>, sort: Sort): List<MoneyEntryEntity> = when (sort) {
+        Sort.Newest -> entries.sortedWith(compareByDescending<MoneyEntryEntity> { it.date }.thenBy { it.id })
+        Sort.Oldest -> entries.sortedWith(compareBy<MoneyEntryEntity> { it.date }.thenBy { it.id })
+        Sort.Biggest -> entries.sortedWith(compareByDescending<MoneyEntryEntity> { it.amount }.thenBy { it.id })
+    }
 
     /** Total per category for one kind, biggest first. */
     fun byCategory(entries: List<MoneyEntryEntity>, kind: Int): List<Pair<String, Double>> =
@@ -112,6 +137,8 @@ object Recurring {
                     amount = item.amount,
                     note = "",
                     itemId = item.id,
+                    source = item.source,
+                    paidBy = item.paidBy,
                 )
             }
             lastPosted = month.toString()

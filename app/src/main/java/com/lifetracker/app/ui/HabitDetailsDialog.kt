@@ -8,6 +8,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -40,8 +44,11 @@ fun HabitDetailsDialog(
     onEditNote: (NoteEntity) -> Unit,
     onEdit: () -> Unit,
     onArchive: () -> Unit,
+    onDelete: () -> Unit,
+    onClearProgress: () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    var ask by remember { mutableStateOf(0) }
     val habit = row.habit
     val streaks = row.rules.streaks()
     val plan = HabitPlan.fromRaw(habit.raw)
@@ -85,6 +92,40 @@ fun HabitDetailsDialog(
             )
             HabitNotesList(notes, today, onEditNote, onAddNote)
             PaperButton("Archive", onArchive, modifier = Modifier.padding(top = 10.dp), style = PaperButtonStyle.Ghost, small = true)
+            PaperButton("Clear all progress", { ask = 1 }, modifier = Modifier.padding(top = 6.dp), style = PaperButtonStyle.Ghost, small = true)
+            PaperButton("Delete", { ask = 2 }, modifier = Modifier.padding(top = 6.dp), style = PaperButtonStyle.Danger, small = true)
+            Text(
+                text = "Clearing one day here does not reach Streak: Streak keeps the larger amount for a day. Clear all progress and Delete do reach it.",
+                modifier = Modifier.padding(top = 8.dp),
+                fontSize = 11.sp,
+                color = paper.ink2,
+            )
+        }
+    }
+    if (ask == 1) {
+        PaperDialog(
+            title = "Clear all progress?",
+            onDismiss = { ask = 0 },
+            confirmText = "Clear",
+            onConfirm = { ask = 0; onClearProgress() },
+            confirmStyle = PaperButtonStyle.Danger,
+        ) {
+            Text("Only days after today will count. Every day stays stored in the app and in backups; nothing is erased.", fontSize = 13.sp, color = paper.ink2)
+        }
+    }
+    if (ask == 2) {
+        PaperDialog(
+            title = "Delete this habit?",
+            onDismiss = { ask = 0 },
+            confirmText = "Delete",
+            onConfirm = { ask = 0; onDelete() },
+            confirmStyle = PaperButtonStyle.Danger,
+        ) {
+            Text(
+                "It disappears from the lists, with its notes, and Streak is told. It is kept: Settings, Habits, Deleted habits and notes brings it back.",
+                fontSize = 13.sp,
+                color = paper.ink2,
+            )
         }
     }
 }

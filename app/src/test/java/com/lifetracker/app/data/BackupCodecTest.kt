@@ -42,7 +42,7 @@ class BackupCodecTest {
             ActivityTypeEntity("c-abc", "Reading \"fiction\"", 0xFFD6457FL, 90, 1, true, 8),
         ),
         moneyCategories = listOf(
-            MoneyCategoryEntity("x-food", "Food", 0xFFC28410L, KIND_EXPENSE, 0, false),
+            MoneyCategoryEntity("x-food", "Food", 0xFFC28410L, KIND_EXPENSE, 0, false, "utensils"),
             MoneyCategoryEntity("c-1", "Chai \"time\"", 0xFF2E9E6BL, KIND_INCOME, 3, true),
         ),
         moneyItems = listOf(
@@ -52,6 +52,7 @@ class BackupCodecTest {
         moneyEntries = listOf(
             MoneyEntryEntity("auto|i1|2026-10", "2026-10-05", KIND_EXPENSE, "x-bills", "Rent", 8000.0, "", "i1"),
             MoneyEntryEntity("e1", "2026-10-07", KIND_INCOME, "i-pocket", "Pocket \"money\"", 5000.0, "line\ntwo", ""),
+            MoneyEntryEntity("e2", "2026-10-08", KIND_EXPENSE, "x-food", "Dinner", 900.0, "", "", SOURCE_OTHER, "Maa"),
         ),
         usageSessions = listOf(
             UsageSessionEntity(UsageSessionEntity.idFor("com.a", 1_760_000_000_000L), "com.a", 1_760_000_000_000L, 1_760_000_060_000L),

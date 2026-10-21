@@ -140,4 +140,59 @@ class MoneyStatsTest {
         assertTrue(plan.entries.size <= 120)
         assertEquals("2026-10", plan.lastPosted)
     }
+
+    private fun withSource(kind: Int, amount: Double, source: Int, who: String = "") =
+        MoneyEntryEntity(MoneyStats.newId(), "2026-10-05", kind, "c", "x", amount, "", "", source, who)
+
+    @Test
+    fun onlyYourOwnExpensesReduceWhatIsLeft() {
+        val t = MoneyStats.totals(
+            listOf(
+                entry(KIND_INCOME, "pay", 5000.0),
+                withSource(KIND_EXPENSE, 100.0, SOURCE_MINE),
+                withSource(KIND_EXPENSE, 700.0, SOURCE_OTHER, "Maa"),
+                withSource(KIND_EXPENSE, 50.0, SOURCE_UNSURE),
+            ),
+        )
+        assertEquals(100.0, t.spent, 0.001)
+        assertEquals(4900.0, t.net, 0.001)
+        assertEquals(700.0, t.paidByOthers, 0.001)
+        assertEquals(50.0, t.toDecide, 0.001)
+    }
+
+    @Test
+    fun anOldEntryWithNoSourceIsYours() {
+        assertTrue(MoneyStats.countsAgainstAllowance(entry(KIND_EXPENSE, "a", 10.0)))
+        assertTrue(!MoneyStats.countsAgainstAllowance(entry(KIND_INCOME, "a", 10.0)))
+    }
+
+    @Test
+    fun sourceNotes() {
+        assertEquals("Paid by Maa", MoneyStats.sourceNote(SOURCE_OTHER, " Maa "))
+        assertEquals("Someone else paid", MoneyStats.sourceNote(SOURCE_OTHER, ""))
+        assertEquals("Not sure yet", MoneyStats.sourceNote(SOURCE_UNSURE, ""))
+        assertEquals(null, MoneyStats.sourceNote(SOURCE_MINE, ""))
+    }
+
+    @Test
+    fun sortingOrders() {
+        val a = MoneyEntryEntity("a", "2026-10-01", KIND_EXPENSE, "c", "a", 300.0, "", "")
+        val b = MoneyEntryEntity("b", "2026-10-03", KIND_EXPENSE, "c", "b", 10.0, "", "")
+        val c = MoneyEntryEntity("c", "2026-10-02", KIND_EXPENSE, "c", "c", 99.0, "", "")
+        val all = listOf(a, b, c)
+        assertEquals(listOf("b", "c", "a"), MoneyStats.sorted(all, MoneyStats.Sort.Newest).map { it.id })
+        assertEquals(listOf("a", "c", "b"), MoneyStats.sorted(all, MoneyStats.Sort.Oldest).map { it.id })
+        assertEquals(listOf("a", "c", "b"), MoneyStats.sorted(all, MoneyStats.Sort.Biggest).map { it.id })
+    }
+
+    @Test
+    fun monthlyItemsCarryWhoPays() {
+        val rent = MoneyItemEntity(
+            "r", "Rent", KIND_EXPENSE, "x-bills", 8000.0, MoneyItemEntity.MONTHLY, 5, "2026-09-01", "", "", false, 0,
+            SOURCE_OTHER, "Papa",
+        )
+        val plan = Recurring.plan(rent, LocalDate.of(2026, 10, 10))
+        assertTrue(plan.entries.isNotEmpty())
+        assertTrue(plan.entries.all { it.source == SOURCE_OTHER && it.paidBy == "Papa" })
+    }
 }

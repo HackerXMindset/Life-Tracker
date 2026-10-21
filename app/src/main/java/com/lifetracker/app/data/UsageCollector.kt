@@ -42,10 +42,6 @@ object UsageCollector {
     private val SYSTEM_PACKAGES = setOf(
         "android",
         "com.android.systemui",
-        "com.miui.home",
-        "com.mi.android.globallauncher",
-        "com.miui.aod",
-        "com.google.android.apps.nexuslauncher",
     )
 
     @Suppress("DEPRECATION")
@@ -155,7 +151,11 @@ object UsageCollector {
         val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
         val launchers = context.packageManager.queryIntentActivities(home, PackageManager.MATCH_DEFAULT_ONLY)
             .map { it.activityInfo.packageName }
-        return SYSTEM_PACKAGES + launchers
+        // Always-on display screens are the phone itself too; they are found by name, not by a list.
+        val aod = runCatching {
+            context.packageManager.getInstalledPackages(0).map { it.packageName }.filter { it.endsWith(".aod") }
+        }.getOrDefault(emptyList())
+        return SYSTEM_PACKAGES + launchers + aod
     }
 
     @Suppress("DEPRECATION")

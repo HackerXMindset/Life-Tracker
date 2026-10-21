@@ -72,6 +72,24 @@ class MoneyViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { dao.deleteEntry(entry) }
     }
 
+    /** Deletes a saved item. The entries it already made stay. */
+    fun deleteItem(item: MoneyItemEntity) {
+        viewModelScope.launch { dao.deleteItem(item.id) }
+    }
+
+    /** Deletes a category only when no entry or saved item uses it; otherwise hides it. Returns true when it was deleted. */
+    fun deleteCategory(category: MoneyCategoryEntity, onDone: (deleted: Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            if (dao.usesOfCategory(category.id) == 0) {
+                dao.deleteCategory(category.id)
+                onDone(true)
+            } else {
+                dao.upsertCategory(category.copy(archived = true))
+                onDone(false)
+            }
+        }
+    }
+
     /** Saves a category. A new one (sortOrder -1) goes to the end of its own list. */
     fun saveCategory(category: MoneyCategoryEntity, onSaved: (MoneyCategoryEntity) -> Unit = {}) {
         viewModelScope.launch {
@@ -124,5 +142,7 @@ class MoneyViewModel(app: Application) : AndroidViewModel(app) {
         amount = amount,
         note = "",
         itemId = item.id,
+        source = item.source,
+        paidBy = item.paidBy,
     )
 }

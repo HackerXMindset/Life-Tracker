@@ -77,13 +77,55 @@ class HabitSyncState(context: Context) {
     val changes: Map<String, Long>
         get() = synchronized(LOCK) { HabitChanges.parse(prefs.getString("changes", null)) }
 
-    /** Notes that these habits or notes changed just now. */
-    fun stamp(vararg ids: String, now: Long = System.currentTimeMillis()) {
-        synchronized(LOCK) {
-            val next = HabitChanges.stamp(HabitChanges.parse(prefs.getString("changes", null)), ids.toList(), now)
-            prefs.edit { putString("changes", HabitChanges.toJson(next)) }
+    /** What was deleted here (or by Streak) and when, id to milliseconds. Sent to Streak in every file. */
+    val deleted: Map<String, Long>
+        get() = synchronized(LOCK) { HabitChanges.parse(prefs.getString("deleted", null)) }
+
+    private fun read() = HabitTombstones.State(
+        HabitChanges.parse(prefs.getString("changes", null)),
+        HabitChanges.parse(prefs.getString("deleted", null)),
+    )
+
+    private fun write(state: HabitTombstones.State, now: Long) {
+        prefs.edit {
+            putString("changes", HabitChanges.toJson(state.changes))
+            putString("deleted", HabitChanges.toJson(HabitTombstones.forgetOld(state.deleted, now)))
         }
+    }
+
+    /** Notes that these habits or notes changed just now. A deleted one that changes is no longer deleted. */
+    fun stamp(vararg ids: String, now: Long = System.currentTimeMillis()) {
+        synchronized(LOCK) { write(HabitTombstones.changed(read(), ids.toList(), now), now) }
         if (autoSend) StreakSendWorker.schedule(appContext, delaySeconds = StreakSendWorker.QUIET_SECONDS)
+    }
+
+    /** Notes that these habits or notes were deleted just now. */
+    fun markDeleted(vararg ids: String, now: Long = System.currentTimeMillis()) {
+        synchronized(LOCK) { write(HabitTombstones.deleted(read(), ids.toList(), now), now) }
+        if (autoSend) StreakSendWorker.schedule(appContext, delaySeconds = StreakSendWorker.QUIET_SECONDS)
+    }
+
+    /** Streak says [id] was deleted at [at]: remember it, without sending it back as a change made here. */
+    fun learnDeleted(id: String, at: Long) {
+        synchronized(LOCK) {
+            val state = read()
+            write(HabitTombstones.State(state.changes - id, state.deleted + (id to maxOf(at, state.deleted[id] ?: 0L))), System.currentTimeMillis())
+        }
+    }
+
+    /** Streak brought [id] back after it was deleted: forget the deletion (it is not a change made here). */
+    fun forgetDeleted(id: String) {
+        synchronized(LOCK) {
+            val state = read()
+            write(HabitTombstones.State(state.changes, state.deleted - id), System.currentTimeMillis())
+        }
+    }
+
+    /** The last file already read for each of Streak's devices, so a file is only read once. */
+    fun lastFileOf(device: String): String? = prefs.getString("file_$device", null)
+
+    fun setLastFileOf(device: String, name: String) {
+        prefs.edit { putString("file_$device", name) }
     }
 
     private companion object {

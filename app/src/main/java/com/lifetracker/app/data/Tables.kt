@@ -41,6 +41,10 @@ data class HabitEntity(
     val archived: Boolean,
     val sortOrder: Int,
     val raw: String,
+    /** When the habit was deleted (milliseconds), or 0. A deleted habit is hidden and kept; it can be restored. */
+    val deletedAt: Long = 0L,
+    /** When "clear all progress" was used (milliseconds), or 0. Only days after that day count; nothing is erased. */
+    val clearedAt: Long = 0L,
 )
 
 /** One day's record for one habit. For a "relapse" habit, a row means a relapse happened that day. */
@@ -99,6 +103,8 @@ data class NoteEntity(
     val text: String,
     val minutes: Int?,
     val createdAt: String,
+    /** When the note was deleted (milliseconds), or 0. A deleted note is hidden and kept; it can be restored. */
+    val deletedAt: Long = 0L,
 )
 
 /**
@@ -115,8 +121,19 @@ data class ImportedItemEntity(
 
 @Dao
 interface HabitDao {
-    @Query("SELECT * FROM habits ORDER BY sortOrder, name")
+    @Query("SELECT * FROM habits WHERE deletedAt = 0 ORDER BY sortOrder, name")
     fun observeHabits(): Flow<List<HabitEntity>>
+
+    @Query("SELECT * FROM habits WHERE deletedAt > 0 ORDER BY deletedAt DESC")
+    fun observeDeletedHabits(): Flow<List<HabitEntity>>
+
+    /** Hides a habit (or, with 0, shows it again). Nothing it recorded is touched. */
+    @Query("UPDATE habits SET deletedAt = :at WHERE id = :id")
+    suspend fun setHabitDeleted(id: String, at: Long)
+
+    /** "Clear all progress": only days after that day count. No day is erased. */
+    @Query("UPDATE habits SET clearedAt = :at WHERE id = :id")
+    suspend fun setHabitCleared(id: String, at: Long)
 
     @Query("SELECT * FROM habit_completions")
     fun observeCompletions(): Flow<List<CompletionEntity>>
@@ -175,13 +192,13 @@ interface PlanDao {
     @Query("SELECT * FROM todos WHERE date = :date ORDER BY minutes IS NULL, minutes, createdAt")
     fun todosOn(date: String): Flow<List<TodoEntity>>
 
-    @Query("SELECT * FROM notes WHERE date = :date ORDER BY minutes IS NULL, minutes, createdAt")
+    @Query("SELECT * FROM notes WHERE date = :date AND deletedAt = 0 ORDER BY minutes IS NULL, minutes, createdAt")
     fun notesOn(date: String): Flow<List<NoteEntity>>
 
     @Query("SELECT DISTINCT date FROM todos WHERE date IS NOT NULL")
     fun datesWithTodos(): Flow<List<String>>
 
-    @Query("SELECT DISTINCT date FROM notes WHERE date != ''")
+    @Query("SELECT DISTINCT date FROM notes WHERE date != '' AND deletedAt = 0")
     fun datesWithNotes(): Flow<List<String>>
 
     @Query("SELECT * FROM todo_tags")
@@ -196,8 +213,22 @@ interface PlanDao {
     @Query("SELECT * FROM notes")
     suspend fun allNotes(): List<NoteEntity>
 
-    @Query("SELECT * FROM notes")
+    @Query("SELECT * FROM notes WHERE deletedAt = 0")
     fun observeNotes(): Flow<List<NoteEntity>>
+
+    @Query("SELECT * FROM notes WHERE deletedAt > 0 ORDER BY deletedAt DESC")
+    fun observeDeletedNotes(): Flow<List<NoteEntity>>
+
+    /** Hides a note (or, with 0, shows it again). The text stays stored. */
+    @Query("UPDATE notes SET deletedAt = :at WHERE id = :id")
+    suspend fun setNoteDeleted(id: String, at: Long)
+
+    /** A deleted habit takes its notes with it, all at the same time, so restoring the habit can bring back exactly those. */
+    @Query("UPDATE notes SET deletedAt = :at WHERE habitId = :habitId AND deletedAt = 0")
+    suspend fun deleteNotesOfHabit(habitId: String, at: Long)
+
+    @Query("UPDATE notes SET deletedAt = 0 WHERE habitId = :habitId AND deletedAt = :at")
+    suspend fun restoreNotesOfHabit(habitId: String, at: Long)
 
     @Query("SELECT * FROM notes WHERE id = :id")
     suspend fun note(id: String): NoteEntity?
