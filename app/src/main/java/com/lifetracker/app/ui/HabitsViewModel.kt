@@ -7,6 +7,7 @@ import com.lifetracker.app.data.AppDatabase
 import com.lifetracker.app.data.CategoryEntity
 import com.lifetracker.app.data.CompletionEntity
 import com.lifetracker.app.data.HabitCalendar
+import com.lifetracker.app.data.HabitClears
 import com.lifetracker.app.data.HabitEditor
 import com.lifetracker.app.data.HabitEntity
 import com.lifetracker.app.data.HabitForm
@@ -102,6 +103,13 @@ class HabitsViewModel(app: Application) : AndroidViewModel(app) {
             .flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    /** Habits and notes that were deleted: hidden, kept, and listed in Settings so they can be restored. */
+    val deletedHabits: StateFlow<List<HabitEntity>> =
+        dao.observeDeletedHabits().flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val deletedNotes: StateFlow<List<NoteEntity>> =
+        planDao.observeDeletedNotes().flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     /** Habit names by id, archived habits included, for labelling notes. */
     val habitNames: StateFlow<Map<String, String>> =
         dao.observeHabits()
@@ -189,6 +197,54 @@ class HabitsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * Deletes a habit: it is hidden and kept, with its notes, and Streak is told it was deleted. Nothing is erased, and
+     * Settings > Habits > Deleted habits and notes brings it back.
+     */
+    fun deleteHabit(habit: HabitEntity) {
+        viewModelScope.launch {
+            val now = System.currentTimeMillis()
+            val noteIds = planDao.allNotes().filter { it.habitId == habit.id && it.deletedAt == 0L }.map { it.id }
+            dao.setHabitDeleted(habit.id, now)
+            planDao.deleteNotesOfHabit(habit.id, now)
+            sync.markDeleted(habit.id, *noteIds.toTypedArray(), now = now)
+        }
+    }
+
+    /** Brings back a deleted habit and the notes that were deleted with it. Streak reads this as a change. */
+    fun restoreHabit(habit: HabitEntity) {
+        viewModelScope.launch {
+            val at = habit.deletedAt
+            val noteIds = planDao.allNotes().filter { it.habitId == habit.id && it.deletedAt == at }.map { it.id }
+            dao.setHabitDeleted(habit.id, 0L)
+            planDao.restoreNotesOfHabit(habit.id, at)
+            sync.stamp(habit.id, *noteIds.toTypedArray())
+        }
+    }
+
+    /** Deletes one note: hidden and kept. */
+    fun deleteNote(note: NoteEntity) {
+        viewModelScope.launch {
+            planDao.setNoteDeleted(note.id, System.currentTimeMillis())
+            sync.markDeleted(note.id)
+        }
+    }
+
+    fun restoreNote(note: NoteEntity) {
+        viewModelScope.launch {
+            planDao.setNoteDeleted(note.id, 0L)
+            sync.stamp(note.id)
+        }
+    }
+
+    /** "Clear all progress": from now on only days after today count. Every day stays stored. */
+    fun clearAllProgress(habit: HabitEntity) {
+        viewModelScope.launch {
+            dao.setHabitCleared(habit.id, System.currentTimeMillis())
+            sync.stamp(habit.id)
+        }
+    }
+
     /** Sets the exact amount for a day (counted habits). Zero or less clears the day. */
     fun setAmount(habit: HabitEntity, date: LocalDate, amount: Double) {
         if (date.isAfter(LocalDate.now())) return
@@ -225,7 +281,7 @@ class HabitsViewModel(app: Application) : AndroidViewModel(app) {
         val byHabit = src.completions.groupBy { it.habitId }
         val all = src.habits.filter { !it.archived }.map { habit ->
             val counts = HashMap<LocalDate, Double>()
-            for (c in byHabit[habit.id].orEmpty()) {
+            for (c in HabitClears.visible(byHabit[habit.id].orEmpty(), habit.clearedAt)) {
                 runCatching { LocalDate.parse(c.date) }.getOrNull()?.let { counts[it] = c.count }
             }
             val rules = HabitRules.of(habit, counts, today)

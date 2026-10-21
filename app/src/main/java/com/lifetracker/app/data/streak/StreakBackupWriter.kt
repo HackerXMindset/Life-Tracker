@@ -2,6 +2,7 @@ package com.lifetracker.app.data.streak
 
 import com.lifetracker.app.data.CategoryEntity
 import com.lifetracker.app.data.CompletionEntity
+import com.lifetracker.app.data.HabitClears
 import com.lifetracker.app.data.HabitEntity
 import com.lifetracker.app.data.NoteEntity
 import java.time.LocalDate
@@ -39,6 +40,17 @@ object StreakBackupWriter {
     fun isFromDevice(name: String, device: String): Boolean =
         name.startsWith("streak_backup_") && name.contains("_$device.")
 
+    /**
+     * Which device wrote a Streak file: the last part of `streak_backup_2026-10-18_17-10-25_ab12cd34.json`.
+     * Files from before Streak 2.4 have no device and give "".
+     */
+    fun deviceOf(name: String): String {
+        if (!name.startsWith("streak_backup_")) return ""
+        val stem = name.substringBeforeLast('.')
+        val parts = stem.removePrefix("streak_backup_").split('_')
+        return if (parts.size >= 3) parts.drop(2).joinToString("_") else ""
+    }
+
     /** Streak writes days as "04-10-2026". */
     fun dayKey(day: LocalDate): String = "%02d-%02d-%04d".format(day.dayOfMonth, day.monthValue, day.year)
 
@@ -54,22 +66,27 @@ object StreakBackupWriter {
         notes: List<NoteEntity>,
         categories: List<CategoryEntity>,
         changes: Map<String, Long>,
+        deleted: Map<String, Long> = emptyMap(),
     ): String? {
-        val changedHabits = habits.filter { it.id in changes }
-        val changedNotes = notes.filter { it.id in changes }
-        if (changedHabits.isEmpty() && changedNotes.isEmpty()) return null
+        // A deleted habit or note is sent only as a deletion, never as a habit or note.
+        val changedHabits = habits.filter { it.id in changes && it.deletedAt == 0L }
+        val changedNotes = notes.filter { it.id in changes && it.deletedAt == 0L }
+        if (changedHabits.isEmpty() && changedNotes.isEmpty() && deleted.isEmpty()) return null
 
         val byHabit = completions.groupBy { it.habitId }
         val habitArray = JSONArray()
+        val cleared = JSONObject()
         for (habit in changedHabits) {
             val o = runCatching { JSONObject(habit.raw) }.getOrNull() ?: continue
             o.put("id", habit.id)
-            o.put("completions", completionMap(byHabit[habit.id].orEmpty()))
+            // Days from before "clear all progress" are not sent, or Streak would bring them back.
+            o.put("completions", completionMap(HabitClears.visible(byHabit[habit.id].orEmpty(), habit.clearedAt)))
             habitArray.put(o)
+            if (habit.clearedAt > 0L) cleared.put(habit.id, habit.clearedAt)
         }
         val noteArray = JSONArray()
         for (note in changedNotes) noteArray.put(noteJson(note))
-        if (habitArray.length() == 0 && noteArray.length() == 0) return null
+        if (habitArray.length() == 0 && noteArray.length() == 0 && deleted.isEmpty()) return null
 
         val used = changedHabits.map { it.category }.filter { it.isNotBlank() }.toSet()
         val categoryArray = JSONArray()
@@ -89,7 +106,8 @@ object StreakBackupWriter {
             .put("exportedAt", now.format(EXPORTED))
             .put("device", device)
             .put("changes", stamps)
-            .put("deleted", JSONObject())
+            .put("deleted", JSONObject().also { o -> deleted.forEach { (id, at) -> o.put(id, at) } })
+            .put("cleared", cleared)
             .put("habits", habitArray)
             .put("categories", categoryArray)
             .put("notes", noteArray)
