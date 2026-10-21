@@ -121,4 +121,50 @@ class StreakBackupWriterTest {
         assertEquals("hello", data.notes.single().text)
         assertNotNull(data.categories.singleOrNull { it.name == "Study" })
     }
+
+    @Test
+    fun deviceIsReadFromTheFileName() {
+        assertEquals("ab12cd34", StreakBackupWriter.deviceOf("streak_backup_2026-10-14_21-30-05_ab12cd34.json"))
+        assertEquals("", StreakBackupWriter.deviceOf("streak_backup_2026-10-14_21-30-05.json"))
+        assertEquals("", StreakBackupWriter.deviceOf("notes.json"))
+    }
+
+    @Test
+    fun aDeletedHabitIsOnlyListedAsDeletedNeverSentAsAHabit() {
+        val text = StreakBackupWriter.build(
+            "ab12cd34", now, listOf(read.copy(deletedAt = 5_000L), gym), emptyList(), emptyList(), listOf(study, other),
+            changes = mapOf("h2" to 9L), deleted = mapOf("h1" to 5_000L),
+        )!!
+        val root = JSONObject(text)
+        assertEquals(5_000L, root.getJSONObject("deleted").getLong("h1"))
+        assertEquals(1, root.getJSONArray("habits").length())
+        assertEquals("h2", root.getJSONArray("habits").getJSONObject(0).getString("id"))
+    }
+
+    @Test
+    fun aDeletionAloneStillMakesAFile() {
+        val text = StreakBackupWriter.build(
+            "ab12cd34", now, listOf(read.copy(deletedAt = 5_000L)), emptyList(), emptyList(), listOf(study),
+            changes = emptyMap(), deleted = mapOf("h1" to 5_000L),
+        )
+        assertNotNull(text)
+        assertEquals(0, JSONObject(text!!).getJSONArray("habits").length())
+    }
+
+    @Test
+    fun clearedProgressSendsTheTimeAndOnlyLaterDays() {
+        val clearedAt = LocalDate.of(2026, 10, 10).atTime(12, 0).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val days = listOf(
+            CompletionEntity("h1", "2026-10-09", 1.0, null),
+            CompletionEntity("h1", "2026-10-10", 1.0, null),
+            CompletionEntity("h1", "2026-10-12", 1.0, null),
+        )
+        val text = StreakBackupWriter.build(
+            "ab12cd34", now, listOf(read.copy(clearedAt = clearedAt)), days, emptyList(), listOf(study), changes = mapOf("h1" to 1L),
+        )!!
+        val root = JSONObject(text)
+        assertEquals(clearedAt, root.getJSONObject("cleared").getLong("h1"))
+        val sent = root.getJSONArray("habits").getJSONObject(0).getJSONObject("completions")
+        assertEquals(setOf("12-10-2026"), sent.keys().asSequence().toSet())
+    }
 }

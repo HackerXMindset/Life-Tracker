@@ -2,6 +2,19 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🗑️ Habits: delete and restore, and Streak 2.4 sync
+
+### ✨ New
+
+- **Delete a habit here, and bring it back.** The habit page has **Delete** (it asks first) and **Clear all progress** (also asks first). Nothing is erased: a deleted habit is hidden together with its notes and its days, and **Settings > Habits > Deleted habits and notes** lists it with a **Restore** button. Notes have **Delete note** in the note box and the same list.
+- **Clear all progress** hides every day up to today for that habit (the days stay stored), like Streak's own button. Only later days count towards streaks and strength.
+- **Deletions and cleared progress now travel to Streak.** Every file this app writes for Streak carries what was deleted and what was cleared, which fixes "delete does not reach Streak". A restored habit or note is sent as changed again, which Streak reads as bringing it back.
+- **Streak's deletions and cleared progress now arrive here.** The newest file from **each** of Streak's devices is read (before, only the newest file overall). A habit or note Streak deleted is hidden here too (unless you changed it here after that), one Streak changed after you deleted it comes back, and a habit Streak cleared is cleared here.
+
+### 🔧 Changed
+
+- Database 23 and backups 23 (a "deleted at" time on habits and notes and a "cleared at" time on habits; older backups still restore). Nothing already saved is changed.
+
 ## 🛟 A safety net for places, and the diary for the whole app
 
 ### ✨ New

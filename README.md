@@ -170,8 +170,8 @@ Each step is small enough to build, install and try before the next begins. The 
   DONE         R1b The hour ruler on the Timeline is removed (rows stack, lines stay)
   DONE         R5 Settings > Permissions: every permission in one place, why it is needed, how to switch it on
   DONE         R6a Money data: Deduct it from, category icons (database 22)
-  NEXT ──►    Habits H6 Sync catch-up with Streak 2.4: deletions and progress-clears both ways, delete and restore here (database 23)
-              Habits H7 Check times, many checks a day, amounts without a goal, tracking-only habits
+  DONE         Habits H6 Sync catch-up with Streak 2.4: deletions and progress-clears both ways, delete and restore here (database 23)
+  NEXT ──►    Habits H7 Check times, many checks a day, amounts without a goal, tracking-only habits
               Habits H8 Checklist habits (steps)
               Habits H9 Pause (vacation) and rest days
               Habits H10 Schedule extras (monthly weekday, from last done) and difficulty
@@ -289,9 +289,9 @@ Not part of Polish 4, and not built: **Step 13e** (fixing trips and visits by ha
 **Habits round 2 (H6 to H13), from Streak 2.4 (18 October).** You asked for every habit feature Streak has to be in this app's own tracker, plus the focus mode, in the order below. Not built, on purpose: habit statistics pages (B6) and imports from other apps (B7), because you did not want them; widgets, to-dos, Plan, island coins, app lock and themes. I read Streak's source (v2.4.0) for exactly what it saves.
 
 - **H6 Sync catch-up (three steps, database 23, backups 23).** Streak now writes, in every backup file, a list of **deleted** things (habit, note, focus session, to-do, tag, each with the time) and a list of **cleared** habits ("clear all progress", with the time). It applies a deletion only when its own **Keep devices in sync** switch is on, and it still keeps the bigger amount for a day, so un-ticking a single day does not travel (that stays as it is, and the habit page says so).
-  - **H6a Delete and restore here.** Nothing is ever erased. A habit or note gets a "deleted at" time and disappears from the lists. Settings > Habits gets **Deleted habits and notes**, where each one can be restored. The habit page gets **Delete** (asks first). A habit also gets **Clear all progress**: a "cleared at" date after which only newer days count; the days stay in the database and in backups. Both are shown to Streak in H6b.
-  - **H6b Send.** The file for Streak now carries `deleted` and `cleared` (with the habit's notes) and `device`, `changes` as before. A restored item is sent as changed again, which Streak treats as bringing it back.
-  - **H6c Receive.** Streak's newest file **from each device** is read (not only the newest one overall). Its `deleted` list hides the same habits and notes here (only if you did not change that item after the deletion time), and its `cleared` list sets the same "cleared at". All kept restorable.
+  - **H6a Delete and restore here.** Built. Nothing is ever erased. A habit or note gets a "deleted at" time and disappears from the lists. Settings > Habits gets **Deleted habits and notes**, where each one can be restored. The habit page gets **Delete** (asks first). A habit also gets **Clear all progress**: a "cleared at" date after which only newer days count; the days stay in the database and in backups. Both are shown to Streak in H6b.
+  - **H6b Send.** Built. The file for Streak now carries `deleted` and `cleared` (with the habit's notes) and `device`, `changes` as before. A restored item is sent as changed again, which Streak treats as bringing it back.
+  - **H6c Receive.** Built. Streak's newest file **from each device** is read (not only the newest one overall). Its `deleted` list hides the same habits and notes here (only if you did not change that item after the deletion time), and its `cleared` list sets the same "cleared at". All kept restorable.
   - Tests: a deletion older or newer than an edit, restoring, the cleared date, which files are read.
 - **H7 Check times and amounts.** Each tick keeps its time and a habit can have several ticks in a day (several relapses for an avoid habit); the time of any tick can be changed; an amount can be added to or replaced; a counted habit may have no goal; **tracking-only** habits have no streak and show the last time and this week's and month's totals.
 - **H8 Checklist habits.** A habit made of steps; the day is done when every step (or at least N) is ticked; the card shows progress; steps and ticks are stored and sent in Streak's own format.
