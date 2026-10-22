@@ -22,7 +22,7 @@ class BackupCodecTest {
         ),
         completions = listOf(
             CompletionEntity("h1", "2026-10-04", 1.5, null),
-            CompletionEntity("h1", "2026-10-05", 2.0, 780),
+            CompletionEntity("h1", "2026-10-05", 2.0, 780, "480,780", "s1,s2"),
         ),
         categories = listOf(CategoryEntity("c1", "Self Study", 4281648985L, 5)),
         todoTags = listOf(TodoTagEntity("p1", "Physics", 4287532691L, "project", 1)),
@@ -119,6 +119,22 @@ class BackupCodecTest {
     fun roundTripKeepsEveryField() {
         val back = BackupCodec.decode(BackupCodec.encode(full))
         assertEquals(full, back)
+    }
+
+    @Test
+    fun deletedAndClearedTimesSurviveTheRoundTrip() {
+        val data = full.copy(
+            habits = full.habits.map { it.copy(deletedAt = 1_760_000_000_000L, clearedAt = 1_760_000_500_000L) },
+            notes = full.notes.map { it.copy(deletedAt = 1_760_000_100_000L) },
+        )
+        val back = BackupCodec.decode(BackupCodec.encode(data))
+        assertEquals(1_760_000_000_000L, back.habits.single().deletedAt)
+        assertEquals(1_760_000_500_000L, back.habits.single().clearedAt)
+        assertEquals(1_760_000_100_000L, back.notes.single().deletedAt)
+        // Left out when zero, and read back as zero by an older file.
+        val plain = BackupCodec.decode(BackupCodec.encode(full))
+        assertEquals(0L, plain.habits.single().deletedAt)
+        assertEquals(0L, plain.notes.single().deletedAt)
     }
 
     @Test

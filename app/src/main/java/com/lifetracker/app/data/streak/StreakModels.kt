@@ -22,10 +22,11 @@ data class StreakData(
     val changes: Map<String, Long> = emptyMap(),
 ) {
     val isEmpty: Boolean
-        get() = habits.isEmpty() && notes.isEmpty() && focus.isEmpty() && todos.isEmpty()
+        get() = habits.isEmpty() && notes.isEmpty() && focus.isEmpty() && todos.isEmpty() && deleted.isEmpty() && cleared.isEmpty()
 }
 
-data class StreakCompletion(val date: LocalDate, val count: Double, val minuteOfDay: Int?)
+/** One day of a habit. [marks] are the times of every check (minutes of the day), as Streak keeps them; empty when none. */
+data class StreakCompletion(val date: LocalDate, val count: Double, val minuteOfDay: Int?, val marks: List<Int> = emptyList(), val steps: List<String> = emptyList())
 
 data class StreakHabit(
     val id: String,

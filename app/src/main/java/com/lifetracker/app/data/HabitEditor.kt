@@ -20,6 +20,14 @@ data class HabitForm(
     val anyAmount: Boolean = false,
     val plan: HabitPlan = HabitPlan(),
     val description: String = "",
+    /** Tracking only: no streak, no missed days; the card shows the last check and this week's and month's totals. Not for Avoid habits. */
+    val tracking: Boolean = false,
+    /** Checklist habit (Yes/no only): the steps, whether any [stepsNeeded] of them is enough, and how many. Blank titles are dropped. */
+    val steps: List<HabitStep> = emptyList(),
+    val anySteps: Boolean = false,
+    val stepsNeeded: Int = 1,
+    /** 0 = not set, 1 = easy, 2 = medium, 3 = hard. Only weighs the Today ring, and only if that is switched on. */
+    val difficulty: Int = 0,
 )
 
 /**
@@ -53,15 +61,29 @@ object HabitEditor {
             anyAmount = habit.anyAmount,
             plan = HabitPlan.fromRaw(habit.raw),
             description = o.optString("description"),
+            tracking = HabitRules.isTracking(habit),
+            steps = HabitSteps.read(habit.raw),
+            anySteps = HabitSteps.anySteps(habit.raw),
+            stepsNeeded = HabitSteps.stepsNeeded(habit.raw).coerceAtLeast(1),
+            difficulty = difficultyOf(habit.raw),
         )
     }
+
+    /** The difficulty in a habit's record: 0 = not set, 1 = easy, 2 = medium, 3 = hard. */
+    fun difficultyOf(raw: String): Int = runCatching { JSONObject(raw).optInt("difficulty", 0) }.getOrDefault(0).coerceIn(0, 3)
 
     /** What is wrong with the form, in words, or null if it can be saved. */
     fun validate(form: HabitForm): String? {
         if (form.name.isBlank()) return "Give it a name."
         if (form.kind == HabitStats.KIND_COUNTED) {
-            if (!form.anyAmount && form.target <= 0) return "Set a goal above 0, or turn on \"any amount counts\"."
+            // A goal of 0 means no goal: any amount counts the day.
+            if (form.target < 0) return "The goal cannot be below 0. Use 0 for no goal."
             if (form.step <= 0) return "The step must be above 0."
+        }
+        val steps = form.steps.count { it.title.isNotBlank() }
+        if (form.kind == HabitStats.KIND_YES_NO && steps > 0) {
+            if (form.tracking) return "A checklist cannot also be \"just tracking\"."
+            if (form.anySteps && form.stepsNeeded !in 1..steps) return "Steps needed must be between 1 and $steps."
         }
         val plan = form.plan
         when (plan.interval) {
@@ -108,6 +130,12 @@ object HabitEditor {
         o.put("scheduleWeekdays", JSONArray(if (plan.interval == HabitPlan.WEEKDAYS) plan.weekdays.sorted() else emptyList<Int>()))
         o.put("scheduleEvery", plan.every)
         o.put("scheduleUnit", plan.unit)
+        // "Count from the last time done" and "same weekday each month" only mean something for "every X"; Streak ignores them otherwise.
+        val everyX = plan.interval == HabitPlan.EVERY_X_DAYS
+        val fromLastDone = everyX && plan.fromLastDone
+        o.put("fromLastDone", fromLastDone)
+        o.put("monthWeekday", everyX && plan.unit == HabitPlan.UNIT_MONTHS && !fromLastDone && plan.monthWeekday)
+        o.put("difficulty", form.difficulty.coerceIn(0, 3))
         if (plan.interval == HabitPlan.EVERY_X_DAYS && plan.scheduleStart != null) {
             o.put("scheduleStart", dayKey(plan.scheduleStart))
         } else {
@@ -117,6 +145,14 @@ object HabitEditor {
         o.put("unitLabel", if (counted) form.unitLabel.trim() else "")
         o.put("incrementAmount", step)
         o.put("anyAmount", counted && form.anyAmount)
+        o.put("tracking", form.tracking && form.kind != HabitStats.KIND_RELAPSE)
+        if (form.kind == HabitStats.KIND_YES_NO) {
+            // Only a Yes/no habit has its steps edited here; any other kind keeps what its record already holds.
+            val kept = form.steps.filter { it.title.isNotBlank() }
+            o.put("substeps", HabitSteps.toJson(kept))
+            o.put("anySteps", form.anySteps && kept.isNotEmpty())
+            o.put("stepsNeeded", form.stepsNeeded.coerceIn(1, maxOf(1, kept.size)))
+        }
 
         return HabitEntity(
             id = id,
@@ -186,9 +222,32 @@ object HabitEditor {
                 HabitPlan.UNIT_MONTHS -> "month"
                 else -> "day"
             }
-            if (plan.every == 1) "Every $unit" else "Every ${plan.every} ${unit}s"
+            val start = plan.scheduleStart
+            val months = if (plan.every == 1) "month" else "${plan.every} months"
+            when {
+                plan.fromLastDone -> (if (plan.every == 1) "Every $unit" else "Every ${plan.every} ${unit}s") + ", counted from the last time done"
+                plan.unit == HabitPlan.UNIT_MONTHS && start != null && plan.monthWeekday ->
+                    "On the ${weekdaySlot(start)} of every $months"
+                plan.unit == HabitPlan.UNIT_MONTHS && start != null -> "On the ${ordinal(start.dayOfMonth)} of every $months"
+                plan.every == 1 -> "Every $unit"
+                else -> "Every ${plan.every} ${unit}s"
+            }
         }
         else -> "Every day"
+    }
+
+    /** 1 = "1st", 2 = "2nd", 11 = "11th", 23 = "23rd". */
+    fun ordinal(n: Int): String {
+        val suffix = if (n % 100 in 11..13) "th" else when (n % 10) { 1 -> "st"; 2 -> "nd"; 3 -> "rd"; else -> "th" }
+        return "$n$suffix"
+    }
+
+    /** "second Wednesday" or "last Friday": the same weekday in the same week of the month as [day] (the 5th week counts as last). */
+    fun weekdaySlot(day: LocalDate): String {
+        val nth = (day.dayOfMonth - 1) / 7
+        val name = day.dayOfWeek.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.ENGLISH)
+        val word = when (nth) { 0 -> "first"; 1 -> "second"; 2 -> "third"; else -> "last" }
+        return "$word $name"
     }
 
     val DAY_NAMES = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")

@@ -4,12 +4,15 @@ import android.content.Context
 import android.net.Uri
 import androidx.room.withTransaction
 import com.lifetracker.app.data.AppDatabase
+import com.lifetracker.app.data.AppLog
 import com.lifetracker.app.data.CategoryEntity
 import com.lifetracker.app.data.CompletionEntity
 import com.lifetracker.app.data.DataSources
 import com.lifetracker.app.data.EntryEntity
 import com.lifetracker.app.data.HabitEntity
 import com.lifetracker.app.data.HabitSource
+import com.lifetracker.app.data.HabitSyncState
+import com.lifetracker.app.data.HabitTombstones
 import com.lifetracker.app.data.HabitsSettings
 import com.lifetracker.app.data.ImportedItemEntity
 import com.lifetracker.app.data.NoteEntity
@@ -61,7 +64,11 @@ data class ImportResult(
 object StreakImporter {
     private const val SOURCE_FOCUS = "streak-focus"
 
-    /** Imports if a newer backup is waiting. Returns null when there was nothing new to do. */
+    /**
+     * Imports if a newer backup is waiting. Streak writes one file per device it syncs with, so the newest file of
+     * **each** device is read (oldest first, so the newest one wins where they disagree). Returns null when there
+     * was nothing new to do.
+     */
     suspend fun importIfNew(context: Context, force: Boolean = false): ImportResult? =
         withContext(Dispatchers.IO) {
             val sources = DataSources(context)
@@ -71,34 +78,62 @@ object StreakImporter {
             val candidates = SourceScanner.streakCandidates(context, folder)
             if (candidates.isEmpty()) throw IOException("No Streak backup found in that folder.")
 
-            var data: StreakData? = null
-            var used: String? = null
+            val sync = HabitSyncState(context)
+            val importHabits = HabitsSettings(context).source == HabitSource.Streak
+            val db = AppDatabase.get(context)
+            val seen = sources.streakSeenExportedAt
+
+            // The newest readable file of each device (candidates are newest first).
+            val perDevice = LinkedHashMap<String, Pair<String, StreakData>>()
             var lastError: Exception? = null
             for (file in candidates) {
+                val device = StreakBackupWriter.deviceOf(file.name)
+                if (device in perDevice) continue
                 try {
-                    data = StreakParser.parse(readBackupText(context, file.uri, file.name))
-                    used = file.name
-                    break
+                    perDevice[device] = file.name to StreakParser.parse(readBackupText(context, file.uri, file.name))
                 } catch (e: Exception) {
                     lastError = e
+                    AppLog.w("Streak", "Could not read ${file.name}: ${e.message ?: e.javaClass.simpleName}")
                 }
             }
-            if (data == null || used == null) {
-                throw IOException(lastError?.message ?: "Could not read the Streak backup.")
-            }
+            if (perDevice.isEmpty()) throw IOException(lastError?.message ?: "Could not read the Streak backup.")
 
-            val seen = sources.streakSeenExportedAt
-            if (!force && seen != null && data.exportedAt.isNotEmpty() && data.exportedAt <= seen) {
-                return@withContext null
+            val results = ArrayList<ImportResult>()
+            var newestExported = ""
+            for ((device, pair) in perDevice.entries.sortedBy { it.value.first.substringBeforeLast('.') }.map { it.key to it.value }) {
+                val (name, data) = pair
+                val isNew = when {
+                    force -> true
+                    device.isNotEmpty() -> sync.lastFileOf(device) != name
+                    else -> seen == null || data.exportedAt.isEmpty() || data.exportedAt > seen
+                }
+                if (!isNew) continue
+                if (data.isEmpty) {
+                    if (device.isNotEmpty()) sync.setLastFileOf(device, name)
+                    continue
+                }
+                results += apply(db, sync, data, name, importHabits)
+                if (device.isNotEmpty()) sync.setLastFileOf(device, name)
+                if (data.exportedAt > newestExported) newestExported = data.exportedAt
+                AppLog.i("Streak", "Read $name (device ${device.ifEmpty { "unknown" }})")
             }
-            if (data.isEmpty) return@withContext null
-
-            val importHabits = HabitsSettings(context).source == HabitSource.Streak
-            val result = apply(AppDatabase.get(context), data, used, importHabits)
-            sources.streakSeenExportedAt = data.exportedAt
+            if (results.isEmpty()) return@withContext null
+            if (newestExported.isNotEmpty()) sources.streakSeenExportedAt = newestExported
             sources.lastStreakImportText = LocalDateTime.now().toString()
-            result
+            combine(results)
         }
+
+    private fun combine(results: List<ImportResult>): ImportResult =
+        if (results.size == 1) results.first() else ImportResult(
+            fileName = "${results.size} files (" + results.joinToString { it.fileName } + ")",
+            habits = results.maxOf { it.habits },
+            completionsAdded = results.sumOf { it.completionsAdded },
+            focusAdded = results.sumOf { it.focusAdded },
+            todos = results.maxOf { it.todos },
+            datedTodos = results.maxOf { it.datedTodos },
+            notes = results.maxOf { it.notes },
+            habitsSkipped = results.all { it.habitsSkipped },
+        )
 
     private fun readBackupText(context: Context, uri: Uri, name: String): String {
         val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
@@ -115,7 +150,7 @@ object StreakImporter {
         throw IOException("$name does not contain backup.json.")
     }
 
-    private suspend fun apply(db: AppDatabase, data: StreakData, fileName: String, importHabits: Boolean): ImportResult {
+    private suspend fun apply(db: AppDatabase, sync: HabitSyncState, data: StreakData, fileName: String, importHabits: Boolean): ImportResult {
         val habitDao = db.habitDao()
         val planDao = db.planDao()
         val entryDao = db.entryDao()
@@ -133,6 +168,8 @@ object StreakImporter {
 
             // Habits and their days. Where both sides have a day, the higher count wins.
             val existing = habitDao.allCompletions().associateBy { it.habitId to it.date }
+            // A habit hidden or cleared here keeps that when Streak's copy is read again.
+            val localHabits = habitDao.allHabits().associateBy { it.id }
             val completions = ArrayList<CompletionEntity>()
             val habits = (if (importHabits) data.habits else emptyList()).map { h ->
                 val first = h.completions.minOfOrNull { it.date }
@@ -140,12 +177,9 @@ object StreakImporter {
                 for (c in h.completions) {
                     val key = h.id to c.date.toString()
                     val old = existing[key]
-                    if (old == null) {
-                        completionsAdded++
-                        completions += CompletionEntity(h.id, c.date.toString(), c.count, c.minuteOfDay)
-                    } else if (c.count > old.count) {
-                        completions += CompletionEntity(h.id, c.date.toString(), c.count, c.minuteOfDay ?: old.minuteOfDay)
-                    }
+                    val day = StreakMerge.day(old, h.id, c) ?: continue
+                    if (old == null) completionsAdded++
+                    completions += day
                 }
                 HabitEntity(
                     id = h.id,
@@ -165,6 +199,8 @@ object StreakImporter {
                     archived = h.archived,
                     sortOrder = h.order,
                     raw = h.raw,
+                    deletedAt = localHabits[h.id]?.deletedAt ?: 0L,
+                    clearedAt = localHabits[h.id]?.clearedAt ?: 0L,
                 )
             }
             habitDao.upsertHabits(habits)
@@ -193,11 +229,41 @@ object StreakImporter {
             )
 
             if (importHabits) {
+                val localNotes = planDao.allNotes().associateBy { it.id }
                 planDao.upsertNotes(
                     data.notes.map {
-                        NoteEntity(it.id, it.habitId, it.date?.toString() ?: "", it.type, it.text, it.minutes, it.createdAt)
+                        NoteEntity(
+                            it.id, it.habitId, it.date?.toString() ?: "", it.type, it.text, it.minutes, it.createdAt,
+                            deletedAt = localNotes[it.id]?.deletedAt ?: 0L,
+                        )
                     },
                 )
+
+                // What Streak says was deleted, brought back or cleared (Streak 2.4). Nothing is erased: items are hidden or shown.
+                val plan = StreakMerge.plan(
+                    deleted = data.deleted,
+                    cleared = data.cleared,
+                    changes = data.changes,
+                    fileHabitIds = data.habits.map { it.id }.toSet(),
+                    fileNoteIds = data.notes.map { it.id }.toSet(),
+                    habits = habitDao.allHabits().map { StreakMerge.LocalHabit(it.id, it.deletedAt, it.clearedAt) },
+                    notes = planDao.allNotes().map { StreakMerge.LocalNote(it.id, it.habitId, it.deletedAt) },
+                    state = HabitTombstones.State(sync.changes, sync.deleted),
+                )
+                for ((id, at) in plan.hideHabits) habitDao.setHabitDeleted(id, at)
+                for ((id, at) in plan.hideNotes) planDao.setNoteDeleted(id, at)
+                for (id in plan.showHabits) habitDao.setHabitDeleted(id, 0L)
+                for (id in plan.showNotes) planDao.setNoteDeleted(id, 0L)
+                for ((id, at) in plan.clears) habitDao.setHabitCleared(id, at)
+                for ((id, at) in plan.remember) sync.learnDeleted(id, at)
+                for (id in plan.showHabits + plan.showNotes) sync.forgetDeleted(id)
+                if (!plan.isEmpty) {
+                    AppLog.i(
+                        "Streak",
+                        "$fileName: hid ${plan.hideHabits.size} habit(s) and ${plan.hideNotes.size} note(s), showed ${plan.showHabits.size} habit(s) " +
+                            "and ${plan.showNotes.size} note(s), cleared progress on ${plan.clears.size} habit(s)",
+                    )
+                }
             }
 
             // Focus sessions become Timeline entries, once each.

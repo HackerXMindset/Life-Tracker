@@ -2,6 +2,73 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📅 Habits: schedule extras and difficulty
+
+### ✨ New
+
+- **"Every X" schedules got two switches.** **Count from the last time I did it**: the next due day is X days after the last day it was done. And, for months, **Same weekday each month** (the second Tuesday, the last Friday). A fixed day each month is **Every 1 month**, counting from a day: it is due on that day number, or on the last day of a shorter month.
+- **The schedule is said in words** under the form and on the habit page: "On the 14th of every month", "On the second Wednesday of every month", "Every 3 days, counted from the last time done".
+- **Difficulty.** Mark a habit Easy, Medium or Hard. Like Streak, it only weighs habits against each other: switch on **Settings, Habits, Weigh the Today ring by difficulty** (off by default) and the ring fills by weight (easy 1, medium 2, hard 3; not set counts as medium). "3 of 5 completed" still counts habits, and a habit's own strength is not changed.
+
+### 🔧 Changed
+
+- No database change. The switches and difficulty live in the habit's own record, so they travel to and from Streak.
+
+## ⏸️ Habits: pause and rest days
+
+### ✨ New
+
+- **Pause a habit.** Press and hold a habit's card and use **Pause** (a holiday or an illness). While paused, days count as neither done nor missed and never break a streak, and the card says "Paused". **Resume** ends the pause yesterday (a pause that began today just disappears), as Streak does.
+- **Rest days.** On the same page, pick the weekdays that never count (for example Sunday).
+- **Pause one day.** Press and hold a single day for **Pause this day** or **Resume this day**. Resuming a day in the middle of a pause splits it, so only that day comes back.
+- Pauses and rest days are kept in the habit's own record in Streak's own shape, so they travel with the habit to and from Streak. Ticks on a paused day are kept and still count.
+
+### 🔧 Changed
+
+- No database change.
+
+## ☑️ Habits: checklists
+
+### ✨ New
+
+- **Checklist habits.** A Yes/no habit can now be made of **steps**. In the habit form, **Steps** lets you add, rename and remove steps. The day is done when every step is ticked, or, with **Any of the steps is enough**, when the number you choose is ticked.
+- **Tick steps one by one.** Press and hold a day to tick each step on its own (today's ticks note the time). Tapping the habit's card ticks every step, or clears the day if it was already done. The card shows **2/4 steps**, and the calendar fills as steps are ticked.
+- **Steps travel to and from Streak.** The steps live in the habit's own record, and each day keeps which steps were ticked, in Streak's own format. Where both sides have a day, the bigger count wins and brings its steps.
+
+### 🔧 Changed
+
+- Database version 25 and backup format 25: one new column on a habit's day for the ticked steps. Every day you already had stays as it was. A backup made before this version restores with no step lists (a day keeps its amount).
+- A removed step stops counting but stays stored in the days it was ticked on, as in Streak. A checklist cannot also be "just tracking".
+
+## ⏱️ Habits: check times, several checks a day, tracking only
+
+### ✨ New
+
+- **Every check keeps its time.** Ticking a habit today notes the time. Press and hold a day to see the time of each check and **change** any of them with the clock. A day ticked in the past has no time until you set one.
+- **Several checks in a day.** A counted habit adds one step each tap and keeps each time. An Avoid habit can have more than one relapse a day: tapping the card when you already relapsed opens the day window, where you can **log another**, **take back the last one** or add one **at a time**.
+- **Add or replace an amount.** On a counted habit the day window has **Add** (on top of what is there), **Add at a time…**, and **Replace the day's total**. Zero clears the day, as before.
+- **A counted habit can have no goal.** Enter 0 for the goal: any amount counts the day and nothing is "short".
+- **Tracking only.** A new switch, **Just tracking (no streak)**, for Yes/no and Counted habits. Such a habit has no streak, no strength and no missed days, and is left out of the Today ring. Its card shows **Last Today · 14:05**, **Week** and **Month** totals, and every tap adds one more check. It uses the same switch Streak has, so it travels both ways.
+- **Times travel to and from Streak** (Streak calls them marks). Where both sides have a day, the bigger amount still wins and brings its times.
+
+### 🔧 Changed
+
+- Database version 24 and backup format 24: one new column on a habit's day for its times. Every day you already had stays as it was. A backup made before this version restores with no check times.
+- Tapping the card of an Avoid habit that already has a relapse today now opens the day window instead of clearing the day.
+
+## 🗑️ Habits: delete and restore, and Streak 2.4 sync
+
+### ✨ New
+
+- **Delete a habit here, and bring it back.** The habit page has **Delete** (it asks first) and **Clear all progress** (also asks first). Nothing is erased: a deleted habit is hidden together with its notes and its days, and **Settings > Habits > Deleted habits and notes** lists it with a **Restore** button. Notes have **Delete note** in the note box and the same list.
+- **Clear all progress** hides every day up to today for that habit (the days stay stored), like Streak's own button. Only later days count towards streaks and strength.
+- **Deletions and cleared progress now travel to Streak.** Every file this app writes for Streak carries what was deleted and what was cleared, which fixes "delete does not reach Streak". A restored habit or note is sent as changed again, which Streak reads as bringing it back.
+- **Streak's deletions and cleared progress now arrive here.** The newest file from **each** of Streak's devices is read (before, only the newest file overall). A habit or note Streak deleted is hidden here too (unless you changed it here after that), one Streak changed after you deleted it comes back, and a habit Streak cleared is cleared here.
+
+### 🔧 Changed
+
+- Database 23 and backups 23 (a "deleted at" time on habits and notes and a "cleared at" time on habits; older backups still restore). Nothing already saved is changed.
+
 ## 🛟 A safety net for places, and the diary for the whole app
 
 ### ✨ New

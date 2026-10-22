@@ -164,6 +164,8 @@ fun HabitsScreen(vm: HabitsViewModel = viewModel()) {
                 onToday = {
                     val relapse = row.habit.kind == HabitStats.KIND_RELAPSE
                     if (relapse && !row.rules.cellIsRelapse(ui.today)) relapseFor = row.habit
+                    // Already relapsed today: the day window adds or takes back single relapses, so a tap never wipes the day.
+                    else if (relapse) dayMenu = row.habit.id to ui.today
                     else vm.tap(row.habit, ui.today)
                 },
                 onDay = { vm.tap(row.habit, it) },
@@ -202,6 +204,8 @@ fun HabitsScreen(vm: HabitsViewModel = viewModel()) {
             onArchive = { vm.setArchived(row.habit, true); detailsId = null },
             onDelete = { vm.deleteHabit(row.habit); detailsId = null },
             onClearProgress = { vm.clearAllProgress(row.habit); detailsId = null },
+            onPause = { vm.setPaused(row.habit, it) },
+            onRestDays = { vm.setRestDays(row.habit, it) },
             onDismiss = { detailsId = null },
         )
     }
@@ -213,6 +217,11 @@ fun HabitsScreen(vm: HabitsViewModel = viewModel()) {
             date = date,
             onToggle = { vm.tap(row.habit, date) },
             onAmount = { vm.setAmount(row.habit, date, it) },
+            onAddCheck = { amount, minute -> vm.addCheck(row.habit, date, amount, minute) },
+            onUndo = { vm.undoCheck(row.habit, date) },
+            onStep = { vm.toggleStep(row.habit, date, it) },
+            onPauseDay = { vm.togglePauseDay(row.habit, date) },
+            onTime = { from, to -> vm.changeTime(row.habit, date, from, to) },
             onReason = { vm.setMissReason(row.habit, date, it) },
             onClear = { vm.clear(row.habit, date) },
             onNote = { noteDraft = NoteDraft(row.habit.id, date) },
@@ -232,6 +241,7 @@ fun HabitsScreen(vm: HabitsViewModel = viewModel()) {
                 noteDraft = null
             },
             onDismiss = { noteDraft = null },
+            onDelete = draft.note?.let { note -> { vm.deleteNote(note); noteDraft = null } },
         )
     }
     if (adding) {
@@ -556,18 +566,41 @@ private fun MetaLine(row: HabitRow, accent: Color, muted: Color) {
             Text("Paused", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = PAUSED_BLUE)
             Spacer(Modifier.width(8.dp))
         }
-        Icon(
-            painter = painterResource(R.drawable.ic_flame),
-            contentDescription = "Streak",
-            modifier = Modifier.size(14.dp),
-            tint = accent,
-        )
-        Spacer(Modifier.width(3.dp))
-        Text(row.streakText, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = muted)
-        if (habit.kind == HabitStats.KIND_COUNTED) {
+        if (row.tracking) {
+            // Tracking only: no streak. The last check and the totals take its place.
+            Text(
+                text = "Last ${row.lastCheck}  ·  Week ${amount(row.weekTotal)}  ·  Month ${amount(row.monthTotal)}",
+                modifier = Modifier.weight(1f, fill = false),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = muted,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        } else {
+            Icon(
+                painter = painterResource(R.drawable.ic_flame),
+                contentDescription = "Streak",
+                modifier = Modifier.size(14.dp),
+                tint = accent,
+            )
+            Spacer(Modifier.width(3.dp))
+            Text(row.streakText, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = muted)
+        }
+        if (row.stepsTotal > 0) {
             Spacer(Modifier.width(8.dp))
             Text(
-                text = "·  ${amount(row.todayCount)}/${amount(habit.target)}$unit",
+                text = "·  ${row.stepsToday}/${row.stepsTotal} steps",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = muted,
+                maxLines = 1,
+            )
+        } else if (habit.kind == HabitStats.KIND_COUNTED && !row.tracking) {
+            Spacer(Modifier.width(8.dp))
+            Text(
+                // A goal of 0 means no goal: just today's amount.
+                text = if (habit.target > 0) "·  ${amount(row.todayCount)}/${amount(habit.target)}$unit" else "·  ${amount(row.todayCount)}$unit today",
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = muted,
@@ -606,7 +639,7 @@ private fun ActionButton(row: HabitRow, accent: Color, size: Dp, onClick: () -> 
     val icon = when {
         relapse -> R.drawable.ic_ban
         filled -> R.drawable.ic_check
-        counted -> R.drawable.ic_add
+        counted || row.tracking -> R.drawable.ic_add
         else -> R.drawable.ic_check
     }
     val ink = if (filled) Color.White else accent

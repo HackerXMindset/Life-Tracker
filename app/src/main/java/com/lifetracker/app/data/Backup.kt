@@ -57,7 +57,7 @@ data class BackupData(
  */
 object BackupCodec {
     const val APP_NAME = "life-tracker"
-    const val FORMAT_VERSION = 23
+    const val FORMAT_VERSION = 25
 
     fun encode(data: BackupData): String =
         JSONObject()
@@ -207,12 +207,16 @@ object BackupCodec {
     private fun completionJson(c: CompletionEntity) = JSONObject()
         .put("habitId", c.habitId).put("date", c.date).put("count", c.count)
         .put("minuteOfDay", c.minuteOfDay ?: JSONObject.NULL)
+        .put("marks", c.marks)
+        .put("steps", c.steps)
 
     private fun completion(o: JSONObject) = CompletionEntity(
         habitId = o.getString("habitId"),
         date = o.getString("date"),
         count = o.getDouble("count"),
         minuteOfDay = o.intOrNull("minuteOfDay"),
+        marks = o.optString("marks", ""),
+        steps = o.optString("steps", ""),
     )
 
     private fun categoryJson(c: CategoryEntity) = JSONObject()

@@ -21,6 +21,11 @@ class HabitsSettings(context: Context) {
         get() = prefs.getBoolean("compact", false)
         set(value) = prefs.edit { putBoolean("compact", value) }
 
+    /** Weigh the Today ring by each habit's difficulty (easy 1, medium 2, hard 3), as Streak's own switch does. Off by default. */
+    var weighDifficulty: Boolean
+        get() = prefs.getBoolean("weighDifficulty", false)
+        set(value) = prefs.edit { putBoolean("weighDifficulty", value) }
+
     /** The category chip that is selected. Empty means All. */
     var category: String
         get() = prefs.getString("category", "") ?: ""

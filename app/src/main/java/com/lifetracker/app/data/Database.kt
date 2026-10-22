@@ -90,7 +90,7 @@ interface EntryDao {
         TimelineEditEntity::class,
         PlaceCategoryEntity::class,
     ],
-    version = 23,
+    version = 25,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -123,7 +123,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "life-tracker.db",
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25)
                     .addCallback(object : RoomDatabase.Callback() {
                         // A brand new database starts with the built-in activities and money categories.
                         override fun onCreate(db: SupportSQLiteDatabase) {
@@ -372,6 +372,25 @@ val MIGRATION_11_12: Migration = object : Migration(11, 12) {
             "CREATE TABLE IF NOT EXISTS `raw_fixes` (`ms` INTEGER NOT NULL, `lat` REAL NOT NULL, " +
                 "`lng` REAL NOT NULL, `acc` REAL NOT NULL, PRIMARY KEY(`ms`))",
         )
+    }
+}
+
+/**
+ * Version 24 -> 25: a day of a checklist habit keeps which steps were ticked. Every day already stored stays as it was.
+ */
+val MIGRATION_24_25: Migration = object : Migration(24, 25) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `habit_completions` ADD COLUMN `steps` TEXT NOT NULL DEFAULT ''")
+    }
+}
+
+/**
+ * Version 23 -> 24: a day of a habit keeps the time of every check (Streak's "marks"). Every day already stored stays as it was,
+ * with no list of times (its one old time, if it had one, still shows).
+ */
+val MIGRATION_23_24: Migration = object : Migration(23, 24) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `habit_completions` ADD COLUMN `marks` TEXT NOT NULL DEFAULT ''")
     }
 }
 

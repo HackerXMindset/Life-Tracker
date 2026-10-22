@@ -68,6 +68,40 @@ class StreakImportTest {
     }
 
     @Test
+    fun marksAreReadAndOnlyRealMinutesKept() {
+        val text = """
+            {"app":"streak","version":2,"exportedAt":"2026-10-04T11:04:28.044810","habits":[
+              {"id":"h1","name":"Water","kind":2,"completions":{
+                "04-10-2026":{"date":"04-10-2026","numberOfCompletions":3.0,"hour":14,"minute":5,"marks":[480,600,845,5000,-3]},
+                "05-10-2026":{"date":"05-10-2026","numberOfCompletions":1.0,"marks":[700]},
+                "06-10-2026":{"date":"06-10-2026","numberOfCompletions":1.0}}}]}
+        """.trimIndent()
+        val days = StreakParser.parse(text).habits.single().completions.associateBy { it.date.dayOfMonth }
+        assertEquals(listOf(480, 600, 845), days.getValue(4).marks)
+        assertEquals(14 * 60 + 5, days.getValue(4).minuteOfDay)
+        // With no hour, the last mark is the time.
+        assertEquals(700, days.getValue(5).minuteOfDay)
+        assertEquals(emptyList<Int>(), days.getValue(6).marks)
+        assertEquals(null, days.getValue(6).minuteOfDay)
+    }
+
+    @Test
+    fun stepsOfADayAreRead() {
+        val text = """
+            {"app":"streak","version":2,"exportedAt":"2026-10-04T11:04:28.044810","habits":[
+              {"id":"h1","name":"Morning","substeps":[{"id":"a","title":"Wake"},{"id":"b","title":"Stretch"}],"completions":{
+                "04-10-2026":{"date":"04-10-2026","numberOfCompletions":2.0,"steps":["a","b"]},
+                "05-10-2026":{"date":"05-10-2026","numberOfCompletions":1.0}}}]}
+        """.trimIndent()
+        val habit = StreakParser.parse(text).habits.single()
+        val days = habit.completions.associateBy { it.date.dayOfMonth }
+        assertEquals(listOf("a", "b"), days.getValue(4).steps)
+        assertEquals(emptyList<String>(), days.getValue(5).steps)
+        // The steps themselves stay in the habit's own record.
+        assertTrue(habit.raw.contains("Stretch"))
+    }
+
+    @Test
     fun oneBrokenRecordIsSkippedNotFatal() {
         val data = StreakParser.parse(sample)
         // "n-bad" has no date or text; it must not stop the good note being read.

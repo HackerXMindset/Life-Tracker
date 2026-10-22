@@ -33,6 +33,7 @@ import com.lifetracker.app.data.HabitEntity
 import com.lifetracker.app.data.HabitForm
 import com.lifetracker.app.data.HabitPlan
 import com.lifetracker.app.data.HabitStats
+import com.lifetracker.app.data.HabitStep
 import com.lifetracker.app.ui.theme.LocalPaper
 import com.lifetracker.app.ui.theme.PaperButton
 import com.lifetracker.app.ui.theme.PaperButtonStyle
@@ -74,6 +75,10 @@ fun HabitEditorDialog(
     var step by remember { mutableStateOf(numberText(start.step)) }
     var anyAmount by remember { mutableStateOf(start.anyAmount) }
     var description by remember { mutableStateOf(start.description) }
+    var tracking by remember { mutableStateOf(start.tracking) }
+    var steps by remember { mutableStateOf(start.steps) }
+    var anySteps by remember { mutableStateOf(start.anySteps) }
+    var stepsNeeded by remember { mutableStateOf(start.stepsNeeded.toString()) }
 
     var interval by remember { mutableStateOf(start.plan.interval) }
     var weekdays by remember { mutableStateOf(start.plan.weekdays.toSet()) }
@@ -81,6 +86,9 @@ fun HabitEditorDialog(
     var every by remember { mutableStateOf(start.plan.every.toString()) }
     var everyUnit by remember { mutableStateOf(start.plan.unit) }
     var from by remember { mutableStateOf(start.plan.scheduleStart ?: LocalDate.now()) }
+    var fromLast by remember { mutableStateOf(start.plan.fromLastDone) }
+    var monthWeekday by remember { mutableStateOf(start.plan.monthWeekday) }
+    var difficulty by remember { mutableStateOf(start.difficulty) }
     var error by remember { mutableStateOf<String?>(null) }
 
     fun form(): HabitForm {
@@ -104,8 +112,15 @@ fun HabitEditorDialog(
                 every = every.trim().toIntOrNull() ?: 0,
                 unit = everyUnit,
                 scheduleStart = if (interval == HabitPlan.EVERY_X_DAYS) from else null,
+                fromLastDone = fromLast,
+                monthWeekday = monthWeekday,
             ),
+            difficulty = difficulty,
             description = description,
+            tracking = tracking && kind != HabitStats.KIND_RELAPSE,
+            steps = if (kind == HabitStats.KIND_YES_NO) steps else start.steps,
+            anySteps = if (kind == HabitStats.KIND_YES_NO) anySteps else start.anySteps,
+            stepsNeeded = if (kind == HabitStats.KIND_YES_NO) stepsNeeded.trim().toIntOrNull() ?: 0 else start.stepsNeeded,
         )
     }
 
@@ -174,7 +189,7 @@ fun HabitEditorDialog(
                     value = target,
                     onValueChange = { target = it; error = null },
                     modifier = Modifier.fillMaxWidth(),
-                    label = "Goal for one day",
+                    label = "Goal for one day (0 = no goal)",
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 )
@@ -194,6 +209,61 @@ fun HabitEditorDialog(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 )
                 SwitchRow("Any amount counts as done", anyAmount) { anyAmount = it }
+            }
+            if (kind == HabitStats.KIND_YES_NO) {
+                MonoLabel("Steps (optional)")
+                Text(
+                    text = "Make it a checklist: the day is done when every step is ticked.",
+                    fontSize = 12.sp,
+                    color = paper.ink2,
+                )
+                steps.forEachIndexed { i, step ->
+                    Row(
+                        verticalAlignment = androidx.compose.ui.Alignment.Bottom,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        PaperField(
+                            value = step.title,
+                            onValueChange = { text ->
+                                steps = steps.mapIndexed { j, old -> if (j == i) old.copy(title = text) else old }
+                                error = null
+                            },
+                            modifier = Modifier.weight(1f),
+                            label = "Step ${i + 1}",
+                            singleLine = true,
+                        )
+                        PaperButton("Remove", { steps = steps.filterIndexed { j, _ -> j != i }; error = null }, style = PaperButtonStyle.Ghost, small = true)
+                    }
+                }
+                PaperButton(
+                    "Add a step",
+                    { steps = steps + HabitStep(HabitEditor.newId(), ""); error = null },
+                    style = PaperButtonStyle.Ghost,
+                    small = true,
+                )
+                if (steps.any { it.title.isNotBlank() }) {
+                    SwitchRow("Any of the steps is enough", anySteps) { anySteps = it; error = null }
+                    if (anySteps) {
+                        PaperField(
+                            value = stepsNeeded,
+                            onValueChange = { stepsNeeded = it; error = null },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = "How many steps are needed",
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        )
+                    }
+                }
+            }
+            if (kind != HabitStats.KIND_RELAPSE) {
+                SwitchRow("Just tracking (no streak)", tracking) { tracking = it }
+                if (tracking) {
+                    Text(
+                        text = "No streak, no strength and no missed days. The card shows the last check and this week's and this month's totals, and every tap adds a check.",
+                        fontSize = 12.sp,
+                        color = paper.ink2,
+                    )
+                }
             }
 
             MonoLabel("How often")
@@ -257,8 +327,38 @@ fun HabitEditorDialog(
                         style = PaperButtonStyle.Ghost,
                         small = true,
                     )
+                    SwitchRow("Count from the last time I did it", fromLast) { fromLast = it }
+                    if (everyUnit == HabitPlan.UNIT_MONTHS && !fromLast) {
+                        SwitchRow("Same weekday each month", monthWeekday) { monthWeekday = it }
+                    }
+                    Text(
+                        text = HabitEditor.describe(
+                            HabitPlan(
+                                interval = HabitPlan.EVERY_X_DAYS,
+                                every = every.trim().toIntOrNull()?.coerceAtLeast(1) ?: 1,
+                                unit = everyUnit,
+                                scheduleStart = from,
+                                fromLastDone = fromLast,
+                                monthWeekday = monthWeekday,
+                            ),
+                        ),
+                        fontSize = 12.sp,
+                        color = paper.ink2,
+                    )
                 }
             }
+
+            MonoLabel("Difficulty")
+            Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf(0 to "Not set", 1 to "Easy", 2 to "Medium", 3 to "Hard").forEach { (value, label) ->
+                    PaperPill(label, difficulty == value, { difficulty = value })
+                }
+            }
+            Text(
+                text = "Only used if \"Weigh the Today ring by difficulty\" is on in Settings, Habits.",
+                fontSize = 12.sp,
+                color = paper.ink2,
+            )
 
             PaperField(
                 value = description,

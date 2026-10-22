@@ -43,8 +43,9 @@ import java.time.LocalDate
 data class NoteDraft(val habitId: String, val date: LocalDate, val note: NoteEntity? = null)
 
 /**
- * Write a note, or change one. Save stays off while the text is blank, and there is no delete here.
- * [habits] (id to name) is given only when the writer must pick the habit.
+ * Write a note, or change one. Save stays off while the text is blank. A note being changed has **Delete note** at the
+ * bottom (after a question): the note is hidden and kept, and comes back from Settings > Habits. [habits] (id to name)
+ * is given only when the writer must pick the habit.
  */
 @Composable
 fun NoteDialog(
@@ -54,7 +55,9 @@ fun NoteDialog(
     habits: List<Pair<String, String>>?,
     onSave: (habitId: String, text: String) -> Unit,
     onDismiss: () -> Unit,
+    onDelete: (() -> Unit)? = null,
 ) {
+    var askDelete by remember(draft) { mutableStateOf(false) }
     var text by remember(draft) { mutableStateOf(draft.note?.text.orEmpty()) }
     var habit by remember(draft) { mutableStateOf(draft.habitId) }
     val day = HabitNotes.dayLabel(draft.note?.date ?: draft.date.toString(), today)
@@ -97,6 +100,20 @@ fun NoteDialog(
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 3,
             )
+            if (draft.note != null && onDelete != null) {
+                PaperButton("Delete note", { askDelete = true }, style = PaperButtonStyle.Danger, small = true)
+            }
+        }
+    }
+    if (askDelete && onDelete != null) {
+        PaperDialog(
+            title = "Delete this note?",
+            onDismiss = { askDelete = false },
+            confirmText = "Delete",
+            confirmStyle = PaperButtonStyle.Danger,
+            onConfirm = { askDelete = false; onDelete() },
+        ) {
+            Text("The note is hidden, not erased. Settings > Habits > Deleted habits and notes brings it back.", fontSize = 14.sp, color = paper.ink)
         }
     }
 }
