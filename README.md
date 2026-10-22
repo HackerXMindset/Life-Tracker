@@ -173,8 +173,8 @@ Each step is small enough to build, install and try before the next begins. The 
   DONE         Habits H6 Sync catch-up with Streak 2.4: deletions and progress-clears both ways, delete and restore here (database 23)
   DONE         Habits H7 Check times, many checks a day, amounts without a goal, tracking-only habits (database 24)
   DONE         Habits H8 Checklist habits (steps) (database 25)
-  NEXT ──►    Habits H9 Pause (vacation) and rest days (no database change)
-              Habits H10 Schedule extras (monthly weekday, from last done) and difficulty
+  DONE         Habits H9 Pause (vacation) and rest days (no database change)
+  NEXT ──►    Habits H10 Schedule extras (monthly weekday, from last done) and difficulty
               Habits H11 Duplicate, reorder, hide completed
               Habits H12 Reminders for habits
               Habits H13 Focus mode (timer attached to a habit, sessions on the Timeline)
@@ -305,10 +305,10 @@ Not part of Polish 4, and not built: **Step 13e** (fixing trips and visits by ha
   - **H8b Ticking steps. Built.** `habit_completions` gets a `steps` column (the ticked step ids). Tap the card: every step is ticked, or, if the day is done, the day is cleared (as Streak's toggle). Press and hold a day: each step has its own tick; each tick notes the time (today only), the amount of the day is the number of steps ticked. The card shows **2/4 steps** instead of a goal; the calendar fills partly as steps are ticked and full when the day is done.
   - **H8c Rules and sync. Built.** The goal of a checklist day is the number of steps needed, so the streak, strength and calendar maths are the ones already there. Steps and each day's ticked steps are read from and written to Streak files; where both sides have a day the bigger count wins and brings its steps. A day imported before this version with no step list keeps its count.
   - Tests: reading and writing steps, needed count (all, any N, N too big), toggling a step and all steps, removed steps not counting, the Streak read, write and merge with steps, backup round trip.
-- **H9 Pause and rest days (no database change).** The rules already know holidays and weekly rest days (a paused day is neither done nor missed and never breaks a streak). H9 lets you set them here, stored in the habit's own record in Streak's own shape (`vacations`, `restDays`), so they travel with it.
-  - **H9a Pause and resume. Planned.** The habit page (press and hold the card) gets **Pause** and, while paused, **Resume**. Pausing starts a holiday today with no end; resuming ends it yesterday (a pause that began today simply disappears), as Streak does. The card shows "Paused".
-  - **H9b Rest days. Planned.** The habit page gets **Rest days**: Mon to Sun to switch on, for days that never count (for example Sunday).
-  - **H9c Pause one day. Planned.** The day window (press and hold a day) gets **Pause this day** / **Resume this day**. Pausing a day in the middle of a pause splits it, so only that day comes back, as in Streak.
+- **H9 Pause and rest days. Built (no database change).** The rules already know holidays and weekly rest days (a paused day is neither done nor missed and never breaks a streak). H9 lets you set them here, stored in the habit's own record in Streak's own shape (`vacations`, `restDays`), so they travel with it.
+  - **H9a Pause and resume. Built.** The habit page (press and hold the card) gets **Pause** and, while paused, **Resume**. Pausing starts a holiday today with no end; resuming ends it yesterday (a pause that began today simply disappears), as Streak does. The card shows "Paused".
+  - **H9b Rest days. Built.** The habit page gets **Rest days**: Mon to Sun to switch on, for days that never count (for example Sunday).
+  - **H9c Pause one day. Built.** The day window (press and hold a day) gets **Pause this day** / **Resume this day**. Pausing a day in the middle of a pause splits it, so only that day comes back, as in Streak.
   - Nothing recorded is touched: ticks on a paused day stay and still count. Tests: pause and resume, a pause started today, pausing and un-pausing single days (start, middle, end of a stretch, open-ended), rest days, and the streak not breaking.
 - **H10 Schedule extras and difficulty.** A fixed day each month, the same weekday each month (first Monday, last Friday), "every X days counted from the last time done", the schedule's start day, and difficulty (easy to hard) for the strength score.
 - **H11 Housekeeping.** Duplicate (opens the form first), reorder, a Today filter that hides completed habits, and move completed to the bottom.

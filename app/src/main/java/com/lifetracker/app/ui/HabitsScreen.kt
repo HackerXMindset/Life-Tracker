@@ -204,6 +204,8 @@ fun HabitsScreen(vm: HabitsViewModel = viewModel()) {
             onArchive = { vm.setArchived(row.habit, true); detailsId = null },
             onDelete = { vm.deleteHabit(row.habit); detailsId = null },
             onClearProgress = { vm.clearAllProgress(row.habit); detailsId = null },
+            onPause = { vm.setPaused(row.habit, it) },
+            onRestDays = { vm.setRestDays(row.habit, it) },
             onDismiss = { detailsId = null },
         )
     }
@@ -218,6 +220,7 @@ fun HabitsScreen(vm: HabitsViewModel = viewModel()) {
             onAddCheck = { amount, minute -> vm.addCheck(row.habit, date, amount, minute) },
             onUndo = { vm.undoCheck(row.habit, date) },
             onStep = { vm.toggleStep(row.habit, date, it) },
+            onPauseDay = { vm.togglePauseDay(row.habit, date) },
             onTime = { from, to -> vm.changeTime(row.habit, date, from, to) },
             onReason = { vm.setMissReason(row.habit, date, it) },
             onClear = { vm.clear(row.habit, date) },

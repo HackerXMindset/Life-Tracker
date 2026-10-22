@@ -21,6 +21,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifetracker.app.data.HabitEditor
+import com.lifetracker.app.data.HabitPauses
 import com.lifetracker.app.data.HabitStats
 import com.lifetracker.app.data.HabitSteps
 import com.lifetracker.app.data.HabitTicks
@@ -53,6 +54,8 @@ fun HabitDayDialog(
     onUndo: () -> Unit,
     /** Ticks or unticks one step of a checklist habit (by step id). */
     onStep: (String) -> Unit,
+    /** Pauses this day, or brings it back. */
+    onPauseDay: () -> Unit,
     /** Changes one check's time: from (null = it had none) to a minute of the day. */
     onTime: (Int?, Int) -> Unit,
     onReason: (String?) -> Unit,
@@ -193,6 +196,13 @@ fun HabitDayDialog(
                         small = true,
                     )
                 }
+            }
+
+            val inPause = HabitPauses.isInPause(habit.raw, date, LocalDate.now())
+            if (HabitPauses.isRestDay(habit.raw, date) && !inPause) {
+                Text("A rest day of the week. Change the rest days on the habit page.", fontSize = 12.sp, color = paper.ink2)
+            } else {
+                PaperButton(if (inPause) "Resume this day" else "Pause this day", onPauseDay, style = PaperButtonStyle.Ghost, small = true)
             }
 
             PaperButton("Add a note for this day", { onNote(); onDismiss() }, style = PaperButtonStyle.Ghost, small = true)

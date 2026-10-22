@@ -13,6 +13,7 @@ import com.lifetracker.app.data.HabitEntity
 import com.lifetracker.app.data.HabitForm
 import com.lifetracker.app.data.HabitMode
 import com.lifetracker.app.data.HabitNotes
+import com.lifetracker.app.data.HabitPauses
 import com.lifetracker.app.data.HabitPlan
 import com.lifetracker.app.data.HabitRules
 import com.lifetracker.app.data.HabitStats
@@ -329,6 +330,24 @@ class HabitsViewModel(app: Application) : AndroidViewModel(app) {
             val key = date.toString()
             val next = HabitTicks.withTotal(dao.completion(habit.id, key), habit.id, key, amount, noteMinute(date))
             if (next == null) dao.deleteCompletion(habit.id, key) else dao.upsertCompletion(next)
+            sync.stamp(habit.id)
+        }
+    }
+
+    /** Pauses the habit from today (a holiday with no end), or resumes it. Nothing it recorded is touched. */
+    fun setPaused(habit: HabitEntity, on: Boolean) = changeRecord(habit) { HabitPauses.setPaused(it, on, LocalDate.now()) }
+
+    /** Pauses one day, or brings it back. */
+    fun togglePauseDay(habit: HabitEntity, date: LocalDate) = changeRecord(habit) { HabitPauses.toggleDay(it, date, LocalDate.now()) }
+
+    /** The weekdays (1 = Monday ... 7 = Sunday) that never count for this habit. */
+    fun setRestDays(habit: HabitEntity, days: Collection<Int>) = changeRecord(habit) { HabitPauses.setRestDays(it, days) }
+
+    /** Changes the habit's own record (where holidays and rest days live) and notes it as changed for Streak. */
+    private fun changeRecord(habit: HabitEntity, change: (String) -> String) {
+        viewModelScope.launch {
+            val current = dao.habit(habit.id) ?: return@launch
+            dao.upsertHabit(current.copy(raw = change(current.raw)))
             sync.stamp(habit.id)
         }
     }

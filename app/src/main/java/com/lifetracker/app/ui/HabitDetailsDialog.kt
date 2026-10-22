@@ -1,5 +1,6 @@
 package com.lifetracker.app.ui
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifetracker.app.data.HabitEditor
+import com.lifetracker.app.data.HabitPauses
 import com.lifetracker.app.data.HabitPlan
 import com.lifetracker.app.data.HabitStats
 import com.lifetracker.app.data.NoteEntity
@@ -28,6 +30,7 @@ import com.lifetracker.app.ui.theme.LocalPaper
 import com.lifetracker.app.ui.theme.PaperButton
 import com.lifetracker.app.ui.theme.PaperButtonStyle
 import com.lifetracker.app.ui.theme.PaperDialog
+import com.lifetracker.app.ui.theme.PaperPill
 import java.time.LocalDate
 import java.util.Locale
 
@@ -46,6 +49,10 @@ fun HabitDetailsDialog(
     onArchive: () -> Unit,
     onDelete: () -> Unit,
     onClearProgress: () -> Unit,
+    /** Pause from today (true) or resume (false). */
+    onPause: (Boolean) -> Unit,
+    /** The weekdays (1 = Monday ... 7 = Sunday) that never count. */
+    onRestDays: (List<Int>) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var ask by remember { mutableStateOf(0) }
@@ -98,6 +105,32 @@ fun HabitDetailsDialog(
                 color = paper.ink2,
             )
             HabitNotesList(notes, today, onEditNote, onAddNote)
+            val paused = HabitPauses.isPaused(habit.raw)
+            val rest = HabitPauses.restDays(habit.raw)
+            MonoLabel("Pause")
+            Text(
+                text = if (paused) "Paused. Days while paused count as neither done nor missed, and never break a streak."
+                else "Pause it for a holiday or an illness. Nothing recorded is touched.",
+                fontSize = 11.5.sp,
+                color = paper.ink2,
+            )
+            PaperButton(
+                if (paused) "Resume" else "Pause",
+                { onPause(!paused) },
+                modifier = Modifier.padding(top = 4.dp),
+                style = PaperButtonStyle.Ghost,
+                small = true,
+            )
+            MonoLabel("Rest days (never count)", modifier = Modifier.padding(top = 10.dp))
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()).padding(top = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                HabitEditor.DAY_NAMES.forEachIndexed { i, label ->
+                    val day = i + 1
+                    PaperPill(label, day in rest, { onRestDays(if (day in rest) rest - day else rest + day) })
+                }
+            }
             PaperButton("Archive", onArchive, modifier = Modifier.padding(top = 10.dp), style = PaperButtonStyle.Ghost, small = true)
             PaperButton("Clear all progress", { ask = 1 }, modifier = Modifier.padding(top = 6.dp), style = PaperButtonStyle.Ghost, small = true)
             PaperButton("Delete", { ask = 2 }, modifier = Modifier.padding(top = 6.dp), style = PaperButtonStyle.Danger, small = true)

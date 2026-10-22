@@ -2,6 +2,19 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## ⏸️ Habits: pause and rest days
+
+### ✨ New
+
+- **Pause a habit.** Press and hold a habit's card and use **Pause** (a holiday or an illness). While paused, days count as neither done nor missed and never break a streak, and the card says "Paused". **Resume** ends the pause yesterday (a pause that began today just disappears), as Streak does.
+- **Rest days.** On the same page, pick the weekdays that never count (for example Sunday).
+- **Pause one day.** Press and hold a single day for **Pause this day** or **Resume this day**. Resuming a day in the middle of a pause splits it, so only that day comes back.
+- Pauses and rest days are kept in the habit's own record in Streak's own shape, so they travel with the habit to and from Streak. Ticks on a paused day are kept and still count.
+
+### 🔧 Changed
+
+- No database change.
+
 ## ☑️ Habits: checklists
 
 ### ✨ New
