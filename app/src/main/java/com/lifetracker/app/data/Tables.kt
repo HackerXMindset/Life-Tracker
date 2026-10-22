@@ -57,7 +57,10 @@ data class CompletionEntity(
     val habitId: String,
     val date: String,
     val count: Double,
+    /** The time of the last check, as minutes of the day. */
     val minuteOfDay: Int?,
+    /** The time of every check that day, as minutes of the day, in order ("480,615,1300"). Empty when no time is known. */
+    val marks: String = "",
 )
 
 @Entity(tableName = "categories")

@@ -2,6 +2,22 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## ⏱️ Habits: check times, several checks a day, tracking only
+
+### ✨ New
+
+- **Every check keeps its time.** Ticking a habit today notes the time. Press and hold a day to see the time of each check and **change** any of them with the clock. A day ticked in the past has no time until you set one.
+- **Several checks in a day.** A counted habit adds one step each tap and keeps each time. An Avoid habit can have more than one relapse a day: tapping the card when you already relapsed opens the day window, where you can **log another**, **take back the last one** or add one **at a time**.
+- **Add or replace an amount.** On a counted habit the day window has **Add** (on top of what is there), **Add at a time…**, and **Replace the day's total**. Zero clears the day, as before.
+- **A counted habit can have no goal.** Enter 0 for the goal: any amount counts the day and nothing is "short".
+- **Tracking only.** A new switch, **Just tracking (no streak)**, for Yes/no and Counted habits. Such a habit has no streak, no strength and no missed days, and is left out of the Today ring. Its card shows **Last Today · 14:05**, **Week** and **Month** totals, and every tap adds one more check. It uses the same switch Streak has, so it travels both ways.
+- **Times travel to and from Streak** (Streak calls them marks). Where both sides have a day, the bigger amount still wins and brings its times.
+
+### 🔧 Changed
+
+- Database version 24 and backup format 24: one new column on a habit's day for its times. Every day you already had stays as it was. A backup made before this version restores with no check times.
+- Tapping the card of an Avoid habit that already has a relapse today now opens the day window instead of clearing the day.
+
 ## 🗑️ Habits: delete and restore, and Streak 2.4 sync
 
 ### ✨ New

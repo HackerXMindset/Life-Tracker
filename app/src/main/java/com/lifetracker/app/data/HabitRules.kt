@@ -117,6 +117,10 @@ class HabitRules(
     createdOn: LocalDate,
     private val today: LocalDate,
     private val weekStart: DayOfWeek = DayOfWeek.MONDAY,
+    /** A tracking-only habit: no streak, no strength, no missed days; every check just counts. Never for an Avoid habit. */
+    val tracking: Boolean = false,
+    /** The times of the checks of each day (minutes of the day, in order), for days that have them. */
+    private val times: Map<LocalDate, List<Int>> = emptyMap(),
 ) {
     private val relapse: Boolean get() = kind == HabitStats.KIND_RELAPSE
 
@@ -130,7 +134,8 @@ class HabitRules(
 
     /** Whether one day's amount reaches the goal. */
     fun reaches(count: Double): Boolean =
-        if (kind == HabitStats.KIND_COUNTED && (anyAmount || target <= 0)) count > 0 else count >= target - 1e-9
+        if (tracking) count > 0
+        else if (kind == HabitStats.KIND_COUNTED && (anyAmount || target <= 0)) count > 0 else count >= target - 1e-9
 
     /** What was recorded on a day: the amount, or 0 if nothing. For a "relapse" habit a record means a relapse. */
     fun amountOn(day: LocalDate): Double = counts[day] ?: 0.0
@@ -142,6 +147,23 @@ class HabitRules(
         if (relapse) return !day.isBefore(startedAt) && amount == null
         return amount != null && reaches(amount)
     }
+
+    /** The times of the checks on a day, in order. */
+    fun timesOn(day: LocalDate): List<Int> = times[day].orEmpty()
+
+    /** The day of the latest check and its last time, or null if there is none. */
+    fun lastCheck(): Pair<LocalDate, Int?>? {
+        val day = counts.filter { it.value > 0 && !it.key.isAfter(today) }.keys.maxOrNull() ?: return null
+        return day to timesOn(day).lastOrNull()
+    }
+
+    /** The amounts of every day from [from] to [to], added up. */
+    fun totalIn(from: LocalDate, to: LocalDate): Double =
+        counts.filter { !it.key.isBefore(from) && !it.key.isAfter(to) }.values.sum()
+
+    fun weekTotal(): Double = totalIn(HabitCalendar.startOfWeek(today, weekStart), today)
+
+    fun monthTotal(): Double = totalIn(today.withDayOfMonth(1), today)
 
     /** Is the habit due on this day, by its schedule? */
     fun isScheduled(day: LocalDate): Boolean = when (plan.interval) {
@@ -263,10 +285,10 @@ class HabitRules(
 
     /** Can a reason for missing this day be given? Only a past, due day that was not done and not paused. */
     fun canMiss(day: LocalDate): Boolean =
-        day.isBefore(today) && !day.isBefore(startedAt) && !isCompleted(day) && !isNeutral(day)
+        !tracking && day.isBefore(today) && !day.isBefore(startedAt) && !isCompleted(day) && !isNeutral(day)
 
     /** True when there is nothing left to do today: not due, done, or covered. A "relapse" habit is never "done for now". */
-    fun isDoneForNow(): Boolean = !relapse && (isOffDay(today) || isCompleted(today) || isCovered(today))
+    fun isDoneForNow(): Boolean = tracking || !relapse && (isOffDay(today) || isCompleted(today) || isCovered(today))
 
     /** Days that reached the goal. */
     fun totalCompletions(): Int = if (relapse) 0 else counts.values.count { reaches(it) }
@@ -448,6 +470,14 @@ class HabitRules(
     fun cell(day: LocalDate): HabitCell {
         val before = day.isBefore(startedAt)
         val future = day.isAfter(today)
+        if (tracking) {
+            return when {
+                before -> HabitCell(DayKind.BEFORE, 0f)
+                future -> HabitCell(DayKind.FUTURE, 0f)
+                (counts[day] ?: 0.0) > 0 -> HabitCell(DayKind.DONE, 1f)
+                else -> HabitCell(DayKind.OFF, 0f)
+            }
+        }
         if (!before && !future && isNeutral(day)) return HabitCell(DayKind.PAUSED, 0f)
         if (relapse) {
             return when {
@@ -484,7 +514,7 @@ class HabitRules(
      * halves every 12 days). Days off, paused or covered days are left out. Streak shows it as a bar and a percent.
      */
     fun strength(): Double {
-        if (counts.isEmpty() && !relapse) return 0.0
+        if (tracking || counts.isEmpty() && !relapse) return 0.0
         var score = 0.0
         var norm = 0.0
         for (i in 0 until 90) {
@@ -509,7 +539,12 @@ class HabitRules(
 
     companion object {
         /** Rules for a stored habit, with its records by day. */
-        fun of(habit: HabitEntity, counts: Map<LocalDate, Double>, today: LocalDate): HabitRules =
+        fun of(
+            habit: HabitEntity,
+            counts: Map<LocalDate, Double>,
+            today: LocalDate,
+            times: Map<LocalDate, List<Int>> = emptyMap(),
+        ): HabitRules =
             HabitRules(
                 kind = habit.kind,
                 target = habit.target,
@@ -518,6 +553,12 @@ class HabitRules(
                 counts = counts,
                 createdOn = runCatching { LocalDate.parse(habit.startedOn) }.getOrDefault(today),
                 today = today,
+                tracking = isTracking(habit),
+                times = times,
             )
+
+        /** Whether the habit is tracking-only (Streak's `tracking` switch). An Avoid habit never is. */
+        fun isTracking(habit: HabitEntity): Boolean =
+            habit.kind != HabitStats.KIND_RELAPSE && runCatching { JSONObject(habit.raw).optBoolean("tracking", false) }.getOrDefault(false)
     }
 }

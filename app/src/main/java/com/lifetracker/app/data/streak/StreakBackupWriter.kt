@@ -4,6 +4,7 @@ import com.lifetracker.app.data.CategoryEntity
 import com.lifetracker.app.data.CompletionEntity
 import com.lifetracker.app.data.HabitClears
 import com.lifetracker.app.data.HabitEntity
+import com.lifetracker.app.data.HabitTicks
 import com.lifetracker.app.data.NoteEntity
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -125,6 +126,8 @@ object StreakBackupWriter {
             val key = dayKey(day)
             val o = JSONObject().put("date", key).put("numberOfCompletions", c.count)
             c.minuteOfDay?.let { o.put("hour", it / 60).put("minute", it % 60) }
+            val marks = HabitTicks.parse(c.marks)
+            if (marks.isNotEmpty()) o.put("marks", JSONArray(marks))
             out.put(key, o)
         }
         return out

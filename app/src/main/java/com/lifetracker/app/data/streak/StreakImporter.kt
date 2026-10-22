@@ -177,12 +177,9 @@ object StreakImporter {
                 for (c in h.completions) {
                     val key = h.id to c.date.toString()
                     val old = existing[key]
-                    if (old == null) {
-                        completionsAdded++
-                        completions += CompletionEntity(h.id, c.date.toString(), c.count, c.minuteOfDay)
-                    } else if (c.count > old.count) {
-                        completions += CompletionEntity(h.id, c.date.toString(), c.count, c.minuteOfDay ?: old.minuteOfDay)
-                    }
+                    val day = StreakMerge.day(old, h.id, c) ?: continue
+                    if (old == null) completionsAdded++
+                    completions += day
                 }
                 HabitEntity(
                     id = h.id,

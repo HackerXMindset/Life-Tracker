@@ -1,5 +1,7 @@
 package com.lifetracker.app.data.streak
 
+import com.lifetracker.app.data.CompletionEntity
+import com.lifetracker.app.data.HabitTicks
 import com.lifetracker.app.data.HabitTombstones
 
 /**
@@ -8,6 +10,26 @@ import com.lifetracker.app.data.HabitTombstones
  * note is hidden with the time, and can be restored.
  */
 object StreakMerge {
+    /**
+     * The day to write when Streak's copy of a day meets this app's ([old], null if there is none), or null to leave this
+     * app's day as it is. The bigger amount wins, and the times come with it (this side's stay if Streak had none). With
+     * the same amount, Streak's times are taken only when this side has none.
+     */
+    fun day(old: CompletionEntity?, habitId: String, c: StreakCompletion): CompletionEntity? {
+        val key = c.date.toString()
+        if (old == null) return CompletionEntity(habitId, key, c.count, c.minuteOfDay, HabitTicks.join(c.marks))
+        if (c.count > old.count) {
+            return CompletionEntity(
+                habitId, key, c.count, c.minuteOfDay ?: old.minuteOfDay,
+                if (c.marks.isNotEmpty()) HabitTicks.join(c.marks) else old.marks,
+            )
+        }
+        if (c.count == old.count && old.marks.isEmpty() && c.marks.isNotEmpty()) {
+            return CompletionEntity(habitId, key, old.count, c.minuteOfDay ?: old.minuteOfDay, HabitTicks.join(c.marks))
+        }
+        return null
+    }
+
     class LocalHabit(val id: String, val deletedAt: Long, val clearedAt: Long)
 
     class LocalNote(val id: String, val habitId: String, val deletedAt: Long)

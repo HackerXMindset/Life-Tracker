@@ -74,6 +74,7 @@ fun HabitEditorDialog(
     var step by remember { mutableStateOf(numberText(start.step)) }
     var anyAmount by remember { mutableStateOf(start.anyAmount) }
     var description by remember { mutableStateOf(start.description) }
+    var tracking by remember { mutableStateOf(start.tracking) }
 
     var interval by remember { mutableStateOf(start.plan.interval) }
     var weekdays by remember { mutableStateOf(start.plan.weekdays.toSet()) }
@@ -106,6 +107,7 @@ fun HabitEditorDialog(
                 scheduleStart = if (interval == HabitPlan.EVERY_X_DAYS) from else null,
             ),
             description = description,
+            tracking = tracking && kind != HabitStats.KIND_RELAPSE,
         )
     }
 
@@ -174,7 +176,7 @@ fun HabitEditorDialog(
                     value = target,
                     onValueChange = { target = it; error = null },
                     modifier = Modifier.fillMaxWidth(),
-                    label = "Goal for one day",
+                    label = "Goal for one day (0 = no goal)",
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 )
@@ -194,6 +196,16 @@ fun HabitEditorDialog(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 )
                 SwitchRow("Any amount counts as done", anyAmount) { anyAmount = it }
+            }
+            if (kind != HabitStats.KIND_RELAPSE) {
+                SwitchRow("Just tracking (no streak)", tracking) { tracking = it }
+                if (tracking) {
+                    Text(
+                        text = "No streak, no strength and no missed days. The card shows the last check and this week's and this month's totals, and every tap adds a check.",
+                        fontSize = 12.sp,
+                        color = paper.ink2,
+                    )
+                }
             }
 
             MonoLabel("How often")

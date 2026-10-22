@@ -20,6 +20,8 @@ data class HabitForm(
     val anyAmount: Boolean = false,
     val plan: HabitPlan = HabitPlan(),
     val description: String = "",
+    /** Tracking only: no streak, no missed days; the card shows the last check and this week's and month's totals. Not for Avoid habits. */
+    val tracking: Boolean = false,
 )
 
 /**
@@ -53,6 +55,7 @@ object HabitEditor {
             anyAmount = habit.anyAmount,
             plan = HabitPlan.fromRaw(habit.raw),
             description = o.optString("description"),
+            tracking = HabitRules.isTracking(habit),
         )
     }
 
@@ -60,7 +63,8 @@ object HabitEditor {
     fun validate(form: HabitForm): String? {
         if (form.name.isBlank()) return "Give it a name."
         if (form.kind == HabitStats.KIND_COUNTED) {
-            if (!form.anyAmount && form.target <= 0) return "Set a goal above 0, or turn on \"any amount counts\"."
+            // A goal of 0 means no goal: any amount counts the day.
+            if (form.target < 0) return "The goal cannot be below 0. Use 0 for no goal."
             if (form.step <= 0) return "The step must be above 0."
         }
         val plan = form.plan
@@ -117,6 +121,7 @@ object HabitEditor {
         o.put("unitLabel", if (counted) form.unitLabel.trim() else "")
         o.put("incrementAmount", step)
         o.put("anyAmount", counted && form.anyAmount)
+        o.put("tracking", form.tracking && form.kind != HabitStats.KIND_RELAPSE)
 
         return HabitEntity(
             id = id,
