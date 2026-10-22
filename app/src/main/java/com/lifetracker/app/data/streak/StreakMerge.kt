@@ -1,6 +1,7 @@
 package com.lifetracker.app.data.streak
 
 import com.lifetracker.app.data.CompletionEntity
+import com.lifetracker.app.data.HabitSteps
 import com.lifetracker.app.data.HabitTicks
 import com.lifetracker.app.data.HabitTombstones
 
@@ -17,15 +18,22 @@ object StreakMerge {
      */
     fun day(old: CompletionEntity?, habitId: String, c: StreakCompletion): CompletionEntity? {
         val key = c.date.toString()
-        if (old == null) return CompletionEntity(habitId, key, c.count, c.minuteOfDay, HabitTicks.join(c.marks))
+        val steps = HabitSteps.join(c.steps)
+        if (old == null) return CompletionEntity(habitId, key, c.count, c.minuteOfDay, HabitTicks.join(c.marks), steps)
         if (c.count > old.count) {
             return CompletionEntity(
                 habitId, key, c.count, c.minuteOfDay ?: old.minuteOfDay,
                 if (c.marks.isNotEmpty()) HabitTicks.join(c.marks) else old.marks,
+                if (c.steps.isNotEmpty()) steps else old.steps,
             )
         }
-        if (c.count == old.count && old.marks.isEmpty() && c.marks.isNotEmpty()) {
-            return CompletionEntity(habitId, key, old.count, c.minuteOfDay ?: old.minuteOfDay, HabitTicks.join(c.marks))
+        // The same amount, and only Streak knows the times or the ticked steps: take them.
+        if (c.count == old.count && ((old.marks.isEmpty() && c.marks.isNotEmpty()) || (old.steps.isEmpty() && c.steps.isNotEmpty()))) {
+            return CompletionEntity(
+                habitId, key, old.count, c.minuteOfDay ?: old.minuteOfDay,
+                if (old.marks.isEmpty() && c.marks.isNotEmpty()) HabitTicks.join(c.marks) else old.marks,
+                if (old.steps.isEmpty()) steps else old.steps,
+            )
         }
         return null
     }

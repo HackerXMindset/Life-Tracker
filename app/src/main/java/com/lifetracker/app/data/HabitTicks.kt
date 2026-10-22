@@ -26,8 +26,8 @@ object HabitTicks {
     /** Amounts are kept to three decimals so 0.1 + 0.2 stays 0.3. */
     fun round(value: Double): Double = Math.round(value * 1000.0) / 1000.0
 
-    private fun make(habitId: String, date: String, count: Double, minutes: List<Int>) =
-        CompletionEntity(habitId, date, count, minutes.lastOrNull(), join(minutes))
+    private fun make(habitId: String, date: String, count: Double, minutes: List<Int>, steps: String = "") =
+        CompletionEntity(habitId, date, count, minutes.lastOrNull(), join(minutes), steps)
 
     /**
      * One more check of [amount]. [nowMinute] is the time to note, or null when the day is not today and the time is not
@@ -35,14 +35,14 @@ object HabitTicks {
      */
     fun add(old: CompletionEntity?, habitId: String, date: String, amount: Double, nowMinute: Int?): CompletionEntity {
         val minutes = times(old) + listOfNotNull(nowMinute)
-        return make(habitId, date, round((old?.count ?: 0.0) + amount), minutes)
+        return make(habitId, date, round((old?.count ?: 0.0) + amount), minutes, old?.steps.orEmpty())
     }
 
     /** The day with its last check taken back by [amount]; null when nothing is left, so the day is cleared. */
     fun undo(old: CompletionEntity, amount: Double): CompletionEntity? {
         val left = round(old.count - amount)
         if (left <= 1e-9) return null
-        return make(old.habitId, old.date, left, times(old).dropLast(1))
+        return make(old.habitId, old.date, left, times(old).dropLast(1), old.steps)
     }
 
     /** The day with one time changed ([from] null or not found: the time is added). The list stays in time order. */
@@ -51,7 +51,7 @@ object HabitTicks {
         val at = if (from == null) -1 else minutes.indexOf(from)
         if (at < 0) minutes.add(to) else minutes[at] = to
         minutes.sort()
-        return make(old.habitId, old.date, old.count, minutes)
+        return make(old.habitId, old.date, old.count, minutes, old.steps)
     }
 
     /** The day with its total replaced. The times stay; a day with none gets [nowMinute], if known. Zero or less clears the day (null). */
@@ -60,7 +60,7 @@ object HabitTicks {
         if (value <= 0.0) return null
         val kept = times(old)
         val minutes = if (kept.isEmpty()) listOfNotNull(nowMinute) else kept
-        return make(habitId, date, value, minutes)
+        return make(habitId, date, value, minutes, old?.steps.orEmpty())
     }
 
     fun clock(minute: Int): String = "%02d:%02d".format(Locale.ROOT, minute / 60, minute % 60)

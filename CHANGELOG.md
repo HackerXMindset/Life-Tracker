@@ -2,6 +2,19 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## ☑️ Habits: checklists
+
+### ✨ New
+
+- **Checklist habits.** A Yes/no habit can now be made of **steps**. In the habit form, **Steps** lets you add, rename and remove steps. The day is done when every step is ticked, or, with **Any of the steps is enough**, when the number you choose is ticked.
+- **Tick steps one by one.** Press and hold a day to tick each step on its own (today's ticks note the time). Tapping the habit's card ticks every step, or clears the day if it was already done. The card shows **2/4 steps**, and the calendar fills as steps are ticked.
+- **Steps travel to and from Streak.** The steps live in the habit's own record, and each day keeps which steps were ticked, in Streak's own format. Where both sides have a day, the bigger count wins and brings its steps.
+
+### 🔧 Changed
+
+- Database version 25 and backup format 25: one new column on a habit's day for the ticked steps. Every day you already had stays as it was. A backup made before this version restores with no step lists (a day keeps its amount).
+- A removed step stops counting but stays stored in the days it was ticked on, as in Streak. A checklist cannot also be "just tracking".
+
 ## ⏱️ Habits: check times, several checks a day, tracking only
 
 ### ✨ New

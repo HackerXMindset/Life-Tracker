@@ -121,6 +121,8 @@ class HabitRules(
     val tracking: Boolean = false,
     /** The times of the checks of each day (minutes of the day, in order), for days that have them. */
     private val times: Map<LocalDate, List<Int>> = emptyMap(),
+    /** For a checklist habit: the steps ticked on each day. */
+    private val ticked: Map<LocalDate, Set<String>> = emptyMap(),
 ) {
     private val relapse: Boolean get() = kind == HabitStats.KIND_RELAPSE
 
@@ -147,6 +149,9 @@ class HabitRules(
         if (relapse) return !day.isBefore(startedAt) && amount == null
         return amount != null && reaches(amount)
     }
+
+    /** The ids of the steps ticked on a day (a checklist habit). */
+    fun tickedOn(day: LocalDate): Set<String> = ticked[day].orEmpty()
 
     /** The times of the checks on a day, in order. */
     fun timesOn(day: LocalDate): List<Int> = times[day].orEmpty()
@@ -544,18 +549,23 @@ class HabitRules(
             counts: Map<LocalDate, Double>,
             today: LocalDate,
             times: Map<LocalDate, List<Int>> = emptyMap(),
-        ): HabitRules =
-            HabitRules(
+            ticked: Map<LocalDate, Set<String>> = emptyMap(),
+        ): HabitRules {
+            // A checklist day is done when enough steps are ticked, so the goal is that number of steps.
+            val needed = if (habit.kind == HabitStats.KIND_RELAPSE) 0 else HabitSteps.needed(habit.raw)
+            return HabitRules(
                 kind = habit.kind,
-                target = habit.target,
-                anyAmount = habit.anyAmount,
+                target = if (needed > 0) needed.toDouble() else habit.target,
+                anyAmount = needed == 0 && habit.anyAmount,
                 plan = HabitPlan.fromRaw(habit.raw),
                 counts = counts,
                 createdOn = runCatching { LocalDate.parse(habit.startedOn) }.getOrDefault(today),
                 today = today,
                 tracking = isTracking(habit),
                 times = times,
+                ticked = ticked,
             )
+        }
 
         /** Whether the habit is tracking-only (Streak's `tracking` switch). An Avoid habit never is. */
         fun isTracking(habit: HabitEntity): Boolean =
