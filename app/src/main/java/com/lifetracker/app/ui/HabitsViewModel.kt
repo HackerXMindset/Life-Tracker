@@ -16,6 +16,7 @@ import com.lifetracker.app.data.HabitNotes
 import com.lifetracker.app.data.HabitPlan
 import com.lifetracker.app.data.HabitRules
 import com.lifetracker.app.data.HabitStats
+import com.lifetracker.app.data.HabitSteps
 import com.lifetracker.app.data.HabitSyncState
 import com.lifetracker.app.data.HabitTicks
 import com.lifetracker.app.data.HabitsSettings
@@ -50,6 +51,10 @@ data class HabitRow(
     val lastCheck: String = "",
     val weekTotal: Double = 0.0,
     val monthTotal: Double = 0.0,
+    /** Checklist habit: how many steps there are, how many are ticked today, and how many make the day done. */
+    val stepsTotal: Int = 0,
+    val stepsToday: Int = 0,
+    val stepsNeeded: Int = 0,
 )
 
 data class HabitsUi(
@@ -182,7 +187,12 @@ class HabitsViewModel(app: Application) : AndroidViewModel(app) {
             val key = date.toString()
             val existing = dao.completion(habit.id, key)
             val tracking = HabitRules.isTracking(habit)
-            if (habit.kind == HabitStats.KIND_COUNTED || tracking) {
+            val steps = if (HabitSteps.isChecklist(habit)) HabitSteps.read(habit.raw) else emptyList()
+            if (steps.isNotEmpty()) {
+                // A checklist: every step ticked, or, when the day is done, the day cleared (as Streak's toggle).
+                val next = HabitSteps.toggleAll(existing, habit.id, key, habit, steps, noteMinute(date))
+                if (next == null) dao.deleteCompletion(habit.id, key) else dao.upsertCompletion(next)
+            } else if (habit.kind == HabitStats.KIND_COUNTED || tracking) {
                 dao.upsertCompletion(HabitTicks.add(existing, habit.id, key, stepOf(habit), noteMinute(date)))
             } else if (existing == null) {
                 val amount = if (habit.kind == HabitStats.KIND_RELAPSE) 1.0 else maxOf(1.0, habit.target)
@@ -202,6 +212,18 @@ class HabitsViewModel(app: Application) : AndroidViewModel(app) {
             val add = amount ?: stepOf(habit)
             if (add <= 0) return@launch
             dao.upsertCompletion(HabitTicks.add(dao.completion(habit.id, key), habit.id, key, add, minute ?: noteMinute(date)))
+            sync.stamp(habit.id)
+        }
+    }
+
+    /** Ticks or unticks one step of a checklist habit on a day. The time is noted when ticking today. */
+    fun toggleStep(habit: HabitEntity, date: LocalDate, stepId: String) {
+        if (date.isAfter(LocalDate.now())) return
+        viewModelScope.launch {
+            val key = date.toString()
+            val steps = HabitSteps.read(habit.raw)
+            val next = HabitSteps.toggle(dao.completion(habit.id, key), habit.id, key, stepId, steps, noteMinute(date))
+            if (next == null) dao.deleteCompletion(habit.id, key) else dao.upsertCompletion(next)
             sync.stamp(habit.id)
         }
     }
@@ -333,12 +355,16 @@ class HabitsViewModel(app: Application) : AndroidViewModel(app) {
         val all = src.habits.filter { !it.archived }.map { habit ->
             val counts = HashMap<LocalDate, Double>()
             val times = HashMap<LocalDate, List<Int>>()
+            val ticked = HashMap<LocalDate, Set<String>>()
+            val steps = if (HabitSteps.isChecklist(habit)) HabitSteps.read(habit.raw) else emptyList()
             for (c in HabitClears.visible(byHabit[habit.id].orEmpty(), habit.clearedAt)) {
                 val day = runCatching { LocalDate.parse(c.date) }.getOrNull() ?: continue
-                counts[day] = c.count
+                // A checklist day counts the steps still there; other days keep their amount.
+                counts[day] = if (steps.isEmpty()) c.count else HabitSteps.dayCount(c, steps)
+                if (steps.isNotEmpty()) HabitSteps.ticked(c, steps).takeIf { it.isNotEmpty() }?.let { ticked[day] = it }
                 HabitTicks.times(c).takeIf { it.isNotEmpty() }?.let { times[day] = it }
             }
-            val rules = HabitRules.of(habit, counts, today, times)
+            val rules = HabitRules.of(habit, counts, today, times, ticked)
             val plan = HabitPlan.fromRaw(habit.raw)
             HabitRow(
                 habit = habit,
@@ -353,6 +379,9 @@ class HabitsViewModel(app: Application) : AndroidViewModel(app) {
                 lastCheck = if (rules.tracking) HabitTicks.lastCheckText(rules.lastCheck(), today) else "",
                 weekTotal = rules.weekTotal(),
                 monthTotal = rules.monthTotal(),
+                stepsTotal = steps.size,
+                stepsToday = if (steps.isEmpty()) 0 else (counts[today] ?: 0.0).toInt(),
+                stepsNeeded = if (steps.isEmpty()) 0 else HabitSteps.needed(habit.raw),
             )
         }
         val chips = HabitCalendar.categoryChips(all.map { it.habit.category }, src.categories.map { it.name })

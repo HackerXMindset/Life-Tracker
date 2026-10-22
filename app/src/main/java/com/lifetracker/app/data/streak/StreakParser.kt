@@ -112,11 +112,15 @@ object StreakParser {
                 val marks = c.optJSONArray("marks")?.let { a ->
                     (0 until a.length()).mapNotNull { i -> a.optInt(i, -1).takeIf { it in 0..1439 } }
                 }.orEmpty()
+                val steps = c.optJSONArray("steps")?.let { a ->
+                    (0 until a.length()).mapNotNull { i -> a.optString(i, "").takeIf { it.isNotEmpty() } }
+                }.orEmpty()
                 completions += StreakCompletion(
                     date = day,
                     count = c.number("numberOfCompletions", c.number("count", 1.0)),
                     minuteOfDay = hour?.let { it * 60 + (c.intOrNull("minute") ?: 0) } ?: marks.lastOrNull(),
                     marks = marks,
+                    steps = steps,
                 )
             }
         }

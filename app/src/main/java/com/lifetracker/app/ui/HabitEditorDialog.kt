@@ -33,6 +33,7 @@ import com.lifetracker.app.data.HabitEntity
 import com.lifetracker.app.data.HabitForm
 import com.lifetracker.app.data.HabitPlan
 import com.lifetracker.app.data.HabitStats
+import com.lifetracker.app.data.HabitStep
 import com.lifetracker.app.ui.theme.LocalPaper
 import com.lifetracker.app.ui.theme.PaperButton
 import com.lifetracker.app.ui.theme.PaperButtonStyle
@@ -75,6 +76,9 @@ fun HabitEditorDialog(
     var anyAmount by remember { mutableStateOf(start.anyAmount) }
     var description by remember { mutableStateOf(start.description) }
     var tracking by remember { mutableStateOf(start.tracking) }
+    var steps by remember { mutableStateOf(start.steps) }
+    var anySteps by remember { mutableStateOf(start.anySteps) }
+    var stepsNeeded by remember { mutableStateOf(start.stepsNeeded.toString()) }
 
     var interval by remember { mutableStateOf(start.plan.interval) }
     var weekdays by remember { mutableStateOf(start.plan.weekdays.toSet()) }
@@ -108,6 +112,9 @@ fun HabitEditorDialog(
             ),
             description = description,
             tracking = tracking && kind != HabitStats.KIND_RELAPSE,
+            steps = if (kind == HabitStats.KIND_YES_NO) steps else start.steps,
+            anySteps = if (kind == HabitStats.KIND_YES_NO) anySteps else start.anySteps,
+            stepsNeeded = if (kind == HabitStats.KIND_YES_NO) stepsNeeded.trim().toIntOrNull() ?: 0 else start.stepsNeeded,
         )
     }
 
@@ -196,6 +203,51 @@ fun HabitEditorDialog(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 )
                 SwitchRow("Any amount counts as done", anyAmount) { anyAmount = it }
+            }
+            if (kind == HabitStats.KIND_YES_NO) {
+                MonoLabel("Steps (optional)")
+                Text(
+                    text = "Make it a checklist: the day is done when every step is ticked.",
+                    fontSize = 12.sp,
+                    color = paper.ink2,
+                )
+                steps.forEachIndexed { i, step ->
+                    Row(
+                        verticalAlignment = androidx.compose.ui.Alignment.Bottom,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        PaperField(
+                            value = step.title,
+                            onValueChange = { text ->
+                                steps = steps.mapIndexed { j, old -> if (j == i) old.copy(title = text) else old }
+                                error = null
+                            },
+                            modifier = Modifier.weight(1f),
+                            label = "Step ${i + 1}",
+                            singleLine = true,
+                        )
+                        PaperButton("Remove", { steps = steps.filterIndexed { j, _ -> j != i }; error = null }, style = PaperButtonStyle.Ghost, small = true)
+                    }
+                }
+                PaperButton(
+                    "Add a step",
+                    { steps = steps + HabitStep(HabitEditor.newId(), ""); error = null },
+                    style = PaperButtonStyle.Ghost,
+                    small = true,
+                )
+                if (steps.any { it.title.isNotBlank() }) {
+                    SwitchRow("Any of the steps is enough", anySteps) { anySteps = it; error = null }
+                    if (anySteps) {
+                        PaperField(
+                            value = stepsNeeded,
+                            onValueChange = { stepsNeeded = it; error = null },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = "How many steps are needed",
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        )
+                    }
+                }
             }
             if (kind != HabitStats.KIND_RELAPSE) {
                 SwitchRow("Just tracking (no streak)", tracking) { tracking = it }

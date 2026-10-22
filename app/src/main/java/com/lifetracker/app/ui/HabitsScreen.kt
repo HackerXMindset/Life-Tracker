@@ -217,6 +217,7 @@ fun HabitsScreen(vm: HabitsViewModel = viewModel()) {
             onAmount = { vm.setAmount(row.habit, date, it) },
             onAddCheck = { amount, minute -> vm.addCheck(row.habit, date, amount, minute) },
             onUndo = { vm.undoCheck(row.habit, date) },
+            onStep = { vm.toggleStep(row.habit, date, it) },
             onTime = { from, to -> vm.changeTime(row.habit, date, from, to) },
             onReason = { vm.setMissReason(row.habit, date, it) },
             onClear = { vm.clear(row.habit, date) },
@@ -583,7 +584,16 @@ private fun MetaLine(row: HabitRow, accent: Color, muted: Color) {
             Spacer(Modifier.width(3.dp))
             Text(row.streakText, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = muted)
         }
-        if (habit.kind == HabitStats.KIND_COUNTED && !row.tracking) {
+        if (row.stepsTotal > 0) {
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = "·  ${row.stepsToday}/${row.stepsTotal} steps",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = muted,
+                maxLines = 1,
+            )
+        } else if (habit.kind == HabitStats.KIND_COUNTED && !row.tracking) {
             Spacer(Modifier.width(8.dp))
             Text(
                 // A goal of 0 means no goal: just today's amount.

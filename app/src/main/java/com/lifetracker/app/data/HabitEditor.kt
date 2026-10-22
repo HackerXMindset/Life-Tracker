@@ -22,6 +22,10 @@ data class HabitForm(
     val description: String = "",
     /** Tracking only: no streak, no missed days; the card shows the last check and this week's and month's totals. Not for Avoid habits. */
     val tracking: Boolean = false,
+    /** Checklist habit (Yes/no only): the steps, whether any [stepsNeeded] of them is enough, and how many. Blank titles are dropped. */
+    val steps: List<HabitStep> = emptyList(),
+    val anySteps: Boolean = false,
+    val stepsNeeded: Int = 1,
 )
 
 /**
@@ -56,6 +60,9 @@ object HabitEditor {
             plan = HabitPlan.fromRaw(habit.raw),
             description = o.optString("description"),
             tracking = HabitRules.isTracking(habit),
+            steps = HabitSteps.read(habit.raw),
+            anySteps = HabitSteps.anySteps(habit.raw),
+            stepsNeeded = HabitSteps.stepsNeeded(habit.raw).coerceAtLeast(1),
         )
     }
 
@@ -66,6 +73,11 @@ object HabitEditor {
             // A goal of 0 means no goal: any amount counts the day.
             if (form.target < 0) return "The goal cannot be below 0. Use 0 for no goal."
             if (form.step <= 0) return "The step must be above 0."
+        }
+        val steps = form.steps.count { it.title.isNotBlank() }
+        if (form.kind == HabitStats.KIND_YES_NO && steps > 0) {
+            if (form.tracking) return "A checklist cannot also be \"just tracking\"."
+            if (form.anySteps && form.stepsNeeded !in 1..steps) return "Steps needed must be between 1 and $steps."
         }
         val plan = form.plan
         when (plan.interval) {
@@ -122,6 +134,13 @@ object HabitEditor {
         o.put("incrementAmount", step)
         o.put("anyAmount", counted && form.anyAmount)
         o.put("tracking", form.tracking && form.kind != HabitStats.KIND_RELAPSE)
+        if (form.kind == HabitStats.KIND_YES_NO) {
+            // Only a Yes/no habit has its steps edited here; any other kind keeps what its record already holds.
+            val kept = form.steps.filter { it.title.isNotBlank() }
+            o.put("substeps", HabitSteps.toJson(kept))
+            o.put("anySteps", form.anySteps && kept.isNotEmpty())
+            o.put("stepsNeeded", form.stepsNeeded.coerceIn(1, maxOf(1, kept.size)))
+        }
 
         return HabitEntity(
             id = id,

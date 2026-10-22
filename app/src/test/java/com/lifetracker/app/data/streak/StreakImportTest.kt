@@ -86,6 +86,22 @@ class StreakImportTest {
     }
 
     @Test
+    fun stepsOfADayAreRead() {
+        val text = """
+            {"app":"streak","version":2,"exportedAt":"2026-10-04T11:04:28.044810","habits":[
+              {"id":"h1","name":"Morning","substeps":[{"id":"a","title":"Wake"},{"id":"b","title":"Stretch"}],"completions":{
+                "04-10-2026":{"date":"04-10-2026","numberOfCompletions":2.0,"steps":["a","b"]},
+                "05-10-2026":{"date":"05-10-2026","numberOfCompletions":1.0}}}]}
+        """.trimIndent()
+        val habit = StreakParser.parse(text).habits.single()
+        val days = habit.completions.associateBy { it.date.dayOfMonth }
+        assertEquals(listOf("a", "b"), days.getValue(4).steps)
+        assertEquals(emptyList<String>(), days.getValue(5).steps)
+        // The steps themselves stay in the habit's own record.
+        assertTrue(habit.raw.contains("Stretch"))
+    }
+
+    @Test
     fun oneBrokenRecordIsSkippedNotFatal() {
         val data = StreakParser.parse(sample)
         // "n-bad" has no date or text; it must not stop the good note being read.

@@ -126,4 +126,14 @@ class StreakMergeTest {
         val mine = CompletionEntity("h", "2026-10-04", 2.0, 615, "500,615")
         assertNull(StreakMerge.day(mine, "h", StreakCompletion(oct4, 2.0, 700, listOf(600, 700))))
     }
+
+    @Test fun aBiggerDayInStreakBringsItsStepsAndAnEqualOneFillsInMissingSteps() {
+        val ours = CompletionEntity("h", "2026-10-04", 1.0, null, "", "a")
+        assertEquals("a,b", StreakMerge.day(ours, "h", StreakCompletion(oct4, 2.0, null, emptyList(), listOf("a", "b")))!!.steps)
+        // A day with no step list (from before steps were kept) takes Streak's list when the amount is the same.
+        val old = CompletionEntity("h", "2026-10-04", 2.0, null, "", "")
+        assertEquals("a,b", StreakMerge.day(old, "h", StreakCompletion(oct4, 2.0, null, emptyList(), listOf("a", "b")))!!.steps)
+        // Our own list is never replaced by an equal day.
+        assertNull(StreakMerge.day(ours, "h", StreakCompletion(oct4, 1.0, null, emptyList(), listOf("b"))))
+    }
 }

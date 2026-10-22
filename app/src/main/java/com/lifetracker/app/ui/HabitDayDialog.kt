@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifetracker.app.data.HabitEditor
 import com.lifetracker.app.data.HabitStats
+import com.lifetracker.app.data.HabitSteps
 import com.lifetracker.app.data.HabitTicks
 import com.lifetracker.app.ui.theme.LocalPaper
 import com.lifetracker.app.ui.theme.PaperButton
@@ -50,6 +51,8 @@ fun HabitDayDialog(
     /** One more check: an amount (null = one step) at a minute of the day (null = now, for today). */
     onAddCheck: (Double?, Int?) -> Unit,
     onUndo: () -> Unit,
+    /** Ticks or unticks one step of a checklist habit (by step id). */
+    onStep: (String) -> Unit,
     /** Changes one check's time: from (null = it had none) to a minute of the day. */
     onTime: (Int?, Int) -> Unit,
     onReason: (String?) -> Unit,
@@ -65,6 +68,9 @@ fun HabitDayDialog(
     val relapse = habit.kind == HabitStats.KIND_RELAPSE
     val done = rules.isCompleted(date)
     val tracking = rules.tracking
+    val steps = if (row.stepsTotal > 0) HabitSteps.read(habit.raw) else emptyList()
+    val checklist = steps.isNotEmpty()
+    val tickedSteps = rules.tickedOn(date)
     val checks = rules.timesOn(date)
     val context = LocalContext.current
     val reasons = HabitEditor.missReasons(habit.raw)
@@ -74,6 +80,7 @@ fun HabitDayDialog(
     var custom by remember(date) { mutableStateOf("") }
 
     val status = when {
+        checklist -> "${shown(recorded)} of ${row.stepsTotal} steps" + if (done) "  ·  Done" else ""
         counted -> "${shown(recorded)} of ${if (habit.target <= 0 && !habit.anyAmount) "no goal" else if (habit.anyAmount || habit.target <= 0) "any amount" else shown(habit.target)}$unit"
         relapse -> if (recorded > 0) "${shown(recorded)} ${if (recorded == 1.0) "relapse" else "relapses"} logged" else "No relapse"
         tracking -> if (recorded > 0) "${shown(recorded)} checked$unit" else "Nothing yet"
@@ -101,6 +108,17 @@ fun HabitDayDialog(
                 color = paper.ink2,
             )
             when {
+                checklist -> {
+                    steps.forEach { step ->
+                        TimeRow(step.title.ifBlank { "Step" }, if (step.id in tickedSteps) "Ticked ✓" else "Tick") { onStep(step.id) }
+                    }
+                    PaperButton(
+                        text = if (done) "Clear the day" else "Tick every step",
+                        onClick = { onToggle(); onDismiss() },
+                        style = PaperButtonStyle.Ghost,
+                        small = true,
+                    )
+                }
                 counted -> {
                     PaperField(
                         value = amount,
@@ -159,7 +177,7 @@ fun HabitDayDialog(
                 )
             }
 
-            if (recorded > 0) {
+            if (recorded > 0 && !checklist) {
                 MonoLabel(if (checks.size == 1) "Time of the check" else "Times of the checks")
                 if (checks.isEmpty()) {
                     TimeRow("No time noted", "Set a time") { pickTime(nowMinute) { onTime(null, it) } }

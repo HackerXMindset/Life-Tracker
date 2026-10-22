@@ -22,7 +22,7 @@ class BackupCodecTest {
         ),
         completions = listOf(
             CompletionEntity("h1", "2026-10-04", 1.5, null),
-            CompletionEntity("h1", "2026-10-05", 2.0, 780, "480,780"),
+            CompletionEntity("h1", "2026-10-05", 2.0, 780, "480,780", "s1,s2"),
         ),
         categories = listOf(CategoryEntity("c1", "Self Study", 4281648985L, 5)),
         todoTags = listOf(TodoTagEntity("p1", "Physics", 4287532691L, "project", 1)),
