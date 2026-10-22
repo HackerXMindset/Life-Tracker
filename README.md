@@ -172,7 +172,7 @@ Each step is small enough to build, install and try before the next begins. The 
   DONE         R6a Money data: Deduct it from, category icons (database 22)
   DONE         Habits H6 Sync catch-up with Streak 2.4: deletions and progress-clears both ways, delete and restore here (database 23)
   DONE         Habits H7 Check times, many checks a day, amounts without a goal, tracking-only habits (database 24)
-  NEXT ──►    Habits H8 Checklist habits (steps)
+  NEXT ──►    Habits H8 Checklist habits (steps) (database 25)
               Habits H9 Pause (vacation) and rest days
               Habits H10 Schedule extras (monthly weekday, from last done) and difficulty
               Habits H11 Duplicate, reorder, hide completed
@@ -300,7 +300,11 @@ Not part of Polish 4, and not built: **Step 13e** (fixing trips and visits by ha
   - **H7d Tracking only. Built.** A switch on the habit form for Yes/no and Counted habits (the same `tracking` flag Streak uses, so it travels). Such a habit has **no streak, no strength, no missed days and is left out of the Today ring**. The card shows **Last: Today · 14:05**, **this week** and **this month**; every tap adds a check (so "Coke zero" can be ticked five times a day). Totals add up the amounts of the days (a deliberate small difference from Streak, which counts days).
   - Sync: Streak's `marks` are read and written; where both sides have a day the bigger amount wins as before, and the times come from the side that won. A backup made before this version restores as it was (no times). Never erased: undoing a check only changes the day's list, like Streak; clearing a day is still the one way a day goes.
   - Tests: marks text in and out, add/undo/change time, old single time, tracking totals and last check, no-goal days, the Streak writer and reader with `marks`, backup round trip.
-- **H8 Checklist habits.** A habit made of steps; the day is done when every step (or at least N) is ticked; the card shows progress; steps and ticks are stored and sent in Streak's own format.
+- **H8 Checklist habits (database 25, backups 25).** A yes/no habit can be made of **steps** (Streak's `substeps`, kept in the habit's own record, so they travel with it). The day is done when every step is ticked, or, if you choose "any N of them", when N are. Each day keeps which steps were ticked (Streak's `steps`).
+  - **H8a Steps in the habit form. Planned.** A **Steps** part on the Yes/no form: add, rename and remove steps (blank ones are dropped), and a switch **Any of the steps is enough** with **How many are needed**. A removed step stops counting but stays in the days it was ticked on (Streak does the same). Not offered for Avoid or Counted habits, and a checklist cannot also be "just tracking".
+  - **H8b Ticking steps. Planned.** `habit_completions` gets a `steps` column (the ticked step ids). Tap the card: every step is ticked, or, if the day is done, the day is cleared (as Streak's toggle). Press and hold a day: each step has its own tick; each tick notes the time (today only), the amount of the day is the number of steps ticked. The card shows **2/4 steps** instead of a goal; the calendar fills partly as steps are ticked and full when the day is done.
+  - **H8c Rules and sync. Planned.** The goal of a checklist day is the number of steps needed, so the streak, strength and calendar maths are the ones already there. Steps and each day's ticked steps are read from and written to Streak files; where both sides have a day the bigger count wins and brings its steps. A day imported before this version with no step list keeps its count.
+  - Tests: reading and writing steps, needed count (all, any N, N too big), toggling a step and all steps, removed steps not counting, the Streak read, write and merge with steps, backup round trip.
 - **H9 Pause and rest days.** Pause a habit for a stretch from its long-press menu (paused days count as neither done nor missed) and choose weekly rest days; both are stored and sent.
 - **H10 Schedule extras and difficulty.** A fixed day each month, the same weekday each month (first Monday, last Friday), "every X days counted from the last time done", the schedule's start day, and difficulty (easy to hard) for the strength score.
 - **H11 Housekeeping.** Duplicate (opens the form first), reorder, a Today filter that hides completed habits, and move completed to the bottom.
@@ -483,6 +487,7 @@ life-tracker/
         │   │   ├── HabitStats.kt      Streak arithmetic
         │   │   ├── HabitRules.kt      Streak's schedules, streaks, goals, day colours (Habits H1)
         │   │   ├── HabitCalendar.kt   Week, month and year grids, Today ring maths (H2)
+        │   │   ├── HabitSteps.kt      Checklist habits: steps, which are ticked, how many are needed (H8)
         │   │   ├── HabitTicks.kt      Check times (marks) of a day: add, undo, change a time, last check (H7)
         │   │   ├── HabitsSettings.kt  Which calendar, card size, category
         │   │   ├── HabitEditor.kt     Makes and changes habits in Streak's record format (H3a)
