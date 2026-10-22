@@ -2,6 +2,18 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📅 Habits: schedule extras and difficulty
+
+### ✨ New
+
+- **"Every X" schedules got two switches.** **Count from the last time I did it**: the next due day is X days after the last day it was done. And, for months, **Same weekday each month** (the second Tuesday, the last Friday). A fixed day each month is **Every 1 month**, counting from a day: it is due on that day number, or on the last day of a shorter month.
+- **The schedule is said in words** under the form and on the habit page: "On the 14th of every month", "On the second Wednesday of every month", "Every 3 days, counted from the last time done".
+- **Difficulty.** Mark a habit Easy, Medium or Hard. Like Streak, it only weighs habits against each other: switch on **Settings, Habits, Weigh the Today ring by difficulty** (off by default) and the ring fills by weight (easy 1, medium 2, hard 3; not set counts as medium). "3 of 5 completed" still counts habits, and a habit's own strength is not changed.
+
+### 🔧 Changed
+
+- No database change. The switches and difficulty live in the habit's own record, so they travel to and from Streak.
+
 ## ⏸️ Habits: pause and rest days
 
 ### ✨ New

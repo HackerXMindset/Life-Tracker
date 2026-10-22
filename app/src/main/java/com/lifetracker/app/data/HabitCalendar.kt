@@ -7,8 +7,9 @@ import java.time.LocalDate
 enum class HabitMode(val label: String) { Week("Week"), Month("Month"), Year("Year") }
 
 /** "3 of 5 done today", for the ring at the top of the Habits screen. */
-data class TodayProgress(val done: Int, val total: Int) {
-    val ratio: Float get() = if (total == 0) 0f else done.toFloat() / total
+data class TodayProgress(val done: Int, val total: Int, val weightDone: Int = done, val weightTotal: Int = total) {
+    /** How full the ring is: by habits, or weighed by difficulty when that is switched on. */
+    val ratio: Float get() = if (weightTotal == 0) 0f else weightDone.toFloat() / weightTotal
     val allDone: Boolean get() = total > 0 && done == total
 }
 
@@ -51,10 +52,16 @@ object HabitCalendar {
     }
 
     /** Habits that are due today and not paused are counted; one is finished when done or covered. */
-    fun todayProgress(rules: List<HabitRules>, today: LocalDate): TodayProgress {
-        val counted = rules.filter { !it.tracking && !it.isPaused(today) && it.isScheduled(today) }
-        return TodayProgress(counted.count { it.isCompleted(today) || it.isCovered(today) }, counted.size)
+    fun todayProgress(rules: List<HabitRules>, today: LocalDate, difficulties: List<Int>? = null): TodayProgress {
+        val due = rules.indices.filter { i -> val r = rules[i]; !r.tracking && !r.isPaused(today) && r.isScheduled(today) }
+        val finished = due.filter { i -> rules[i].isCompleted(today) || rules[i].isCovered(today) }
+        // Without difficulty every habit weighs the same.
+        fun weight(i: Int) = if (difficulties == null) 1 else weightOf(difficulties.getOrElse(i) { 0 })
+        return TodayProgress(finished.size, due.size, finished.sumOf(::weight), due.sumOf(::weight))
     }
+
+    /** Streak's weights: easy 1, medium 2, hard 3, and a habit with no difficulty counts as medium. */
+    fun weightOf(difficulty: Int): Int = when (difficulty) { 1 -> 1; 3 -> 3; else -> 2 }
 
     /** The streak shown on a card: weeks or months are marked, days are a bare number. */
     fun streakText(current: Int, interval: Int): String = when (interval) {

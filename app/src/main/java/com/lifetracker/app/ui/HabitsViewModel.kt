@@ -90,14 +90,15 @@ class HabitsViewModel(app: Application) : AndroidViewModel(app) {
     private val mode = MutableStateFlow(settings.mode)
     private val compact = MutableStateFlow(settings.compact)
     private val category = MutableStateFlow(settings.category)
+    private val weigh = MutableStateFlow(settings.weighDifficulty)
 
     private val source = combine(dao.observeHabits(), dao.observeCompletions(), dao.observeCategories()) { h, c, k ->
         Source(h, c, k)
     }
 
     val state: StateFlow<HabitsUi> =
-        combine(source, mode, compact, category) { src, m, small, picked ->
-            build(src, m, small, picked, LocalDate.now())
+        combine(source, mode, compact, category, weigh) { src, m, small, picked, weighed ->
+            build(src, m, small, picked, weighed, LocalDate.now())
         }
             .flowOn(Dispatchers.Default)
             .stateIn(
@@ -159,6 +160,12 @@ class HabitsViewModel(app: Application) : AndroidViewModel(app) {
         val next = !compact.value
         settings.compact = next
         compact.value = next
+    }
+
+    /** Weigh the Today ring by difficulty (Settings, Habits). */
+    fun setWeighDifficulty(value: Boolean) {
+        settings.weighDifficulty = value
+        weigh.value = value
     }
 
     fun setCategory(value: String) {
@@ -369,7 +376,7 @@ class HabitsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private fun build(src: Source, m: HabitMode, small: Boolean, picked: String, today: LocalDate): HabitsUi {
+    private fun build(src: Source, m: HabitMode, small: Boolean, picked: String, weighed: Boolean, today: LocalDate): HabitsUi {
         val byHabit = src.completions.groupBy { it.habitId }
         val all = src.habits.filter { !it.archived }.map { habit ->
             val counts = HashMap<LocalDate, Double>()
@@ -410,7 +417,10 @@ class HabitsViewModel(app: Application) : AndroidViewModel(app) {
             today = today,
             rows = shown,
             hasAny = all.isNotEmpty(),
-            progress = HabitCalendar.todayProgress(all.map { it.rules }, today),
+            progress = HabitCalendar.todayProgress(
+                all.map { it.rules }, today,
+                if (weighed) all.map { HabitEditor.difficultyOf(it.habit.raw) } else null,
+            ),
             chips = chips,
             allCategories = (src.categories.map { it.name } + all.map { it.habit.category }).filter { it.isNotBlank() }.distinct(),
             archived = src.habits.filter { it.archived },

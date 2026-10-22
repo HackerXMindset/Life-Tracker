@@ -76,6 +76,7 @@ fun HabitsSettingsScreen(onBack: () -> Unit, vm: HabitsViewModel = androidx.life
     val names by vm.habitNames.collectAsState()
     val settings = remember { HabitsSettings(context) }
     var source by remember { mutableStateOf(settings.source) }
+    var weigh by remember { mutableStateOf(settings.weighDifficulty) }
     var confirm by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
@@ -112,6 +113,16 @@ fun HabitsSettingsScreen(onBack: () -> Unit, vm: HabitsViewModel = androidx.life
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item { SettingsTop("Habits", "Where habits come from", onBack) }
+        item { PaperSection("Today ring") }
+        item {
+            ToggleRow(
+                label = "Weigh the Today ring by difficulty",
+                checked = weigh,
+                onChange = { weigh = it; vm.setWeighDifficulty(it) },
+                hint = "Off: every habit counts the same. On: easy habits count 1, medium 2, hard 3 (a habit with no difficulty counts as medium). Only the ring fill changes, not \"3 of 5\".",
+                first = true,
+            )
+        }
         item { PaperSection("Track habits with") }
         item {
             PaperSegmented(

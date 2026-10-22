@@ -26,6 +26,8 @@ data class HabitForm(
     val steps: List<HabitStep> = emptyList(),
     val anySteps: Boolean = false,
     val stepsNeeded: Int = 1,
+    /** 0 = not set, 1 = easy, 2 = medium, 3 = hard. Only weighs the Today ring, and only if that is switched on. */
+    val difficulty: Int = 0,
 )
 
 /**
@@ -63,8 +65,12 @@ object HabitEditor {
             steps = HabitSteps.read(habit.raw),
             anySteps = HabitSteps.anySteps(habit.raw),
             stepsNeeded = HabitSteps.stepsNeeded(habit.raw).coerceAtLeast(1),
+            difficulty = difficultyOf(habit.raw),
         )
     }
+
+    /** The difficulty in a habit's record: 0 = not set, 1 = easy, 2 = medium, 3 = hard. */
+    fun difficultyOf(raw: String): Int = runCatching { JSONObject(raw).optInt("difficulty", 0) }.getOrDefault(0).coerceIn(0, 3)
 
     /** What is wrong with the form, in words, or null if it can be saved. */
     fun validate(form: HabitForm): String? {
@@ -124,6 +130,12 @@ object HabitEditor {
         o.put("scheduleWeekdays", JSONArray(if (plan.interval == HabitPlan.WEEKDAYS) plan.weekdays.sorted() else emptyList<Int>()))
         o.put("scheduleEvery", plan.every)
         o.put("scheduleUnit", plan.unit)
+        // "Count from the last time done" and "same weekday each month" only mean something for "every X"; Streak ignores them otherwise.
+        val everyX = plan.interval == HabitPlan.EVERY_X_DAYS
+        val fromLastDone = everyX && plan.fromLastDone
+        o.put("fromLastDone", fromLastDone)
+        o.put("monthWeekday", everyX && plan.unit == HabitPlan.UNIT_MONTHS && !fromLastDone && plan.monthWeekday)
+        o.put("difficulty", form.difficulty.coerceIn(0, 3))
         if (plan.interval == HabitPlan.EVERY_X_DAYS && plan.scheduleStart != null) {
             o.put("scheduleStart", dayKey(plan.scheduleStart))
         } else {
@@ -210,9 +222,32 @@ object HabitEditor {
                 HabitPlan.UNIT_MONTHS -> "month"
                 else -> "day"
             }
-            if (plan.every == 1) "Every $unit" else "Every ${plan.every} ${unit}s"
+            val start = plan.scheduleStart
+            val months = if (plan.every == 1) "month" else "${plan.every} months"
+            when {
+                plan.fromLastDone -> (if (plan.every == 1) "Every $unit" else "Every ${plan.every} ${unit}s") + ", counted from the last time done"
+                plan.unit == HabitPlan.UNIT_MONTHS && start != null && plan.monthWeekday ->
+                    "On the ${weekdaySlot(start)} of every $months"
+                plan.unit == HabitPlan.UNIT_MONTHS && start != null -> "On the ${ordinal(start.dayOfMonth)} of every $months"
+                plan.every == 1 -> "Every $unit"
+                else -> "Every ${plan.every} ${unit}s"
+            }
         }
         else -> "Every day"
+    }
+
+    /** 1 = "1st", 2 = "2nd", 11 = "11th", 23 = "23rd". */
+    fun ordinal(n: Int): String {
+        val suffix = if (n % 100 in 11..13) "th" else when (n % 10) { 1 -> "st"; 2 -> "nd"; 3 -> "rd"; else -> "th" }
+        return "$n$suffix"
+    }
+
+    /** "second Wednesday" or "last Friday": the same weekday in the same week of the month as [day] (the 5th week counts as last). */
+    fun weekdaySlot(day: LocalDate): String {
+        val nth = (day.dayOfMonth - 1) / 7
+        val name = day.dayOfWeek.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.ENGLISH)
+        val word = when (nth) { 0 -> "first"; 1 -> "second"; 2 -> "third"; else -> "last" }
+        return "$word $name"
     }
 
     val DAY_NAMES = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")

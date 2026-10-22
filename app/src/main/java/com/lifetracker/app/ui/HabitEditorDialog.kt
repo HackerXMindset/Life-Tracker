@@ -86,6 +86,9 @@ fun HabitEditorDialog(
     var every by remember { mutableStateOf(start.plan.every.toString()) }
     var everyUnit by remember { mutableStateOf(start.plan.unit) }
     var from by remember { mutableStateOf(start.plan.scheduleStart ?: LocalDate.now()) }
+    var fromLast by remember { mutableStateOf(start.plan.fromLastDone) }
+    var monthWeekday by remember { mutableStateOf(start.plan.monthWeekday) }
+    var difficulty by remember { mutableStateOf(start.difficulty) }
     var error by remember { mutableStateOf<String?>(null) }
 
     fun form(): HabitForm {
@@ -109,7 +112,10 @@ fun HabitEditorDialog(
                 every = every.trim().toIntOrNull() ?: 0,
                 unit = everyUnit,
                 scheduleStart = if (interval == HabitPlan.EVERY_X_DAYS) from else null,
+                fromLastDone = fromLast,
+                monthWeekday = monthWeekday,
             ),
+            difficulty = difficulty,
             description = description,
             tracking = tracking && kind != HabitStats.KIND_RELAPSE,
             steps = if (kind == HabitStats.KIND_YES_NO) steps else start.steps,
@@ -321,8 +327,38 @@ fun HabitEditorDialog(
                         style = PaperButtonStyle.Ghost,
                         small = true,
                     )
+                    SwitchRow("Count from the last time I did it", fromLast) { fromLast = it }
+                    if (everyUnit == HabitPlan.UNIT_MONTHS && !fromLast) {
+                        SwitchRow("Same weekday each month", monthWeekday) { monthWeekday = it }
+                    }
+                    Text(
+                        text = HabitEditor.describe(
+                            HabitPlan(
+                                interval = HabitPlan.EVERY_X_DAYS,
+                                every = every.trim().toIntOrNull()?.coerceAtLeast(1) ?: 1,
+                                unit = everyUnit,
+                                scheduleStart = from,
+                                fromLastDone = fromLast,
+                                monthWeekday = monthWeekday,
+                            ),
+                        ),
+                        fontSize = 12.sp,
+                        color = paper.ink2,
+                    )
                 }
             }
+
+            MonoLabel("Difficulty")
+            Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf(0 to "Not set", 1 to "Easy", 2 to "Medium", 3 to "Hard").forEach { (value, label) ->
+                    PaperPill(label, difficulty == value, { difficulty = value })
+                }
+            }
+            Text(
+                text = "Only used if \"Weigh the Today ring by difficulty\" is on in Settings, Habits.",
+                fontSize = 12.sp,
+                color = paper.ink2,
+            )
 
             PaperField(
                 value = description,
