@@ -155,21 +155,22 @@ object DayLayout {
 
         val stays = ArrayList<Stay>()
         if (showPlaces) {
-            var previousEnd = Long.MIN_VALUE
-            visits
+            val candidates = visits
                 .filter { !it.ignored && PlaceRules.lengthMs(it, nowMs) >= PlaceRules.MIN_STAY_MS }
                 .map { v ->
                     val end = if (v.ongoing) max(nowMs, v.startMs) else v.endMs
                     Stay(v, max(v.startMs, dayStartMs), min(end, limit))
                 }
-                .sortedBy { it.startMs }
-                .forEach { s ->
-                    val start = max(s.startMs, previousEnd)
-                    if (s.endMs > start) {
-                        stays += Stay(s.visit, start, s.endMs)
-                        previousEnd = s.endMs
-                    }
-                }
+                .filter { it.endMs > it.startMs }
+                .sortedWith(compareBy<Stay> { it.startMs }.thenBy { it.visit.startMs }.thenBy { it.visit.id })
+
+            // Keep each visit's real start. If a stale open visit overlaps a newer one, end the
+            // earlier block at the newer visit's start instead of shifting the newer visit forward.
+            candidates.forEachIndexed { index, s ->
+                val nextStart = candidates.getOrNull(index + 1)?.startMs ?: Long.MAX_VALUE
+                val end = min(s.endMs, nextStart)
+                if (end > s.startMs) stays += Stay(s.visit, s.startMs, end)
+            }
         }
 
         val inside = stays.map { ArrayList<Item>() }
@@ -191,7 +192,7 @@ object DayLayout {
                 placeId = id,
                 name = placeNames[id]?.takeIf { it.isNotBlank() } ?: "Unnamed spot",
                 named = id.isNotEmpty(),
-                ongoing = s.visit.ongoing,
+                ongoing = s.visit.ongoing && nowMs in dayStartMs until dayEndMs && s.endMs == limit,
                 visit = s.visit,
                 children = joinGaps((things + holes).sortedBy { it.startMs }),
             )

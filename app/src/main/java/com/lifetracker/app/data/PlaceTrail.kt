@@ -57,27 +57,40 @@ object PlaceTrail {
         placeNames: Map<String, String>,
         nowMs: Long,
     ): List<Row> {
-        val stays = ArrayList<Stay>()
-        var previousEnd = Long.MIN_VALUE
-        visits
+        val candidates = visits
             .filter { !it.ignored && PlaceRules.lengthMs(it, nowMs) >= PlaceRules.MIN_STAY_MS }
-            .sortedBy { it.startMs }
-            .forEach { v ->
+            .map { v ->
                 val end = if (v.ongoing) max(nowMs, v.startMs) else v.endMs
-                val start = max(v.startMs, previousEnd)
-                if (end > start) {
-                    stays += Stay(
-                        key = "stay" + v.id,
-                        startMs = start,
-                        endMs = end,
-                        name = placeNames[v.placeId]?.takeIf { it.isNotBlank() } ?: "Unnamed spot",
-                        named = v.placeId.isNotEmpty(),
-                        ongoing = v.ongoing,
-                        visit = v,
-                    )
-                    previousEnd = end
-                }
+                Stay(
+                    key = "stay" + v.id,
+                    startMs = v.startMs,
+                    endMs = end,
+                    name = placeNames[v.placeId]?.takeIf { it.isNotBlank() } ?: "Unnamed spot",
+                    named = v.placeId.isNotEmpty(),
+                    ongoing = v.ongoing,
+                    visit = v,
+                )
             }
+            .filter { it.endMs > it.startMs }
+            .sortedWith(compareBy<Stay> { it.startMs }.thenBy { it.visit.id })
+
+        val stays = candidates.mapIndexedNotNull { index, stay ->
+            val nextStart = candidates.getOrNull(index + 1)?.startMs ?: Long.MAX_VALUE
+            val end = min(stay.endMs, nextStart)
+            if (end <= stay.startMs) {
+                null
+            } else {
+                Stay(
+                    key = stay.key,
+                    startMs = stay.startMs,
+                    endMs = end,
+                    name = stay.name,
+                    named = stay.named,
+                    ongoing = stay.ongoing && end == nowMs && nextStart > nowMs,
+                    visit = stay.visit,
+                )
+            }
+        }
 
         val sortedTrips = trips.sortedBy { it.startMs }
         var next = 0

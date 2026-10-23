@@ -9,7 +9,7 @@ import org.junit.Test
 class PlaceTrailTest {
     private val min = 60_000L
     private val now = 10_000 * min
-    private val names = mapOf("home" to "Home", "park" to "Park")
+    private val names = mapOf("home" to "Home", "park" to "Park", "mosque" to "Green Park Mosque")
 
     // 0.009 degrees of latitude is about 1,000 m.
     private fun visit(id: String, place: String, from: Long, to: Long, lat: Double = 0.0, ongoing: Boolean = false, ignored: Boolean = false) =
@@ -53,6 +53,27 @@ class PlaceTrailTest {
         val rows = build(listOf(visit("a", "home", 0, 60), visit("b", "home", 70, 120)))
         assertEquals(2, rows.size)
         assertTrue(rows.all { it is PlaceTrail.Stay })
+    }
+
+    @Test
+    fun anOlderOpenHomeVisitDoesNotHideTheMosqueOrTheReturnHomeVisit() {
+        val rows = build(
+            listOf(
+                visit("home-old", "home", 18, 0, ongoing = true),
+                visit("mosque", "mosque", 30, 63),
+                visit("home-new", "home", 77, 0, ongoing = true),
+            ),
+        )
+
+        val stays = rows.filterIsInstance<PlaceTrail.Stay>()
+        assertEquals(listOf("home", "mosque", "home"), stays.map { it.visit.placeId })
+        assertEquals(18 * min, stays[0].startMs)
+        assertEquals(30 * min, stays[0].endMs)
+        assertFalse(stays[0].ongoing)
+        assertEquals(30 * min, stays[1].startMs)
+        assertEquals(63 * min, stays[1].endMs)
+        assertEquals(77 * min, stays[2].startMs)
+        assertEquals(now, stays[2].endMs)
     }
 
     @Test

@@ -295,9 +295,14 @@ object PlacesTracker {
                 "Reading ${LogFormat.clock(fix.timeMs)}: accuracy ${fix.accuracyM.toInt()} m" +
                     (if (fix.speedMs >= 0f) ", speed ${"%.1f".format(fix.speedMs * 3.6f)} km/h" else ""),
             )
+            val staleOpenVisits = PlaceVisitIntegrity.closeOlderOpenVisits(recent, step.saves)
+            if (staleOpenVisits.isNotEmpty()) {
+                AppLog.w("Visits", "Closed ${staleOpenVisits.size} stale open visit(s) before saving a newer visit")
+                logVisits(staleOpenVisits, names)
+            }
             logVisits(step.saves, names)
             if (beforeState != afterState) AppLog.i("Places", "Now: $afterState [was: $beforeState]")
-            if (step.saves.isNotEmpty()) dao.upsertVisits(step.saves)
+            if (step.saves.isNotEmpty()) dao.upsertVisits(staleOpenVisits + step.saves)
             if (step.points.isNotEmpty()) {
                 // Note the step counter on the readings taken now (not on one placed back at the start of a stay).
                 val counter = StepCounterSync.counterNow(context)

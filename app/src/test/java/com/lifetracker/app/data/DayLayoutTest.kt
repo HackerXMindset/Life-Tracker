@@ -9,7 +9,7 @@ class DayLayoutTest {
     private val min = 60_000L
     private val dayStart = 0L
     private val dayEnd = 24 * 60 * min
-    private val names = mapOf("home" to "Home", "park" to "Park")
+    private val names = mapOf("home" to "Home", "park" to "Park", "mosque" to "Green Park Mosque")
 
     private fun visit(id: String, place: String, from: Long, to: Long, ongoing: Boolean = false) =
         PlaceVisitEntity(id, place, from * min, to * min, 0.0, 0.0, "auto", ongoing, false)
@@ -120,6 +120,28 @@ class DayLayoutTest {
         val gap = home.children.filterIsInstance<DayLayout.Gap>().single()
         assertEquals(20 * min, gap.startMs)
         assertEquals(50 * min, gap.endMs)
+    }
+
+    @Test
+    fun anOlderOpenHomeVisitDoesNotHideTheMosqueOrTheReturnHomeVisit() {
+        val rows = build(
+            visits = listOf(
+                visit("home-old", "home", 18, 0, ongoing = true),
+                visit("mosque", "mosque", 30, 63),
+                visit("home-new", "home", 77, 0, ongoing = true),
+            ),
+            now = 100 * min,
+        )
+
+        val places = rows.filterIsInstance<DayLayout.Place>()
+        assertEquals(listOf("home", "mosque", "home"), places.map { it.placeId })
+        assertEquals(18 * min, places[0].startMs)
+        assertEquals(30 * min, places[0].endMs)
+        assertTrue(!places[0].ongoing)
+        assertEquals(30 * min, places[1].startMs)
+        assertEquals(63 * min, places[1].endMs)
+        assertEquals(77 * min, places[2].startMs)
+        assertEquals(100 * min, places[2].endMs)
     }
 
     @Test

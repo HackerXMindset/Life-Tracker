@@ -31,6 +31,26 @@ class PlaceEngineTest {
     }
 
     @Test
+    fun aNewerVisitClosesAnyOlderStaleOpenVisit() {
+        val staleHome = PlaceVisitEntity(
+            "home-old", "home", t0, t0 + 100 * min, 0.0, 0.0, "stop", true, false,
+        )
+        val mosque = PlaceVisitEntity(
+            "mosque", "mosque", t0 + 12 * min, t0 + 45 * min, 0.0, 0.0, "stop", false, false,
+        )
+        val newHome = PlaceVisitEntity(
+            "home-new", "home", t0 + 77 * min, t0 + 100 * min, 0.0, 0.0, "stop", true, false,
+        )
+
+        val closed = PlaceVisitIntegrity.closeOlderOpenVisits(listOf(staleHome), listOf(mosque, newHome))
+
+        assertEquals(1, closed.size)
+        assertEquals("home-old", closed.single().id)
+        assertEquals(t0 + 12 * min, closed.single().endMs)
+        assertFalse(closed.single().ongoing)
+    }
+
+    @Test
     fun threeMinutesAtAnUnknownSpotBecomesAStopAndKeepsWatching() {
         val run = Run(places)
         for (m in 0..2) run.feed(fix(m, 28.7000, 77.3000))

@@ -371,3 +371,37 @@ object PlaceEngine {
         )
     }
 }
+
+
+/**
+ * Repairs stale open rows when the live detector saves a newer visit. The tracker should normally
+ * close a stay as it leaves it, but a previous process interruption or stale duplicate row can
+ * leave another visit marked ongoing. Close that older row at (or before) the newer visit's start.
+ *
+ * Returns only the existing rows that need to be persisted; [incoming] remain authoritative and
+ * are written by the caller after these repairs.
+ */
+object PlaceVisitIntegrity {
+    fun closeOlderOpenVisits(
+        existing: List<PlaceVisitEntity>,
+        incoming: List<PlaceVisitEntity>,
+    ): List<PlaceVisitEntity> {
+        if (incoming.isEmpty()) return emptyList()
+        val incomingIds = incoming.map { it.id }.toHashSet()
+
+        return existing.mapNotNull { open ->
+            if (!open.ongoing || open.id in incomingIds) return@mapNotNull null
+            val nextStart = incoming
+                .asSequence()
+                .filter { it.id != open.id && it.startMs > open.startMs }
+                .map { it.startMs }
+                .minOrNull()
+                ?: return@mapNotNull null
+
+            open.copy(
+                endMs = max(open.startMs, min(open.endMs, nextStart)),
+                ongoing = false,
+            )
+        }
+    }
+}
