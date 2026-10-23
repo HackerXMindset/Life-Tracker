@@ -140,6 +140,7 @@ object BackupManager {
         tripPoints = db.tripDao().allPoints(),
         rawFixes = db.rawDao().all(),
         timelineEdits = db.timelineEditDao().all(),
+        focusSessions = db.focusDao().all(),
     )
 
     /**
@@ -234,6 +235,10 @@ object BackupManager {
             }
             if (data.version >= 17) {
                 db.usageDao().insertMissingStates(data.usageStates)
+            }
+            if (data.version >= 26) {
+                // Focus sessions only grow: restoring adds the ones that are missing.
+                db.focusDao().insertMissing(data.focusSessions)
             }
         }
     }

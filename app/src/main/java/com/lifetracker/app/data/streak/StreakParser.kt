@@ -172,6 +172,7 @@ object StreakParser {
         completed = !o.isNull("completed") && o.getBoolean("completed"),
         startedAt = moment(o.textOrNull("startedAt")) ?: throw IllegalArgumentException("no start time"),
         label = o.text("label"),
+        counted = !o.isNull("counted") && o.optBoolean("counted", false),
     )
 
     private fun todo(o: JSONObject): StreakTodo {

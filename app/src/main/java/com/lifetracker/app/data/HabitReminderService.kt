@@ -350,6 +350,7 @@ class HabitReminderBootReceiver : BroadcastReceiver() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 HabitReminderScheduler.rearmAll(app)
+                FocusEngine.restore(app)
             } catch (e: Exception) {
                 AppLog.e("Habits", "Could not set reminders again: ${e.message}")
             } finally {

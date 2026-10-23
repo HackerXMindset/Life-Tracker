@@ -35,6 +35,8 @@
     <!-- Lets the app check your position every minute while you are somewhere it does not know (shows a notification while it does). -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <!-- The focus timer's banner stays up while the app is in the background (Habits H13). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <!-- Only used to suggest a name for a stop you have not named (OpenStreetMap). Nothing else uses the internet. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Android 9 and older use Google's own version of the Physical activity permission. -->
@@ -105,6 +107,18 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
+        <!-- The focus timer (Habits H13): the running banner, the end alarm and the banner's buttons. -->
+        <service
+            android:name=".data.FocusService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="A focus timer for a habit that keeps running with the screen off" />
+        </service>
+        <receiver
+            android:name=".data.FocusReceiver"
+            android:exported="false" />
         <!-- Habit reminders (Habits H12): the alarm, the Done and Snooze buttons, and setting the alarms again after a restart. -->
         <receiver
             android:name=".data.HabitReminderReceiver"
