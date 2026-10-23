@@ -806,7 +806,7 @@ object BackupCodec {
                     ms += p[0].toLong()
                     lat += p[1].toLong()
                     lng += p[2].toLong()
-                    val speed = if (p.size == 5 && p[4].toLong() >= 0L) p[4].toLong() / 100f else -1f
+                    val speed = if (p.size >= 5 && p[4].toLong() >= 0L) p[4].toLong() / 100f else -1f
                     if (p.size == 11) {
                         out.add(
                             RawFixEntity(
