@@ -41,6 +41,16 @@ class HabitsSettings(context: Context) {
             putBoolean("filterDoneLast", value.completedLast)
         }
 
+    /** Habit reminders (Habits H12): on or off for every habit at once. On by default. */
+    var remindersOn: Boolean
+        get() = prefs.getBoolean("remindersOn", true)
+        set(value) = prefs.edit { putBoolean("remindersOn", value) }
+
+    /** A reminder stays quiet when the habit is already done today (Streak's "quiet when done"). On by default. */
+    var quietWhenDone: Boolean
+        get() = prefs.getBoolean("quietWhenDone", true)
+        set(value) = prefs.edit { putBoolean("quietWhenDone", value) }
+
     /** The category chip that is selected. Empty means All. */
     var category: String
         get() = prefs.getString("category", "") ?: ""

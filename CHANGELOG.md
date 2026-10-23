@@ -2,6 +2,19 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🔔 Habits: reminders
+
+### ✨ New
+
+- **Reminders for each habit.** In **New habit / Edit habit**, **Add reminder**: a time, the weekdays it rings on, **every N days**, or **repeat every N hours until a time**, your own message, and how long **Snooze** waits (5, 10 or 15 minutes). A habit can have several. They are kept in the habit's own record, so they travel to and from Streak.
+- **The banner** shows the habit's name and your message, with **Done** (a yes/no habit is ticked, a counted or tracking-only habit gets one more check) and **Snooze**. Avoid habits and checklists have no Done button; tapping the banner opens the app.
+- **Quiet when done.** A reminder does not ring for a habit already done today, and ticking a habit takes its banner away. It also stays quiet on days the habit is not due and while it is paused. Settings > Habits has **Habit reminders** (all on or off) and **Stay quiet when already done**.
+- **Exact alarms.** A new card in **Settings > Permissions** switches on "alarms and reminders" so reminders ring at the minute you chose (Android 14 and newer turn it off for new apps). Without it they still ring, but may be a few minutes late. Reminders need the Notifications permission too.
+
+### 🔧 Changed
+
+- No database change. Alarms are set again after a restart, an update, or a change of clock or time zone.
+
 ## 📄 Habits: full-screen pages, reorder and the Today filter
 
 ### ✨ New

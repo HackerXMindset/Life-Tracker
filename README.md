@@ -176,8 +176,8 @@ Each step is small enough to build, install and try before the next begins. The 
   DONE         Habits H9 Pause (vacation) and rest days (no database change)
   DONE         Habits H10 Schedule extras (monthly weekday, from last done) and difficulty (no database change)
   DONE         Habits H11 Full-screen habit pages, reorder, Today filter (duplicate dropped)
-  NEXT ──►    Habits H12 Reminders for habits
-              Habits H13 Focus mode (timer attached to a habit, sessions on the Timeline)
+  DONE         Habits H12 Reminders for habits (no database change)
+  NEXT ──►    Habits H13 Focus mode (timer attached to a habit, sessions on the Timeline)
               R6b/R6c Money: editing and the paper look (after the habits): "Deduct it from", separate expense and income categories, edit anything, paper look (includes Paper P5)
   DONE         Paper P4 New look: Food
               Paper P5 New look: Money (built inside R6)
@@ -319,7 +319,11 @@ Not part of Polish 4, and not built: **Step 13e** (fixing trips and visits by ha
   - **H11b Reorder. Built.** A **Reorder** button on the Habits tab opens a list of every habit with **Up** and **Down** buttons (no dragging, which is fiddly). The new order is written to each habit's own `order` (Streak's field) and noted as changed, so it travels to Streak. Archived habits keep their place.
   - **H11c Today filter. Built.** A **Filter** button on the Habits tab with switches (kept between visits): **Only habits due today**, **Hide completed**, **Hide tracking-only habits**, and **Completed last** (completed habits move to the bottom instead of hiding). Nothing is deleted or changed; the Today ring still counts every habit that is due.
   - Tests: moving a habit up and down (first, last, one habit), the order written into the record, and the filter rules (due today, completed, tracking-only, completed last, and what stays when the filters hide everything).
-- **H12 Reminders.** Per-habit reminders (a time, chosen days, every N days, repeated hourly until a time), a notification with a Done button; needs the notification permission (shown in Settings > Permissions).
+- **H12 Habit reminders (no database change).** (From Streak 2.4: each habit can have several reminders.) Not copied from Streak: its motivational quotes and the greeting with your name, because you did not ask for them.
+  - **H12a The rules. Built.** A reminder is kept in the habit's own record (`reminders`, Streak's own shape, so it travels to and from Streak): a time, the weekdays it rings on, **every N days** (counted from a day it starts), **repeat every N hours until a time**, your message, and how long **Snooze** waits (5, 10 or 15 minutes). It only rings on days the habit is on its schedule and not paused or a rest day. `HabitReminders.kt` works out the next moment a reminder should ring, and is tested.
+  - **H12b The alarms. Built.** One alarm per reminder, always set for its next moment only (not weeks ahead), and set again each time it rings. They are also set again when the app opens, when you save, delete, archive, pause or import a habit, when the phone restarts, when the clock or time zone changes, and after an app update. Android 14 and newer switch **exact alarms** off for new apps, so there is a new row in **Settings > Permissions** ("Exact alarms") with a button to the right page; without it the reminders still ring, but may be a few minutes late. The phone's cleaner can still stop the app (see Settings > Permissions > Battery).
+  - **H12c The notification. Built.** Needs the notification permission (already in Settings > Permissions). Title is the habit's name, text is your message (or a plain "Time for …" line with the streak). Buttons: **Done** (a yes/no habit is ticked, a counted or tracking-only habit gets one more check; no Done for Avoid habits and checklists, which open the app) and **Snooze**. If the habit is already done today the reminder stays quiet (a switch in Settings > Habits, on by default), and ticking a habit takes its reminder away.
+  - **H12d The screens. Built.** In **New habit / Edit habit** a **Reminders** section lists the reminders with **Add reminder** and Edit/Delete for each; the pop-up has the time, weekday pills, every N days, the repeat-every-hours switch with its until-time, the message and Snooze. The habit page says them in words ("Every day at 08:00", "Every 2 hours from 09:00 to 17:00"). **Settings > Habits** gets **Habit reminders** (all on or off) and **Stay quiet when already done**.
 - **H13 Focus mode.** A timer on a habit: a countdown or stopwatch, Pomodoro rounds with a short and long break, a label for the session, an end alarm that rings with the screen off, and saved timers. Finished sessions are kept (as Streak's focus sessions are) and shown on the Timeline; the first full round marks the habit. Needs the foreground notification and exact alarm behaviour spelled out before it is built.
 
 **Paper redesign (P1 to P7, one part at a time).** The whole app takes on the look of your paper demo (`Life-Tracker-paper.html`): cream paper, ink-black buttons, green only for "good", orange highlighter swipes under headings, hand-drawn wobbly card borders with a hard pencil shadow, tally strokes for progress bars, dashed lines for what the phone collected on its own, a floating menu bar, and a dark version. This is looks only: the app keeps exactly the features it has, and the demo's made-up numbers are replaced by your real data. Features that only exist in the demo (Money's "Deduct it from" choice and imported shopping orders, the built-in food tracker) are not part of it. Habits keeps everything built so far (editing Streak habits, sending changes to Streak) in the demo's style. I cannot run the app here, so after each part you send a screenshot and I fix what differs from the demo.
@@ -500,6 +504,8 @@ life-tracker/
         │   │   ├── HabitCalendar.kt   Week, month and year grids, Today ring maths (H2)
         │   │   ├── HabitPauses.kt     Pause (holiday), rest days and pausing single days, kept in the habit's record (H9)
         │   │   ├── HabitOrder.kt      Moving a habit up or down, the Today filter (H11)
+        │   │   ├── HabitReminders.kt  A reminder, kept in the habit's record, and when it rings next (H12a)
+        │   │   ├── HabitReminderService.kt  The alarms, the notification with Done and Snooze, setting them again after a restart (H12b, H12c)
         │   │   ├── HabitSteps.kt      Checklist habits: steps, which are ticked, how many are needed (H8)
         │   │   ├── HabitTicks.kt      Check times (marks) of a day: add, undo, change a time, last check (H7)
         │   │   ├── HabitsSettings.kt  Which calendar, card size, category
@@ -603,6 +609,7 @@ life-tracker/
         │       ├── theme/
         │       │   └── Theme.kt       Light and dark colours
         │       ├── HabitsScreen.kt    Habits tab: cards, streaks, 14-day rows
+        │       ├── HabitReminderEditor.kt  The Reminders part of the habit form (H12d)
         │       ├── HabitPages.kt      Full-screen page frame (Back, title, pinned Save/Cancel) and the Reorder page (H11)
         │       ├── HabitsViewModel.kt Works out each habit's streaks and ticking
         │       ├── HabitsSettingsScreen.kt  Settings: own data or import from Streak (H4)

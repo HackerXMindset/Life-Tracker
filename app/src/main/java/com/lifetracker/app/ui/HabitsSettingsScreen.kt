@@ -77,6 +77,8 @@ fun HabitsSettingsScreen(onBack: () -> Unit, vm: HabitsViewModel = androidx.life
     val settings = remember { HabitsSettings(context) }
     var source by remember { mutableStateOf(settings.source) }
     var weigh by remember { mutableStateOf(settings.weighDifficulty) }
+    var remindersOn by remember { mutableStateOf(settings.remindersOn) }
+    var quiet by remember { mutableStateOf(settings.quietWhenDone) }
     var confirm by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
@@ -121,6 +123,24 @@ fun HabitsSettingsScreen(onBack: () -> Unit, vm: HabitsViewModel = androidx.life
                 onChange = { weigh = it; vm.setWeighDifficulty(it) },
                 hint = "Off: every habit counts the same. On: easy habits count 1, medium 2, hard 3 (a habit with no difficulty counts as medium). Only the ring fill changes, not \"3 of 5\".",
                 first = true,
+            )
+        }
+        item { PaperSection("Reminders") }
+        item {
+            ToggleRow(
+                label = "Habit reminders",
+                checked = remindersOn,
+                onChange = { remindersOn = it; vm.setRemindersOn(it) },
+                hint = "Off: no habit rings. Each habit's reminders are set when you edit it. Needs the Notifications permission, and Exact alarms for the exact minute (Settings > Permissions).",
+                first = true,
+            )
+        }
+        item {
+            ToggleRow(
+                label = "Stay quiet when already done",
+                checked = quiet,
+                onChange = { quiet = it; vm.setQuietWhenDone(it) },
+                hint = "A reminder does not ring for a habit you have already done today, and ticking a habit takes its banner away.",
             )
         }
         item { PaperSection("Track habits with") }

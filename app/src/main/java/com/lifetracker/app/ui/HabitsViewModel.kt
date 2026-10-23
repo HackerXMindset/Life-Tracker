@@ -14,6 +14,7 @@ import com.lifetracker.app.data.HabitForm
 import com.lifetracker.app.data.HabitMode
 import com.lifetracker.app.data.HabitNotes
 import com.lifetracker.app.data.HabitOrder
+import com.lifetracker.app.data.HabitReminderScheduler
 import com.lifetracker.app.data.HabitPauses
 import com.lifetracker.app.data.HabitPlan
 import com.lifetracker.app.data.HabitRules
@@ -197,6 +198,18 @@ class HabitsViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
         }
+    }
+
+    /** Habit reminders on or off for every habit (Settings, Habits). The alarms are set or taken away at once. */
+    fun setRemindersOn(value: Boolean) {
+        settings.remindersOn = value
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { runCatching { HabitReminderScheduler.rearmAll(getApplication<Application>()) } }
+    }
+
+    /** Stay quiet when the habit is already done today (Settings, Habits). */
+    fun setQuietWhenDone(value: Boolean) {
+        settings.quietWhenDone = value
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { runCatching { HabitReminderScheduler.rearmAll(getApplication<Application>()) } }
     }
 
     /** Weigh the Today ring by difficulty (Settings, Habits). */
