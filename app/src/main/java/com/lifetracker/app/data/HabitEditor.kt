@@ -28,8 +28,8 @@ data class HabitForm(
     val stepsNeeded: Int = 1,
     /** 0 = not set, 1 = easy, 2 = medium, 3 = hard. Only weighs the Today ring, and only if that is switched on. */
     val difficulty: Int = 0,
-    /** The habit's reminders (Habits H12). */
-    val reminders: List<HabitReminders.Reminder> = emptyList(),
+    /** The habit's reminders (Habits H12). Null means "leave the habit's own as they are"; a list, even an empty one, replaces them. */
+    val reminders: List<HabitReminders.Reminder>? = null,
 )
 
 /**
@@ -139,7 +139,7 @@ object HabitEditor {
         o.put("fromLastDone", fromLastDone)
         o.put("monthWeekday", everyX && plan.unit == HabitPlan.UNIT_MONTHS && !fromLastDone && plan.monthWeekday)
         o.put("difficulty", form.difficulty.coerceIn(0, 3))
-        HabitReminders.put(o, form.reminders)
+        form.reminders?.let { HabitReminders.put(o, it) }
         if (plan.interval == HabitPlan.EVERY_X_DAYS && plan.scheduleStart != null) {
             o.put("scheduleStart", dayKey(plan.scheduleStart))
         } else {
