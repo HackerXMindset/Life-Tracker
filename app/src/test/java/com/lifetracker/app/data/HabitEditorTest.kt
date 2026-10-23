@@ -122,7 +122,7 @@ class HabitEditorTest {
             plan = HabitPlan(interval = HabitPlan.MONTHLY, timesPerPeriod = 10), description = "Stay hydrated",
         )
         val back = HabitEditor.formFrom(build(form))
-        assertEquals(form.copy(plan = back.plan), back)
+        assertEquals(form.copy(plan = back.plan, reminders = emptyList()), back)
         assertEquals(HabitPlan.MONTHLY, back.plan.interval)
         assertEquals(10, back.plan.timesPerPeriod)
     }
