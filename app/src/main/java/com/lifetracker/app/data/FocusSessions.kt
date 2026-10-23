@@ -89,6 +89,10 @@ object FocusCredit {
         habit.kind == HabitStats.KIND_YES_NO && !HabitSteps.isChecklist(habit) &&
             runCatching { org.json.JSONObject(habit.raw).optBoolean("focusOnly", false) }.getOrDefault(false)
 
+    /** The habit's own "focusOnly" switch, whatever its kind. */
+    fun focusOnlyFlag(raw: String): Boolean =
+        runCatching { org.json.JSONObject(raw).optBoolean("focusOnly", false) }.getOrDefault(false)
+
     /** The minutes a habit remembers for its focus set-up (Streak's `focusMinutes`, 25 when not set). */
     fun minutesOf(habit: HabitEntity): Int =
         runCatching { org.json.JSONObject(habit.raw).optInt("focusMinutes", 25) }.getOrDefault(25).coerceIn(0, 600)

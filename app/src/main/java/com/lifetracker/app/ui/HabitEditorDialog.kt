@@ -91,6 +91,7 @@ fun HabitEditorPage(
     var monthWeekday by remember { mutableStateOf(start.plan.monthWeekday) }
     var difficulty by remember { mutableStateOf(start.difficulty) }
     var reminders by remember { mutableStateOf(start.reminders.orEmpty()) }
+    var focusOnly by remember { mutableStateOf(start.focusOnly == true) }
     var error by remember { mutableStateOf<String?>(null) }
 
     fun form(): HabitForm {
@@ -119,6 +120,7 @@ fun HabitEditorPage(
             ),
             difficulty = difficulty,
             reminders = reminders,
+            focusOnly = focusOnly,
             description = description,
             tracking = tracking && kind != HabitStats.KIND_RELAPSE,
             steps = if (kind == HabitStats.KIND_YES_NO) steps else start.steps,
@@ -364,6 +366,15 @@ fun HabitEditorPage(
                 fontSize = 12.sp,
                 color = paper.ink2,
             )
+
+            if (kind == HabitStats.KIND_YES_NO && steps.none { it.title.isNotBlank() }) {
+                SwitchRow("Only a focus session can complete it", focusOnly) { focusOnly = it }
+                Text(
+                    text = "The card cannot be ticked by hand: start a focus session from the Focus button, and a finished one ticks it.",
+                    fontSize = 12.sp,
+                    color = paper.ink2,
+                )
+            }
 
             RemindersSection(reminders, followsHabit = kind != HabitStats.KIND_RELAPSE && interval == HabitPlan.EVERY_X_DAYS) { reminders = it }
 

@@ -2,6 +2,22 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## ⏱️ Habits: focus mode
+
+### ✨ New
+
+- **A focus timer for a habit**, as in Streak. Press **Focus** on the Habits tab or on a habit's page. Pick the habit (or none), then **Countdown**, **Stopwatch** or **Pomodoro** (a break after each round; every 4th break is a long one if you set it in Settings > Habits > Focus), the minutes, and what you are working on (your recent labels are buttons).
+- **It keeps going with the screen off.** A banner shows the running time with **Pause, +1 min, End** (and **Continue / Skip break** between rounds), and the end rings on the exact second with the phone's alarm sound, even in battery saving. A finished Pomodoro round is saved and the break starts by itself; after a break it waits for **Continue**. A countdown is saved the moment it ends.
+- **Sessions are kept** (never deleted), put one block on the Timeline, and go to Streak in its own backup shape (Streak's sessions come in too). A finished round **ticks a yes/no habit** for the day; a habit that **counts minutes** gets the minutes added.
+- **Saved timers.** Each habit remembers its own minutes and break (kept in the habit's record, so it travels to Streak), and the recent labels per habit.
+- **"Only a focus session can complete it"** (a switch in New habit / Edit habit, like Streak's): the card cannot be ticked by hand (taking a tick back still works).
+- A **Focus** card in Settings > Habits: long break, minutes for a session with no habit, and "Count only whole Pomodoro rounds".
+
+### 🔧 Changed
+
+- **Database 26** (a new table for sessions). Backups are format 26 and older backups still restore.
+- Not copied from Streak: the music player, backgrounds, clock styles, the to-do list inside a session and the focus statistics pages.
+
 ## 🔔 Habits: reminders
 
 ### ✨ New
