@@ -151,25 +151,33 @@ object DayLayout {
         // On today nothing after now can be missing yet.
         val limit = if (nowMs in dayStartMs until dayEndMs) nowMs else dayEndMs
 
-        class Stay(val visit: PlaceVisitEntity, val startMs: Long, val endMs: Long)
+        class Stay(
+            val visit: PlaceVisitEntity,
+            val startMs: Long,
+            val endMs: Long,
+            val ongoing: Boolean,
+        )
 
         val stays = ArrayList<Stay>()
         if (showPlaces) {
-            var previousEnd = Long.MIN_VALUE
-            visits
+            // An old open visit can outlive the real stay it represents. End it at the next visit's
+            // actual start; never push that next visit forward to the stale end.
+            val candidates = visits
                 .filter { !it.ignored && PlaceRules.lengthMs(it, nowMs) >= PlaceRules.MIN_STAY_MS }
                 .map { v ->
                     val end = if (v.ongoing) max(nowMs, v.startMs) else v.endMs
-                    Stay(v, max(v.startMs, dayStartMs), min(end, limit))
+                    Stay(v, max(v.startMs, dayStartMs), min(end, limit), v.ongoing)
                 }
+                .filter { it.endMs > it.startMs }
                 .sortedBy { it.startMs }
-                .forEach { s ->
-                    val start = max(s.startMs, previousEnd)
-                    if (s.endMs > start) {
-                        stays += Stay(s.visit, start, s.endMs)
-                        previousEnd = s.endMs
-                    }
+
+            candidates.forEachIndexed { index, s ->
+                val nextStart = candidates.getOrNull(index + 1)?.startMs ?: Long.MAX_VALUE
+                val end = min(s.endMs, nextStart)
+                if (end > s.startMs) {
+                    stays += Stay(s.visit, s.startMs, end, s.ongoing && end == s.endMs)
                 }
+            }
         }
 
         val inside = stays.map { ArrayList<Item>() }
@@ -191,7 +199,7 @@ object DayLayout {
                 placeId = id,
                 name = placeNames[id]?.takeIf { it.isNotBlank() } ?: "Unnamed spot",
                 named = id.isNotEmpty(),
-                ongoing = s.visit.ongoing,
+                ongoing = s.ongoing,
                 visit = s.visit,
                 children = joinGaps((things + holes).sortedBy { it.startMs }),
             )

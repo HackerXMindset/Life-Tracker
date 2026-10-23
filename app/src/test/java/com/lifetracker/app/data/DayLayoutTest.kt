@@ -1,6 +1,7 @@
 package com.lifetracker.app.data
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -9,7 +10,7 @@ class DayLayoutTest {
     private val min = 60_000L
     private val dayStart = 0L
     private val dayEnd = 24 * 60 * min
-    private val names = mapOf("home" to "Home", "park" to "Park")
+    private val names = mapOf("home" to "Home", "park" to "Park", "mosque" to "Green Park Mosque")
 
     private fun visit(id: String, place: String, from: Long, to: Long, ongoing: Boolean = false) =
         PlaceVisitEntity(id, place, from * min, to * min, 0.0, 0.0, "auto", ongoing, false)
@@ -255,5 +256,25 @@ class DayLayoutTest {
         assertEquals(0, home.children.filterIsInstance<DayLayout.Gap>().size)
         assertEquals(listOf("a", "b"), home.children.filterIsInstance<DayLayout.Thing>().map { it.key })
         assertEquals(1, off.filterIsInstance<DayLayout.Thing>().size)
+    }
+
+    @Test
+    fun aStaleOpenVisitDoesNotHideTheMosqueOrTheLaterHomeVisit() {
+        val rows = build(
+            visits = listOf(
+                visit("home-old", "home", 10, 10, ongoing = true),
+                visit("mosque", "mosque", 20, 60),
+                visit("home-new", "home", 70, 70, ongoing = true),
+            ),
+            now = 100 * min,
+        )
+        val stays = rows.filterIsInstance<DayLayout.Place>().sortedBy { it.startMs }
+
+        assertEquals(listOf("home-old", "mosque", "home-new"), stays.map { it.visit.id })
+        assertEquals(listOf(10 * min, 20 * min, 70 * min), stays.map { it.startMs })
+        assertEquals(listOf(20 * min, 60 * min, 100 * min), stays.map { it.endMs })
+        assertFalse(stays[0].ongoing)
+        assertEquals("Green Park Mosque", stays[1].name)
+        assertTrue(stays[2].ongoing)
     }
 }
