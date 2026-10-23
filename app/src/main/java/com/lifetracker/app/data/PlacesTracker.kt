@@ -297,7 +297,29 @@ object PlacesTracker {
             )
             logVisits(step.saves, names)
             if (beforeState != afterState) AppLog.i("Places", "Now: $afterState [was: $beforeState]")
-            if (step.saves.isNotEmpty()) dao.upsertVisits(step.saves)
+            if (step.saves.isNotEmpty()) {
+                // The current stay in the engine is authoritative. A previous app/process state may
+                // have left another visit marked open; close those rows when a newer active visit is saved.
+                val activeVisit = step.saves.filter { it.ongoing }.maxByOrNull { it.startMs }
+                if (activeVisit == null) {
+                    dao.upsertVisits(step.saves)
+                } else {
+                    val idsSavedThisStep = step.saves.mapTo(HashSet()) { it.id }
+                    val staleOpen = dao.openVisits()
+                        .filter { it.id != activeVisit.id && it.id !in idsSavedThisStep }
+                        .map { old ->
+                            old.copy(
+                                endMs = maxOf(old.startMs, minOf(old.endMs, activeVisit.startMs)),
+                                ongoing = false,
+                            )
+                        }
+                    if (staleOpen.isNotEmpty()) {
+                        AppLog.w("Visits", "Closing ${staleOpen.size} stale open visit(s) before ${LogFormat.clock(activeVisit.startMs)}")
+                        dao.upsertVisits(staleOpen)
+                    }
+                    dao.upsertVisits(step.saves)
+                }
+            }
             if (step.points.isNotEmpty()) {
                 // Note the step counter on the readings taken now (not on one placed back at the start of a stay).
                 val counter = StepCounterSync.counterNow(context)

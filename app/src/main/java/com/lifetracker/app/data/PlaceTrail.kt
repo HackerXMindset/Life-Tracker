@@ -1,6 +1,7 @@
 package com.lifetracker.app.data
 
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.roundToInt
 
 /**
@@ -57,27 +58,42 @@ object PlaceTrail {
         placeNames: Map<String, String>,
         nowMs: Long,
     ): List<Row> {
-        val stays = ArrayList<Stay>()
-        var previousEnd = Long.MIN_VALUE
-        visits
+        // Resolve overlaps by shortening the earlier stay, not by moving a later stay's
+        // start forward. This keeps completed stops visible even when an older visit was left open.
+        val candidates = visits
             .filter { !it.ignored && PlaceRules.lengthMs(it, nowMs) >= PlaceRules.MIN_STAY_MS }
-            .sortedBy { it.startMs }
-            .forEach { v ->
+            .map { v ->
                 val end = if (v.ongoing) max(nowMs, v.startMs) else v.endMs
-                val start = max(v.startMs, previousEnd)
-                if (end > start) {
-                    stays += Stay(
-                        key = "stay" + v.id,
-                        startMs = start,
-                        endMs = end,
-                        name = placeNames[v.placeId]?.takeIf { it.isNotBlank() } ?: "Unnamed spot",
-                        named = v.placeId.isNotEmpty(),
-                        ongoing = v.ongoing,
-                        visit = v,
-                    )
-                    previousEnd = end
-                }
+                Stay(
+                    key = "stay" + v.id,
+                    startMs = v.startMs,
+                    endMs = end,
+                    name = placeNames[v.placeId]?.takeIf { it.isNotBlank() } ?: "Unnamed spot",
+                    named = v.placeId.isNotEmpty(),
+                    ongoing = v.ongoing,
+                    visit = v,
+                )
             }
+            .filter { it.endMs > it.startMs }
+            .sortedBy { it.startMs }
+
+        val stays = candidates.mapIndexedNotNull { index, candidate ->
+            val nextStart = candidates.getOrNull(index + 1)?.startMs ?: Long.MAX_VALUE
+            val end = min(candidate.endMs, nextStart)
+            if (end <= candidate.startMs) {
+                null
+            } else {
+                Stay(
+                    key = candidate.key,
+                    startMs = candidate.startMs,
+                    endMs = end,
+                    name = candidate.name,
+                    named = candidate.named,
+                    ongoing = candidate.ongoing && end == candidate.endMs,
+                    visit = candidate.visit,
+                )
+            }
+        }
 
         val sortedTrips = trips.sortedBy { it.startMs }
         var next = 0
