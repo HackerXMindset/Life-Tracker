@@ -365,7 +365,7 @@ fun HabitEditorPage(
                 color = paper.ink2,
             )
 
-            RemindersSection(reminders) { reminders = it }
+            RemindersSection(reminders, followsHabit = kind != HabitStats.KIND_RELAPSE && interval == HabitPlan.EVERY_X_DAYS) { reminders = it }
 
             PaperField(
                 value = description,

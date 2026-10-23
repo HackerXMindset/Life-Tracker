@@ -35,7 +35,7 @@ import java.time.LocalDate
 
 /** The Reminders part of New habit / Edit habit (Habits H12): the list, with Add, Edit and Delete for each. */
 @Composable
-fun RemindersSection(reminders: List<Reminder>, onChange: (List<Reminder>) -> Unit) {
+fun RemindersSection(reminders: List<Reminder>, followsHabit: Boolean, onChange: (List<Reminder>) -> Unit) {
     val paper = LocalPaper.current
     // The reminder being edited, or a new one; null when the pop-up is closed.
     var editing by remember { mutableStateOf<Reminder?>(null) }
@@ -74,6 +74,7 @@ fun RemindersSection(reminders: List<Reminder>, onChange: (List<Reminder>) -> Un
     editing?.let { start ->
         ReminderDialog(
             start = start,
+            followsHabit = followsHabit,
             onDismiss = { editing = null },
             onSave = { saved ->
                 onChange(if (isNew) reminders + saved else reminders.map { if (it.id == saved.id) saved else it })
@@ -84,12 +85,12 @@ fun RemindersSection(reminders: List<Reminder>, onChange: (List<Reminder>) -> Un
 }
 
 @Composable
-private fun ReminderDialog(start: Reminder, onDismiss: () -> Unit, onSave: (Reminder) -> Unit) {
+private fun ReminderDialog(start: Reminder, followsHabit: Boolean, onDismiss: () -> Unit, onSave: (Reminder) -> Unit) {
     val paper = LocalPaper.current
     val context = LocalContext.current
     var minute by remember { mutableStateOf(start.startMinute) }
     var days by remember { mutableStateOf(start.days.toSet()) }
-    var byInterval by remember { mutableStateOf(start.isInterval) }
+    var byInterval by remember { mutableStateOf(start.isInterval && !followsHabit) }
     var everyDays by remember { mutableStateOf(if (start.isInterval) start.everyDays.toString() else "2") }
     var hourly by remember { mutableStateOf(start.isHourly) }
     var everyHours by remember { mutableStateOf(if (start.isHourly) start.everyHours.toString() else "2") }
@@ -104,11 +105,11 @@ private fun ReminderDialog(start: Reminder, onDismiss: () -> Unit, onSave: (Remi
 
     fun build(): Reminder {
         val n = everyDays.trim().toIntOrNull() ?: 0
-        val interval = byInterval && !hourly
+        val interval = byInterval && !hourly && !followsHabit
         return start.copy(
             hour = minute / 60,
             minute = minute % 60,
-            days = days.sorted(),
+            days = if (followsHabit) HabitReminders.ALL_DAYS else days.sorted(),
             message = message.trim(),
             everyDays = if (interval) n else 1,
             // A reminder for every N days counts from the day it is saved; saving it again keeps its rhythm.
@@ -125,7 +126,7 @@ private fun ReminderDialog(start: Reminder, onDismiss: () -> Unit, onSave: (Remi
         confirmText = "Save",
         onConfirm = {
             val r = build()
-            val problem = HabitReminders.problem(r) ?: if (byInterval && !hourly && r.everyDays < 2) "Every N days needs 2 or more." else null
+            val problem = HabitReminders.problem(if (followsHabit && !hourly && r.days.isEmpty()) r.copy(days = HabitReminders.ALL_DAYS) else r) ?: if (byInterval && !hourly && !followsHabit && r.everyDays < 2) "Every N days needs 2 or more." else null
             if (problem != null) error = problem else onSave(r)
         },
     ) {
@@ -157,6 +158,9 @@ private fun ReminderDialog(start: Reminder, onDismiss: () -> Unit, onSave: (Remi
                     )
                     if (until != null) PaperButton("Clear", { until = null }, style = PaperButtonStyle.Ghost, small = true)
                 }
+            } else if (followsHabit) {
+                // Like Streak: a habit that is itself "every N days" decides the days.
+                Text("This habit repeats every N days, so the reminder rings on its days.", fontSize = 12.sp, color = paper.ink2)
             } else {
                 MonoLabel("Which days")
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -174,7 +178,7 @@ private fun ReminderDialog(start: Reminder, onDismiss: () -> Unit, onSave: (Remi
                     )
                 }
             }
-            if (!(byInterval && !hourly)) {
+            if (hourly || (!byInterval && !followsHabit)) {
                 Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     HabitEditor.DAY_NAMES.forEachIndexed { i, label ->
                         val day = i + 1
