@@ -146,6 +146,19 @@ object PlacesTracker {
         return text
     }
 
+    /** Resolve overlapping records from the same reading before persisting them. */
+    private fun capOverlappingSavedVisits(saves: List<PlaceVisitEntity>): List<PlaceVisitEntity> {
+        val ordered = saves.sortedBy { it.startMs }
+        return ordered.mapIndexed { index, visit ->
+            val next = ordered.drop(index + 1).firstOrNull { it.id != visit.id && it.startMs > visit.startMs }
+            if (visit.ongoing && next != null) {
+                visit.copy(endMs = minOf(visit.endMs, next.startMs).coerceAtLeast(visit.startMs), ongoing = false)
+            } else {
+                visit
+            }
+        }
+    }
+
     /** What was last written to the diary about each saved visit, so only a start, a change of place or an end is written. */
     private val loggedVisits = java.util.concurrent.ConcurrentHashMap<String, String>()
 
@@ -295,9 +308,16 @@ object PlacesTracker {
                 "Reading ${LogFormat.clock(fix.timeMs)}: accuracy ${fix.accuracyM.toInt()} m" +
                     (if (fix.speedMs >= 0f) ", speed ${"%.1f".format(fix.speedMs * 3.6f)} km/h" else ""),
             )
-            logVisits(step.saves, names)
+            val saves = capOverlappingSavedVisits(step.saves)
+            logVisits(saves, names)
             if (beforeState != afterState) AppLog.i("Places", "Now: $afterState [was: $beforeState]")
-            if (step.saves.isNotEmpty()) dao.upsertVisits(step.saves)
+            if (saves.isNotEmpty()) {
+                // Repair stale open rows in storage too, rather than relying only on the timeline to hide overlap.
+                for (saved in saves.sortedBy { it.startMs }) {
+                    dao.closeOlderOpenVisits(saved.startMs, saved.id)
+                }
+                dao.upsertVisits(saves)
+            }
             if (step.points.isNotEmpty()) {
                 // Note the step counter on the readings taken now (not on one placed back at the start of a stay).
                 val counter = StepCounterSync.counterNow(context)

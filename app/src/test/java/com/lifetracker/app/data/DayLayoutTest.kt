@@ -9,7 +9,7 @@ class DayLayoutTest {
     private val min = 60_000L
     private val dayStart = 0L
     private val dayEnd = 24 * 60 * min
-    private val names = mapOf("home" to "Home", "park" to "Park")
+    private val names = mapOf("home" to "Home", "park" to "Park", "mosque" to "Green Park Mosque")
 
     private fun visit(id: String, place: String, from: Long, to: Long, ongoing: Boolean = false) =
         PlaceVisitEntity(id, place, from * min, to * min, 0.0, 0.0, "auto", ongoing, false)
@@ -255,5 +255,22 @@ class DayLayoutTest {
         assertEquals(0, home.children.filterIsInstance<DayLayout.Gap>().size)
         assertEquals(listOf("a", "b"), home.children.filterIsInstance<DayLayout.Thing>().map { it.key })
         assertEquals(1, off.filterIsInstance<DayLayout.Thing>().size)
+    }
+
+    @Test
+    fun anOpenHomeVisitIsCappedSoTheLaterMosqueVisitAndReturnHomeRemainVisible() {
+        val now = 150L * min
+        val rows = build(
+            visits = listOf(
+                visit("home-before", "home", 78, 78, ongoing = true),
+                visit("mosque", "mosque", 90, 123),
+                visit("home-after", "home", 137, 137, ongoing = true),
+            ),
+            now = now,
+        )
+        val stays = rows.filterIsInstance<DayLayout.Place>()
+        assertEquals(listOf("Home", "Green Park Mosque", "Home"), stays.map { it.name })
+        assertEquals(listOf(78L, 90L, 137L).map { it * min }, stays.map { it.startMs })
+        assertEquals(listOf(90L, 123L, 150L).map { it * min }, stays.map { it.endMs })
     }
 }

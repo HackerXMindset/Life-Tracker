@@ -155,21 +155,18 @@ object DayLayout {
 
         val stays = ArrayList<Stay>()
         if (showPlaces) {
-            var previousEnd = Long.MIN_VALUE
-            visits
+            // An open/stale stay may claim it continued until now even though a later stay was saved.
+            // End every stay at the next visit's actual start instead of moving that later visit forward.
+            val eligibleVisits = visits
                 .filter { !it.ignored && PlaceRules.lengthMs(it, nowMs) >= PlaceRules.MIN_STAY_MS }
-                .map { v ->
-                    val end = if (v.ongoing) max(nowMs, v.startMs) else v.endMs
-                    Stay(v, max(v.startMs, dayStartMs), min(end, limit))
-                }
                 .sortedBy { it.startMs }
-                .forEach { s ->
-                    val start = max(s.startMs, previousEnd)
-                    if (s.endMs > start) {
-                        stays += Stay(s.visit, start, s.endMs)
-                        previousEnd = s.endMs
-                    }
-                }
+            eligibleVisits.forEachIndexed { index, visit ->
+                val nextStart = eligibleVisits.getOrNull(index + 1)?.startMs ?: Long.MAX_VALUE
+                val recordedEnd = if (visit.ongoing) max(nowMs, visit.startMs) else visit.endMs
+                val end = min(min(recordedEnd, nextStart), limit)
+                val start = max(visit.startMs, dayStartMs)
+                if (end > start) stays += Stay(visit, start, end)
+            }
         }
 
         val inside = stays.map { ArrayList<Item>() }

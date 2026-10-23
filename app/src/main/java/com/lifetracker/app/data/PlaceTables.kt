@@ -101,6 +101,10 @@ interface PlaceDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertVisits(visits: List<PlaceVisitEntity>)
 
+    /** Ends older open visits when a later visit is saved, capping them at that visit's actual start. */
+    @Query("UPDATE place_visits SET endMs = CASE WHEN endMs > :endMs THEN :endMs WHEN endMs < startMs THEN startMs ELSE endMs END, ongoing = 0 WHERE ongoing = 1 AND id != :exceptId AND startMs < :endMs")
+    suspend fun closeOlderOpenVisits(endMs: Long, exceptId: String)
+
     /** Adds visits that are not there yet and leaves existing ones (and what you decided about them) alone. */
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertMissingVisits(visits: List<PlaceVisitEntity>)

@@ -1,6 +1,7 @@
 package com.lifetracker.app.data
 
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.roundToInt
 
 /**
@@ -58,26 +59,26 @@ object PlaceTrail {
         nowMs: Long,
     ): List<Row> {
         val stays = ArrayList<Stay>()
-        var previousEnd = Long.MIN_VALUE
-        visits
+        val eligibleVisits = visits
             .filter { !it.ignored && PlaceRules.lengthMs(it, nowMs) >= PlaceRules.MIN_STAY_MS }
             .sortedBy { it.startMs }
-            .forEach { v ->
-                val end = if (v.ongoing) max(nowMs, v.startMs) else v.endMs
-                val start = max(v.startMs, previousEnd)
-                if (end > start) {
-                    stays += Stay(
-                        key = "stay" + v.id,
-                        startMs = start,
-                        endMs = end,
-                        name = placeNames[v.placeId]?.takeIf { it.isNotBlank() } ?: "Unnamed spot",
-                        named = v.placeId.isNotEmpty(),
-                        ongoing = v.ongoing,
-                        visit = v,
-                    )
-                    previousEnd = end
-                }
+        eligibleVisits.forEachIndexed { index, visit ->
+            // Preserve the actual arrival time of the next stop; a stale open stay must not swallow it.
+            val nextStart = eligibleVisits.getOrNull(index + 1)?.startMs ?: Long.MAX_VALUE
+            val recordedEnd = if (visit.ongoing) max(nowMs, visit.startMs) else visit.endMs
+            val end = min(recordedEnd, nextStart)
+            if (end > visit.startMs) {
+                stays += Stay(
+                    key = "stay" + visit.id,
+                    startMs = visit.startMs,
+                    endMs = end,
+                    name = placeNames[visit.placeId]?.takeIf { it.isNotBlank() } ?: "Unnamed spot",
+                    named = visit.placeId.isNotEmpty(),
+                    ongoing = visit.ongoing,
+                    visit = visit,
+                )
             }
+        }
 
         val sortedTrips = trips.sortedBy { it.startMs }
         var next = 0
@@ -103,7 +104,7 @@ object PlaceTrail {
                 tripBetween = true
             }
             val a = before
-            if (a != null && !tripBetween && differentSpots(a.visit, stay.visit)) {
+            if (a != null && stay.startMs > a.endMs && !tripBetween && differentSpots(a.visit, stay.visit)) {
                 out += Journey(
                     key = "unknown" + a.endMs,
                     startMs = a.endMs,

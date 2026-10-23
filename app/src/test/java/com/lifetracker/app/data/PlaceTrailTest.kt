@@ -9,7 +9,7 @@ import org.junit.Test
 class PlaceTrailTest {
     private val min = 60_000L
     private val now = 10_000 * min
-    private val names = mapOf("home" to "Home", "park" to "Park")
+    private val names = mapOf("home" to "Home", "park" to "Park", "mosque" to "Green Park Mosque")
 
     // 0.009 degrees of latitude is about 1,000 m.
     private fun visit(id: String, place: String, from: Long, to: Long, lat: Double = 0.0, ongoing: Boolean = false, ignored: Boolean = false) =
@@ -113,5 +113,26 @@ class PlaceTrailTest {
         assertEquals(60 * min, made.startMs)
         assertEquals(80 * min, made.endMs)
         assertEquals(journey.distanceM, made.distanceM)
+    }
+
+    @Test
+    fun anOpenHomeVisitIsCappedAtTheNextVisitInsteadOfHidingTheMosque() {
+        val homeStart = now / min - 100L
+        val mosqueStart = now / min - 90L
+        val mosqueEnd = now / min - 60L
+        val homeAgainStart = now / min - 50L
+        val rows = build(
+            listOf(
+                visit("home-before", "home", homeStart, homeStart, ongoing = true),
+                visit("mosque", "mosque", mosqueStart, mosqueEnd, lat = 0.009),
+                visit("home-after", "home", homeAgainStart, homeAgainStart, ongoing = true),
+            ),
+        )
+        val stays = rows.filterIsInstance<PlaceTrail.Stay>()
+        assertEquals(listOf("Home", "Green Park Mosque", "Home"), stays.map { it.name })
+        assertEquals(listOf(homeStart, mosqueStart, homeAgainStart).map { it * min }, stays.map { it.startMs })
+        assertEquals(listOf(mosqueStart, mosqueEnd, now / min).map { it * min }, stays.map { it.endMs })
+        assertTrue(stays.first().ongoing)
+        assertTrue(stays.last().ongoing)
     }
 }
