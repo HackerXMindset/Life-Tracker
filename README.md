@@ -178,6 +178,7 @@ Each step is small enough to build, install and try before the next begins. The 
   DONE         Habits H11 Full-screen habit pages, reorder, Today filter (duplicate dropped)
   DONE         Habits H12 Reminders for habits (no database change)
   DONE         Habits H13 Focus mode (timer attached to a habit, sessions on the Timeline) (database 26)
+  PLANNED      C1 to C9 Places and trips rebuilt like Colota (planned, waiting for your "continue"; see "Places and trips remake" below)
   NEXT ──►    R6b/R6c Money (see below)
               R6b/R6c Money: editing and the paper look (after the habits): "Deduct it from", separate expense and income categories, edit anything, paper look (includes Paper P5)
   DONE         Paper P4 New look: Food
@@ -434,6 +435,42 @@ Why: phone usage showed less than Digital Wellbeing (Wed 14 Oct 6h 20m vs 7h 24m
 **Step 15: Stats.** Choose any metric and view it by day, week, month or year, with a heatmap and short written insights. This comes late on purpose: it needs the other steps' data to exist first.
 
 **Step 16: Polish.** Reminders, search, smoother screens, and anything learned from using the app every day.
+
+### Places and trips remake, Colota-style (planned 23 October, waiting for your "continue")
+
+You asked for Places and Trips to work like Colota, with all of its features, **rebuilt instead of added on top**. Colota is AGPL-licensed, so none of its code is copied: everything is written fresh here, in this app's Paper look, using Colota only as the description of what to do. Your seven answers:
+
+1. **Recording: both, you choose.** A switch picks **GPS all day** (Colota's way) or **Gentle** (today's way: the phone's arrived/left messages, readings only during trips). Both write into the same new store, so every screen is the same either way.
+2. **Profiles: full.** Your own rules that change how often and how accurately the app records.
+3. **Pause zones: any place can pause**, with pause on a chosen Wi-Fi and pause when motionless.
+4. **Edit trips: merge, split and a note on a single point.**
+5. **Import and export: GPX, KML, GeoJSON, CSV and Google Timeline, plus an automatic export to a folder.**
+6. **Map: yes, with areas you download for offline use.**
+7. **Extras: none.** No server, no password-encrypted backup, no Tasker or shortcuts. The app stays fully on your phone (the map is the one exception, see assumption (c)).
+
+**What "remake" means for your data.** Nothing is deleted. The old tables (`places`, `place_visits`, `trips`, `trip_points`) stay exactly as they are. `trips` and `place_visits` remain the result the Timeline, Stats and backups read, so those keep working, but from now on they are **produced from the raw readings by the new rules**. Old trip readings are copied (never moved) into the new readings table so old trips draw on the map too. Hiding a trip or a visit keeps it and can be undone, as now.
+
+**Not copied from Colota (you did not pick them):** sending readings to a server (API fields, login, certificates, QR set-up), password-encrypted backups, Tasker / shortcut control, extra app languages.
+
+**Stages (each is one pull request with a green check, tell me "continue" for each):**
+
+- **C1 The new data (database 27, backup format 27).** (a) `track_points`: every reading (time, latitude, longitude, accuracy, speed, direction, altitude, battery, step counter, where it came from: GPS, network, anchor, heartbeat, imported, old trip; which profile was active). (b) `trip_edits`: merges and splits stored by the **boundary times**, never touching the readings, each can be undone. (c) `point_notes`: your note on one reading. (d) `tracking_profiles`. (e) New columns on `places`: pause here, pause on Wi-Fi (names), pause when motionless, heartbeat minutes, entry delay. All with safe defaults. (f) The migration copies old `trip_points` into `track_points`. (g) Backup and restore carry all of it (restoring only adds). Tests: migration, backup round trip.
+- **C2 The rules (plain code, fully tested, nothing on the phone yet).** Accuracy filter and position-jump filter; speed averaged over the last 5 readings; "still" = under 0.3 m/s across 60 s; trips cut where there is a gap of 15 minutes or more and kept only if 100 m or longer (your 50 m start rule from Polish 4e stays for Gentle mode); how you travelled (today's guess); applying merges and splits on top of the detected trips; visits and pause-zone logic (entry delay of 3.5 readings, anchor point at the place's centre on leaving); the profile chooser (conditions, priority, switch-on and switch-off delays).
+- **C3 The all-day engine.** A foreground service (type location) with one quiet notification ("Tracking", "Paused: inside Home / Wi-Fi / no movement") with Pause and Resume. Settings: accuracy level (high, balanced, low power), seconds between readings, minimum movement, worst accuracy accepted. Comes back after a restart and after the phone closes the app. The existing safety-net check stays. The Gentle mode keeps today's engine but writes its readings into the same table.
+- **C4 Profiles.** Conditions: charging, Android Auto (car mode), a Bluetooth device you pick, any Wi-Fi, a named Wi-Fi, speed above, speed below, stationary. Each has an interval, a movement limit, a priority and switch-on / switch-off delays; the editor reads the rule back as a sentence ("When charging, record every 5 s"). Screen: list showing which profile is active now, create, edit, hide (kept, restorable).
+- **C5 Pause zones.** In the place editor: **Pause recording here**, **Pause on these Wi-Fi names**, **Pause when motionless**, heartbeat every N minutes while paused, entry delay. A stay is still recorded as a visit (arrival and leaving time); only the dense readings stop. Anchor point on leaving.
+- **C6 The screens, rebuilt.** One **Location** page replaces the Places screen and the Stats trips list: a month calendar with a dot for each day that has movement, a day summary (distance, time moving, trips, places) and the day's stays and trips in order. A **trip page**: map, distance, time, speeds, how you travelled, **Merge with previous / next**, **Split here** (pick a point on the path), a note on a point, **Hide** (kept, **Show again**). A **place page**: map circle, its visits, its pause settings. Settings > Places and trips is re-ordered: Recording, Profiles, Places, Import and export, Offline maps, Keep it running. All in the Paper look.
+- **C7 The map and offline areas.** MapLibre (open, free) with OpenFreeMap tiles. Paths are coloured by speed; the day, a trip and a place picker use it. **Offline maps**: frame an area, name it, see the size, download (zoom 8 to 14, in the background, progress shown), list with size and date, redownload. Without an internet connection the map shows the areas you downloaded and plain lines for the rest.
+- **C8 Import and export.** Export: GPX, KML, GeoJSON, CSV for a day, a range or everything (replaces today's Readings GPX and CSV buttons). Import: GPX, KML, GeoJSON, CSV, Google Timeline (old `Records.json` and the new on-phone export); the file type is detected from its content, a preview shows how many are new and which dates, duplicates are skipped, nothing is overwritten. **Automatic export**: pick a folder and daily or weekly; a small work item writes the file and notes it in the log.
+- **C9 The finish.** Old Places and trips screens removed, the Timeline and Stats checked against the new pipeline, README, CHANGELOG (one release section), the help text in the app.
+
+**Assumptions I made (tell me if any is wrong):**
+- (a) Gentle mode stays the default for now, and **GPS all day is switched on by you** in Settings > Places and trips (it needs the all-the-time location permission you already gave and, on your phone, the unrestricted-battery setting).
+- (b) The new rules apply to **new** readings. Old trips and visits are not re-cut; they stay as they are (you can still merge or split them once C6 is built).
+- (c) The map needs the internet to fetch tiles: when you view a new area and when you download one, using a public free tile server (OpenFreeMap). This is the one thing in the app that contacts an outside server, and no location of yours is sent (only which tiles to fetch). If you would rather have no outside contact at all, tell me and C7 becomes "paths and places on a plain background".
+- (d) Deleting an offline area removes only those downloaded map tiles (they can be downloaded again). It is the one thing in this plan that really deletes, because tiles are a copy of public maps, not your data. Say so if you want even that to be "hidden".
+- (e) Colota's "calendar with activity dots" is built as dots for days with movement only (no walking / driving colours), because your trips already carry their own colours on the Timeline.
+- (f) Extra battery use of GPS all day is on you to judge; the app shows the last day's number of readings and the profile in force so you can compare.
 
 ---
 
