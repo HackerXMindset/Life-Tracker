@@ -54,6 +54,8 @@ fun HabitDetailsPage(
     onPause: (Boolean) -> Unit,
     /** The weekdays (1 = Monday ... 7 = Sunday) that never count. */
     onRestDays: (List<Int>) -> Unit,
+    /** Opens the focus timer for this habit. */
+    onFocus: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     var ask by remember { mutableStateOf(0) }
@@ -106,6 +108,7 @@ fun HabitDetailsPage(
                 color = paper.ink2,
             )
             HabitNotesList(notes, today, onEditNote, onAddNote)
+            PaperButton("Focus", onFocus, modifier = Modifier.padding(top = 8.dp), style = PaperButtonStyle.Ghost, small = true)
             val reminders = HabitReminders.read(habit.raw)
             if (reminders.isNotEmpty()) {
                 MonoLabel("Reminders", modifier = Modifier.padding(top = 4.dp))

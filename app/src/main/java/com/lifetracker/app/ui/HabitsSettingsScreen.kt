@@ -24,6 +24,10 @@ import com.lifetracker.app.ui.theme.PaperCard
 import com.lifetracker.app.ui.theme.PaperChip
 import com.lifetracker.app.ui.theme.PaperSegmented
 import androidx.compose.material3.Text
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import com.lifetracker.app.data.FocusSettings
+import com.lifetracker.app.ui.theme.PaperPill
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -79,6 +83,10 @@ fun HabitsSettingsScreen(onBack: () -> Unit, vm: HabitsViewModel = androidx.life
     var weigh by remember { mutableStateOf(settings.weighDifficulty) }
     var remindersOn by remember { mutableStateOf(settings.remindersOn) }
     var quiet by remember { mutableStateOf(settings.quietWhenDone) }
+    val focus = remember { FocusSettings(context) }
+    var longBreak by remember { mutableStateOf(focus.longBreakMinutes) }
+    var wholeRounds by remember { mutableStateOf(focus.wholeRounds) }
+    var focusMinutes by remember { mutableStateOf(focus.minutes) }
     var confirm by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
@@ -141,6 +149,32 @@ fun HabitsSettingsScreen(onBack: () -> Unit, vm: HabitsViewModel = androidx.life
                 checked = quiet,
                 onChange = { quiet = it; vm.setQuietWhenDone(it) },
                 hint = "A reminder does not ring for a habit you have already done today, and ticking a habit takes its banner away.",
+            )
+        }
+        item { PaperSection("Focus") }
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                MonoLabel("Long break (every 4th break)")
+                Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf(0 to "None", 10 to "10 min", 15 to "15 min", 20 to "20 min", 30 to "30 min").forEach { (m, label) ->
+                        PaperPill(label, longBreak == m, { longBreak = m; focus.longBreakMinutes = m })
+                    }
+                }
+                MonoLabel("Minutes for a session with no habit")
+                Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf(15, 25, 45, 60, 90).forEach { m ->
+                        PaperPill("$m min", focusMinutes == m, { focusMinutes = m; focus.minutes = m })
+                    }
+                }
+            }
+        }
+        item {
+            ToggleRow(
+                label = "Count only whole Pomodoro rounds",
+                checked = wholeRounds,
+                onChange = { wholeRounds = it; focus.wholeRounds = it },
+                hint = "On: ending a Pomodoro round early keeps nothing. Off: the part you did is kept. A habit's own minutes and break are remembered on the habit.",
+                first = true,
             )
         }
         item { PaperSection("Track habits with") }

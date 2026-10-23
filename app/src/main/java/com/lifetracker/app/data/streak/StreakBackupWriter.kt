@@ -2,6 +2,7 @@ package com.lifetracker.app.data.streak
 
 import com.lifetracker.app.data.CategoryEntity
 import com.lifetracker.app.data.CompletionEntity
+import com.lifetracker.app.data.FocusSessionEntity
 import com.lifetracker.app.data.HabitClears
 import com.lifetracker.app.data.HabitEntity
 import com.lifetracker.app.data.HabitSteps
@@ -69,11 +70,14 @@ object StreakBackupWriter {
         categories: List<CategoryEntity>,
         changes: Map<String, Long>,
         deleted: Map<String, Long> = emptyMap(),
+        focus: List<FocusSessionEntity> = emptyList(),
     ): String? {
         // A deleted habit or note is sent only as a deletion, never as a habit or note.
         val changedHabits = habits.filter { it.id in changes && it.deletedAt == 0L }
         val changedNotes = notes.filter { it.id in changes && it.deletedAt == 0L }
-        if (changedHabits.isEmpty() && changedNotes.isEmpty() && deleted.isEmpty()) return null
+        // A focus session is sent once it is noted as changed (a new one is, when it is saved).
+        val changedFocus = focus.filter { it.id in changes }
+        if (changedHabits.isEmpty() && changedNotes.isEmpty() && changedFocus.isEmpty() && deleted.isEmpty()) return null
 
         val byHabit = completions.groupBy { it.habitId }
         val habitArray = JSONArray()
@@ -88,7 +92,9 @@ object StreakBackupWriter {
         }
         val noteArray = JSONArray()
         for (note in changedNotes) noteArray.put(noteJson(note))
-        if (habitArray.length() == 0 && noteArray.length() == 0 && deleted.isEmpty()) return null
+        val focusArray = JSONArray()
+        for (f in changedFocus) focusArray.put(focusJson(f))
+        if (habitArray.length() == 0 && noteArray.length() == 0 && focusArray.length() == 0 && deleted.isEmpty()) return null
 
         val used = changedHabits.map { it.category }.filter { it.isNotBlank() }.toSet()
         val categoryArray = JSONArray()
@@ -99,7 +105,7 @@ object StreakBackupWriter {
         }
 
         val stamps = JSONObject()
-        changes.filterKeys { id -> changedHabits.any { it.id == id } || changedNotes.any { it.id == id } }
+        changes.filterKeys { id -> changedHabits.any { it.id == id } || changedNotes.any { it.id == id } || changedFocus.any { it.id == id } }
             .forEach { (id, at) -> stamps.put(id, at) }
 
         return JSONObject()
@@ -113,11 +119,24 @@ object StreakBackupWriter {
             .put("habits", habitArray)
             .put("categories", categoryArray)
             .put("notes", noteArray)
-            .put("focus", JSONArray())
+            .put("focus", focusArray)
             .put("todos", JSONArray())
             .put("todoTags", JSONArray())
             .put("settings", JSONObject())
             .toString(2)
+    }
+
+    private val STARTED = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS")
+
+    /** A focus session in Streak's own shape (`counted` and `label` only when set). */
+    private fun focusJson(f: FocusSessionEntity): JSONObject {
+        val started = LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(f.startedAtMs), java.time.ZoneId.systemDefault())
+        val o = JSONObject()
+            .put("id", f.id).put("habitId", f.habitId).put("targetMinutes", f.targetMinutes)
+            .put("seconds", f.seconds).put("completed", f.completed).put("startedAt", started.format(STARTED))
+        if (f.counted) o.put("counted", true)
+        if (f.label.isNotEmpty()) o.put("label", f.label)
+        return o
     }
 
     private fun completionMap(list: List<CompletionEntity>): JSONObject {

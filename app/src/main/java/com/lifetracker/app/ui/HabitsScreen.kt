@@ -69,6 +69,7 @@ import com.lifetracker.app.data.HabitCalendar
 import com.lifetracker.app.data.HabitCell
 import com.lifetracker.app.data.HabitEntity
 import com.lifetracker.app.data.HabitMode
+import com.lifetracker.app.data.FocusEngine
 import com.lifetracker.app.data.HabitNotes
 import com.lifetracker.app.data.HabitRules
 import com.lifetracker.app.data.HabitSource
@@ -113,6 +114,10 @@ fun HabitsScreen(vm: HabitsViewModel = viewModel()) {
     var showNotes by remember { mutableStateOf(false) }
     var showReorder by remember { mutableStateOf(false) }
     var showFilter by remember { mutableStateOf(false) }
+    // The focus page: null = closed, "" = open with no habit chosen, otherwise the habit it starts for.
+    var focusFor by remember { mutableStateOf<String?>(null) }
+    val focusState by remember { FocusEngine.state(context) }.collectAsState()
+    LaunchedEffect(Unit) { vm.notice.collect { android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_LONG).show() } }
     var noteDraft by remember { mutableStateOf<NoteDraft?>(null) }
     val notes by vm.notes.collectAsState()
     val names by vm.habitNames.collectAsState()
@@ -121,7 +126,11 @@ fun HabitsScreen(vm: HabitsViewModel = viewModel()) {
     val pageRow = detailsId?.let { id -> ui.all.firstOrNull { it.habit.id == id } }
     LaunchedEffect(detailsId, pageRow == null) { if (detailsId != null && pageRow == null) detailsId = null }
 
-    if (adding) HabitEditorPage(
+    if (focusFor != null) FocusPage(
+        habits = ui.all.map { it.habit },
+        startHabitId = focusFor.orEmpty(),
+        onBack = { focusFor = null },
+    ) else if (adding) HabitEditorPage(
         initial = null,
         categories = ui.allCategories,
         onSave = { vm.save(it, null); adding = false },
@@ -143,6 +152,7 @@ fun HabitsScreen(vm: HabitsViewModel = viewModel()) {
         onClearProgress = { vm.clearAllProgress(pageRow.habit); detailsId = null },
         onPause = { vm.setPaused(pageRow.habit, it) },
         onRestDays = { vm.setRestDays(pageRow.habit, it) },
+        onFocus = { focusFor = pageRow.habit.id; detailsId = null },
         onDismiss = { detailsId = null },
     ) else if (showReorder) HabitReorderPage(
         habits = ui.all.map { it.habit },
@@ -176,6 +186,7 @@ fun HabitsScreen(vm: HabitsViewModel = viewModel()) {
             item(key = "modes") { ModeSwitch(ui.mode, vm::setMode) }
             item(key = "tools") {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    PaperPill(if (focusState != null) "Focus  ● running" else "Focus", focusState != null, { focusFor = "" })
                     PaperPill("Reorder", false, { showReorder = true })
                     PaperPill(if (ui.filter.active) "Filter  ●" else "Filter", ui.filter.active, { showFilter = true })
                 }

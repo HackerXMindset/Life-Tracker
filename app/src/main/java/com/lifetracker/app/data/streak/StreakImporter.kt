@@ -9,6 +9,7 @@ import com.lifetracker.app.data.CategoryEntity
 import com.lifetracker.app.data.CompletionEntity
 import com.lifetracker.app.data.DataSources
 import com.lifetracker.app.data.EntryEntity
+import com.lifetracker.app.data.FocusSessionEntity
 import com.lifetracker.app.data.HabitEntity
 import com.lifetracker.app.data.HabitSource
 import com.lifetracker.app.data.HabitSyncState
@@ -291,6 +292,21 @@ object StreakImporter {
                 }
             }
             importDao.insertAll(marks)
+            // Streak's focus sessions are also kept as sessions (once each), so they travel with this app's own.
+            db.focusDao().insertMissing(
+                data.focus.map {
+                    FocusSessionEntity(
+                        id = it.id,
+                        habitId = it.habitId,
+                        targetMinutes = it.targetMinutes,
+                        seconds = it.seconds,
+                        completed = it.completed,
+                        startedAtMs = it.startedAt.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli(),
+                        counted = it.counted,
+                        label = it.label,
+                    )
+                },
+            )
         }
 
         return ImportResult(

@@ -13,6 +13,7 @@ import com.lifetracker.app.data.HabitEntity
 import com.lifetracker.app.data.HabitForm
 import com.lifetracker.app.data.HabitMode
 import com.lifetracker.app.data.HabitNotes
+import com.lifetracker.app.data.FocusCredit
 import com.lifetracker.app.data.HabitOrder
 import com.lifetracker.app.data.HabitReminderScheduler
 import com.lifetracker.app.data.HabitPauses
@@ -101,6 +102,10 @@ class HabitsViewModel(app: Application) : AndroidViewModel(app) {
     private val category = MutableStateFlow(settings.category)
     private val weigh = MutableStateFlow(settings.weighDifficulty)
     private val filter = MutableStateFlow(settings.filter)
+    private val noticeFlow = kotlinx.coroutines.flow.MutableSharedFlow<String>(extraBufferCapacity = 4)
+
+    /** A short message for the screen to show (for instance why a card could not be ticked). */
+    val notice: kotlinx.coroutines.flow.SharedFlow<String> = noticeFlow
     private val options = combine(weigh, filter) { w, f -> w to f }
 
     private val source = combine(dao.observeHabits(), dao.observeCompletions(), dao.observeCategories()) { h, c, k ->
@@ -252,6 +257,9 @@ class HabitsViewModel(app: Application) : AndroidViewModel(app) {
                 if (next == null) dao.deleteCompletion(habit.id, key) else dao.upsertCompletion(next)
             } else if (habit.kind == HabitStats.KIND_COUNTED || tracking) {
                 dao.upsertCompletion(HabitTicks.add(existing, habit.id, key, stepOf(habit), noteMinute(date)))
+            } else if (existing == null && FocusCredit.needsFocusSession(habit)) {
+                // "Only a focus session can complete it" (Streak's focusOnly): a manual tick is not allowed, but un-ticking is.
+                noticeFlow.tryEmit("${habit.name} can only be completed with a focus session. Open Focus to start one.")
             } else if (existing == null) {
                 val amount = if (habit.kind == HabitStats.KIND_RELAPSE) 1.0 else maxOf(1.0, habit.target)
                 dao.upsertCompletion(HabitTicks.add(null, habit.id, key, amount, noteMinute(date)))

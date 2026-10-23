@@ -54,7 +54,8 @@ object StreakFolderWriter {
             val categories = db.habitDao().allCategories()
 
             val deleted = sync.deleted
-            fun make(at: LocalDateTime) = StreakBackupWriter.build(device, at, habits, completions, notes, categories, changes, deleted)
+            val focus = db.focusDao().all()
+            fun make(at: LocalDateTime) = StreakBackupWriter.build(device, at, habits, completions, notes, categories, changes, deleted, focus)
 
             val fingerprint = make(LocalDateTime.of(2000, 1, 1, 0, 0))
                 ?: return@withContext SendResult("Nothing to send yet: nothing has been changed here.", false)
@@ -88,7 +89,8 @@ object StreakFolderWriter {
             sync.lastSentText = now.toString()
             val root = JSONObject(text)
             SendResult(
-                "Sent ${root.getJSONArray("habits").length()} habits, ${root.getJSONArray("notes").length()} notes and " +
+                "Sent ${root.getJSONArray("habits").length()} habits, ${root.getJSONArray("notes").length()} notes, " +
+                    "${root.getJSONArray("focus").length()} focus sessions and " +
                     "${root.getJSONObject("deleted").length()} deletions as $name. " +
                     "Streak takes them in the next time it checks the folder.",
                 true,

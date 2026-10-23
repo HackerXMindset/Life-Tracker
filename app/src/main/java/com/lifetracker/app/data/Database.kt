@@ -89,8 +89,9 @@ interface EntryDao {
         TripPointEntity::class,
         TimelineEditEntity::class,
         PlaceCategoryEntity::class,
+        FocusSessionEntity::class,
     ],
-    version = 25,
+    version = 26,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -111,6 +112,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun rawDao(): RawFixDao
     abstract fun timelineEditDao(): TimelineEditDao
     abstract fun placeCategoryDao(): PlaceCategoryDao
+    abstract fun focusDao(): FocusDao
 
     companion object {
         @Volatile
@@ -123,7 +125,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "life-tracker.db",
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26)
                     .addCallback(object : RoomDatabase.Callback() {
                         // A brand new database starts with the built-in activities and money categories.
                         override fun onCreate(db: SupportSQLiteDatabase) {
@@ -371,6 +373,17 @@ val MIGRATION_11_12: Migration = object : Migration(11, 12) {
         db.execSQL(
             "CREATE TABLE IF NOT EXISTS `raw_fixes` (`ms` INTEGER NOT NULL, `lat` REAL NOT NULL, " +
                 "`lng` REAL NOT NULL, `acc` REAL NOT NULL, PRIMARY KEY(`ms`))",
+        )
+    }
+}
+
+/** Version 25 -> 26: a new table keeps focus sessions (Habits H13). Nothing already stored changes. */
+val MIGRATION_25_26: Migration = object : Migration(25, 26) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `focus_sessions` (`id` TEXT NOT NULL, `habitId` TEXT NOT NULL, `targetMinutes` INTEGER NOT NULL, " +
+                "`seconds` INTEGER NOT NULL, `completed` INTEGER NOT NULL, `startedAtMs` INTEGER NOT NULL, `counted` INTEGER NOT NULL, " +
+                "`label` TEXT NOT NULL, PRIMARY KEY(`id`))",
         )
     }
 }

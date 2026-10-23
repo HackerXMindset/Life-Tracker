@@ -113,6 +113,10 @@ class BackupCodecTest {
             TimelineEditEntity("call", "1760000000000|98765", 1_760_000_100_000L, 1_760_000_900_000L, "Study", false, 1_760_300_000_000L, "Call with \"Mom\""),
             TimelineEditEntity("visit", "v1", -1L, -1L, "", true, 1_760_300_000_001L, "Home"),
         ),
+        focusSessions = listOf(
+            FocusSessionEntity("f1", "h1", 25, 1500, true, 1_760_000_000_000L, true, "Deep \"work\""),
+            FocusSessionEntity("f2", "", 0, 95, false, 1_760_100_000_000L),
+        ),
     )
 
     @Test

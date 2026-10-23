@@ -71,6 +71,7 @@ data class StreakFocus(
     val completed: Boolean,
     val startedAt: LocalDateTime,
     val label: String,
+    val counted: Boolean = false,
 )
 
 data class StreakTodo(

@@ -30,6 +30,8 @@ data class HabitForm(
     val difficulty: Int = 0,
     /** The habit's reminders (Habits H12). Null means "leave the habit's own as they are"; a list, even an empty one, replaces them. */
     val reminders: List<HabitReminders.Reminder>? = null,
+    /** Only a focus session can complete the habit (Streak's `focusOnly`). Null leaves the habit's own setting. */
+    val focusOnly: Boolean? = null,
 )
 
 /**
@@ -69,6 +71,7 @@ object HabitEditor {
             stepsNeeded = HabitSteps.stepsNeeded(habit.raw).coerceAtLeast(1),
             difficulty = difficultyOf(habit.raw),
             reminders = HabitReminders.read(habit.raw),
+            focusOnly = FocusCredit.focusOnlyFlag(habit.raw),
         )
     }
 
@@ -140,6 +143,7 @@ object HabitEditor {
         o.put("monthWeekday", everyX && plan.unit == HabitPlan.UNIT_MONTHS && !fromLastDone && plan.monthWeekday)
         o.put("difficulty", form.difficulty.coerceIn(0, 3))
         form.reminders?.let { HabitReminders.put(o, it) }
+        form.focusOnly?.let { o.put("focusOnly", it && form.kind == HabitStats.KIND_YES_NO && form.steps.none { step -> step.title.isNotBlank() }) }
         if (plan.interval == HabitPlan.EVERY_X_DAYS && plan.scheduleStart != null) {
             o.put("scheduleStart", dayKey(plan.scheduleStart))
         } else {

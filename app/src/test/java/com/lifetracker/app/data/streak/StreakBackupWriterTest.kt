@@ -2,6 +2,7 @@ package com.lifetracker.app.data.streak
 
 import com.lifetracker.app.data.CategoryEntity
 import com.lifetracker.app.data.CompletionEntity
+import com.lifetracker.app.data.FocusSessionEntity
 import com.lifetracker.app.data.HabitEditor
 import com.lifetracker.app.data.HabitForm
 import com.lifetracker.app.data.NoteEntity
@@ -199,5 +200,40 @@ class StreakBackupWriterTest {
         assertEquals(clearedAt, root.getJSONObject("cleared").getLong("h1"))
         val sent = root.getJSONArray("habits").getJSONObject(0).getJSONObject("completions")
         assertEquals(setOf("12-10-2026"), sent.keys().asSequence().toSet())
+    }
+
+    @Test
+    fun aFocusSessionIsSentInStreaksShapeOnceItIsNotedAsChanged() {
+        val started = LocalDateTime.of(2026, 10, 14, 9, 30).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val mine = FocusSessionEntity("f1", "h1", 25, 1500, true, started, true, "Deep work")
+        val plain = FocusSessionEntity("f2", "", 0, 95, false, started)
+        val unchanged = FocusSessionEntity("f3", "h1", 25, 600, false, started)
+        val text = StreakBackupWriter.build(
+            "ab12cd34", now, listOf(read, gym), emptyList(), emptyList(), listOf(study, other),
+            mapOf("f1" to 5L, "f2" to 6L), focus = listOf(mine, plain, unchanged),
+        )!!
+        val root = JSONObject(text)
+        val sent = root.getJSONArray("focus")
+        assertEquals(2, sent.length())
+        val o = sent.getJSONObject(0)
+        assertEquals("f1", o.getString("id"))
+        assertEquals("2026-10-14T09:30:00.000", o.getString("startedAt"))
+        assertTrue(o.getBoolean("counted"))
+        assertEquals("Deep work", o.getString("label"))
+        assertFalse(sent.getJSONObject(1).has("counted"))
+        assertFalse(sent.getJSONObject(1).has("label"))
+        assertEquals(5L, root.getJSONObject("changes").getLong("f1"))
+        // Our own parser reads it back.
+        val back = StreakParser.parse(text).focus
+        assertEquals(listOf("f1", "f2"), back.map { it.id })
+        assertEquals(1500, back[0].seconds)
+        assertTrue(back[0].counted)
+        // A session alone is enough to make a file.
+        assertNotNull(
+            StreakBackupWriter.build("ab12cd34", now, listOf(read), emptyList(), emptyList(), emptyList(), mapOf("f1" to 5L), focus = listOf(mine)),
+        )
+        assertNull(
+            StreakBackupWriter.build("ab12cd34", now, listOf(read), emptyList(), emptyList(), emptyList(), emptyMap(), focus = listOf(mine)),
+        )
     }
 }
