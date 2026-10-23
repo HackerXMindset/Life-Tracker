@@ -175,8 +175,8 @@ Each step is small enough to build, install and try before the next begins. The 
   DONE         Habits H8 Checklist habits (steps) (database 25)
   DONE         Habits H9 Pause (vacation) and rest days (no database change)
   DONE         Habits H10 Schedule extras (monthly weekday, from last done) and difficulty (no database change)
-  NEXT ──►    Habits H11 Full-screen habit pages, reorder, Today filter (duplicate dropped)
-              Habits H12 Reminders for habits
+  DONE         Habits H11 Full-screen habit pages, reorder, Today filter (duplicate dropped)
+  NEXT ──►    Habits H12 Reminders for habits
               Habits H13 Focus mode (timer attached to a habit, sessions on the Timeline)
               R6b/R6c Money: editing and the paper look (after the habits): "Deduct it from", separate expense and income categories, edit anything, paper look (includes Paper P5)
   DONE         Paper P4 New look: Food
@@ -315,9 +315,9 @@ Not part of Polish 4, and not built: **Step 13e** (fixing trips and visits by ha
   - **H10b Difficulty. Built.** Each habit can be marked **Easy**, **Medium** or **Hard** (or not set). Streak uses this only to weigh habits against each other in its shared numbers, and it is off in Streak until switched on. Here it does the same for the one shared number this app has, the **Today ring**: a new switch in **Settings, Habits**, **Weigh the Today ring by difficulty** (off by default), makes an easy habit count 1, medium 2 and hard 3 (not set counts as medium). The text "3 of 5 completed" still counts habits; only the ring fill is weighed. A habit's own strength is not changed by it, as in Streak. (Earlier this plan said it would change the strength score; Streak does not do that, so it does not.)
   - Tests: the words for each schedule, the switches written to and read from the record (and cleared when they no longer apply), difficulty read and written, the weighted ring, the "from last done" and same-weekday rules through the form.
 - **H11 Full-screen habit pages, reorder and the Today filter (no database change).** (You asked on 22 October for the habit page and the add/edit form to open as their own screens, like Streak, not as pop-ups; duplicating a habit was dropped.)
-  - **H11a Full-screen pages. Planned.** Tapping a habit's card (or pressing and holding it) opens **the habit page** over the whole Habits tab, with a Back button, the same numbers and actions as before, and **Edit**. **New habit** and **Edit habit** are full pages too, with **Save** and **Cancel** pinned at the bottom, and the phone's Back button closes the page. The small questions stay as pop-ups (the day window, "Delete this habit?", "Log a relapse?").
-  - **H11b Reorder. Planned.** A **Reorder** button on the Habits tab opens a list of every habit with **Up** and **Down** buttons (no dragging, which is fiddly). The new order is written to each habit's own `order` (Streak's field) and noted as changed, so it travels to Streak. Archived habits keep their place.
-  - **H11c Today filter. Planned.** A **Filter** button on the Habits tab with switches (kept between visits): **Only habits due today**, **Hide completed**, **Hide tracking-only habits**, and **Completed last** (completed habits move to the bottom instead of hiding). Nothing is deleted or changed; the Today ring still counts every habit that is due.
+  - **H11a Full-screen pages. Built.** Tapping a habit's card (or pressing and holding it) opens **the habit page** over the whole Habits tab, with a Back button, the same numbers and actions as before, and **Edit**. **New habit** and **Edit habit** are full pages too, with **Save** and **Cancel** pinned at the bottom, and the phone's Back button closes the page. The small questions stay as pop-ups (the day window, "Delete this habit?", "Log a relapse?").
+  - **H11b Reorder. Built.** A **Reorder** button on the Habits tab opens a list of every habit with **Up** and **Down** buttons (no dragging, which is fiddly). The new order is written to each habit's own `order` (Streak's field) and noted as changed, so it travels to Streak. Archived habits keep their place.
+  - **H11c Today filter. Built.** A **Filter** button on the Habits tab with switches (kept between visits): **Only habits due today**, **Hide completed**, **Hide tracking-only habits**, and **Completed last** (completed habits move to the bottom instead of hiding). Nothing is deleted or changed; the Today ring still counts every habit that is due.
   - Tests: moving a habit up and down (first, last, one habit), the order written into the record, and the filter rules (due today, completed, tracking-only, completed last, and what stays when the filters hide everything).
 - **H12 Reminders.** Per-habit reminders (a time, chosen days, every N days, repeated hourly until a time), a notification with a Done button; needs the notification permission (shown in Settings > Permissions).
 - **H13 Focus mode.** A timer on a habit: a countdown or stopwatch, Pomodoro rounds with a short and long break, a label for the session, an end alarm that rings with the screen off, and saved timers. Finished sessions are kept (as Streak's focus sessions are) and shown on the Timeline; the first full round marks the habit. Needs the foreground notification and exact alarm behaviour spelled out before it is built.
@@ -603,6 +603,7 @@ life-tracker/
         │       ├── theme/
         │       │   └── Theme.kt       Light and dark colours
         │       ├── HabitsScreen.kt    Habits tab: cards, streaks, 14-day rows
+        │       ├── HabitPages.kt      Full-screen page frame (Back, title, pinned Save/Cancel) and the Reorder page (H11)
         │       ├── HabitsViewModel.kt Works out each habit's streaks and ticking
         │       ├── HabitsSettingsScreen.kt  Settings: own data or import from Streak (H4)
         │       ├── FoodScreen.kt      Food tab: calories, macros, water, meals

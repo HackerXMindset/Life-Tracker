@@ -26,6 +26,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifetracker.app.data.HabitEditor
@@ -55,7 +56,7 @@ private fun number(text: String): Double? = text.replace(",", ".").trim().toDoub
  * [categories] are the names to pick from; a new name typed in the box is added as a category.
  */
 @Composable
-fun HabitEditorDialog(
+fun HabitEditorPage(
     initial: HabitEntity?,
     categories: List<String>,
     onSave: (HabitForm) -> Unit,
@@ -125,9 +126,9 @@ fun HabitEditorDialog(
     }
 
     val paper = LocalPaper.current
-    PaperDialog(
+    HabitPage(
         title = if (initial == null) "New habit" else "Edit habit",
-        onDismiss = onDismiss,
+        onBack = onDismiss,
         confirmText = "Save",
         onConfirm = {
             val built = form()
@@ -139,6 +140,8 @@ fun HabitEditorDialog(
             modifier = Modifier.verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            // At the top, so it is seen even though Save is pinned at the bottom of the page.
+            error?.let { Text(text = it, color = paper.bad, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
             PaperField(
                 value = name,
                 onValueChange = { name = it; error = null },
@@ -367,7 +370,6 @@ fun HabitEditorDialog(
                 label = "Description (optional)",
             )
 
-            error?.let { Text(text = it, color = paper.bad, fontSize = 13.sp) }
         }
     }
 }

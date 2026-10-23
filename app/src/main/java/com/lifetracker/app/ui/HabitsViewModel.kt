@@ -13,6 +13,7 @@ import com.lifetracker.app.data.HabitEntity
 import com.lifetracker.app.data.HabitForm
 import com.lifetracker.app.data.HabitMode
 import com.lifetracker.app.data.HabitNotes
+import com.lifetracker.app.data.HabitOrder
 import com.lifetracker.app.data.HabitPauses
 import com.lifetracker.app.data.HabitPlan
 import com.lifetracker.app.data.HabitRules
@@ -46,6 +47,8 @@ data class HabitRow(
     /** Done today. For a "relapse" habit it means no relapse today. */
     val doneToday: Boolean,
     val paused: Boolean,
+    /** Due today (on its schedule and not paused). */
+    val dueToday: Boolean = true,
     /** Tracking only: no streak, strength or missed days. The card shows the last check and this week's and month's totals. */
     val tracking: Boolean = false,
     /** For a tracking-only habit: "Today · 14:05", this week's and this month's totals. */
@@ -72,6 +75,11 @@ data class HabitsUi(
     val category: String,
     val mode: HabitMode,
     val compact: Boolean,
+    /** Every active habit, in order, whatever the category or filter shows: the habit page and the day window look here. */
+    val all: List<HabitRow> = emptyList(),
+    val filter: HabitOrder.Filter = HabitOrder.Filter(),
+    /** How many habits the Today filter is hiding. */
+    val hiddenCount: Int = 0,
 )
 
 private class Source(
@@ -91,14 +99,16 @@ class HabitsViewModel(app: Application) : AndroidViewModel(app) {
     private val compact = MutableStateFlow(settings.compact)
     private val category = MutableStateFlow(settings.category)
     private val weigh = MutableStateFlow(settings.weighDifficulty)
+    private val filter = MutableStateFlow(settings.filter)
+    private val options = combine(weigh, filter) { w, f -> w to f }
 
     private val source = combine(dao.observeHabits(), dao.observeCompletions(), dao.observeCategories()) { h, c, k ->
         Source(h, c, k)
     }
 
     val state: StateFlow<HabitsUi> =
-        combine(source, mode, compact, category, weigh) { src, m, small, picked, weighed ->
-            build(src, m, small, picked, weighed, LocalDate.now())
+        combine(source, mode, compact, category, options) { src, m, small, picked, opts ->
+            build(src, m, small, picked, opts.first, opts.second, LocalDate.now())
         }
             .flowOn(Dispatchers.Default)
             .stateIn(
@@ -160,6 +170,33 @@ class HabitsViewModel(app: Application) : AndroidViewModel(app) {
         val next = !compact.value
         settings.compact = next
         compact.value = next
+    }
+
+    /** The Today filter (Filter button on the Habits tab). Nothing is deleted; it only hides or moves cards. */
+    fun setFilter(value: HabitOrder.Filter) {
+        settings.filter = value
+        filter.value = value
+    }
+
+    /**
+     * Moves a habit one place up (-1) or down (1) among the habits you see (hidden ones keep their place). The new order is
+     * written to each habit's own order and noted as changed, so it reaches Streak.
+     */
+    fun moveHabit(habitId: String, delta: Int) {
+        viewModelScope.launch {
+            val live = dao.allHabits().filter { it.deletedAt == 0L }.sortedWith(compareBy({ it.sortOrder }, { it.name }))
+            val ids = live.map { it.id }
+            val moved = HabitOrder.move(ids, habitId, delta, skip = live.filter { it.archived }.map { it.id }.toSet())
+            if (moved == ids) return@launch
+            val byId = live.associateBy { it.id }
+            moved.forEachIndexed { index, id ->
+                val habit = byId.getValue(id)
+                if (habit.sortOrder != index) {
+                    dao.upsertHabit(HabitOrder.withOrder(habit, index))
+                    sync.stamp(id)
+                }
+            }
+        }
     }
 
     /** Weigh the Today ring by difficulty (Settings, Habits). */
@@ -376,7 +413,7 @@ class HabitsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private fun build(src: Source, m: HabitMode, small: Boolean, picked: String, weighed: Boolean, today: LocalDate): HabitsUi {
+    private fun build(src: Source, m: HabitMode, small: Boolean, picked: String, weighed: Boolean, hide: HabitOrder.Filter, today: LocalDate): HabitsUi {
         val byHabit = src.completions.groupBy { it.habitId }
         val all = src.habits.filter { !it.archived }.map { habit ->
             val counts = HashMap<LocalDate, Double>()
@@ -401,6 +438,7 @@ class HabitsViewModel(app: Application) : AndroidViewModel(app) {
                 todayCount = counts[today] ?: 0.0,
                 doneToday = !rules.tracking && (rules.isCompleted(today) || rules.isCovered(today)),
                 paused = rules.isPaused(today),
+                dueToday = !rules.isOffDay(today),
                 tracking = rules.tracking,
                 lastCheck = if (rules.tracking) HabitTicks.lastCheckText(rules.lastCheck(), today) else "",
                 weekTotal = rules.weekTotal(),
@@ -412,7 +450,11 @@ class HabitsViewModel(app: Application) : AndroidViewModel(app) {
         }
         val chips = HabitCalendar.categoryChips(all.map { it.habit.category }, src.categories.map { it.name })
         val selected = picked.takeIf { it in chips } ?: ""
-        val shown = if (selected.isEmpty()) all else all.filter { it.habit.category == selected }
+        val inCategory = if (selected.isEmpty()) all else all.filter { it.habit.category == selected }
+        // The Today filter hides or moves cards; an Avoid habit is never "completed" (a relapse can still happen).
+        val shown = HabitOrder.apply(inCategory, hide) { r ->
+            HabitOrder.Facts(r.dueToday, r.habit.kind != HabitStats.KIND_RELAPSE && r.doneToday, r.tracking)
+        }
         return HabitsUi(
             today = today,
             rows = shown,
@@ -427,6 +469,9 @@ class HabitsViewModel(app: Application) : AndroidViewModel(app) {
             category = selected,
             mode = m,
             compact = small,
+            all = all,
+            filter = hide,
+            hiddenCount = inCategory.size - shown.size,
         )
     }
 }

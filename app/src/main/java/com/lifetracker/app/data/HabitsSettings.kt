@@ -26,6 +26,21 @@ class HabitsSettings(context: Context) {
         get() = prefs.getBoolean("weighDifficulty", false)
         set(value) = prefs.edit { putBoolean("weighDifficulty", value) }
 
+    /** The Today filter on the Habits tab (Habits H11). Every switch is off by default. */
+    var filter: HabitOrder.Filter
+        get() = HabitOrder.Filter(
+            dueToday = prefs.getBoolean("filterDue", false),
+            hideCompleted = prefs.getBoolean("filterHideDone", false),
+            hideTracking = prefs.getBoolean("filterHideTracking", false),
+            completedLast = prefs.getBoolean("filterDoneLast", false),
+        )
+        set(value) = prefs.edit {
+            putBoolean("filterDue", value.dueToday)
+            putBoolean("filterHideDone", value.hideCompleted)
+            putBoolean("filterHideTracking", value.hideTracking)
+            putBoolean("filterDoneLast", value.completedLast)
+        }
+
     /** The category chip that is selected. Empty means All. */
     var category: String
         get() = prefs.getString("category", "") ?: ""
