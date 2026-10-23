@@ -90,7 +90,7 @@ fun HabitEditorPage(
     var fromLast by remember { mutableStateOf(start.plan.fromLastDone) }
     var monthWeekday by remember { mutableStateOf(start.plan.monthWeekday) }
     var difficulty by remember { mutableStateOf(start.difficulty) }
-    var reminders by remember { mutableStateOf(start.reminders) }
+    var reminders by remember { mutableStateOf(start.reminders.orEmpty()) }
     var error by remember { mutableStateOf<String?>(null) }
 
     fun form(): HabitForm {
@@ -365,7 +365,7 @@ fun HabitEditorPage(
                 color = paper.ink2,
             )
 
-            RemindersSection(reminders) { reminders = it }
+            RemindersSection(reminders, followsHabit = kind != HabitStats.KIND_RELAPSE && interval == HabitPlan.EVERY_X_DAYS) { reminders = it }
 
             PaperField(
                 value = description,
