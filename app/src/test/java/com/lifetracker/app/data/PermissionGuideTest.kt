@@ -19,8 +19,8 @@ class PermissionGuideTest {
     }
 
     @Test fun summaryWords() {
-        assertEquals("All allowed", PermissionGuide.summary(9, 9))
-        assertEquals("3 still off", PermissionGuide.summary(6, 9))
+        assertEquals("All allowed", PermissionGuide.summary(10, 10))
+        assertEquals("3 still off", PermissionGuide.summary(7, 10))
         assertEquals("", PermissionGuide.summary(0, 0))
     }
 }

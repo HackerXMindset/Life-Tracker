@@ -17,6 +17,8 @@
 
     <!-- Shows the banner that asks what you plugged your phone into. You can say no when Android asks. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Habit reminders ring at the minute chosen when this is allowed (Settings > Permissions > Exact alarms). -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
     <!-- Reads your steps and sleep from Health Connect, once you allow it inside the app. -->
     <uses-permission android:name="android.permission.health.READ_STEPS" />
@@ -101,6 +103,21 @@
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+        <!-- Habit reminders (Habits H12): the alarm, the Done and Snooze buttons, and setting the alarms again after a restart. -->
+        <receiver
+            android:name=".data.HabitReminderReceiver"
+            android:exported="false" />
+        <receiver
+            android:name=".data.HabitReminderBootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
             </intent-filter>
         </receiver>
     </application>

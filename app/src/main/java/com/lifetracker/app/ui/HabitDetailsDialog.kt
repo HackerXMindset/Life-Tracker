@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifetracker.app.data.HabitEditor
 import com.lifetracker.app.data.HabitPauses
+import com.lifetracker.app.data.HabitReminders
 import com.lifetracker.app.data.HabitPlan
 import com.lifetracker.app.data.HabitStats
 import com.lifetracker.app.data.NoteEntity
@@ -105,6 +106,12 @@ fun HabitDetailsPage(
                 color = paper.ink2,
             )
             HabitNotesList(notes, today, onEditNote, onAddNote)
+            val reminders = HabitReminders.read(habit.raw)
+            if (reminders.isNotEmpty()) {
+                MonoLabel("Reminders", modifier = Modifier.padding(top = 4.dp))
+                reminders.forEach { Text(HabitReminders.describe(it), fontSize = 13.sp, color = paper.ink) }
+                Text("Change them with Edit.", fontSize = 11.5.sp, color = paper.ink2)
+            }
             val paused = HabitPauses.isPaused(habit.raw)
             val rest = HabitPauses.restDays(habit.raw)
             MonoLabel("Pause")

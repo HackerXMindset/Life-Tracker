@@ -40,6 +40,7 @@ import com.lifetracker.app.data.CallsCollector
 import com.lifetracker.app.data.ChargeNotifier
 import com.lifetracker.app.data.DataSources
 import com.lifetracker.app.data.DataSources.Slot
+import com.lifetracker.app.data.HabitReminderScheduler
 import com.lifetracker.app.data.HealthConnectSync
 import com.lifetracker.app.data.KeepAlive
 import com.lifetracker.app.data.Perm
@@ -58,6 +59,7 @@ fun quickPermissionStates(context: Context): Map<Perm, Boolean> = mapOf(
     Perm.Activity to (PlacesTracker.hasActivityRecognition(context) && StepCounterSync.hasPermission(context)),
     Perm.Calls to CallsCollector.hasAccess(context),
     Perm.Notifications to ChargeNotifier.canNotify(context),
+    Perm.ExactAlarms to HabitReminderScheduler.canRingExactly(context),
     Perm.Battery to KeepAlive.isExempt(context),
 )
 
@@ -183,6 +185,7 @@ fun PermissionsScreen(onBack: () -> Unit, onOpen: (Page) -> Unit) {
                             )
                         }
                     }) { Text("Allow") }
+                    Perm.ExactAlarms -> if (!allowed(perm)) Button(onClick = { HabitReminderScheduler.openExactAlarmSettings(context) }) { Text("Allow") }
                     Perm.Battery -> if (!allowed(perm)) Button(onClick = {
                         KeepAlive.open(context, KeepAlive.exemptionIntents(context))
                     }) { Text("Allow unrestricted") }
