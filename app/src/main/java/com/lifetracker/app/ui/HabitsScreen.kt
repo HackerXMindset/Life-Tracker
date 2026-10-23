@@ -111,11 +111,44 @@ fun HabitsScreen(vm: HabitsViewModel = viewModel()) {
     var showArchived by remember { mutableStateOf(false) }
     var dayMenu by remember { mutableStateOf<Pair<String, LocalDate>?>(null) }
     var showNotes by remember { mutableStateOf(false) }
+    var showReorder by remember { mutableStateOf(false) }
+    var showFilter by remember { mutableStateOf(false) }
     var noteDraft by remember { mutableStateOf<NoteDraft?>(null) }
     val notes by vm.notes.collectAsState()
     val names by vm.habitNames.collectAsState()
 
-    if (showNotes) HabitNotesPage(
+    // The habit page and the add/edit form are whole screens in place of the list (as Streak's are); small questions stay pop-ups.
+    val pageRow = detailsId?.let { id -> ui.all.firstOrNull { it.habit.id == id } }
+    LaunchedEffect(detailsId, pageRow == null) { if (detailsId != null && pageRow == null) detailsId = null }
+
+    if (adding) HabitEditorPage(
+        initial = null,
+        categories = ui.allCategories,
+        onSave = { vm.save(it, null); adding = false },
+        onDismiss = { adding = false },
+    ) else if (editing != null) HabitEditorPage(
+        initial = editing,
+        categories = ui.allCategories,
+        onSave = { vm.save(it, editing); editing = null },
+        onDismiss = { editing = null },
+    ) else if (pageRow != null) HabitDetailsPage(
+        row = pageRow,
+        notes = HabitNotes.forHabit(notes, pageRow.habit.id),
+        today = ui.today,
+        onAddNote = { noteDraft = NoteDraft(pageRow.habit.id, ui.today) },
+        onEditNote = { noteDraft = NoteDraft(it.habitId, ui.today, it) },
+        onEdit = { editing = pageRow.habit; detailsId = null },
+        onArchive = { vm.setArchived(pageRow.habit, true); detailsId = null },
+        onDelete = { vm.deleteHabit(pageRow.habit); detailsId = null },
+        onClearProgress = { vm.clearAllProgress(pageRow.habit); detailsId = null },
+        onPause = { vm.setPaused(pageRow.habit, it) },
+        onRestDays = { vm.setRestDays(pageRow.habit, it) },
+        onDismiss = { detailsId = null },
+    ) else if (showReorder) HabitReorderPage(
+        habits = ui.all.map { it.habit },
+        onMove = vm::moveHabit,
+        onBack = { showReorder = false },
+    ) else if (showNotes) HabitNotesPage(
         notes = notes,
         names = names,
         today = ui.today,
@@ -141,8 +174,23 @@ fun HabitsScreen(vm: HabitsViewModel = viewModel()) {
             item(key = "empty") { EmptyCard() }
         } else {
             item(key = "modes") { ModeSwitch(ui.mode, vm::setMode) }
+            item(key = "tools") {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    PaperPill("Reorder", false, { showReorder = true })
+                    PaperPill(if (ui.filter.active) "Filter  ●" else "Filter", ui.filter.active, { showFilter = true })
+                }
+            }
             if (ui.chips.isNotEmpty()) {
                 item(key = "chips") { CategoryChips(ui.chips, ui.category, vm::setCategory) }
+            }
+        }
+        if (ui.hasAny && ui.rows.isEmpty() && ui.hiddenCount > 0) {
+            item(key = "all-hidden") {
+                Text(
+                    text = "The Today filter is hiding everything here. Open Filter to show it again.",
+                    fontSize = 13.sp,
+                    color = LocalPaper.current.ink2,
+                )
             }
         }
         items(ui.rows, key = { it.habit.id }) { row ->
@@ -172,6 +220,15 @@ fun HabitsScreen(vm: HabitsViewModel = viewModel()) {
                 onMenu = { dayMenu = row.habit.id to it },
             )
         }
+        if (ui.hiddenCount > 0 && ui.rows.isNotEmpty()) {
+            item(key = "hidden-count") {
+                Text(
+                    text = "${ui.hiddenCount} ${if (ui.hiddenCount == 1) "habit is" else "habits are"} hidden by the Today filter.",
+                    fontSize = 12.sp,
+                    color = LocalPaper.current.ink2,
+                )
+            }
+        }
         if (ui.archived.isNotEmpty()) {
             item(key = "archived") {
                 Text(
@@ -191,26 +248,8 @@ fun HabitsScreen(vm: HabitsViewModel = viewModel()) {
         }
     }
 
-    detailsId?.let { id ->
-        val row = ui.rows.firstOrNull { it.habit.id == id }
-        if (row == null) detailsId = null
-        else HabitDetailsDialog(
-            row = row,
-            notes = HabitNotes.forHabit(notes, row.habit.id),
-            today = ui.today,
-            onAddNote = { noteDraft = NoteDraft(row.habit.id, ui.today) },
-            onEditNote = { noteDraft = NoteDraft(it.habitId, ui.today, it) },
-            onEdit = { editing = row.habit; detailsId = null },
-            onArchive = { vm.setArchived(row.habit, true); detailsId = null },
-            onDelete = { vm.deleteHabit(row.habit); detailsId = null },
-            onClearProgress = { vm.clearAllProgress(row.habit); detailsId = null },
-            onPause = { vm.setPaused(row.habit, it) },
-            onRestDays = { vm.setRestDays(row.habit, it) },
-            onDismiss = { detailsId = null },
-        )
-    }
     dayMenu?.let { (id, date) ->
-        val row = ui.rows.firstOrNull { it.habit.id == id }
+        val row = ui.all.firstOrNull { it.habit.id == id }
         if (row == null) dayMenu = null
         else HabitDayDialog(
             row = row,
@@ -244,21 +283,19 @@ fun HabitsScreen(vm: HabitsViewModel = viewModel()) {
             onDelete = draft.note?.let { note -> { vm.deleteNote(note); noteDraft = null } },
         )
     }
-    if (adding) {
-        HabitEditorDialog(
-            initial = null,
-            categories = ui.allCategories,
-            onSave = { vm.save(it, null); adding = false },
-            onDismiss = { adding = false },
-        )
-    }
-    editing?.let { habit ->
-        HabitEditorDialog(
-            initial = habit,
-            categories = ui.allCategories,
-            onSave = { vm.save(it, habit); editing = null },
-            onDismiss = { editing = null },
-        )
+    if (showFilter) {
+        val f = ui.filter
+        PaperDialog(title = "Today filter", onDismiss = { showFilter = false }, dismissText = "Close") {
+            SwitchRow("Only habits due today", f.dueToday) { vm.setFilter(f.copy(dueToday = it)) }
+            SwitchRow("Hide completed", f.hideCompleted) { vm.setFilter(f.copy(hideCompleted = it)) }
+            SwitchRow("Hide tracking-only habits", f.hideTracking) { vm.setFilter(f.copy(hideTracking = it)) }
+            SwitchRow("Completed last", f.completedLast) { vm.setFilter(f.copy(completedLast = it)) }
+            Text(
+                text = "Nothing is deleted or changed; cards are only hidden or moved. The ring at the top still counts every habit that is due.",
+                fontSize = 12.sp,
+                color = LocalPaper.current.ink2,
+            )
+        }
     }
 
     relapseFor?.let { habit ->

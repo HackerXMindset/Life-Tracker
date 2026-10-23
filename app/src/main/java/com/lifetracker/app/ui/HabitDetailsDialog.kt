@@ -37,9 +37,9 @@ import java.util.Locale
 private fun amount(value: Double): String =
     if (value == Math.floor(value)) value.toLong().toString() else String.format(Locale.getDefault(), "%.1f", value)
 
-/** The habit page: the numbers, and what you can do with the habit. */
+/** The habit page, a whole screen: the numbers, and what you can do with the habit. */
 @Composable
-fun HabitDetailsDialog(
+fun HabitDetailsPage(
     row: HabitRow,
     notes: List<NoteEntity>,
     today: LocalDate,
@@ -73,9 +73,9 @@ fun HabitDetailsDialog(
     val totalLabel = if (habit.kind == HabitStats.KIND_RELAPSE) "Relapses" else "Days done"
 
     val paper = LocalPaper.current
-    PaperDialog(
+    HabitPage(
         title = habit.name,
-        onDismiss = onDismiss,
+        onBack = onDismiss,
         dismissText = "Close",
         confirmText = "Edit",
         onConfirm = onEdit,

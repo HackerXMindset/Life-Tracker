@@ -2,6 +2,18 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📄 Habits: full-screen pages, reorder and the Today filter
+
+### ✨ New
+
+- **Habit pages are full screens.** Tapping a habit's card (or pressing and holding it) opens its page with a Back button, and **New habit** and **Edit habit** open as full pages too, with **Save** and **Cancel** pinned at the bottom. The phone's Back button closes them. The small questions (the day window, "Delete this habit?", "Log a relapse?") stay as pop-ups.
+- **Reorder.** A **Reorder** button on the Habits tab opens a list with **Up** and **Down** buttons. The order is written to each habit's own `order`, so it travels to and from Streak.
+- **Today filter.** A **Filter** button with four switches, kept between visits: **Only habits due today**, **Hide completed**, **Hide tracking-only habits** and **Completed last**. Cards are only hidden or moved, never deleted, a note says how many are hidden, and the Today ring still counts every habit that is due.
+
+### 🔧 Changed
+
+- No database change.
+
 ## 📅 Habits: schedule extras and difficulty
 
 ### ✨ New
