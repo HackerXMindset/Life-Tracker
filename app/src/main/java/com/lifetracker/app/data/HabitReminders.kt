@@ -43,7 +43,8 @@ object HabitReminders {
         val out = ArrayList<Reminder>()
         for (i in 0 until array.length()) {
             val o = array.optJSONObject(i) ?: continue
-            val id = o.optString("id", "").ifBlank { continue }
+            val id = o.optString("id", "")
+            if (id.isBlank()) continue
             if (!o.has("hour") || !o.has("minute")) continue
             val days = (o.optJSONArray("selectedDays") ?: o.optJSONArray("days"))
                 ?.let { a -> (0 until a.length()).map { a.optInt(it) }.filter { it in 1..7 }.distinct().sorted() }
