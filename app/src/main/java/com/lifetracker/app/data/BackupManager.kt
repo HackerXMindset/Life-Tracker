@@ -141,6 +141,9 @@ object BackupManager {
         rawFixes = db.rawDao().all(),
         timelineEdits = db.timelineEditDao().all(),
         focusSessions = db.focusDao().all(),
+        tripEdits = db.tripEditDao().all(),
+        pointNotes = db.pointNoteDao().all(),
+        trackingProfiles = db.trackingProfileDao().all(),
     )
 
     /**
@@ -211,7 +214,16 @@ object BackupManager {
             }
             if (data.version >= 10) {
                 // Places are never removed, and visits only grow: restoring adds to them and keeps what you decided about a stop.
-                db.placeDao().upsertPlaces(data.places)
+                // A file from before version 27 knows nothing of pause zones, so a place that exists here keeps its own pause settings.
+                db.placeDao().upsertPlaces(
+                    if (data.version >= 27) data.places else data.places.map { p ->
+                        val mine = db.placeDao().place(p.id) ?: return@map p
+                        p.copy(
+                            pauseHere = mine.pauseHere, pauseWifi = mine.pauseWifi, pauseMotionless = mine.pauseMotionless,
+                            heartbeatMin = mine.heartbeatMin, entryDelaySec = mine.entryDelaySec,
+                        )
+                    },
+                )
                 // Place categories only ever grow: restoring adds or updates them and never removes one you made since.
                 db.placeCategoryDao().upsertAll(data.placeCategories)
                 db.placeDao().insertMissingVisits(data.placeVisits)
@@ -239,6 +251,12 @@ object BackupManager {
             if (data.version >= 26) {
                 // Focus sessions only grow: restoring adds the ones that are missing.
                 db.focusDao().insertMissing(data.focusSessions)
+            }
+            if (data.version >= 27) {
+                // Edits, notes and profiles only grow: restoring adds the ones that are missing and keeps what you did since.
+                db.tripEditDao().insertMissing(data.tripEdits)
+                db.pointNoteDao().insertMissing(data.pointNotes)
+                db.trackingProfileDao().insertMissing(data.trackingProfiles)
             }
         }
     }

@@ -2,6 +2,13 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧭 Places and trips remake: the new data (C1)
+
+### 🔧 Changed
+
+- **Groundwork only, nothing looks different yet.** Database 27 and backup format 27 prepare the Colota-style Places and trips: every position reading can now also keep its direction, height, battery, step counter, where it came from and which profile was active; there are new places for merges and splits of trips, notes on a single reading and tracking profiles; and every place has room for pause-zone settings (all off).
+- **Nothing is removed or moved.** Old trip readings are copied into the one readings table (the old trip table stays as it is). Older backups still restore, and restoring never switches off a pause setting you made later.
+
 ## ⏱️ Habits: focus mode
 
 ### ✨ New

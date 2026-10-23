@@ -38,6 +38,16 @@ data class PlaceEntity(
     val radiusM: Int,
     val archived: Boolean,
     val createdMs: Long,
+    /** Pause zone: while you are here the dense position readings stop (the stay is still recorded). Added in database version 27. */
+    val pauseHere: Boolean = false,
+    /** Pause zone: Wi-Fi names (one per line); being on one of them at this place stops the readings. Empty for none. */
+    val pauseWifi: String = "",
+    /** Pause zone: stop the readings once you have been still for a while here. */
+    val pauseMotionless: Boolean = false,
+    /** Pause zone: while paused, one reading every this many minutes as proof you are still here; 0 for none. */
+    val heartbeatMin: Int = 0,
+    /** Pause zone: seconds to keep recording after arriving before pausing; -1 for automatic (3.5 times the interval). */
+    val entryDelaySec: Int = -1,
 )
 
 @Entity(tableName = "place_visits", indices = [Index("startMs")])

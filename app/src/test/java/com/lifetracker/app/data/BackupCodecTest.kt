@@ -80,7 +80,10 @@ class BackupCodecTest {
         ),
         places = listOf(
             PlaceEntity("p1", "Central \"Library\"", "study", 28.6139, 77.2090, 150, false, 1_760_000_000_000L),
-            PlaceEntity("p2", "Old gym", "gym", -33.8688, 151.2093, 100, true, 1_760_000_500_000L),
+            PlaceEntity(
+                "p2", "Old gym", "gym", -33.8688, 151.2093, 100, true, 1_760_000_500_000L,
+                pauseHere = true, pauseWifi = "Home Wi-Fi\nGym, guest", pauseMotionless = true, heartbeatMin = 30, entryDelaySec = 45,
+            ),
         ),
         placeVisits = listOf(
             PlaceVisitEntity("v1760000000000", "p1", 1_760_000_000_000L, 1_760_003_600_000L, 28.6139, 77.2090, "geofence", false, false, 82),
@@ -100,6 +103,29 @@ class BackupCodecTest {
             RawFixEntity(1_760_000_030_000L, 28.610200, 77.209400, 9f, 0f),
             RawFixEntity(1_760_000_090_500L, 28.609900, 77.209800, 30f),
             RawFixEntity(1_760_200_000_000L, -33.868800, 151.209300, 5f, 27.5f),
+            RawFixEntity(
+                1_760_200_005_000L, -33.868700, 151.209400, 6f, 3.5f,
+                bearing = 92f, altitude = 211.5, battery = 64, steps = 98_765L, source = FixSource.GPS, profileId = "pr1",
+            ),
+            RawFixEntity(1_760_200_010_000L, -33.868600, 151.209500, 7f, source = FixSource.OLD_TRIP, steps = 5L),
+        ),
+        tripEdits = listOf(
+            TripEditEntity("e1", TripEditKind.MERGE, 1_760_004_800_000L, 1_760_005_000_000L, 1_760_300_000_000L),
+            TripEditEntity("e2", TripEditKind.SPLIT, 1_760_020_300_000L, 0L, 1_760_300_000_100L, undoneMs = 1_760_300_500_000L),
+        ),
+        pointNotes = listOf(
+            PointNoteEntity(1_760_200_005_000L, "Waited for \"the\" bus", 1_760_300_000_200L),
+            PointNoteEntity(1_760_200_010_000L, "", 1_760_300_000_300L),
+        ),
+        trackingProfiles = listOf(
+            TrackingProfileEntity(
+                "pr1", "Driving", ProfileCondition.SPEED_ABOVE, conditionNumber = 25.0, intervalSec = 2, minMoveM = 0,
+                accuracyMode = "high", priority = 5, activateDelaySec = 10, deactivateDelaySec = 60, createdMs = 1_760_000_000_000L,
+            ),
+            TrackingProfileEntity(
+                "pr2", "Home Wi-Fi", ProfileCondition.WIFI_NAMED, conditionText = "Home, 5G", intervalSec = 300, minMoveM = 20,
+                enabled = false, deletedAt = 1_760_300_000_000L, createdMs = 1_760_000_100_000L,
+            ),
         ),
         usageCombos = listOf(
             UsageComboEntity("c1", "Study", "com.openai.chatgpt,xyz.penpencil.physicswala", "Study", 1_760_300_000_002L),
@@ -287,6 +313,71 @@ class BackupCodecTest {
         val back = BackupCodec.decode(BackupCodec.encode(BackupData(13, "x", emptyList(), rawFixes = list))).rawFixes
         assertEquals(13.4f, back[0].speed, 0.001f)
         assertEquals(-1f, back[1].speed, 0f)
+    }
+
+    @Test
+    fun theNewValuesOfAReadingComeBack() {
+        val back = BackupCodec.decode(BackupCodec.encode(full)).rawFixes.sortedBy { it.ms }
+        val rich = back.single { it.ms == 1_760_200_005_000L }
+        assertEquals(92f, rich.bearing, 0f)
+        assertEquals(211.5, rich.altitude!!, 0.0)
+        assertEquals(64, rich.battery)
+        assertEquals(98_765L, rich.steps)
+        assertEquals(FixSource.GPS, rich.source)
+        assertEquals("pr1", rich.profileId)
+        val plain = back.single { it.ms == 1_760_000_090_500L }
+        assertEquals(-1f, plain.bearing, 0f)
+        assertEquals(null, plain.altitude)
+        assertEquals("", plain.source)
+        assertEquals(-1L, plain.steps)
+    }
+
+    @Test
+    fun aReadingWithNothingNewKeepsTheShortRow() {
+        val text = BackupCodec.encode(BackupData(27, "x", emptyList(), rawFixes = listOf(RawFixEntity(1_760_000_000_000L, 28.61, 77.21, 10f, 2f))))
+        assertEquals(false, text.contains("OLD") || text.contains("gps"))
+        assertEquals(5, Regex("\"rows\": \"([^\"]*)\"").find(text)!!.groupValues[1].split(',').size)
+    }
+
+    @Test
+    fun commasInASourceDoNotBreakTheRow() {
+        val odd = RawFixEntity(1_760_000_000_000L, 28.61, 77.21, 10f, source = "a,b;c", profileId = "x,y")
+        val back = BackupCodec.decode(BackupCodec.encode(BackupData(27, "x", emptyList(), rawFixes = listOf(odd)))).rawFixes.single()
+        assertEquals("a_b_c", back.source)
+        assertEquals("x_y", back.profileId)
+    }
+
+    @Test
+    fun pauseSettingsOfAPlaceSurviveAndAnOldFileMeansOff() {
+        val back = BackupCodec.decode(BackupCodec.encode(full)).places.single { it.id == "p2" }
+        assertEquals(true, back.pauseHere)
+        assertEquals("Home Wi-Fi\nGym, guest", back.pauseWifi)
+        assertEquals(true, back.pauseMotionless)
+        assertEquals(30, back.heartbeatMin)
+        assertEquals(45, back.entryDelaySec)
+        val old = """{"app":"life-tracker","version":26,"exportedAt":"x","entries":[],"places":[{"id":"p","name":"A","kind":"home","lat":1.0,"lng":2.0,"radiusM":50,"archived":false,"createdMs":5}]}"""
+        val place = BackupCodec.decode(old).places.single()
+        assertEquals(false, place.pauseHere)
+        assertEquals("", place.pauseWifi)
+        assertEquals(0, place.heartbeatMin)
+        assertEquals(-1, place.entryDelaySec)
+    }
+
+    @Test
+    fun editsNotesAndProfilesKeepTheirUndoneAndHiddenTimes() {
+        val back = BackupCodec.decode(BackupCodec.encode(full))
+        assertEquals(0L, back.tripEdits.single { it.id == "e1" }.undoneMs)
+        assertEquals(1_760_300_500_000L, back.tripEdits.single { it.id == "e2" }.undoneMs)
+        assertEquals("", back.pointNotes.single { it.ms == 1_760_200_010_000L }.note)
+        assertEquals(1_760_300_000_000L, back.trackingProfiles.single { it.id == "pr2" }.deletedAt)
+        assertEquals(false, back.trackingProfiles.single { it.id == "pr2" }.enabled)
+    }
+
+    @Test
+    fun aBackupOfOnlyEditsOrProfilesIsNotEmpty() {
+        assertEquals(false, BackupData(27, "x", emptyList(), tripEdits = full.tripEdits).isEmpty)
+        assertEquals(false, BackupData(27, "x", emptyList(), pointNotes = full.pointNotes).isEmpty)
+        assertEquals(false, BackupData(27, "x", emptyList(), trackingProfiles = full.trackingProfiles).isEmpty)
     }
 
     @Test

@@ -90,8 +90,11 @@ interface EntryDao {
         TimelineEditEntity::class,
         PlaceCategoryEntity::class,
         FocusSessionEntity::class,
+        TripEditEntity::class,
+        PointNoteEntity::class,
+        TrackingProfileEntity::class,
     ],
-    version = 26,
+    version = 27,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -113,6 +116,9 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun timelineEditDao(): TimelineEditDao
     abstract fun placeCategoryDao(): PlaceCategoryDao
     abstract fun focusDao(): FocusDao
+    abstract fun tripEditDao(): TripEditDao
+    abstract fun pointNoteDao(): PointNoteDao
+    abstract fun trackingProfileDao(): TrackingProfileDao
 
     companion object {
         @Volatile
@@ -125,7 +131,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "life-tracker.db",
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27)
                     .addCallback(object : RoomDatabase.Callback() {
                         // A brand new database starts with the built-in activities and money categories.
                         override fun onCreate(db: SupportSQLiteDatabase) {
@@ -374,6 +380,52 @@ val MIGRATION_11_12: Migration = object : Migration(11, 12) {
             "CREATE TABLE IF NOT EXISTS `raw_fixes` (`ms` INTEGER NOT NULL, `lat` REAL NOT NULL, " +
                 "`lng` REAL NOT NULL, `acc` REAL NOT NULL, PRIMARY KEY(`ms`))",
         )
+    }
+}
+
+/**
+ * Version 26 -> 27 (the Places and trips remake). Nothing already stored is changed or removed:
+ * (1) the readings table gets six columns that start as "not known" (direction, altitude, battery, steps, source, profile);
+ * (2) every old trip reading that is not in the readings table yet is copied in (marked "old-trip"), and readings that lack a step
+ *     count get the one the old trip reading had; the old trip table is left as it is;
+ * (3) three new tables: edits of trips, notes on readings and tracking profiles;
+ * (4) five new columns on places for pause zones, all off.
+ */
+val MIGRATION_26_27: Migration = object : Migration(26, 27) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `raw_fixes` ADD COLUMN `bearing` REAL NOT NULL DEFAULT -1")
+        db.execSQL("ALTER TABLE `raw_fixes` ADD COLUMN `altitude` REAL")
+        db.execSQL("ALTER TABLE `raw_fixes` ADD COLUMN `battery` INTEGER NOT NULL DEFAULT -1")
+        db.execSQL("ALTER TABLE `raw_fixes` ADD COLUMN `steps` INTEGER NOT NULL DEFAULT -1")
+        db.execSQL("ALTER TABLE `raw_fixes` ADD COLUMN `source` TEXT NOT NULL DEFAULT ''")
+        db.execSQL("ALTER TABLE `raw_fixes` ADD COLUMN `profileId` TEXT NOT NULL DEFAULT ''")
+        db.execSQL(
+            "INSERT OR IGNORE INTO `raw_fixes` (`ms`, `lat`, `lng`, `acc`, `speed`, `bearing`, `altitude`, `battery`, `steps`, `source`, `profileId`) " +
+                "SELECT `ms`, `lat`, `lng`, `acc`, -1, -1, NULL, -1, MAX(`steps`), 'old-trip', '' FROM `trip_points` GROUP BY `ms`",
+        )
+        db.execSQL(
+            "UPDATE `raw_fixes` SET `steps` = (SELECT MAX(`steps`) FROM `trip_points` WHERE `trip_points`.`ms` = `raw_fixes`.`ms`) " +
+                "WHERE `steps` = -1 AND `ms` IN (SELECT `ms` FROM `trip_points` WHERE `steps` >= 0)",
+        )
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `trip_edits` (`id` TEXT NOT NULL, `kind` TEXT NOT NULL, `atMs` INTEGER NOT NULL, " +
+                "`otherMs` INTEGER NOT NULL, `createdMs` INTEGER NOT NULL, `undoneMs` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        )
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `point_notes` (`ms` INTEGER NOT NULL, `note` TEXT NOT NULL, `updatedMs` INTEGER NOT NULL, PRIMARY KEY(`ms`))",
+        )
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `tracking_profiles` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `condition` TEXT NOT NULL, " +
+                "`conditionText` TEXT NOT NULL, `conditionNumber` REAL NOT NULL, `intervalSec` INTEGER NOT NULL, `minMoveM` INTEGER NOT NULL, " +
+                "`accuracyMode` TEXT NOT NULL, `priority` INTEGER NOT NULL, `activateDelaySec` INTEGER NOT NULL, " +
+                "`deactivateDelaySec` INTEGER NOT NULL, `enabled` INTEGER NOT NULL, `deletedAt` INTEGER NOT NULL, " +
+                "`createdMs` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        )
+        db.execSQL("ALTER TABLE `places` ADD COLUMN `pauseHere` INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE `places` ADD COLUMN `pauseWifi` TEXT NOT NULL DEFAULT ''")
+        db.execSQL("ALTER TABLE `places` ADD COLUMN `pauseMotionless` INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE `places` ADD COLUMN `heartbeatMin` INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE `places` ADD COLUMN `entryDelaySec` INTEGER NOT NULL DEFAULT -1")
     }
 }
 

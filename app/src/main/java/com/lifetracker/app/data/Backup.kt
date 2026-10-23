@@ -39,13 +39,17 @@ data class BackupData(
     val timelineEdits: List<TimelineEditEntity> = emptyList(),
     val placeCategories: List<PlaceCategoryEntity> = emptyList(),
     val focusSessions: List<FocusSessionEntity> = emptyList(),
+    val tripEdits: List<TripEditEntity> = emptyList(),
+    val pointNotes: List<PointNoteEntity> = emptyList(),
+    val trackingProfiles: List<TrackingProfileEntity> = emptyList(),
 ) {
     val isEmpty: Boolean
         get() = entries.isEmpty() && habits.isEmpty() && completions.isEmpty() && categories.isEmpty() &&
             todoTags.isEmpty() && todos.isEmpty() && notes.isEmpty() && meals.isEmpty() && water.isEmpty() &&
             moneyItems.isEmpty() && moneyEntries.isEmpty() && usageSessions.isEmpty() && calls.isEmpty() &&
             chargeSessions.isEmpty() && stepDays.isEmpty() && sleepNights.isEmpty() && places.isEmpty() && placeVisits.isEmpty() &&
-            trips.isEmpty() && tripPoints.isEmpty() && rawFixes.isEmpty() && timelineEdits.isEmpty() && usageCombos.isEmpty() && usageStates.isEmpty() && focusSessions.isEmpty()
+            trips.isEmpty() && tripPoints.isEmpty() && rawFixes.isEmpty() && timelineEdits.isEmpty() && usageCombos.isEmpty() && usageStates.isEmpty() && focusSessions.isEmpty() &&
+            tripEdits.isEmpty() && pointNotes.isEmpty() && trackingProfiles.isEmpty()
 }
 
 /**
@@ -53,12 +57,12 @@ data class BackupData(
  *
  * `version` lets later steps add more data without breaking old backups.
  * Version 1 held only Timeline entries; version 2 adds habits, to-dos, notes
- * and the record of what was imported; version 3 adds meals, food goals and water; version 4 adds your own activities and their goals; version 5 adds money (categories, saved items and entries); version 6 adds phone usage (sessions are stored compactly as [app, start, end]); version 7 adds phone calls (each stored as [number, name, type, start, seconds]); version 8 adds charging sessions (each stored as [start, end, startLevel, endLevel, plug, source, samples, currentSamples, sumMa, sumMv, ongoing]); version 9 adds steps (each day stored as [date, steps, source]) and sleep (each night stored as [date, start, end, source]); version 10 adds places (the ones you named) and place visits (each stored as [id, place, start, end, lat, lng, source, ongoing, ignored]); version 11 adds trips (each stored as [id, start, end, from, to, distance, medianKmh, topKmh, activity, mode, modeSource]) and the position readings of each trip (each stored as [trip, time, lat, lng, accuracy]); version 12 adds every position reading, stored compactly one day at a time (see rawFixesJson); version 13 adds the speed the phone measured to each reading; version 14 adds how sure the app is of each visit (a tenth value in each visit list); version 15 adds what you changed on the Timeline (each stored as [kind, id, start, end, category, hidden, changedAt, label]); version 16 adds the app combinations you named (each stored as an object with id, name, pkgs, activityId and updatedMs); version 17 adds the stretches when the phone was off or its screen stayed off (each stored as [kind, start, end]); version 18 adds the step counter to each trip reading (a sixth value, -1 when not known); version 19 adds an icon to each activity and each app (an "icon" text, left out when there is none); version 21 adds the place categories (each stored as an object with id, name, color, icon, sortOrder and archived); version 22 adds "deduct it from" to money entries and saved items ("source" 0 mine, 1 someone else, 2 not sure, and "paidBy"; left out when it is mine) and an icon to money categories; version 23 adds "deletedAt" and "clearedAt" to habits and "deletedAt" to notes (each left out when 0); version 24 adds the check times of a habit day ("marks"); version 25 adds the ticked steps of a checklist day ("steps"); version 26 adds the focus sessions (each an object with id, habitId, targetMinutes, seconds, completed, startedAtMs, counted and label). A file from a newer version of the app
+ * and the record of what was imported; version 3 adds meals, food goals and water; version 4 adds your own activities and their goals; version 5 adds money (categories, saved items and entries); version 6 adds phone usage (sessions are stored compactly as [app, start, end]); version 7 adds phone calls (each stored as [number, name, type, start, seconds]); version 8 adds charging sessions (each stored as [start, end, startLevel, endLevel, plug, source, samples, currentSamples, sumMa, sumMv, ongoing]); version 9 adds steps (each day stored as [date, steps, source]) and sleep (each night stored as [date, start, end, source]); version 10 adds places (the ones you named) and place visits (each stored as [id, place, start, end, lat, lng, source, ongoing, ignored]); version 11 adds trips (each stored as [id, start, end, from, to, distance, medianKmh, topKmh, activity, mode, modeSource]) and the position readings of each trip (each stored as [trip, time, lat, lng, accuracy]); version 12 adds every position reading, stored compactly one day at a time (see rawFixesJson); version 13 adds the speed the phone measured to each reading; version 14 adds how sure the app is of each visit (a tenth value in each visit list); version 15 adds what you changed on the Timeline (each stored as [kind, id, start, end, category, hidden, changedAt, label]); version 16 adds the app combinations you named (each stored as an object with id, name, pkgs, activityId and updatedMs); version 17 adds the stretches when the phone was off or its screen stayed off (each stored as [kind, start, end]); version 18 adds the step counter to each trip reading (a sixth value, -1 when not known); version 19 adds an icon to each activity and each app (an "icon" text, left out when there is none); version 21 adds the place categories (each stored as an object with id, name, color, icon, sortOrder and archived); version 22 adds "deduct it from" to money entries and saved items ("source" 0 mine, 1 someone else, 2 not sure, and "paidBy"; left out when it is mine) and an icon to money categories; version 23 adds "deletedAt" and "clearedAt" to habits and "deletedAt" to notes (each left out when 0); version 24 adds the check times of a habit day ("marks"); version 25 adds the ticked steps of a checklist day ("steps"); version 26 adds the focus sessions (each an object with id, habitId, targetMinutes, seconds, completed, startedAtMs, counted and label); version 27 adds the Places and trips remake: more values on each position reading (direction, altitude, battery, steps, source, profile; see rawFixesJson), pause-zone settings on places (left out when off), the edits of trips ("tripEdits"), notes on readings ("pointNotes") and tracking profiles ("trackingProfiles"). A file from a newer version of the app
  * is refused rather than half-read.
  */
 object BackupCodec {
     const val APP_NAME = "life-tracker"
-    const val FORMAT_VERSION = 26
+    const val FORMAT_VERSION = 27
 
     fun encode(data: BackupData): String =
         JSONObject()
@@ -96,6 +100,9 @@ object BackupCodec {
             .put("usageCombos", array(data.usageCombos, ::usageComboJson))
             .put("usageStates", statesJson(data.usageStates))
             .put("focusSessions", array(data.focusSessions, ::focusJson))
+            .put("tripEdits", array(data.tripEdits, ::tripEditJson))
+            .put("pointNotes", array(data.pointNotes, ::pointNoteJson))
+            .put("trackingProfiles", array(data.trackingProfiles, ::profileJson))
             .toString(2)
 
     /** Reads a backup. Throws [IllegalArgumentException] with a readable reason if it is not usable. */
@@ -141,6 +148,9 @@ object BackupCodec {
                 usageCombos = list(root, "usageCombos", required = false, ::usageCombo),
                 usageStates = states(root),
                 focusSessions = list(root, "focusSessions", required = false, ::focus),
+                tripEdits = list(root, "tripEdits", required = false, ::tripEdit),
+                pointNotes = list(root, "pointNotes", required = false, ::pointNote),
+                trackingProfiles = list(root, "trackingProfiles", required = false, ::profile),
             )
         } catch (e: JSONException) {
             throw IllegalArgumentException("This file is damaged or is not a backup.")
@@ -563,6 +573,14 @@ object BackupCodec {
     private fun placeJson(p: PlaceEntity) = JSONObject()
         .put("id", p.id).put("name", p.name).put("kind", p.kind).put("lat", p.lat).put("lng", p.lng)
         .put("radiusM", p.radiusM).put("archived", p.archived).put("createdMs", p.createdMs)
+        .also { o ->
+            // The pause-zone settings are left out while they are all off (version 27).
+            if (p.pauseHere) o.put("pauseHere", true)
+            if (p.pauseWifi.isNotEmpty()) o.put("pauseWifi", p.pauseWifi)
+            if (p.pauseMotionless) o.put("pauseMotionless", true)
+            if (p.heartbeatMin != 0) o.put("heartbeatMin", p.heartbeatMin)
+            if (p.entryDelaySec != -1) o.put("entryDelaySec", p.entryDelaySec)
+        }
 
     private fun place(o: JSONObject) = PlaceEntity(
         id = o.getString("id"),
@@ -572,6 +590,56 @@ object BackupCodec {
         lng = o.getDouble("lng"),
         radiusM = o.getInt("radiusM"),
         archived = o.getBoolean("archived"),
+        createdMs = o.getLong("createdMs"),
+        pauseHere = o.optBoolean("pauseHere", false),
+        pauseWifi = o.optString("pauseWifi", ""),
+        pauseMotionless = o.optBoolean("pauseMotionless", false),
+        heartbeatMin = o.optInt("heartbeatMin", 0),
+        entryDelaySec = o.optInt("entryDelaySec", -1),
+    )
+
+    private fun tripEditJson(e: TripEditEntity) = JSONObject()
+        .put("id", e.id).put("kind", e.kind).put("atMs", e.atMs).put("otherMs", e.otherMs).put("createdMs", e.createdMs)
+        .put("undoneMs", e.undoneMs)
+
+    private fun tripEdit(o: JSONObject) = TripEditEntity(
+        id = o.getString("id"),
+        kind = o.getString("kind"),
+        atMs = o.getLong("atMs"),
+        otherMs = o.optLong("otherMs", 0L),
+        createdMs = o.getLong("createdMs"),
+        undoneMs = o.optLong("undoneMs", 0L),
+    )
+
+    private fun pointNoteJson(n: PointNoteEntity) = JSONObject().put("ms", n.ms).put("note", n.note).put("updatedMs", n.updatedMs)
+
+    private fun pointNote(o: JSONObject) = PointNoteEntity(
+        ms = o.getLong("ms"),
+        note = o.getString("note"),
+        updatedMs = o.optLong("updatedMs", 0L),
+    )
+
+    private fun profileJson(p: TrackingProfileEntity) = JSONObject()
+        .put("id", p.id).put("name", p.name).put("condition", p.condition).put("conditionText", p.conditionText)
+        .put("conditionNumber", p.conditionNumber).put("intervalSec", p.intervalSec).put("minMoveM", p.minMoveM)
+        .put("accuracyMode", p.accuracyMode).put("priority", p.priority).put("activateDelaySec", p.activateDelaySec)
+        .put("deactivateDelaySec", p.deactivateDelaySec).put("enabled", p.enabled).put("deletedAt", p.deletedAt)
+        .put("createdMs", p.createdMs)
+
+    private fun profile(o: JSONObject) = TrackingProfileEntity(
+        id = o.getString("id"),
+        name = o.getString("name"),
+        condition = o.getString("condition"),
+        conditionText = o.optString("conditionText", ""),
+        conditionNumber = o.optDouble("conditionNumber", 0.0),
+        intervalSec = o.getInt("intervalSec"),
+        minMoveM = o.optInt("minMoveM", 0),
+        accuracyMode = o.optString("accuracyMode", ""),
+        priority = o.optInt("priority", 0),
+        activateDelaySec = o.optInt("activateDelaySec", 0),
+        deactivateDelaySec = o.optInt("deactivateDelaySec", 0),
+        enabled = o.optBoolean("enabled", true),
+        deletedAt = o.optLong("deletedAt", 0L),
         createdMs = o.getLong("createdMs"),
     )
 
@@ -687,7 +755,10 @@ object BackupCodec {
      * "milliseconds after the previous one, latitude, longitude, accuracy, speed", the first one counted from the start of the
      * day and each next latitude and longitude as a change, with degrees in millionths (about 11 cm), the accuracy
      * in whole metres and the speed in centimetres per second (-1 when the phone did not say), separated by ";".
-     * A version 12 file has no speed (four values) and is still read.
+     * A version 12 file has no speed (four values) and is still read. From version 27 a reading that has any of the new values
+     * (direction, altitude, battery, steps, source, profile) has eleven values: the five above, then the direction in whole degrees
+     * (-1 for none), the altitude in decimetres (empty for none), the battery percent (-1), the step counter (-1), the source and
+     * the profile id (commas and semicolons in those two are replaced by underscores). A reading with none of them keeps five values.
      */
     private fun rawFixesJson(list: List<RawFixEntity>): JSONArray {
         val out = JSONArray()
@@ -702,6 +773,13 @@ object BackupCodec {
                 if (sb.isNotEmpty()) sb.append(';')
                 sb.append(f.ms - ms).append(',').append(la - lat).append(',').append(lo - lng).append(',').append(Math.round(f.acc))
                     .append(',').append(if (f.speed < 0f) -1L else Math.round(f.speed * 100.0))
+                if (hasExtras(f)) {
+                    sb.append(',').append(if (f.bearing < 0f) -1L else Math.round(f.bearing.toDouble()))
+                        .append(',').append(f.altitude?.let { Math.round(it * 10.0).toString() } ?: "")
+                        .append(',').append(f.battery).append(',').append(f.steps)
+                        .append(',').append(f.source.replace(',', '_').replace(';', '_'))
+                        .append(',').append(f.profileId.replace(',', '_').replace(';', '_'))
+                }
                 ms = f.ms
                 lat = la
                 lng = lo
@@ -724,12 +802,26 @@ object BackupCodec {
             try {
                 for (row in rows.split(';')) {
                     val p = row.split(',')
-                    if (p.size != 4 && p.size != 5) throw JSONException("bad reading")
+                    if (p.size != 4 && p.size != 5 && p.size != 11) throw JSONException("bad reading")
                     ms += p[0].toLong()
                     lat += p[1].toLong()
                     lng += p[2].toLong()
                     val speed = if (p.size == 5 && p[4].toLong() >= 0L) p[4].toLong() / 100f else -1f
-                    out.add(RawFixEntity(ms, lat / 1_000_000.0, lng / 1_000_000.0, p[3].toFloat(), speed))
+                    if (p.size == 11) {
+                        out.add(
+                            RawFixEntity(
+                                ms, lat / 1_000_000.0, lng / 1_000_000.0, p[3].toFloat(), speed,
+                                bearing = p[5].toLong().let { if (it < 0L) -1f else it.toFloat() },
+                                altitude = p[6].takeIf { it.isNotEmpty() }?.let { it.toLong() / 10.0 },
+                                battery = p[7].toInt(),
+                                steps = p[8].toLong(),
+                                source = p[9],
+                                profileId = p[10],
+                            ),
+                        )
+                    } else {
+                        out.add(RawFixEntity(ms, lat / 1_000_000.0, lng / 1_000_000.0, p[3].toFloat(), speed))
+                    }
                 }
             } catch (e: NumberFormatException) {
                 throw JSONException("bad reading")
@@ -737,4 +829,7 @@ object BackupCodec {
         }
         return out
     }
+
+    private fun hasExtras(f: RawFixEntity) =
+        f.bearing >= 0f || f.altitude != null || f.battery != -1 || f.steps != -1L || f.source.isNotEmpty() || f.profileId.isNotEmpty()
 }
