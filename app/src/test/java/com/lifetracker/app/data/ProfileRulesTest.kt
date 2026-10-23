@@ -137,7 +137,7 @@ class ProfileRulesTest {
         assertEquals(80, e.settings.accuracyLimitM)
         assertEquals("car", e.profileId)
         // No accuracy level in the profile keeps yours.
-        assertEquals(AccuracyMode.BALANCED, ProfileRules.effective(base, p.copy(accuracy = "")).settings.accuracyMode)
+        assertEquals(AccuracyMode.BALANCED, ProfileRules.effective(base, p.copy(accuracyMode = "")).settings.accuracyMode)
         assertEquals(20, ProfileRules.effective(base, p.copy(minMoveM = 20)).settings.minMoveM)
         // Nothing in force: your own settings.
         assertEquals(Effective(base, ""), ProfileRules.effective(base, null))
