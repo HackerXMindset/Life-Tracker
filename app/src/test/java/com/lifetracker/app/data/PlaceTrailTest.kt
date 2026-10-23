@@ -132,7 +132,7 @@ class PlaceTrailTest {
         assertEquals(listOf("Home", "Green Park Mosque", "Home"), stays.map { it.name })
         assertEquals(listOf(homeStart, mosqueStart, homeAgainStart).map { it * min }, stays.map { it.startMs })
         assertEquals(listOf(mosqueStart, mosqueEnd, now / min).map { it * min }, stays.map { it.endMs })
-        assertTrue(stays.first().ongoing)
+        assertFalse(stays.first().ongoing)
         assertTrue(stays.last().ongoing)
     }
 }

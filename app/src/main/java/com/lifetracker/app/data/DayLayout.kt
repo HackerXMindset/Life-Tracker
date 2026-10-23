@@ -151,7 +151,7 @@ object DayLayout {
         // On today nothing after now can be missing yet.
         val limit = if (nowMs in dayStartMs until dayEndMs) nowMs else dayEndMs
 
-        class Stay(val visit: PlaceVisitEntity, val startMs: Long, val endMs: Long)
+        class Stay(val visit: PlaceVisitEntity, val startMs: Long, val endMs: Long, val ongoing: Boolean)
 
         val stays = ArrayList<Stay>()
         if (showPlaces) {
@@ -165,7 +165,7 @@ object DayLayout {
                 val recordedEnd = if (visit.ongoing) max(nowMs, visit.startMs) else visit.endMs
                 val end = min(min(recordedEnd, nextStart), limit)
                 val start = max(visit.startMs, dayStartMs)
-                if (end > start) stays += Stay(visit, start, end)
+                if (end > start) stays += Stay(visit, start, end, ongoing = visit.ongoing && nextStart > nowMs)
             }
         }
 
@@ -188,7 +188,7 @@ object DayLayout {
                 placeId = id,
                 name = placeNames[id]?.takeIf { it.isNotBlank() } ?: "Unnamed spot",
                 named = id.isNotEmpty(),
-                ongoing = s.visit.ongoing,
+                ongoing = s.ongoing,
                 visit = s.visit,
                 children = joinGaps((things + holes).sortedBy { it.startMs }),
             )

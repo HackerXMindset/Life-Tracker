@@ -1,6 +1,7 @@
 package com.lifetracker.app.data
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -272,5 +273,7 @@ class DayLayoutTest {
         assertEquals(listOf("Home", "Green Park Mosque", "Home"), stays.map { it.name })
         assertEquals(listOf(78L, 90L, 137L).map { it * min }, stays.map { it.startMs })
         assertEquals(listOf(90L, 123L, 150L).map { it * min }, stays.map { it.endMs })
+        assertFalse(stays.first().ongoing)
+        assertTrue(stays.last().ongoing)
     }
 }

@@ -74,7 +74,7 @@ object PlaceTrail {
                     endMs = end,
                     name = placeNames[visit.placeId]?.takeIf { it.isNotBlank() } ?: "Unnamed spot",
                     named = visit.placeId.isNotEmpty(),
-                    ongoing = visit.ongoing,
+                    ongoing = visit.ongoing && nextStart > nowMs,
                     visit = visit,
                 )
             }
