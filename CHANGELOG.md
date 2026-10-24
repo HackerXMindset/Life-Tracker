@@ -2,6 +2,18 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧭 Places and trips remake: tracking profiles (C4)
+
+### ✨ New
+
+- **Tracking profiles** (Settings > Tracking profiles). A profile is a rule: while something is true, GPS all day records with the profile's pace and accuracy instead of yours. Conditions: charging, car mode, a chosen Bluetooth device connected, any Wi-Fi, a named Wi-Fi, faster than a speed, slower than a speed, still. Each profile sets seconds between readings, the least a reading must have moved, the accuracy level, a priority (the highest wins), and how long the condition must hold before it switches on and stay ended before it switches off. The list shows which profile is in force now, and every rule is read back as a sentence.
+- **Hide, never delete.** A hidden profile is kept and can be shown again.
+- **Bluetooth devices permission** (Settings > Permissions) lets the app see your paired devices and which are connected, so a profile can switch on when your car or headphones connect. Only names and addresses are read.
+
+### 🔧 Changed
+
+- Profiles only work when Recording is set to GPS all day. Car mode is Android's own car mode; for a car screen with Android Auto use the Bluetooth condition.
+
 ## 🧭 Places and trips remake: GPS all day (C3)
 
 ### ✨ New
