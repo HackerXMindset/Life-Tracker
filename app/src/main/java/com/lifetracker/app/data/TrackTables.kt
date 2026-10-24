@@ -132,6 +132,10 @@ interface TrackingProfileDao {
     @Query("SELECT * FROM tracking_profiles WHERE deletedAt = 0 ORDER BY priority DESC, name COLLATE NOCASE")
     fun observe(): Flow<List<TrackingProfileEntity>>
 
+    /** Every profile, hidden ones last, for the profiles page. */
+    @Query("SELECT * FROM tracking_profiles ORDER BY (deletedAt <> 0), priority DESC, name COLLATE NOCASE")
+    fun observeAll(): Flow<List<TrackingProfileEntity>>
+
     @Query("SELECT * FROM tracking_profiles WHERE deletedAt = 0 AND enabled = 1 ORDER BY priority DESC, name COLLATE NOCASE")
     suspend fun enabled(): List<TrackingProfileEntity>
 

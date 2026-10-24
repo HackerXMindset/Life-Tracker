@@ -51,6 +51,7 @@ class TrackService : Service() {
     private var motion: MotionSensor? = null
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
     private var receiver: BroadcastReceiver? = null
+    private var bluetooth: BluetoothWatch.Watcher? = null
     private var begun = false
     private var lastShown = ""
     private var lastPlan: Plan? = null
@@ -152,6 +153,9 @@ class TrackService : Service() {
             networkCallback = cb
         }.onFailure { AppLog.w("Track", "Could not watch the Wi-Fi: ${it.message}") }
 
+        val watcher = BluetoothWatch.Watcher(applicationContext) { look() }
+        if (watcher.start()) bluetooth = watcher
+
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_POWER_CONNECTED)
             addAction(Intent.ACTION_POWER_DISCONNECTED)
@@ -173,6 +177,8 @@ class TrackService : Service() {
         networkCallback = null
         receiver?.let { r -> runCatching { unregisterReceiver(r) } }
         receiver = null
+        bluetooth?.stop()
+        bluetooth = null
     }
 
     /** Looks at the plan again (no new reading) and does what it says. */

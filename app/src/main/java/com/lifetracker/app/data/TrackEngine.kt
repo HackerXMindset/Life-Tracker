@@ -137,6 +137,7 @@ object TrackEngine {
 
     private fun logPlan(settings: PlacesSettings, plan: Plan) {
         settings.trackStatus = plan.status
+        settings.trackProfileId = plan.profileId
         val line = "${plan.status}; every ${plan.intervalSec} s, ${AccuracyMode.label(plan.accuracyMode)}" +
             (if (plan.gpsOff) "; readings off" else "") + (if (plan.profileId.isNotEmpty()) "; profile ${plan.profileId}" else "")
         if (line != lastLogged) {

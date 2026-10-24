@@ -215,6 +215,11 @@ class PlacesSettings(context: Context) {
         get() = prefs.getString("track_status", "") ?: ""
         set(value) = prefs.edit { putString("track_status", value) }
 
+    /** The id of the tracking profile in force now (empty for none). */
+    var trackProfileId: String
+        get() = prefs.getString("track_profile_id", "") ?: ""
+        set(value) = prefs.edit { putString("track_profile_id", value) }
+
     /** Readings GPS all day kept and refused since it was last switched on. */
     var trackKept: Int
         get() = prefs.getInt("track_kept", 0)
