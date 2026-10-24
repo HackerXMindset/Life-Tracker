@@ -180,7 +180,8 @@ Each step is small enough to build, install and try before the next begins. The 
   DONE         Habits H13 Focus mode (timer attached to a habit, sessions on the Timeline) (database 26)
   DONE         C1 Places and trips remake: the new data (database 27, backup 27)
   DONE         C2 Places and trips remake: the rules (tested, not wired in yet)
-  PLANNED      C3 to C9 Places and trips rebuilt like Colota (rules, engine, profiles, pause zones, screens, map, import/export; see "Places and trips remake" below)
+  DONE         C3 Places and trips remake: the all-day engine (Gentle or GPS all day, pause zones, heartbeat)
+  PLANNED      C4 to C9 Places and trips rebuilt like Colota (rules, engine, profiles, pause zones, screens, map, import/export; see "Places and trips remake" below)
   NEXT ──►    R6b/R6c Money (see below)
               R6b/R6c Money: editing and the paper look (after the habits): "Deduct it from", separate expense and income categories, edit anything, paper look (includes Paper P5)
   DONE         Paper P4 New look: Food
