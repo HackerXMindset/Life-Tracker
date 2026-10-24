@@ -1,7 +1,7 @@
 package com.lifetracker.app.data
 
 /** The permissions the app asks for, in the order the Permissions page shows them. */
-enum class Perm { UsageAccess, Location, Background, Activity, Calls, Notifications, ExactAlarms, Battery, HealthConnect, Folders }
+enum class Perm { UsageAccess, Location, Background, Activity, Calls, Notifications, ExactAlarms, Bluetooth, Battery, HealthConnect, Folders }
 
 /** What one permission card says. The wording lives here so it can be tested and read in one place. */
 class PermText(val perm: Perm, val title: String, val why: String, val how: String)
@@ -42,6 +42,11 @@ object PermissionGuide {
             Perm.ExactAlarms, "Exact alarms",
             "Lets habit reminders ring at the minute you chose. Android 14 and newer switch it off for new apps; without it reminders still ring, but can be a few minutes late.",
             "Tap the button and switch on \"Allow setting alarms and reminders\" for this app.",
+        ),
+        PermText(
+            Perm.Bluetooth, "Bluetooth devices (Nearby devices)",
+            "Lets a tracking profile switch on while a device you pick (your car, for example) is connected. Only the names and addresses of paired devices are read, and only on this phone.",
+            "Tap the button and choose Allow. Android calls this \"Nearby devices\".",
         ),
         PermText(
             Perm.Battery, "Unrestricted battery",

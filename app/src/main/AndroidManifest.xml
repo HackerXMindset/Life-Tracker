@@ -42,6 +42,9 @@
     <!-- GPS all day: see whether Wi-Fi is connected and its name (names also need the location permission). -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <!-- Tracking profiles: switch on while a paired device (your car) is connected. Only names and addresses are read. -->
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <!-- Android 9 and older use Google's own version of the Physical activity permission. -->
     <uses-permission android:name="com.google.android.gms.permission.ACTIVITY_RECOGNITION" />
     <!-- Sets the places up again after the phone restarts. -->

@@ -34,7 +34,8 @@ object ProfileRules {
     fun holds(p: TrackingProfileEntity, s: Situation): Boolean = when (p.condition) {
         ProfileCondition.CHARGING -> s.charging
         ProfileCondition.CAR_MODE -> s.carMode
-        ProfileCondition.BLUETOOTH -> p.conditionText.isNotBlank() && s.bluetooth.any { it.equals(p.conditionText.trim(), ignoreCase = true) }
+        ProfileCondition.BLUETOOTH ->
+            ProfileText.deviceAddress(p.conditionText).let { address -> address.isNotEmpty() && s.bluetooth.any { it.equals(address, ignoreCase = true) } }
         ProfileCondition.WIFI -> s.wifiConnected
         ProfileCondition.WIFI_NAMED -> p.conditionText.isNotBlank() && s.wifiName != null && wifiKey(s.wifiName) == wifiKey(p.conditionText)
         ProfileCondition.SPEED_ABOVE -> s.speedKmh != null && s.speedKmh > p.conditionNumber

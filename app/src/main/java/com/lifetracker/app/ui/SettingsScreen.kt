@@ -25,7 +25,7 @@ import com.lifetracker.app.data.UsageCollector
 import com.lifetracker.app.ui.theme.LocalPaper
 
 /** Everything that can be opened from the Settings tab. The numbers for each live under Stats. */
-enum class Page { Phone, Steps, Places, Calls, Charging, Activities, Habits, Appearance, Backup, Timeline, Apps, PlaceCategories, Permissions, Logs }
+enum class Page { Phone, Steps, Places, Calls, Charging, Activities, Habits, Appearance, Backup, Timeline, Apps, PlaceCategories, Profiles, Permissions, Logs }
 
 /**
  * The Settings tab, laid out like the demo: a big title, then four groups of rows. Each row has an icon, a name, one small
@@ -97,6 +97,9 @@ fun SettingsScreen(onOpen: (Page) -> Unit) {
         }
         item {
             SettingsRow(R.drawable.ic_p_pin, "Place categories", "Colour and icon for Home, Study, Gym and your own") { onOpen(Page.PlaceCategories) }
+        }
+        item {
+            SettingsRow(R.drawable.ic_p_pin, "Tracking profiles", "Change how GPS all day records while charging, driving, on a Wi-Fi...") { onOpen(Page.Profiles) }
         }
         item {
             SettingsRow(

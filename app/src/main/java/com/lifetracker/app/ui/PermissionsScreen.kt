@@ -36,6 +36,7 @@ import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.lifetracker.app.data.BluetoothWatch
 import com.lifetracker.app.data.CallsCollector
 import com.lifetracker.app.data.ChargeNotifier
 import com.lifetracker.app.data.DataSources
@@ -60,6 +61,7 @@ fun quickPermissionStates(context: Context): Map<Perm, Boolean> = mapOf(
     Perm.Calls to CallsCollector.hasAccess(context),
     Perm.Notifications to ChargeNotifier.canNotify(context),
     Perm.ExactAlarms to HabitReminderScheduler.canRingExactly(context),
+    Perm.Bluetooth to BluetoothWatch.hasPermission(context),
     Perm.Battery to KeepAlive.isExempt(context),
 )
 
@@ -186,6 +188,9 @@ fun PermissionsScreen(onBack: () -> Unit, onOpen: (Page) -> Unit) {
                         }
                     }) { Text("Allow") }
                     Perm.ExactAlarms -> if (!allowed(perm)) Button(onClick = { HabitReminderScheduler.openExactAlarmSettings(context) }) { Text("Allow") }
+                    Perm.Bluetooth -> if (!allowed(perm)) Button(onClick = {
+                        if (Build.VERSION.SDK_INT >= 31) askOne.launch(android.Manifest.permission.BLUETOOTH_CONNECT)
+                    }) { Text("Allow") }
                     Perm.Battery -> if (!allowed(perm)) Button(onClick = {
                         KeepAlive.open(context, KeepAlive.exemptionIntents(context))
                     }) { Text("Allow unrestricted") }

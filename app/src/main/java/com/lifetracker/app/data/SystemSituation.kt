@@ -51,6 +51,7 @@ object SystemSituation {
         return Situation(
             charging = charging(context),
             carMode = carMode(context),
+            bluetooth = BluetoothWatch.connected,
             wifiConnected = connected,
             wifiName = name,
         )
