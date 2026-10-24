@@ -11,6 +11,7 @@ import com.lifetracker.app.data.KeepAlive
 import com.lifetracker.app.data.Fix
 import com.lifetracker.app.data.PlaceCategoryEntity
 import com.lifetracker.app.data.DefaultPlaceCategories
+import com.lifetracker.app.data.PauseSettings
 import com.lifetracker.app.data.PlaceEntity
 import com.lifetracker.app.data.PlaceLookup
 import com.lifetracker.app.data.PlaceRules
@@ -535,10 +536,14 @@ class PlacesViewModel(private val app: Application) : AndroidViewModel(app) {
      * Saves a new place. If it comes from the review list, that spot's stops (and any other unnamed stop
      * inside the new circle) become visits to it.
      */
-    fun addPlace(name: String, kind: String, radiusM: Int, lat: Double, lng: Double) {
+    fun addPlace(name: String, kind: String, radiusM: Int, lat: Double, lng: Double, pause: PauseSettings = PauseSettings()) {
         viewModelScope.launch {
             val now = System.currentTimeMillis()
-            val place = PlaceEntity("p$now", name.trim(), kind, lat, lng, radiusM, false, now)
+            val place = PlaceEntity(
+                "p$now", name.trim(), kind, lat, lng, radiusM, false, now,
+                pauseHere = pause.pauseHere, pauseWifi = pause.wifi, pauseMotionless = pause.motionless,
+                heartbeatMin = pause.heartbeatMin, entryDelaySec = pause.entryDelaySec,
+            )
             dao.upsertPlace(place)
             val inside = dao.unknownOnce().filter { PlaceRules.distanceM(lat, lng, it.lat, it.lng) <= radiusM }
             if (inside.isNotEmpty()) dao.assign(inside.map { it.id }, place.id, lat, lng)

@@ -45,6 +45,13 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lifetracker.app.data.KeepAlive
 import com.lifetracker.app.data.PlaceEntity
+import androidx.compose.material3.Switch
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import com.lifetracker.app.data.PauseSettings
+import com.lifetracker.app.data.PauseText
+import com.lifetracker.app.data.SystemSituation
 import com.lifetracker.app.data.PlaceKinds
 import com.lifetracker.app.data.PlaceRules
 import com.lifetracker.app.data.PlaceTrail
@@ -317,7 +324,7 @@ fun PlacesScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PlacesViewModel
                     SettingsRow(
                         icon = null,
                         title = row.place.name + if (row.place.archived) "  (not watched)" else "",
-                        hint = "${row.place.radiusM} m circle · " + (placeCategories.firstOrNull { it.id == row.place.kind }?.name ?: PlaceKinds.label(row.place.kind)),
+                        hint = "${row.place.radiusM} m circle · " + (if (row.place.pauseHere) "pause zone · " else "") + (placeCategories.firstOrNull { it.id == row.place.kind }?.name ?: PlaceKinds.label(row.place.kind)),
                         onClick = { editing = row.place },
                     )
                 }
@@ -375,7 +382,7 @@ fun PlacesScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PlacesViewModel
             cluster = null,
             categories = placeCategories,
             onFetchHere = vm::fetchHere,
-            onSave = { name, kind, radius, lat, lng -> vm.addPlace(name, kind, radius, lat, lng) },
+            onSave = { name, kind, radius, lat, lng, pause -> vm.addPlace(name, kind, radius, lat, lng, pause) },
             onArchiveToggle = null,
             onDismiss = { adding = false },
         )
@@ -388,7 +395,7 @@ fun PlacesScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PlacesViewModel
             suggestion = suggestions[vm.suggestionKey(cluster)],
             categories = placeCategories,
             onFetchHere = vm::fetchHere,
-            onSave = { name, kind, radius, lat, lng -> vm.addPlace(name, kind, radius, lat, lng) },
+            onSave = { name, kind, radius, lat, lng, pause -> vm.addPlace(name, kind, radius, lat, lng, pause) },
             onArchiveToggle = null,
             onDismiss = { naming = null },
         )
@@ -400,8 +407,14 @@ fun PlacesScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PlacesViewModel
             cluster = null,
             categories = placeCategories,
             onFetchHere = vm::fetchHere,
-            onSave = { name, kind, radius, lat, lng ->
-                vm.updatePlace(place.copy(name = name.trim(), kind = kind, radiusM = radius, lat = lat, lng = lng))
+            onSave = { name, kind, radius, lat, lng, pause ->
+                vm.updatePlace(
+                    place.copy(
+                        name = name.trim(), kind = kind, radiusM = radius, lat = lat, lng = lng,
+                        pauseHere = pause.pauseHere, pauseWifi = pause.wifi, pauseMotionless = pause.motionless,
+                        heartbeatMin = pause.heartbeatMin, entryDelaySec = pause.entryDelaySec,
+                    ),
+                )
             },
             onArchiveToggle = { vm.updatePlace(place.copy(archived = !place.archived)) },
             onDismiss = { editing = null },
@@ -419,7 +432,7 @@ private fun PlaceDialog(
     suggestion: String? = null,
     categories: List<com.lifetracker.app.data.PlaceCategoryEntity>,
     onFetchHere: ((com.lifetracker.app.data.Fix?) -> Unit) -> Unit,
-    onSave: (String, String, Int, Double, Double) -> Unit,
+    onSave: (String, String, Int, Double, Double, PauseSettings) -> Unit,
     onArchiveToggle: (() -> Unit)?,
     onDismiss: () -> Unit,
 ) {
@@ -438,12 +451,26 @@ private fun PlaceDialog(
     var fetching by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
     val parsed = PlaceRules.parseCoordinates(coords)
+    val context = LocalContext.current
+    val start = remember { initial?.let { PauseSettings.of(it) } ?: PauseSettings() }
+    var pauseHere by remember { mutableStateOf(start.pauseHere) }
+    var wifi by remember { mutableStateOf(start.wifi) }
+    var motionless by remember { mutableStateOf(start.motionless) }
+    var heartbeat by remember { mutableStateOf(start.heartbeatMin.toString()) }
+    var ownDelay by remember { mutableStateOf(start.entryDelaySec >= 0) }
+    var delay by remember { mutableStateOf(if (start.entryDelaySec >= 0) start.entryDelaySec.toString() else "30") }
+    val pause = PauseSettings(
+        pauseHere, wifi, motionless,
+        heartbeat.toIntOrNull() ?: -1,
+        if (ownDelay) (delay.toIntOrNull() ?: -2) else -1,
+    )
+    val pauseProblem = PauseText.problem(pause)
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
@@ -493,6 +520,57 @@ private fun PlaceDialog(
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                Text("Pause zone", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Pause recording here", modifier = Modifier.weight(1f))
+                    Switch(checked = pauseHere, onCheckedChange = { pauseHere = it })
+                }
+                if (pauseHere) {
+                    OutlinedTextField(
+                        value = wifi,
+                        onValueChange = { wifi = it },
+                        label = { Text("Pause on these Wi-Fi names (one per line)") },
+                        minLines = 2,
+                    )
+                    OutlinedButton(onClick = {
+                        val ssid = SystemSituation.wifi(context).second
+                        if (ssid == null) {
+                            message = "Could not see a Wi-Fi name. Connect to the Wi-Fi and allow location (Settings > Permissions)."
+                        } else {
+                            wifi = PauseText.addWifi(wifi, ssid)
+                            message = ""
+                        }
+                    }) { Text("Add the Wi-Fi I am on") }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Pause when motionless", modifier = Modifier.weight(1f))
+                        Switch(checked = motionless, onCheckedChange = { motionless = it })
+                    }
+                    OutlinedTextField(
+                        value = heartbeat,
+                        onValueChange = { heartbeat = it.filter { c -> c.isDigit() }.take(4) },
+                        label = { Text("Heartbeat reading every (minutes, 0 = none)") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(selected = !ownDelay, onClick = { ownDelay = false }, label = { Text("Automatic delay") })
+                        FilterChip(selected = ownDelay, onClick = { ownDelay = true }, label = { Text("My own delay") })
+                    }
+                    if (ownDelay) {
+                        OutlinedTextField(
+                            value = delay,
+                            onValueChange = { delay = it.filter { c -> c.isDigit() }.take(4) },
+                            label = { Text("Keep recording after arriving (seconds)") },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        )
+                    }
+                }
+                Text(
+                    pauseProblem ?: PauseText.describe(pause),
+                    fontSize = 12.sp,
+                    color = if (pauseProblem != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 if (onArchiveToggle != null) {
                     TextButton(onClick = {
                         onArchiveToggle()
@@ -503,9 +581,9 @@ private fun PlaceDialog(
         },
         confirmButton = {
             TextButton(
-                enabled = name.isNotBlank() && parsed != null,
+                enabled = name.isNotBlank() && parsed != null && pauseProblem == null,
                 onClick = {
-                    parsed?.let { onSave(name, kind, radius, it.first, it.second) }
+                    parsed?.let { onSave(name, kind, radius, it.first, it.second, PauseText.clean(pause)) }
                     onDismiss()
                 },
             ) { Text("Save") }
