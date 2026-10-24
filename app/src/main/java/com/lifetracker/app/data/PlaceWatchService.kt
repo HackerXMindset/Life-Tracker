@@ -50,6 +50,13 @@ class PlaceWatchService : Service() {
             AppLog.i("Service", "Readings service started" + (if (intent == null) " by Android after it had been stopped" else ""))
         }
         runCatching { showNotification() }.onFailure { AppLog.e("Service", "Could not show the notification Android needs for the readings", it) }
+        if (PlacesSettings(this).allDay) {
+            // GPS all day has its own service; this old one hands over (after announcing itself, as Android requires).
+            AppLog.i("Service", "GPS all day is on: handing over to its own service")
+            TrackService.start(this)
+            stopSelf()
+            return START_NOT_STICKY
+        }
         beginUpdates()
         // In always-on mode Android brings the service back by itself if it is stopped.
         return if (PlacesSettings(this).alwaysOn) START_STICKY else START_NOT_STICKY
@@ -218,7 +225,12 @@ class PlaceWatchService : Service() {
         }
 
         /** Starts the readings. Safe to call when they are already running. Returns false if Android would not allow it. */
-        fun start(context: Context): Boolean =
+        fun start(context: Context): Boolean {
+            if (PlacesSettings(context).allDay) return TrackService.start(context)
+            return startGentle(context)
+        }
+
+        private fun startGentle(context: Context): Boolean =
             runCatching {
                 androidx.core.content.ContextCompat.startForegroundService(context, Intent(context, PlaceWatchService::class.java))
             }.onFailure {

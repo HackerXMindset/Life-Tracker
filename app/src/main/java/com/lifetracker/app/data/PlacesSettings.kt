@@ -174,8 +174,72 @@ class PlacesSettings(context: Context) {
         get() = prefs.getString("motion_sensor", "") ?: ""
         set(value) = prefs.edit { putString("motion_sensor", value) }
 
+    /** How places and trips are recorded: [RecordingMode.GENTLE] (the default) or [RecordingMode.ALL_DAY]. */
+    var mode: String
+        get() = prefs.getString("mode", RecordingMode.GENTLE)?.takeIf { it in RecordingMode.all } ?: RecordingMode.GENTLE
+        set(value) = prefs.edit { putString("mode", value) }
+
+    /** GPS all day is on. */
+    val allDay: Boolean get() = mode == RecordingMode.ALL_DAY
+
+    /** The position readings run all the time: always-on mode or GPS all day. */
+    val keepRunning: Boolean get() = alwaysOn || allDay
+
+    /** GPS all day: seconds between readings. */
+    var trackIntervalSec: Int
+        get() = prefs.getInt("track_interval_sec", 30)
+        set(value) = prefs.edit { putInt("track_interval_sec", value.coerceAtLeast(1)) }
+
+    /** GPS all day: fewest metres from the last kept reading for a reading to be kept; 0 keeps every one. */
+    var trackMinMoveM: Int
+        get() = prefs.getInt("track_min_move_m", 0)
+        set(value) = prefs.edit { putInt("track_min_move_m", value.coerceAtLeast(0)) }
+
+    /** GPS all day: how exact the phone is asked to be (one of [AccuracyMode.all]). */
+    var trackAccuracyMode: String
+        get() = prefs.getString("track_accuracy_mode", AccuracyMode.HIGH)?.takeIf { it in AccuracyMode.all } ?: AccuracyMode.HIGH
+        set(value) = prefs.edit { putString("track_accuracy_mode", value) }
+
+    /** GPS all day: readings less accurate than this many metres are refused; 0 refuses none. */
+    var trackAccuracyLimitM: Int
+        get() = prefs.getInt("track_accuracy_limit_m", PlaceRules.MAX_ACCURACY_M.toInt())
+        set(value) = prefs.edit { putInt("track_accuracy_limit_m", value.coerceAtLeast(0)) }
+
+    /** You pressed Pause: GPS all day is not recording until you press Resume. */
+    var manualPause: Boolean
+        get() = prefs.getBoolean("manual_pause", false)
+        set(value) = prefs.edit { putBoolean("manual_pause", value) }
+
+    /** The line the GPS-all-day notification shows, kept so the settings page can show it too. */
+    var trackStatus: String
+        get() = prefs.getString("track_status", "") ?: ""
+        set(value) = prefs.edit { putString("track_status", value) }
+
+    /** Readings GPS all day kept and refused since it was last switched on. */
+    var trackKept: Int
+        get() = prefs.getInt("track_kept", 0)
+        set(value) = prefs.edit { putInt("track_kept", value) }
+
+    var trackRefused: Int
+        get() = prefs.getInt("track_refused", 0)
+        set(value) = prefs.edit { putInt("track_refused", value) }
+
+    /** Your own recording settings, as the rules want them. */
+    fun trackSettings() = TrackSettings(trackIntervalSec, trackMinMoveM, trackAccuracyMode, trackAccuracyLimitM)
+
     /** A name found on the internet for a spot, kept so each spot is only looked up once. */
     fun suggestion(key: String): String? = prefs.getString("sug_$key", null)
 
     fun setSuggestion(key: String, value: String) = prefs.edit { putString("sug_$key", value) }
+}
+
+/** The two ways places and trips can be recorded. */
+object RecordingMode {
+    /** Today's way: Android's arrived/left and still/moving messages start the readings only when needed. */
+    const val GENTLE = "gentle"
+
+    /** Colota's way: readings all day, shaped by your settings, profiles and pause zones. */
+    const val ALL_DAY = "all-day"
+
+    val all = listOf(GENTLE, ALL_DAY)
 }
