@@ -2,6 +2,17 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧭 Places and trips remake: pause zones (C5)
+
+### ✨ New
+
+- **Pause zone in the place editor** (Add a place, Name this spot and Edit place). Turn on **Pause recording here** and GPS all day stops its dense readings a moment after you arrive; the stay still shows as a visit with its arrival and leaving time. Options: **Pause on these Wi-Fi names** (with an **Add the Wi-Fi I am on** button), **Pause when motionless**, a **Heartbeat** reading every N minutes while paused, and the **delay** before pausing (automatic, or your own seconds). A sentence under the options reads the whole zone back, and a bad value is refused with its reason. A reading at the place's centre is added when you leave, so the next trip starts cleanly.
+- The place list says "pause zone" on a place that has it on.
+
+### 🔧 Changed
+
+- The place editor scrolls, because it is longer now.
+
 ## 🧭 Places and trips remake: tracking profiles (C4)
 
 ### ✨ New
