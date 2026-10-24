@@ -20,6 +20,9 @@ import com.lifetracker.app.data.PlaceWatchService
 import com.lifetracker.app.data.PlacesSettings
 import com.lifetracker.app.data.PlacesTracker
 import com.lifetracker.app.data.PlacesWorker
+import com.lifetracker.app.data.RecordingMode
+import com.lifetracker.app.data.TrackEngine
+import com.lifetracker.app.data.TrackService
 import com.lifetracker.app.data.TripAdjust
 import com.lifetracker.app.data.TripModes
 import com.lifetracker.app.data.TripRules
@@ -78,6 +81,69 @@ class PlacesViewModel(private val app: Application) : AndroidViewModel(app) {
 
     private val timelineFlow = MutableStateFlow(settings.showOnTimeline)
     val showOnTimeline: StateFlow<Boolean> = timelineFlow
+
+    private fun readRecording() = RecordingUi(
+        mode = settings.mode,
+        intervalSec = settings.trackIntervalSec,
+        minMoveM = settings.trackMinMoveM,
+        accuracyMode = settings.trackAccuracyMode,
+        accuracyLimitM = settings.trackAccuracyLimitM,
+        paused = settings.manualPause,
+        status = settings.trackStatus,
+        kept = settings.trackKept,
+        refused = settings.trackRefused,
+    )
+
+    private val recordingFlow = MutableStateFlow(readRecording())
+
+    /** How places and trips are recorded (Gentle or GPS all day) and the GPS-all-day settings. */
+    val recording: StateFlow<RecordingUi> = recordingFlow
+
+    /** Switches between Gentle and GPS all day, starting the right service and stopping the other one. */
+    fun setMode(mode: String) {
+        if (settings.mode == mode) return
+        settings.mode = mode
+        settings.manualPause = false
+        settings.trackKept = 0
+        settings.trackRefused = 0
+        settings.trackStatus = ""
+        TrackEngine.reset()
+        val canRun = settings.enabled && PlacesTracker.hasLocation(app)
+        if (mode == RecordingMode.ALL_DAY) {
+            runCatching { app.stopService(android.content.Intent(app, PlaceWatchService::class.java)) }
+            if (canRun) TrackService.start(app)
+        } else {
+            TrackService.stop(app)
+            if (canRun && settings.keepRunning) PlaceWatchService.start(app)
+        }
+        recordingFlow.value = readRecording()
+        statusFlow.value = readStatus()
+    }
+
+    fun setTrackIntervalSec(seconds: Int) {
+        settings.trackIntervalSec = seconds
+        recordingFlow.value = readRecording()
+    }
+
+    fun setTrackMinMoveM(metres: Int) {
+        settings.trackMinMoveM = metres
+        recordingFlow.value = readRecording()
+    }
+
+    fun setTrackAccuracyMode(mode: String) {
+        settings.trackAccuracyMode = mode
+        recordingFlow.value = readRecording()
+    }
+
+    fun setTrackAccuracyLimitM(metres: Int) {
+        settings.trackAccuracyLimitM = metres
+        recordingFlow.value = readRecording()
+    }
+
+    fun setTrackPaused(paused: Boolean) {
+        TrackService.setPaused(app, paused)
+        recordingFlow.value = readRecording()
+    }
 
     private val alwaysOnFlow = MutableStateFlow(settings.alwaysOn)
     val alwaysOn: StateFlow<Boolean> = alwaysOnFlow
@@ -313,6 +379,7 @@ class PlacesViewModel(private val app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             if (settings.enabled) runCatching { PlacesTracker.syncAll(app) }
             statusFlow.value = readStatus()
+            recordingFlow.value = readRecording()
             readingsFlow.value = runCatching { readReadings() }.getOrElse { readingsFlow.value }
             // Look at the last days' readings again now and then, so opening the app keeps the visits tidy.
             if (settings.enabled && System.currentTimeMillis() - settings.lastCleanupMs > 60 * 60_000L) {
@@ -505,3 +572,16 @@ class PlacesViewModel(private val app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { dao.ignore(cluster.ids) }
     }
 }
+
+/** What the Recording card shows. */
+data class RecordingUi(
+    val mode: String,
+    val intervalSec: Int,
+    val minMoveM: Int,
+    val accuracyMode: String,
+    val accuracyLimitM: Int,
+    val paused: Boolean,
+    val status: String,
+    val kept: Int,
+    val refused: Int,
+)

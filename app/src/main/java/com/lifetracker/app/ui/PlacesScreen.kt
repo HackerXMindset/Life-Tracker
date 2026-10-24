@@ -77,6 +77,7 @@ fun PlacesScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PlacesViewModel
     val access by vm.access.collectAsState()
     val status by vm.status.collectAsState()
     val alwaysOn by vm.alwaysOn.collectAsState()
+    val recording by vm.recording.collectAsState()
     val alwaysOnInterval by vm.alwaysOnIntervalSec.collectAsState()
     val readings by vm.readings.collectAsState()
     val rebuilding by vm.rebuilding.collectAsState()
@@ -193,6 +194,8 @@ fun PlacesScreen(onBack: () -> Unit, part: Part = Part.Data, vm: PlacesViewModel
                     ToggleRow("Watch my places", enabled, vm::setEnabled, hint = "Needs location all the time, set once", first = true)
                 }
             }
+
+            recordingItems(recording, vm)
 
             if (!access.all || !access.battery) {
                 item {

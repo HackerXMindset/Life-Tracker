@@ -210,7 +210,7 @@ object PlacesTracker {
                 after = describe(next, names)
                 PlaceEngine.keepWatching(next, System.currentTimeMillis())
             }
-            val start = (watch || settings.alwaysOn) && hasLocation(context)
+            val start = (watch || settings.keepRunning) && hasLocation(context)
             AppLog.i(
                 "Places",
                 "$what (at ${LogFormat.clock(at)}): $after" + (if (before != after) " [was: $before]" else "") +
@@ -223,7 +223,8 @@ object PlacesTracker {
     class Watch(val keep: Boolean, val intervalSec: Int, val highAccuracy: Boolean)
 
     /** Seconds between readings while you are standing still: the always-on pace in always-on mode, else the usual one. */
-    fun baseIntervalSec(settings: PlacesSettings): Int = if (settings.alwaysOn) settings.alwaysOnIntervalSec else settings.intervalSec
+    fun baseIntervalSec(settings: PlacesSettings): Int =
+        if (settings.allDay) settings.trackIntervalSec else if (settings.alwaysOn) settings.alwaysOnIntervalSec else settings.intervalSec
 
     /** GPS is used when you chose it, except in always-on mode while you are standing still (Wi-Fi and mobile network then). */
     fun useHighAccuracy(settings: PlacesSettings, state: WatchState): Boolean =
@@ -385,7 +386,7 @@ object PlacesTracker {
     private fun needsStarting(settings: PlacesSettings, now: Long): Boolean =
         PlacesWatchdog.shouldStart(
             enabled = settings.enabled,
-            alwaysOn = settings.alwaysOn,
+            alwaysOn = settings.keepRunning,
             wanted = PlaceEngine.keepWatching(settings.engine, now),
             watching = settings.watching,
             lastBeatMs = settings.lastBeatMs,
@@ -457,7 +458,7 @@ object PlacesTracker {
         AppLog.i("App", "Phone restarted or app updated: handing the places to Android again")
         runCatching { syncAll(context) }
         val settings = PlacesSettings(context)
-        if (settings.enabled && settings.alwaysOn && hasLocation(context)) PlaceWatchService.start(context)
+        if (settings.enabled && settings.keepRunning && hasLocation(context)) PlaceWatchService.start(context)
     }
 
     /** What a tidy-up changed. */

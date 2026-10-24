@@ -50,6 +50,8 @@ data class RawFixEntity(
 object FixSource {
     const val GPS = "gps"
     const val NETWORK = "network"
+    /** The phone combined its sensors (what Google Play services normally reports). */
+    const val FUSED = "fused"
     /** A synthetic reading put at the centre of a place when you leave it, so a trip starts cleanly. */
     const val ANCHOR = "anchor"
     /** A single reading taken now and then while recording is paused or the continuous readings are not running. */

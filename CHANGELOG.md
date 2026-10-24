@@ -2,6 +2,19 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧭 Places and trips remake: GPS all day (C3)
+
+### ✨ New
+
+- **Recording: Gentle or GPS all day** (Settings > Places and trips > Recording). Gentle is what the app did before and stays the default. **GPS all day** reads your position all day at the pace you set (seconds between readings, the least a reading must have moved to be kept, the worst accuracy accepted, High / Balanced / Low power) and keeps every good reading, so the path is exact. A notification stays and shows what it is doing, with a **Pause / Resume** button.
+- **Pause zones work in the engine.** At a place with Pause here on (the switch itself arrives with the place editor in a later stage), the readings stop after you have been there a moment, and stop altogether while you are on one of its Wi-Fi names or have not moved. A heartbeat reading can be taken every few minutes, and a reading at the place's centre is added when you leave, so the next trip starts cleanly.
+- **The diary says why a reading was refused** (too inaccurate, a jump, too close to the last one, out of order). Every kept reading now also keeps its direction, height, battery, step counter and where it came from.
+
+### 🔧 Changed
+
+- Visits and trips still appear on the Timeline as before; in GPS all day the kept readings are given to the same detector. Android's arrived/left messages no longer start the old readings service while GPS all day is on, and the 15-minute check starts the new one if Android stopped it.
+- Two new normal permissions (see the Wi-Fi and its name). Nothing else is asked.
+
 ## 🧭 Places and trips remake: the new data (C1)
 
 ### 🔧 Changed
