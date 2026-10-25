@@ -2,6 +2,19 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧭 Places and trips remake: offline maps (C7b)
+
+### ✨ New
+
+- **Offline areas** (Settings > Places and trips > Maps). **Download an area** by hand: move the map so the part you want fills the window, see the number of tiles, the size and the free space, then download. The list shows each area with its style, how it was added and its state, with **Download again** and **Delete area** (the tiles are removed; the entry stays).
+- **A map for every place:** each place gets the map around it as soon as it is made and again if it changes. You choose how far around.
+- **A map where you go:** a reading outside every downloaded area asks for the map around it. With no connection it waits and downloads when one is back.
+- A switch for each kind, and **Use mobile data for map downloads** (off means Wi-Fi only).
+
+### 🔧 Changed
+
+- OpenFreeMap allows at most 3,000 tiles or 50 MB in one download. The app follows that for its built-in styles and says so when an area is too big. Your own styles have no limit from the app. The only refusal from the app is not enough free space.
+
 ## 🧭 Places and trips remake: the map (C7a)
 
 ### ✨ New

@@ -12,6 +12,7 @@ import com.lifetracker.app.data.Fix
 import com.lifetracker.app.data.PlaceCategoryEntity
 import com.lifetracker.app.data.DefaultPlaceCategories
 import com.lifetracker.app.data.PauseSettings
+import com.lifetracker.app.data.MapScheduler
 import com.lifetracker.app.data.PlaceEntity
 import com.lifetracker.app.data.PlaceLookup
 import com.lifetracker.app.data.PlaceRules
@@ -426,6 +427,7 @@ class PlacesViewModel(private val app: Application) : AndroidViewModel(app) {
         if (on) PlacesWorker.schedule(app) else PlacesWorker.cancel(app)
         viewModelScope.launch {
             runCatching { PlacesTracker.syncAll(app) }
+            runCatching { MapScheduler.kick(app) }
             statusFlow.value = readStatus()
         }
     }
@@ -466,6 +468,7 @@ class PlacesViewModel(private val app: Application) : AndroidViewModel(app) {
             val inside = dao.unknownOnce().filter { PlaceRules.distanceM(lat, lng, it.lat, it.lng) <= radiusM }
             if (inside.isNotEmpty()) dao.assign(inside.map { it.id }, place.id, lat, lng)
             runCatching { PlacesTracker.syncAll(app) }
+            runCatching { MapScheduler.kick(app) }
             statusFlow.value = readStatus()
         }
     }
@@ -486,6 +489,7 @@ class PlacesViewModel(private val app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             dao.upsertPlace(place)
             runCatching { PlacesTracker.syncAll(app) }
+            runCatching { MapScheduler.kick(app) }
             statusFlow.value = readStatus()
         }
     }

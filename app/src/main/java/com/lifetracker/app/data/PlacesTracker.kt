@@ -561,6 +561,8 @@ object PlacesTracker {
         settings.lastCleanupMs = now
         settings.lastCleanupNote = note
         AppLog.i("Cleanup", "Tidy-up of the last three days: $note")
+        // New readings may be outside every offline map area; the map job checks and downloads what is wanted.
+        runCatching { MapScheduler.kick(context) }
     }
 
     /** Tidies everything the readings cover, a week at a time. Returns a line saying what it did. */

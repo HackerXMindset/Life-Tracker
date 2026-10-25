@@ -7,13 +7,17 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -25,7 +29,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlin.math.roundToInt
+import com.lifetracker.app.data.AreaSource
+import com.lifetracker.app.data.AreaState
+import com.lifetracker.app.data.MapAreaEntity
 import com.lifetracker.app.data.MapStyleEntity
+import com.lifetracker.app.data.OfflineRules
+import com.lifetracker.app.data.TileMath
 import com.lifetracker.app.data.MapStyles
 import com.lifetracker.app.ui.theme.LocalPaper
 import com.lifetracker.app.ui.theme.PaperButton
@@ -38,7 +48,12 @@ fun MapsScreen(onBack: () -> Unit, vm: MapsViewModel = viewModel()) {
     val paper = LocalPaper.current
     val styles by vm.styles.collectAsState()
     val selected by vm.selected.collectAsState()
+    val areas by vm.areas.collectAsState()
+    val prefs by vm.prefs.collectAsState()
+    val average by vm.average.collectAsState()
+    val styleLimit by vm.styleLimit.collectAsState()
     var adding by remember { mutableStateOf(false) }
+    var framing by remember { mutableStateOf(false) }
     BackHandler(onBack = onBack)
 
     LazyColumn(
@@ -88,8 +103,66 @@ fun MapsScreen(onBack: () -> Unit, vm: MapsViewModel = viewModel()) {
                 )
             }
         }
+        item { PaperSection("Offline maps", "kept on the phone") }
         item {
-            Text("Offline areas (maps kept on the phone) come in the next step.", fontSize = 12.sp, color = paper.ink2)
+            SetCard {
+                ToggleRow(
+                    "A map for every place", prefs.autoPlaces, vm::setAutoPlaces, first = true,
+                    hint = "Each place gets the map around it as soon as it is made, and again when it changes",
+                )
+                if (prefs.autoPlaces) ReachSlider("Around a place", prefs.placeReachKm, vm::setPlaceReach)
+                ToggleRow(
+                    "A map where you go", prefs.autoWanted, vm::setAutoWanted,
+                    hint = "A reading outside every downloaded area asks for the map around it; with no connection it waits",
+                )
+                if (prefs.autoWanted) ReachSlider("Around where you went", prefs.wantedReachKm, vm::setWantedReach)
+                ToggleRow(
+                    "Use mobile data for map downloads", prefs.mobileData, vm::setMobileData,
+                    hint = "Off means Wi-Fi only; downloads then wait for Wi-Fi",
+                )
+            }
+        }
+        item {
+            val limit = styleLimit
+            Text(
+                (if (limit != null) limit.termsNote + " (the provider's rule, not the app's). " else "Your own style has no limit from the app. ") +
+                    "The only refusal from the app is not enough free space. Automatic areas are never deleted automatically.",
+                fontSize = 12.sp,
+                color = paper.ink2,
+            )
+        }
+        item { PaperButton("Download an area", { framing = true }, modifier = Modifier.fillMaxWidth()) }
+        item {
+            val used = areas.filter { it.state == AreaState.DONE }.sumOf { it.bytes }
+            Text(
+                "Maps on the phone: " + TileMath.sizeText(used) + " · " + TileMath.sizeText(vm.freeBytes()) + " free",
+                fontSize = 13.sp,
+                color = paper.ink,
+            )
+        }
+        if (areas.isEmpty()) {
+            item { Text("No areas yet.", fontSize = 13.sp, color = paper.ink2) }
+        } else {
+            items(areas, key = { it.id }) { a -> AreaRow(a, styles, onAgain = { vm.downloadAgain(a) }, onDelete = { vm.deleteArea(a) }) }
+        }
+    }
+
+    if (framing) {
+        var start by remember { mutableStateOf<Pair<Double, Double>?>(null) }
+        var ready by remember { mutableStateOf(false) }
+        LaunchedEffect(Unit) {
+            start = vm.startPoint()
+            ready = true
+        }
+        if (ready) {
+            MapFrameDialog(
+                start = start,
+                average = average,
+                freeBytes = vm.freeBytes(),
+                limit = styleLimit,
+                onDownload = { name, bounds, minZ, maxZ, done -> vm.addByHand(name, bounds, minZ, maxZ, done) },
+                onDismiss = { framing = false },
+            )
         }
     }
 
@@ -98,6 +171,36 @@ fun MapsScreen(onBack: () -> Unit, vm: MapsViewModel = viewModel()) {
             onAdd = { name, address, key -> vm.add(name, address, key) },
             onDismiss = { adding = false },
         )
+    }
+}
+
+@Composable
+private fun ReachSlider(label: String, km: Int, onChange: (Int) -> Unit) {
+    val paper = LocalPaper.current
+    Column(modifier = Modifier.fillMaxWidth().dashedTop(paper.line).padding(vertical = 8.dp)) {
+        Text("$label: $km km each way", fontSize = 13.sp, color = paper.ink)
+        Slider(
+            value = km.toFloat(),
+            onValueChange = { onChange(it.roundToInt()) },
+            valueRange = 1f..25f,
+            colors = SliderDefaults.colors(thumbColor = paper.ink, activeTrackColor = paper.ink, inactiveTrackColor = paper.line),
+        )
+    }
+}
+
+@Composable
+private fun AreaRow(a: MapAreaEntity, styles: List<MapStyleEntity>, onAgain: () -> Unit, onDelete: () -> Unit) {
+    val paper = LocalPaper.current
+    val styleName = MapStyles.builtInById(a.styleId)?.name ?: styles.firstOrNull { it.id == a.styleId }?.name ?: "a style that was removed"
+    PaperCard(modifier = Modifier.fillMaxWidth(), shadow = false) {
+        Text(a.name, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = paper.ink)
+        Text(styleName + " · " + AreaSource.label(a.source) + " · zoom " + a.minZoom + " to " + a.maxZoom, fontSize = 12.sp, color = paper.ink2)
+        Text(OfflineRules.stateText(a.state, a.source, a.tiles, a.totalTiles, a.bytes, a.note), fontSize = 13.sp, color = if (a.state == AreaState.FAILED) paper.bad else paper.ink)
+        if (a.state == AreaState.DONE && a.doneMs > 0L) Text("Downloaded " + formatDateTime(a.doneMs), fontSize = 12.sp, color = paper.ink2)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PaperButton("Download again", onAgain, style = PaperButtonStyle.Ghost, small = true)
+            if (a.state != AreaState.REMOVED) PaperButton("Delete area", onDelete, style = PaperButtonStyle.Ghost, small = true)
+        }
     }
 }
 
