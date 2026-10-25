@@ -15,6 +15,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
+import com.lifetracker.app.ui.theme.BackgroundSettings
+import com.lifetracker.app.ui.theme.LocalBackgroundStyle
 
 /**
  * The Material colours, filled from the paper colours so every screen that has not been redrawn yet still picks up the
@@ -62,6 +64,8 @@ private val PaperShapes = Shapes(
 fun LifeTrackerTheme(content: @Composable () -> Unit) {
     val context = LocalContext.current
     remember { AppTheme.ensureLoaded(context) }
+    remember { BackgroundSettings.ensureLoaded(context) }
+    val backgroundStyle = BackgroundSettings.style
     val dark = ThemeModes.isDark(AppTheme.mode, isSystemInDarkTheme())
     val paper = if (dark) DarkPaper else LightPaper
     val family = remember { PaperFonts.family(context) }
@@ -76,7 +80,10 @@ fun LifeTrackerTheme(content: @Composable () -> Unit) {
         controller.isAppearanceLightNavigationBars = !dark
     }
 
-    CompositionLocalProvider(LocalPaper provides paper) {
+    CompositionLocalProvider(
+        LocalPaper provides paper,
+        LocalBackgroundStyle provides backgroundStyle,
+    ) {
         MaterialTheme(
             colorScheme = scheme(paper),
             typography = typography,
