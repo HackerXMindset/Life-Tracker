@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -71,20 +72,21 @@ fun Modifier.pencilShadow(shape: Shape, color: Color, dx: Dp = 3.dp, dy: Dp = 4.
 @Composable
 fun PaperCard(
     modifier: Modifier = Modifier,
-    shape: Shape = Wobble.Card,
+    shape: Shape? = null,
     padding: Dp = 16.dp,
     shadow: Boolean = true,
     onClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val p = LocalPaper.current
-    val base = if (shadow) modifier.pencilShadow(shape, p.pencil) else modifier
+    val cardShape = shape ?: if (p.dark) Wobble.Card else RoundedCornerShape(20.dp)
+    val base = if (shadow && p.dark) modifier.pencilShadow(cardShape, p.pencil) else modifier
     val clickable = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier
     Column(
         modifier = base
-            .background(p.surface, shape)
-            .border(1.5.dp, p.pen, shape)
-            .clip(shape)
+            .background(p.surface, cardShape)
+            .border(1.dp, p.line, cardShape)
+            .clip(cardShape)
             .then(clickable)
             .padding(padding),
         content = content,
@@ -125,7 +127,7 @@ fun PaperButtonBox(
     content: @Composable RowScope.() -> Unit,
 ) {
     val p = LocalPaper.current
-    val shape = Wobble.Small
+    val shape = if (p.dark) Wobble.Small else RoundedCornerShape(12.dp)
     val (fill, ink, edge) = when (style) {
         PaperButtonStyle.Dark -> Triple(p.ink, p.bg, p.ink)
         PaperButtonStyle.Ghost -> Triple(p.surface, p.ink, p.pen)
@@ -134,7 +136,7 @@ fun PaperButtonBox(
     Row(
         modifier = modifier
             .height(if (small) 36.dp else 46.dp)
-            .pencilShadow(shape, p.pencil, 2.dp, 3.dp)
+            .then(if (p.dark) Modifier.pencilShadow(shape, p.pencil, 2.dp, 3.dp) else Modifier)
             .background(fill, shape)
             .border(1.5.dp, edge, shape)
             .clip(shape)
@@ -176,7 +178,7 @@ fun PaperPillBox(
     content: @Composable RowScope.() -> Unit,
 ) {
     val p = LocalPaper.current
-    val shape = Wobble.Pill
+    val shape = if (p.dark) Wobble.Pill else CircleShape
     val fill = if (selected) p.ink else p.surface
     val ink = if (selected) p.bg else p.ink
     Row(
@@ -206,7 +208,7 @@ fun PaperSegmented(
     modifier: Modifier = Modifier,
 ) {
     val p = LocalPaper.current
-    val shape = Wobble.Small
+    val shape = if (p.dark) Wobble.Small else RoundedCornerShape(12.dp)
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -265,11 +267,11 @@ fun PaperIconButton(
     modifier: Modifier = Modifier,
 ) {
     val p = LocalPaper.current
-    val shape = Wobble.Small
+    val shape = if (p.dark) Wobble.Small else RoundedCornerShape(12.dp)
     Box(
         modifier = modifier
             .size(40.dp)
-            .pencilShadow(shape, p.pencil, 2.dp, 3.dp)
+            .then(if (p.dark) Modifier.pencilShadow(shape, p.pencil, 2.dp, 3.dp) else Modifier)
             .background(p.surface, shape)
             .border(1.5.dp, p.pen, shape)
             .clip(shape)
@@ -284,22 +286,24 @@ fun PaperIconButton(
 @Composable
 fun HighlightedHeading(text: String, modifier: Modifier = Modifier, fontSize: Float = 17f) {
     val p = LocalPaper.current
-    val swipe = p.sun.copy(alpha = 0.4f)
+    val headingModifier = if (p.dark) {
+        modifier.drawBehind {
+            val h = fontSize.sp.toPx() * 0.5f
+            rotate(-0.8f, pivot = center) {
+                drawRoundRect(
+                    color = p.sun.copy(alpha = 0.4f),
+                    topLeft = Offset(0f, size.height - h - 1.dp.toPx()),
+                    size = Size(size.width + 2.dp.toPx(), h),
+                    cornerRadius = CornerRadius(4.dp.toPx()),
+                )
+            }
+        }.padding(horizontal = 4.dp)
+    } else {
+        modifier
+    }
     Text(
         text = text,
-        modifier = modifier
-            .drawBehind {
-                val h = fontSize.sp.toPx() * 0.5f
-                rotate(-0.8f, pivot = center) {
-                    drawRoundRect(
-                        color = swipe,
-                        topLeft = Offset(0f, size.height - h - 1.dp.toPx()),
-                        size = Size(size.width + 2.dp.toPx(), h),
-                        cornerRadius = CornerRadius(4.dp.toPx()),
-                    )
-                }
-            }
-            .padding(horizontal = 4.dp),
+        modifier = headingModifier,
         fontSize = fontSize.sp,
         fontWeight = FontWeight.Bold,
         color = p.ink,
@@ -321,21 +325,30 @@ fun TallyBar(
     val p = LocalPaper.current
     val filledColor = if (over) p.bad else color
     Canvas(modifier = modifier.fillMaxWidth().height(height)) {
-        val pitch = 10.dp.toPx()
-        val count = TallyMath.count(size.width, pitch)
-        val done = TallyMath.filled(progress, count)
-        val stroke = 1.9f / 10f * pitch
-        fun line(i: Int, c: Color) {
-            val x = i * pitch
-            drawLine(
-                color = c,
-                start = Offset(x + 0.24f * pitch, size.height * 0.93f),
-                end = Offset(x + 0.68f * pitch, size.height * 0.07f),
-                strokeWidth = stroke,
-                cap = StrokeCap.Round,
-            )
+        if (p.dark) {
+            val pitch = 10.dp.toPx()
+            val count = TallyMath.count(size.width, pitch)
+            val done = TallyMath.filled(progress, count)
+            val stroke = 1.9f / 10f * pitch
+            fun line(i: Int, c: Color) {
+                val x = i * pitch
+                drawLine(
+                    color = c,
+                    start = Offset(x + 0.24f * pitch, size.height * 0.93f),
+                    end = Offset(x + 0.68f * pitch, size.height * 0.07f),
+                    strokeWidth = stroke,
+                    cap = StrokeCap.Round,
+                )
+            }
+            for (i in 0 until count) line(i, if (i < done) filledColor else p.line)
+        } else {
+            val fraction = progress.coerceIn(0f, 1f)
+            val radius = CornerRadius(size.height / 2f)
+            drawRoundRect(p.surface2, size = Size(size.width, size.height), cornerRadius = radius)
+            if (fraction > 0f) {
+                drawRoundRect(filledColor, size = Size(size.width * fraction, size.height), cornerRadius = radius)
+            }
         }
-        for (i in 0 until count) line(i, if (i < done) filledColor else p.line)
     }
 }
 
@@ -343,11 +356,11 @@ fun TallyBar(
 @Composable
 fun PaperFab(text: String, @DrawableRes icon: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val p = LocalPaper.current
-    val shape = Wobble.Fab
+    val shape = if (p.dark) Wobble.Fab else RoundedCornerShape(16.dp)
     Row(
         modifier = modifier
             .height(52.dp)
-            .pencilShadow(shape, p.pencil, 3.dp, 4.dp)
+            .then(if (p.dark) Modifier.pencilShadow(shape, p.pencil, 3.dp, 4.dp) else Modifier)
             .background(p.ink, shape)
             .clip(shape)
             .clickable(role = Role.Button, onClick = onClick)
@@ -367,7 +380,7 @@ fun PaperSheet(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Uni
     val p = LocalPaper.current
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        shape = Wobble.Sheet,
+        shape = if (p.dark) Wobble.Sheet else RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         containerColor = p.surface,
         contentColor = p.ink,
         dragHandle = {
@@ -404,7 +417,7 @@ fun PaperField(
             singleLine = singleLine,
             minLines = minLines,
             keyboardOptions = keyboardOptions,
-            shape = Wobble.Small,
+            shape = if (p.dark) Wobble.Small else RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = p.ink,
                 unfocusedBorderColor = p.pen,
@@ -433,7 +446,7 @@ fun PaperDialog(
     val p = LocalPaper.current
     AlertDialog(
         onDismissRequest = onDismiss,
-        shape = Wobble.Card,
+        shape = if (p.dark) Wobble.Card else RoundedCornerShape(20.dp),
         containerColor = p.surface,
         titleContentColor = p.ink,
         textContentColor = p.ink,
@@ -453,8 +466,8 @@ fun PaperChip(text: String, modifier: Modifier = Modifier) {
     Text(
         text = text,
         modifier = modifier
-            .background(p.sun.copy(alpha = 0.22f), Wobble.Pill)
-            .border(1.25.dp, p.sun, Wobble.Pill)
+            .background(p.sun.copy(alpha = if (p.dark) 0.22f else 0.14f), if (p.dark) Wobble.Pill else RoundedCornerShape(8.dp))
+            .border(1.dp, p.sun, if (p.dark) Wobble.Pill else RoundedCornerShape(8.dp))
             .padding(horizontal = 10.dp, vertical = 3.dp),
         fontSize = 11.sp,
         fontWeight = FontWeight.Bold,
