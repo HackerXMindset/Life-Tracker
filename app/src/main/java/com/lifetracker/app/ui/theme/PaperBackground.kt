@@ -110,7 +110,8 @@ private fun loadBackgroundPhoto(context: Context, uriString: String): ImageBitma
     val uri = Uri.parse(uriString)
     val resolver = context.contentResolver
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-    resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) } ?: return null
+    val boundsStream = resolver.openInputStream(uri) ?: return null
+    boundsStream.use { BitmapFactory.decodeStream(it, null, bounds) }
     if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
 
     var sampleSize = 1
@@ -119,6 +120,7 @@ private fun loadBackgroundPhoto(context: Context, uriString: String): ImageBitma
         inSampleSize = sampleSize
         inPreferredConfig = android.graphics.Bitmap.Config.ARGB_8888
     }
-    val bitmap = resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, options) } ?: return null
+    val imageStream = resolver.openInputStream(uri) ?: return null
+    val bitmap = imageStream.use { BitmapFactory.decodeStream(it, null, options) } ?: return null
     return bitmap.asImageBitmap()
 }
