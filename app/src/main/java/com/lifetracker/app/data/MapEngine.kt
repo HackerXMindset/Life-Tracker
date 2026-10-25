@@ -26,8 +26,10 @@ object MapEngine {
             .dispatcher(dispatcher)
             .addInterceptor { chain -> chain.proceed(chain.request().newBuilder().header("User-Agent", agent).build()) }
             .build()
-        HttpRequestUtil.setOkHttpClient(client)
+        // Initialise MapLibre first: installing the HTTP client can initialise its HTTP implementation,
+        // which reads MapLibre's application context.
         MapLibre.getInstance(app)
+        HttpRequestUtil.setOkHttpClient(client)
         started = true
     }
 
