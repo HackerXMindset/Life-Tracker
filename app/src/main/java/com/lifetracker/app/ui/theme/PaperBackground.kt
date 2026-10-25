@@ -85,12 +85,12 @@ fun PaperBackground(modifier: Modifier = Modifier, content: @Composable BoxScope
                 Image(
                     bitmap = photo!!.asImageBitmap(),
                     contentDescription = "Selected background photo",
-                    modifier = Modifier.matchParentSize(),
+                    modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
                 )
                 Box(
                     modifier = Modifier
-                        .matchParentSize()
+                        .fillMaxSize()
                         .background(
                             if (paper.dark) Color.Black.copy(alpha = 0.48f)
                             else Color.White.copy(alpha = 0.42f),
