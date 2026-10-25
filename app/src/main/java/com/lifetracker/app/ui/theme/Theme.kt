@@ -15,8 +15,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
-import com.lifetracker.app.ui.theme.BackgroundSettings
-import com.lifetracker.app.ui.theme.LocalBackgroundStyle
 
 /**
  * The Material colours, filled from the paper colours so every screen that has not been redrawn yet still picks up the
