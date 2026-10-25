@@ -84,6 +84,7 @@ import com.lifetracker.app.data.SleepStats
 import com.lifetracker.app.data.StepDayEntity
 import com.lifetracker.app.data.StepStats
 import com.lifetracker.app.data.TimelineEdits
+import com.lifetracker.app.data.TripEditing
 import com.lifetracker.app.data.TimelineSettings
 import com.lifetracker.app.data.TimelineEditEntity
 import com.lifetracker.app.data.TripEntity
@@ -107,7 +108,16 @@ private const val STUDY_ID = "Study"
 private fun EntryEntity.minutes(): Int = ActivityStats.minutes(this)
 
 @Composable
-fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPlaces: () -> Unit, onOpenCalls: () -> Unit, onOpenFood: () -> Unit, vm: TimelineViewModel = viewModel()) {
+fun TimelineScreen(
+    onOpenCharging: () -> Unit,
+    onOpenSteps: () -> Unit,
+    onOpenPlaces: () -> Unit,
+    onOpenTrip: (String) -> Unit,
+    onOpenPlace: (String) -> Unit,
+    onOpenCalls: () -> Unit,
+    onOpenFood: () -> Unit,
+    vm: TimelineViewModel = viewModel(),
+) {
     val date by vm.date.collectAsState()
     val entries by vm.entries.collectAsState()
     val todos by vm.todos.collectAsState()
@@ -381,15 +391,16 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
         onEditPlace = { p ->
             editTarget = target(
                 TimelineEdits.VISIT, p.visit.id, p.name, p.visit.startMs, if (p.visit.ongoing) null else p.visit.endMs,
-                openLabel = if (p.named) "Open Places" else "Name this spot in Places", onOpen = onOpenPlaces,
+                openLabel = if (p.named) "Open place" else "Name this spot",
+                onOpen = if (p.named) ({ onOpenPlace(p.visit.placeId) }) else onOpenPlaces,
             )
         },
         askHowTravelled = timelineSettings.askHowTravelled,
         onEditTrip = { t ->
-            editTarget = target(TimelineEdits.TRIP, t.id, "Trip", t.startMs, t.endMs)
+            editTarget = target(TimelineEdits.TRIP, t.id, "Trip", t.startMs, t.endMs, openLabel = "Open trip", onOpen = { onOpenTrip(t.id) })
         },
     )
-    val hiddenToday = edits.values.filter { it.hidden && it.startMs in dayStartMs until dayEndMs }
+    val hiddenToday = edits.values.filter { it.hidden && !TripEditing.isJoinedAway(it) && it.startMs in dayStartMs until dayEndMs }
     val anyTimeTodos = todos.filter { it.minutes == null }
     val anyTimeNotes = notes.filter { it.minutes == null }
     val plannedMinutes = todos.filter { !it.done }.sumOf { it.estimate ?: 0 }
@@ -570,7 +581,7 @@ fun TimelineScreen(onOpenCharging: () -> Unit, onOpenSteps: () -> Unit, onOpenPl
     }
 
     if (showHidden) {
-        val hidden = edits.values.filter { it.hidden && it.startMs in dayStartMs until dayEndMs }.sortedBy { it.startMs }
+        val hidden = edits.values.filter { it.hidden && !TripEditing.isJoinedAway(it) && it.startMs in dayStartMs until dayEndMs }.sortedBy { it.startMs }
         PaperDialog(title = "Hidden by you", onDismiss = { showHidden = false }, dismissText = "Close") {
             if (hidden.isEmpty()) Text("Nothing is hidden on this day.", color = LocalPaper.current.ink2)
             hidden.forEach { e ->

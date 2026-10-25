@@ -61,6 +61,13 @@ interface TripDao {
     @Query("SELECT * FROM trips ORDER BY startMs")
     suspend fun allTrips(): List<TripEntity>
 
+    /** Every trip, oldest first, kept up to date while a page is open. */
+    @Query("SELECT * FROM trips ORDER BY startMs")
+    fun observeAllTrips(): Flow<List<TripEntity>>
+
+    @Query("SELECT * FROM trip_points WHERE tripId = :tripId ORDER BY ms")
+    fun observePoints(tripId: String): Flow<List<TripPointEntity>>
+
     /** Trips that started in [from, to), read once. */
     @Query("SELECT * FROM trips WHERE startMs >= :from AND startMs < :to ORDER BY startMs")
     suspend fun tripsIn(from: Long, to: Long): List<TripEntity>

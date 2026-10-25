@@ -15,8 +15,6 @@ import com.lifetracker.app.data.PauseSettings
 import com.lifetracker.app.data.PlaceEntity
 import com.lifetracker.app.data.PlaceLookup
 import com.lifetracker.app.data.PlaceRules
-import com.lifetracker.app.data.PlaceTrail
-import com.lifetracker.app.data.PlaceVisitEntity
 import com.lifetracker.app.data.PlaceWatchService
 import com.lifetracker.app.data.PlacesSettings
 import com.lifetracker.app.data.PlacesTracker
@@ -24,32 +22,20 @@ import com.lifetracker.app.data.PlacesWorker
 import com.lifetracker.app.data.RecordingMode
 import com.lifetracker.app.data.TrackEngine
 import com.lifetracker.app.data.TrackService
-import com.lifetracker.app.data.TripAdjust
 import com.lifetracker.app.data.TripModes
 import com.lifetracker.app.data.TripRules
 import java.io.IOException
 import java.time.Instant
 import java.time.ZoneId
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
-/** One place with the time you spent there in the chosen days. */
-class PlaceRow(val place: PlaceEntity, val ms: Long, val visits: Int)
-
-/** One listed visit. [name] is the place's name. */
-class VisitRow(val visit: PlaceVisitEntity, val name: String)
-
-class PlacesData(val rows: List<PlaceRow>, val visits: List<VisitRow>)
 
 /** What the phone has allowed so far. */
 data class PlacesAccess(val location: Boolean, val background: Boolean, val activity: Boolean, val battery: Boolean = false) {
@@ -62,14 +48,11 @@ class ReadingsInfo(val total: Int, val hourly: List<Int>, val gapText: String)
 class PlacesViewModel(private val app: Application) : AndroidViewModel(app) {
     private val db = AppDatabase.get(app)
     private val dao = db.placeDao()
-    private val tripDao = db.tripDao()
     private val settings = PlacesSettings(app)
 
     private fun <T> share(initial: T, flow: Flow<T>): StateFlow<T> =
         flow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), initial)
 
-    private val rangeFlow = MutableStateFlow(RangeChoice.preset("today"))
-    val range: StateFlow<RangeChoice> = rangeFlow
 
     private val enabledFlow = MutableStateFlow(settings.enabled)
     val enabled: StateFlow<Boolean> = enabledFlow
@@ -207,40 +190,8 @@ class PlacesViewModel(private val app: Application) : AndroidViewModel(app) {
         return ReadingsInfo(dao.count(), FixStats.hourly(fixes, now), text)
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val data: StateFlow<PlacesData> = share(
-        PlacesData(emptyList(), emptyList()),
-        rangeFlow.flatMapLatest { r ->
-            val zone = ZoneId.systemDefault()
-            val from = r.span.startMs(zone)
-            val to = r.span.endMs(zone)
-            combine(dao.observePlaces(), dao.visitsBetween(from, to)) { places, visits ->
-                val now = System.currentTimeMillis()
-                val totals = PlaceRules.totals(visits, from, to, now).associateBy { it.placeId }
-                val names = places.associate { it.id to it.name }
-                PlacesData(
-                    rows = places
-                        .map { PlaceRow(it, totals[it.id]?.ms ?: 0L, totals[it.id]?.visits ?: 0) }
-                        .sortedWith(compareBy<PlaceRow> { it.place.archived }.thenByDescending { it.ms }),
-                    visits = visits.filter { PlaceRules.isShown(it, now) }.map { VisitRow(it, names[it.placeId] ?: "Place") },
-                )
-            }
-        },
-    )
-
-    /** Where you were and how you got from one place to the next, oldest first. */
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val trail: StateFlow<List<PlaceTrail.Row>> = share(
-        emptyList(),
-        rangeFlow.flatMapLatest { r ->
-            val zone = ZoneId.systemDefault()
-            val from = r.span.startMs(zone)
-            val to = r.span.endMs(zone)
-            combine(dao.observePlaces(), dao.visitsBetween(from, to), tripDao.tripsBetween(from, to)) { places, visits, trips ->
-                PlaceTrail.build(visits, trips, places.associate { it.id to it.name }, System.currentTimeMillis())
-            }
-        },
-    )
+    /** Your places, the ones still watched first. */
+    val places: StateFlow<List<PlaceEntity>> = share(emptyList(), dao.observePlaces())
 
     private val recordTripsFlow = MutableStateFlow(settings.recordTrips)
     val recordTrips: StateFlow<Boolean> = recordTripsFlow
@@ -300,35 +251,6 @@ class PlacesViewModel(private val app: Application) : AndroidViewModel(app) {
         tripsTimelineFlow.value = on
     }
 
-    /**
-     * You say how you travelled. For a trip the phone recorded this is your answer and the app looks again at the trips
-     * it had only guessed; for a journey with no trip it is saved as a new trip record.
-     */
-    fun setJourneyMode(journey: PlaceTrail.Journey, mode: String) {
-        viewModelScope.launch {
-            val trip = journey.trip
-            if (trip != null) {
-                tripDao.setMode(trip.id, mode, "you")
-                TripAdjust.refresh(db, trip.id, settings.strideM())
-                reguess()
-            } else {
-                PlaceTrail.tripFor(journey, mode)?.let { tripDao.upsertTrip(it) }
-            }
-        }
-    }
-
-    private suspend fun reguess() {
-        val learned = tripDao.corrected().map { TripModes.learned(it) }
-        for (t in tripDao.guessed()) {
-            val stats = com.lifetracker.app.data.TripStats(t.distanceM, t.endMs - t.startMs, t.medianKmh, t.topKmh, TripRules.MIN_FARTHEST_M)
-            val mode = TripModes.guess(stats, TripModes.parseActivity(t.activity), t.fromPlaceId, t.toPlaceId, learned)
-            if (mode != t.mode) {
-                tripDao.setMode(t.id, mode, "auto")
-                TripAdjust.refresh(db, t.id, settings.strideM())
-            }
-        }
-    }
-
     /** Stops at unnamed spots, grouped by where they were. */
     val clusters: StateFlow<List<PlaceRules.Cluster>> = share(emptyList(), dao.observeUnknown().map { PlaceRules.clusters(it) })
 
@@ -368,10 +290,6 @@ class PlacesViewModel(private val app: Application) : AndroidViewModel(app) {
                 looking = false
             }
         }
-    }
-
-    fun setRange(r: RangeChoice) {
-        rangeFlow.value = r
     }
 
     /** Looks again at what is allowed and tells Android about the places (called when the screen comes into view). */

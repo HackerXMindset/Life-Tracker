@@ -65,8 +65,10 @@ object PlaceCleanup {
     /**
      * The trip with its distance and speeds worked out again from its readings with the bad ones removed, or null if nothing
      * changed. The distance follows the way you travelled: on foot it is checked against the steps and the speed limit of a walk.
+     * Only the readings between the trip's start and end count (a trip that was split keeps the readings of both parts).
      */
-    fun refreshTrip(trip: TripEntity, points: List<TripPointEntity>, strideM: Double = TripRules.DEFAULT_STRIDE_M): TripEntity? {
+    fun refreshTrip(trip: TripEntity, allPoints: List<TripPointEntity>, strideM: Double = TripRules.DEFAULT_STRIDE_M): TripEntity? {
+        val points = allPoints.filter { it.ms in trip.startMs..trip.endMs }
         if (points.size < 2) return null
         val clean = FixFilter.clean(points.map { RawFixEntity(it.ms, it.lat, it.lng, it.acc) })
             .map { TripPointEntity(trip.id, it.ms, it.lat, it.lng, it.acc) }

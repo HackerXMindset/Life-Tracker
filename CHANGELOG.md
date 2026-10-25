@@ -2,6 +2,22 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧭 Places and trips remake: the new screens (C6)
+
+### ✨ New
+
+- **Location page** (Settings > Places and trips > Location, and from the Timeline). A month calendar with a dot on each day you moved, a summary of the day, the day's stays and trips, spots to look at, and hidden trips you can show again.
+- **Trip page.** The path, distance, time and speeds. **Merge with previous or next**, **Split here** on a reading you pick, a note on a reading, **Hide** and **Show again**, and **Undo** for a merge or a split.
+- **Place page.** Its circle, every stay, its pause zone in words, and **Edit place**.
+- **Open trip** and **Open place** buttons on the Timeline.
+- With GPS all day, trips the live detector missed are added from the saved readings.
+
+### 🔧 Changed
+
+- Settings > Places and trips is in a new order: Recording, Profiles, Places, then the rest.
+- The path is drawn on plain paper for now. The map comes next.
+- Nothing is deleted. Hidden trips and stays are kept.
+
 ## 🧭 Places and trips remake: pause zones (C5)
 
 ### ✨ New

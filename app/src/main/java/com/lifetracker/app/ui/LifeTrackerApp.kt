@@ -63,6 +63,9 @@ fun LifeTrackerApp() {
     // A detail screen opened over the tabs, and which half of it: the numbers (from Stats or the Timeline) or the settings.
     var page by rememberSaveable { mutableStateOf<Page?>(null) }
     var part by rememberSaveable { mutableStateOf(Part.Data) }
+    // A trip or a place opened over whatever is showing (from the Timeline or the Location page); Back returns to it.
+    var openTrip by rememberSaveable { mutableStateOf<String?>(null) }
+    var openPlace by rememberSaveable { mutableStateOf<String?>(null) }
     fun openPage(target: Page, half: Part) {
         part = half
         page = target
@@ -106,11 +109,22 @@ fun LifeTrackerApp() {
     Scaffold(
         // The paper behind the whole app shows through; the menu bar floats on it.
         containerColor = Color.Transparent,
-        bottomBar = { PaperNavBar(selected = tab, onSelect = { tab = it; page = null }) },
+        bottomBar = { PaperNavBar(selected = tab, onSelect = { tab = it; page = null; openTrip = null; openPlace = null }) },
     ) { padding ->
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
             val current = page
-            if (current != null) {
+            val trip = openTrip
+            val place = openPlace
+            if (place != null) {
+                PlaceScreen(placeId = place, onBack = { openPlace = null })
+            } else if (trip != null) {
+                TripScreen(
+                    tripId = trip,
+                    onBack = { openTrip = null },
+                    onOpenTrip = { openTrip = it },
+                    onOpenPlace = { openPlace = it },
+                )
+            } else if (current != null) {
                 val back = { page = null }
                 when (current) {
                     Page.Appearance -> AppearanceScreen(onBack = back)
@@ -118,8 +132,8 @@ fun LifeTrackerApp() {
                     Page.Activities -> ActivitiesScreen(onBack = back)
                     Page.Timeline -> TimelineSettingsScreen(onBack = back)
                     Page.Apps -> AppsScreen(onBack = back)
-                    Page.PlaceCategories -> PlaceCategoriesScreen(onBack = back)
-                    Page.Profiles -> ProfilesScreen(onBack = back)
+                    Page.PlaceCategories -> PlaceCategoriesScreen(onBack = { page = Page.Places })
+                    Page.Profiles -> ProfilesScreen(onBack = { page = Page.Places })
                     Page.Permissions -> PermissionsScreen(onBack = back, onOpen = { page = it })
                     Page.Logs -> LogsScreen(onBack = back)
                     Page.Habits -> HabitsSettingsScreen(onBack = back)
@@ -127,14 +141,17 @@ fun LifeTrackerApp() {
                     Page.Calls -> CallsScreen(onBack = back, part = part)
                     Page.Charging -> ChargingScreen(onBack = back, part = part)
                     Page.Steps -> StepsSleepScreen(onBack = back, part = part)
-                    Page.Places -> PlacesScreen(onBack = back, part = part)
+                    Page.Places -> PlacesScreen(onBack = back, onOpen = { page = it }, onOpenPlace = { openPlace = it })
+                    Page.Location -> LocationScreen(onBack = back, onOpenTrip = { openTrip = it }, onOpenPlace = { openPlace = it })
                 }
             } else {
                 when (tab) {
                     Tab.Timeline -> TimelineScreen(
                         onOpenCharging = { openPage(Page.Charging, Part.Data) },
                         onOpenSteps = { openPage(Page.Steps, Part.Data) },
-                        onOpenPlaces = { openPage(Page.Places, Part.Data) },
+                        onOpenPlaces = { openPage(Page.Location, Part.Data) },
+                        onOpenTrip = { openTrip = it },
+                        onOpenPlace = { openPlace = it },
                         onOpenCalls = { openPage(Page.Calls, Part.Data) },
                         onOpenFood = { tab = Tab.Food },
                     )
@@ -144,7 +161,7 @@ fun LifeTrackerApp() {
                     Tab.Stats -> StatsScreen(
                         onOpenPhone = { openPage(Page.Phone, Part.Data) },
                         onOpenSteps = { openPage(Page.Steps, Part.Data) },
-                        onOpenPlaces = { openPage(Page.Places, Part.Data) },
+                        onOpenPlaces = { openPage(Page.Location, Part.Data) },
                         onOpenCalls = { openPage(Page.Calls, Part.Data) },
                         onOpenCharging = { openPage(Page.Charging, Part.Data) },
                     )
