@@ -374,6 +374,17 @@ class BackupCodecTest {
     }
 
     @Test
+    fun yourOwnMapStylesKeepTheirKeyAndHiddenFlag() {
+        val styles = listOf(
+            MapStyleEntity("my-1", "Satellite \"mine\"", "https://t.example.com/{z}/{x}/{y}.jpg?k={key}", "abc", true, 1_760_400_000_000L),
+            MapStyleEntity("my-2", "Other", "https://m.example.com/style.json", "", false, 1_760_400_100_000L),
+        )
+        val back = BackupCodec.decode(BackupCodec.encode(full.copy(mapStyles = styles)))
+        assertEquals(styles, back.mapStyles)
+        assertEquals(false, BackupData(28, "x", emptyList(), mapStyles = styles).isEmpty)
+    }
+
+    @Test
     fun aBackupOfOnlyEditsOrProfilesIsNotEmpty() {
         assertEquals(false, BackupData(27, "x", emptyList(), tripEdits = full.tripEdits).isEmpty)
         assertEquals(false, BackupData(27, "x", emptyList(), pointNotes = full.pointNotes).isEmpty)

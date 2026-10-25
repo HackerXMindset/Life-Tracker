@@ -42,6 +42,7 @@ data class BackupData(
     val tripEdits: List<TripEditEntity> = emptyList(),
     val pointNotes: List<PointNoteEntity> = emptyList(),
     val trackingProfiles: List<TrackingProfileEntity> = emptyList(),
+    val mapStyles: List<MapStyleEntity> = emptyList(),
 ) {
     val isEmpty: Boolean
         get() = entries.isEmpty() && habits.isEmpty() && completions.isEmpty() && categories.isEmpty() &&
@@ -49,7 +50,7 @@ data class BackupData(
             moneyItems.isEmpty() && moneyEntries.isEmpty() && usageSessions.isEmpty() && calls.isEmpty() &&
             chargeSessions.isEmpty() && stepDays.isEmpty() && sleepNights.isEmpty() && places.isEmpty() && placeVisits.isEmpty() &&
             trips.isEmpty() && tripPoints.isEmpty() && rawFixes.isEmpty() && timelineEdits.isEmpty() && usageCombos.isEmpty() && usageStates.isEmpty() && focusSessions.isEmpty() &&
-            tripEdits.isEmpty() && pointNotes.isEmpty() && trackingProfiles.isEmpty()
+            tripEdits.isEmpty() && pointNotes.isEmpty() && trackingProfiles.isEmpty() && mapStyles.isEmpty()
 }
 
 /**
@@ -62,7 +63,7 @@ data class BackupData(
  */
 object BackupCodec {
     const val APP_NAME = "life-tracker"
-    const val FORMAT_VERSION = 27
+    const val FORMAT_VERSION = 28
 
     fun encode(data: BackupData): String =
         JSONObject()
@@ -103,6 +104,7 @@ object BackupCodec {
             .put("tripEdits", array(data.tripEdits, ::tripEditJson))
             .put("pointNotes", array(data.pointNotes, ::pointNoteJson))
             .put("trackingProfiles", array(data.trackingProfiles, ::profileJson))
+            .put("mapStyles", array(data.mapStyles, ::mapStyleJson))
             .toString(2)
 
     /** Reads a backup. Throws [IllegalArgumentException] with a readable reason if it is not usable. */
@@ -151,6 +153,7 @@ object BackupCodec {
                 tripEdits = list(root, "tripEdits", required = false, ::tripEdit),
                 pointNotes = list(root, "pointNotes", required = false, ::pointNote),
                 trackingProfiles = list(root, "trackingProfiles", required = false, ::profile),
+                mapStyles = list(root, "mapStyles", required = false, ::mapStyle),
             )
         } catch (e: JSONException) {
             throw IllegalArgumentException("This file is damaged or is not a backup.")
@@ -617,6 +620,19 @@ object BackupCodec {
         ms = o.getLong("ms"),
         note = o.getString("note"),
         updatedMs = o.optLong("updatedMs", 0L),
+    )
+
+    private fun mapStyleJson(m: MapStyleEntity) = JSONObject()
+        .put("id", m.id).put("name", m.name).put("address", m.address).put("key", m.key)
+        .put("hidden", m.hidden).put("createdMs", m.createdMs)
+
+    private fun mapStyle(o: JSONObject) = MapStyleEntity(
+        id = o.getString("id"),
+        name = o.getString("name"),
+        address = o.getString("address"),
+        key = o.optString("key", ""),
+        hidden = o.optBoolean("hidden", false),
+        createdMs = o.getLong("createdMs"),
     )
 
     private fun profileJson(p: TrackingProfileEntity) = JSONObject()

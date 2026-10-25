@@ -144,6 +144,7 @@ object BackupManager {
         tripEdits = db.tripEditDao().all(),
         pointNotes = db.pointNoteDao().all(),
         trackingProfiles = db.trackingProfileDao().all(),
+        mapStyles = db.mapDao().styles(),
     )
 
     /**
@@ -257,6 +258,10 @@ object BackupManager {
                 db.tripEditDao().insertMissing(data.tripEdits)
                 db.pointNoteDao().insertMissing(data.pointNotes)
                 db.trackingProfileDao().insertMissing(data.trackingProfiles)
+            }
+            if (data.version >= 28) {
+                // Map styles you added only grow: restoring adds the ones that are missing. Downloaded map tiles are not in a backup.
+                data.mapStyles.forEach { db.mapDao().addStyleIfMissing(it) }
             }
         }
     }

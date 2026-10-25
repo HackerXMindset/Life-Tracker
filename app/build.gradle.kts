@@ -84,6 +84,10 @@ dependencies {
     // Android's geofences (arrive at and leave a named place), still/moving detection and one-off position reads.
     implementation("com.google.android.gms:play-services-location:21.3.0")
 
+    // The map (MapLibre, open and free) and the web client it uses, which the app sets up with its own name and 4 requests at a time.
+    implementation("org.maplibre.gl:android-sdk:11.13.5")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
     // Tests that run in the cloud build. The org.json copy is needed because
     // the Android one is only a stub outside a real phone.
     testImplementation("junit:junit:4.13.2")

@@ -76,6 +76,7 @@ fun TripScreen(
     var selected by remember(p?.trip?.id) { mutableIntStateOf(0) }
     val sel = selected.coerceIn(0, (fixes.size - 1).coerceAtLeast(0))
     val path = remember(fixes) { fixes.map { it.lat to it.lng } }
+    val times = remember(fixes) { fixes.map { it.ms } }
     val noted = remember(fixes, p?.notes) { fixes.indices.filter { p?.notes?.containsKey(fixes[it].ms) == true }.toSet() }
     var noting by remember { mutableStateOf(false) }
 
@@ -121,9 +122,10 @@ fun TripScreen(
                     }
                 }
                 item {
-                    PathCanvas(
+                    MapPanel(
                         path = path,
                         description = "The path of the trip, " + TripRules.distanceText(trip.distanceM),
+                        times = times,
                         selected = if (fixes.isEmpty()) -1 else sel,
                         marked = noted,
                         onPick = { selected = it },
