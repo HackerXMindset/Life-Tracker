@@ -119,6 +119,10 @@ interface PointNoteDao {
     @Query("SELECT * FROM point_notes WHERE ms >= :from AND ms < :to AND note <> '' ORDER BY ms")
     suspend fun between(from: Long, to: Long): List<PointNoteEntity>
 
+    /** Every note that has text, kept up to date while a page is open (a cleared note is left out). */
+    @Query("SELECT * FROM point_notes WHERE note <> '' ORDER BY ms")
+    fun observeNotes(): Flow<List<PointNoteEntity>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(note: PointNoteEntity)
 

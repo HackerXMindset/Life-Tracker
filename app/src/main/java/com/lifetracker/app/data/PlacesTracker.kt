@@ -9,6 +9,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.SystemClock
 import androidx.core.content.ContextCompat
+import androidx.room.withTransaction
 import com.google.android.gms.location.ActivityRecognition
 import com.google.android.gms.location.ActivityTransition
 import com.google.android.gms.location.ActivityTransitionRequest
@@ -462,11 +463,12 @@ object PlacesTracker {
     }
 
     /** What a tidy-up changed. */
-    class Cleanup(val added: Int = 0, val stretched: Int = 0, val trips: Int = 0, val scored: Int = 0) {
-        operator fun plus(o: Cleanup) = Cleanup(added + o.added, stretched + o.stretched, trips + o.trips, scored + o.scored)
+    class Cleanup(val added: Int = 0, val stretched: Int = 0, val trips: Int = 0, val scored: Int = 0, val built: Int = 0) {
+        operator fun plus(o: Cleanup) = Cleanup(added + o.added, stretched + o.stretched, trips + o.trips, scored + o.scored, built + o.built)
 
         fun text(): String =
             "Added $added visit${if (added == 1) "" else "s"}, stretched $stretched, corrected $trips trip${if (trips == 1) "" else "s"}, " +
+                (if (built > 0) "built $built trip${if (built == 1) "" else "s"}, " else "") +
                 "checked $scored visit${if (scored == 1) "" else "s"}"
     }
 
@@ -482,7 +484,8 @@ object PlacesTracker {
                 if (end <= fromMs) return@withLock Cleanup()
                 val margin = 6 * 60 * 60_000L
                 val readings = db.rawDao().between(fromMs - margin, end)
-                val stays = StayBuilder.build(FixFilter.clean(readings)).filter { it.endMs >= fromMs }
+                val allStays = StayBuilder.build(FixFilter.clean(readings))
+                val stays = allStays.filter { it.endMs >= fromMs }
                 val places = db.placeDao().activePlaces()
                 val saved = db.placeDao().visitsAround(fromMs - 24 * 60 * 60_000L, end + 24 * 60 * 60_000L)
                 val plan = PlaceCleanup.plan(stays, places, saved)
@@ -495,6 +498,25 @@ object PlacesTracker {
                     db.tripDao().setStats(fixed.id, fixed.distanceM, fixed.medianKmh, fixed.topKmh)
                     trips++
                 }
+                // With GPS all day, trips that the live detector did not write down are built from the readings (never over a trip that exists).
+                var built = 0
+                val settings = PlacesSettings(context)
+                if (settings.allDay) {
+                    val saved2 = db.placeDao().visitsAround(fromMs - 24 * 60 * 60_000L, end + 24 * 60 * 60_000L)
+                    val learned = db.tripDao().corrected().map { TripModes.learned(it) }
+                    val fresh = TripBuilder.plan(
+                        readings, allStays, db.tripDao().allTrips(), saved2, db.tripEditDao().active(), learned,
+                        settings.strideM(), settledBeforeMs = end,
+                    ).filter { it.trip.startMs >= fromMs }
+                    if (fresh.isNotEmpty()) {
+                        db.withTransaction {
+                            db.tripDao().insertMissingTrips(fresh.map { it.trip })
+                            db.tripDao().insertMissingPoints(fresh.flatMap { it.points })
+                        }
+                        built = fresh.size
+                        AppLog.i("Trips", "Built $built trip${if (built == 1) "" else "s"} from the readings that no trip covered")
+                    }
+                }
                 // How sure the app is of each finished visit, from the readings taken during it.
                 var scored = 0
                 for (v in db.placeDao().visitsAround(fromMs, end)) {
@@ -506,7 +528,7 @@ object PlacesTracker {
                         scored++
                     }
                 }
-                Cleanup(plan.adds.size, plan.updates.size, trips, scored)
+                Cleanup(plan.adds.size, plan.updates.size, trips, scored, built)
             }
         }
 
