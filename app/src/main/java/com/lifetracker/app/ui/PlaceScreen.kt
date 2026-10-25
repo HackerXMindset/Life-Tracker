@@ -65,7 +65,7 @@ fun PlaceScreen(
             val kind = categories.firstOrNull { it.id == place.kind }?.name ?: PlaceKinds.label(place.kind)
             item { SettingsTop(place.name, kind + if (place.archived) " · not watched" else "", onBack) }
             item {
-                PathCanvas(
+                MapPanel(
                     path = emptyList(),
                     description = "The circle of ${place.name}, ${place.radiusM} metres",
                     circle = PathFrame.Circle(place.lat, place.lng, place.radiusM.toDouble()),

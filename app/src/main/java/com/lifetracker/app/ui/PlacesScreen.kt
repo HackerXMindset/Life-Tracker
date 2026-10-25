@@ -110,6 +110,10 @@ fun PlacesScreen(onBack: () -> Unit, onOpen: (Page) -> Unit, onOpenPlace: (Strin
             }
         }
 
+        item { PaperSection("Maps") }
+        item {
+            SettingsRow(R.drawable.ic_p_route, "Maps", "The map style for trips and places, and your own styles") { onOpen(Page.Maps) }
+        }
         item { PaperSection("Profiles") }
         item {
             SettingsRow(R.drawable.ic_p_pin, "Tracking profiles", "Change how GPS all day records while charging, driving, on a Wi-Fi...") { onOpen(Page.Profiles) }
@@ -334,6 +338,18 @@ internal fun PlaceDialog(
         if (ownDelay) (delay.toIntOrNull() ?: -2) else -1,
     )
     val pauseProblem = PauseText.problem(pause)
+    var picking by remember { mutableStateOf(false) }
+    if (picking) {
+        MapPickDialog(
+            startLat = parsed?.first,
+            startLng = parsed?.second,
+            onPicked = { lat, lng ->
+                coords = PlaceRules.coordinatesText(lat, lng)
+                picking = false
+            },
+            onDismiss = { picking = false },
+        )
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -381,6 +397,7 @@ internal fun PlaceDialog(
                         }
                     },
                 ) { Text(if (fetching) "Reading position..." else "Use where I am now") }
+                OutlinedButton(onClick = { picking = true }) { Text("Pick on map") }
                 Text(
                     message.ifEmpty {
                         "Tip: in Google Maps, press and hold a spot and copy the numbers at the top, then paste them here. " +

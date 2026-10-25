@@ -93,8 +93,10 @@ interface EntryDao {
         TripEditEntity::class,
         PointNoteEntity::class,
         TrackingProfileEntity::class,
+        MapStyleEntity::class,
+        MapAreaEntity::class,
     ],
-    version = 27,
+    version = 28,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -119,6 +121,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun tripEditDao(): TripEditDao
     abstract fun pointNoteDao(): PointNoteDao
     abstract fun trackingProfileDao(): TrackingProfileDao
+    abstract fun mapDao(): MapDao
 
     companion object {
         @Volatile
@@ -131,7 +134,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "life-tracker.db",
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28)
                     .addCallback(object : RoomDatabase.Callback() {
                         // A brand new database starts with the built-in activities and money categories.
                         override fun onCreate(db: SupportSQLiteDatabase) {
@@ -562,5 +565,27 @@ val MIGRATION_13_14: Migration = object : Migration(13, 14) {
 val MIGRATION_12_13: Migration = object : Migration(12, 13) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE `raw_fixes` ADD COLUMN `speed` REAL NOT NULL DEFAULT -1")
+    }
+}
+
+/**
+ * Version 27 -> 28: the maps. Adds the styles you add yourself (map_styles) and the areas kept on the phone (map_areas). Nothing
+ * else is touched. The SQL must match the entities in MapTables.kt exactly.
+ */
+val MIGRATION_27_28: Migration = object : Migration(27, 28) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `map_styles` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `address` TEXT NOT NULL, " +
+                "`key` TEXT NOT NULL, `hidden` INTEGER NOT NULL, `createdMs` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        )
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `map_areas` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `styleId` TEXT NOT NULL, " +
+                "`styleUrl` TEXT NOT NULL, `west` REAL NOT NULL, `south` REAL NOT NULL, `east` REAL NOT NULL, `north` REAL NOT NULL, " +
+                "`minZoom` INTEGER NOT NULL, `maxZoom` INTEGER NOT NULL, `source` TEXT NOT NULL, `placeId` TEXT NOT NULL, " +
+                "`sig` TEXT NOT NULL, `state` TEXT NOT NULL, `createdMs` INTEGER NOT NULL, `doneMs` INTEGER NOT NULL, " +
+                "`tiles` INTEGER NOT NULL, `bytes` INTEGER NOT NULL, `totalTiles` INTEGER NOT NULL, `regionId` INTEGER NOT NULL, " +
+                "`note` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_map_areas_styleId` ON `map_areas` (`styleId`)")
     }
 }

@@ -25,7 +25,7 @@ import com.lifetracker.app.data.UsageCollector
 import com.lifetracker.app.ui.theme.LocalPaper
 
 /** Everything that can be opened from the Settings tab. The numbers for each live under Stats. */
-enum class Page { Phone, Steps, Places, Location, Calls, Charging, Activities, Habits, Appearance, Backup, Timeline, Apps, PlaceCategories, Profiles, Permissions, Logs }
+enum class Page { Phone, Steps, Places, Location, Calls, Charging, Activities, Habits, Appearance, Backup, Timeline, Apps, PlaceCategories, Profiles, Maps, Permissions, Logs }
 
 /**
  * The Settings tab, laid out like the demo: a big title, then four groups of rows. Each row has an icon, a name, one small

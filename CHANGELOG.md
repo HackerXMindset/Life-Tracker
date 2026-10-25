@@ -2,6 +2,19 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧭 Places and trips remake: the map (C7a)
+
+### ✨ New
+
+- **A real map** on the trip page and the place page. The path is coloured by speed, and tapping it picks a reading. If the map cannot load, the old plain drawing is shown.
+- **Pick on map** in the place editor: move the map so the cross is on the spot.
+- **Settings > Places and trips > Maps.** Three built-in styles (from OpenFreeMap), and **Add your own style** with a style address or a tile address, and a key if its provider wants one. A style you hide is kept.
+
+### 🔧 Changed
+
+- The map is the one place the app talks to an outside server: asking for a tile tells that server roughly which area you look at. Nothing else is sent.
+- Your own map styles are included in the backup.
+
 ## 🧭 Places and trips remake: the new screens (C6)
 
 ### ✨ New
