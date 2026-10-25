@@ -63,6 +63,8 @@ fun AppearanceScreen(onBack: () -> Unit) {
                 onSelect = { AppTheme.set(context, ThemeMode.entries[it]) },
             )
         }
+        item { BackgroundCustomizer() }
+
         item {
             key(activeIdentityRevision) {
                 AppIdentitySettings(onDesignSaved = { savedDesignRevision++ })
