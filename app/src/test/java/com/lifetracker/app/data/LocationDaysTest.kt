@@ -54,8 +54,8 @@ class LocationDaysTest {
     @Test
     fun theSummaryReadsInPlainWords() {
         val s = LocationDays.Summary(12_400, 48 * min, 3, 4, 0L)
-        assertEquals("12.4 km · 48 min moving · 3 trips · 4 places", LocationDays.summaryText(s))
-        assertEquals("850 m · 1 min moving · 1 trip · 1 place", LocationDays.summaryText(LocationDays.Summary(850, min, 1, 1, 0L)))
+        assertEquals("12.4 km · 48m moving · 3 trips · 4 places", LocationDays.summaryText(s))
+        assertEquals("850 m · 1m moving · 1 trip · 1 place", LocationDays.summaryText(LocationDays.Summary(850, min, 1, 1, 0L)))
     }
 
     @Test
