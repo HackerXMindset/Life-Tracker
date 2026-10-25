@@ -5,55 +5,56 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
 /**
- * Shared light and dark theme palettes. The light theme is clean creamy white with neutral surfaces and subtle dividers.
+ * The paper look's colours, taken from the demo (Life-Tracker-paper.html): cream paper, pen ink, a lighter sheet laid
+ * on top, green only for "good", an orange highlighter, and red pencil for problems.
  */
 @Immutable
 class PaperColors(
     val dark: Boolean,
-    /** Main screen background. */
+    /** The paper itself. */
     val bg: Color,
-    /** Card, sheet, and menu surfaces. */
+    /** A lighter sheet laid on the paper: cards, sheets, the menu bar. */
     val surface: Color,
-    /** Secondary surface for selected tracks and empty slots. */
+    /** Worn paper: empty slots, the track of a switch. */
     val surface2: Color,
-    /** Primary text and button colour. */
+    /** Pen. Main text and dark buttons. */
     val ink: Color,
-    /** Secondary text. */
+    /** Pencil. Secondary text. */
     val ink2: Color,
-    /** Subtle divider and outline. */
+    /** A faint ruled line. */
     val line: Color,
-    /** Green accent for positive signals. */
+    /** Green ink, only for "good" signals. */
     val accent: Color,
     val accentInk: Color,
     val accentSoft: Color,
-    /** Warm highlight and current-time indicator. */
+    /** Highlighter, and the "now" hand. */
     val sun: Color,
-    /** Error and warning colour. */
+    /** Red pencil. */
     val bad: Color,
-    /** Card and control outline colour. */
+    /** The wobbly outline of cards and buttons. */
     val pen: Color,
-    /** Decorative shadow colour (transparent in light mode). */
+    /** The hard shadow under cards and buttons. */
     val pencil: Color,
-    /** Optional background vignette (disabled in light mode). */
+    /** The darkening at the edges of the sheet. */
     val vig: Color,
 )
 
 val LightPaper = PaperColors(
     dark = false,
     bg = Color(0xFFFFFCF7),
-    surface = Color(0xFFFFFFFF),
-    surface2 = Color(0xFFF5F5F2),
-    ink = Color(0xFF202124),
-    ink2 = Color(0xFF62676D),
-    line = Color(0xFFE1E4E8),
+    surface = Color(0xFFFAF0DA),
+    surface2 = Color(0xFFE4D2AB),
+    ink = Color(0xFF2A2118),
+    ink2 = Color(0xFF6B5B44),
+    line = Color(0xFFC9B38A),
     accent = Color(0xFF2E6B4F),
-    accentInk = Color(0xFFFFFFFF),
-    accentSoft = Color(0xFFE8F1EA),
-    sun = Color(0xFFF0A23A),
-    bad = Color(0xFFB42318),
-    pen = Color(0xFFE1E4E8),
-    pencil = Color(0x00000000),
-    vig = Color(0x00000000),
+    accentInk = Color(0xFFFAF0DA),
+    accentSoft = Color(0xFFDCE2BF),
+    sun = Color(0xFFE39A2D),
+    bad = Color(0xFFB4432F),
+    pen = Color(0xBD2A2118),
+    pencil = Color(0x26463012),
+    vig = Color(0x33825C22),
 )
 
 val DarkPaper = PaperColors(
