@@ -111,7 +111,7 @@ object MapDownloads {
                 c.resume(offlineRegions?.toList().orEmpty())
             }
 
-            override fun onError(error: String?) {
+            override fun onError(error: String) {
                 c.resume(null)
             }
         })
@@ -130,11 +130,11 @@ object MapDownloads {
                 definition,
                 area.id.toByteArray(),
                 object : OfflineManager.CreateOfflineRegionCallback {
-                    override fun onCreate(offlineRegion: OfflineRegion?) {
+                    override fun onCreate(offlineRegion: OfflineRegion) {
                         c.resume(offlineRegion)
                     }
 
-                    override fun onError(error: String?) {
+                    override fun onError(error: String) {
                         c.resume(null)
                     }
                 },
@@ -191,12 +191,12 @@ object MapDownloads {
             watchdog = watch
 
             region.setObserver(object : OfflineRegion.OfflineRegionObserver {
-                override fun onStatusChanged(status: OfflineRegionStatus?) {
+                override fun onStatusChanged(status: OfflineRegionStatus) {
                     see(status)
                 }
 
-                override fun onError(error: OfflineRegionError?) {
-                    lastError = error?.message.orEmpty().ifBlank { error?.reason.orEmpty() }
+                override fun onError(error: OfflineRegionError) {
+                    lastError = error.message.orEmpty().ifBlank { error.reason.orEmpty() }
                 }
 
                 override fun mapboxTileCountLimitExceeded(limit: Long) {
@@ -250,7 +250,7 @@ object MapDownloads {
                                 c.resume(Unit)
                             }
 
-                            override fun onError(error: String?) {
+                            override fun onError(error: String) {
                                 c.resume(Unit)
                             }
                         })
