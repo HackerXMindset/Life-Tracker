@@ -61,7 +61,7 @@ private val PaperShapes = Shapes(
 @Composable
 fun LifeTrackerTheme(content: @Composable () -> Unit) {
     val context = LocalContext.current
-    remember { AppTheme.ensureLoaded(context) }
+    remember { AppTheme.ensureLoaded(context); BackgroundSettings.ensureLoaded(context) }
     val dark = ThemeModes.isDark(AppTheme.mode, isSystemInDarkTheme())
     val paper = if (dark) DarkPaper else LightPaper
     val family = remember { PaperFonts.family(context) }
