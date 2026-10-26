@@ -216,8 +216,8 @@ object MapDownloads {
                     see(status)
                 }
 
-                override fun onError(error: String) {
-                    lastError = error
+                override fun onError(error: String?) {
+                    lastError = error.orEmpty()
                 }
             })
             handler.postDelayed(watch, WATCH_MS)
