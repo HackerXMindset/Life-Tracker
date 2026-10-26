@@ -17,6 +17,7 @@ class DataSources(context: Context) {
         Backup("backup_folder", writable = true),
         Streak("streak_folder", writable = true),
         OpenNutriTracker("nutri_folder", writable = false),
+        Export("export_folder", writable = true),
     }
 
     fun folder(slot: Slot): Uri? = prefs.getString(slot.key, null)?.let(Uri::parse)

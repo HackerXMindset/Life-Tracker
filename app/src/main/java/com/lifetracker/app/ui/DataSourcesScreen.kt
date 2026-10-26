@@ -61,12 +61,6 @@ fun DataSourcesScreen(onBack: () -> Unit, vm: DataSourcesViewModel = viewModel()
     // Export and GPX import use the same code the Places page used before; only the place on screen moved.
     val places: PlacesViewModel = viewModel()
     val transfer by places.transfer.collectAsState()
-    val exportGpx = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/gpx+xml")) { uri ->
-        if (uri != null) places.exportReadings(uri, csv = false)
-    }
-    val exportCsv = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
-        if (uri != null) places.exportReadings(uri, csv = true)
-    }
     val exportTrips = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/gpx+xml")) { uri ->
         if (uri != null) places.exportTrips(uri)
     }
@@ -135,18 +129,13 @@ fun DataSourcesScreen(onBack: () -> Unit, vm: DataSourcesViewModel = viewModel()
         item { PaperSection("Export", "you choose where it is saved") }
         item {
             Text(
-                "Save your readings or trips as a file other apps can open. Places become waypoints and trips become tracks, " +
-                    "with time and distance. Opens in GPSLogger, OsmAnd and most map apps.",
+                "Save your readings as GPX, KML, GeoJSON or CSV, for everything, one day or a range, or let the app do it into a folder. " +
+                    "Trips can be saved as GPX tracks. Opens in GPSLogger, OsmAnd and most map apps.",
                 fontSize = 12.5.sp,
                 color = LocalPaper.current.ink2,
             )
         }
-        item {
-            SettingsRow(R.drawable.ic_p_ext, "Readings as GPX", "Every position reading, as a track") { exportGpx.launch("life-tracker-readings.gpx") }
-        }
-        item {
-            SettingsRow(R.drawable.ic_p_ext, "Readings as CSV", "The same readings as a table") { exportCsv.launch("life-tracker-readings.csv") }
-        }
+        item { ExportCard() }
         item {
             SettingsRow(R.drawable.ic_p_ext, "Trips as GPX", "Your trips as tracks") { exportTrips.launch("life-tracker-trips.gpx") }
         }
