@@ -2,6 +2,17 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧭 Places and trips remake: export (C8a)
+
+### ✨ New
+
+- **Export card** (Settings > Data sources > Export). Save your position readings as **GPX, KML, GeoJSON or CSV**, for everything, one day or a range of days. Android asks where to save the file.
+- **Automatic export.** Pick a folder and Every day or Every week; the app saves the readings since the last export into it. **Export now** runs it at once. The card says what the last run did.
+
+### 🔧 Changed
+
+- The two buttons for Readings as GPX and as CSV are replaced by the card. Trips as GPX stays.
+
 ## 🧭 Places and trips remake: offline maps (C7b)
 
 ### ✨ New

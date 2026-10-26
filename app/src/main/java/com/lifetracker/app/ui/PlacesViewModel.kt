@@ -341,37 +341,6 @@ class PlacesViewModel(private val app: Application) : AndroidViewModel(app) {
     /** What the last export or import did (or failed to do), shown under the Readings buttons. */
     val transfer: StateFlow<String> = transferFlow
 
-    /** Writes every stored reading to the file you chose, as GPX or CSV. */
-    fun exportReadings(uri: Uri, csv: Boolean) {
-        viewModelScope.launch {
-            transferFlow.value = "Exporting..."
-            transferFlow.value = runCatching { withContext(Dispatchers.IO) { writeReadings(uri, csv) } }
-                .getOrElse { "Export failed: ${it.message ?: it.javaClass.simpleName}" }
-        }
-    }
-
-    private suspend fun writeReadings(uri: Uri, csv: Boolean): String {
-        val raw = AppDatabase.get(app).rawDao()
-        val first = raw.firstMs() ?: return "No readings stored yet"
-        val stream = app.contentResolver.openOutputStream(uri, "wt") ?: throw IOException("Android would not open that file for writing.")
-        var count = 0
-        stream.bufferedWriter(Charsets.UTF_8).use { w ->
-            val gpx = if (csv) null else Gpx.Writer(w, "Life Tracker readings")
-            if (gpx != null) gpx.begin() else w.append(Gpx.csvHeader())
-            val chunk = 7L * 24 * 60 * 60_000L
-            val end = System.currentTimeMillis() + 1
-            var from = first
-            while (from < end) {
-                val fixes = raw.between(from, from + chunk)
-                count += fixes.size
-                if (gpx != null) gpx.add(fixes) else Gpx.csvRows(w, fixes)
-                from += chunk
-            }
-            gpx?.end()
-        }
-        return "Exported $count reading${if (count == 1) "" else "s"} as ${if (csv) "CSV" else "GPX"}."
-    }
-
     /** Writes every trip, one track each, to the file you chose. */
     fun exportTrips(uri: Uri) {
         viewModelScope.launch {
