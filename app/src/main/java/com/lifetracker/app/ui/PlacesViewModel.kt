@@ -363,33 +363,6 @@ class PlacesViewModel(private val app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /**
-     * Adds the positions in a GPX file (from GPSLogger or any other app) to the stored readings, which are only ever added to,
-     * then works the visits out again from all the readings. Readings you already had (same second) are left alone.
-     */
-    fun importGpx(uri: Uri) {
-        viewModelScope.launch {
-            transferFlow.value = "Reading the file..."
-            transferFlow.value = runCatching {
-                withContext(Dispatchers.IO) {
-                    val parsed = app.contentResolver.openInputStream(uri)?.use { Gpx.parse(it) }
-                        ?: throw IOException("Android would not open that file.")
-                    val usable = parsed.fixes.filter { it.acc <= PlaceRules.MAX_ACCURACY_M }
-                    val raw = AppDatabase.get(app).rawDao()
-                    val before = raw.count()
-                    usable.chunked(2_000).forEach { raw.insertMissing(it) }
-                    val added = raw.count() - before
-                    if (added > 0) PlacesTracker.cleanupAll(app)
-                    "Found ${parsed.fixes.size} reading${if (parsed.fixes.size == 1) "" else "s"} in the file: $added new, " +
-                        "${usable.size - added} already here, ${parsed.fixes.size - usable.size} too inaccurate, ${parsed.skipped} without a position or time." +
-                        if (added > 0) " Visits were worked out again." else ""
-                }
-            }.getOrElse { "Import failed: ${it.message ?: it.javaClass.simpleName}" }
-            statusFlow.value = readStatus()
-            readingsFlow.value = runCatching { readReadings() }.getOrElse { readingsFlow.value }
-        }
-    }
-
     fun setEnabled(on: Boolean) {
         settings.enabled = on
         enabledFlow.value = on

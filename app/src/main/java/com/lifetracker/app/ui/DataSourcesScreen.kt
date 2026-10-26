@@ -64,9 +64,6 @@ fun DataSourcesScreen(onBack: () -> Unit, vm: DataSourcesViewModel = viewModel()
     val exportTrips = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/gpx+xml")) { uri ->
         if (uri != null) places.exportTrips(uri)
     }
-    val importGpx = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) places.importGpx(uri)
-    }
 
     val pickBackup = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) vm.setFolder(Slot.Backup, uri)
@@ -176,29 +173,7 @@ fun DataSourcesScreen(onBack: () -> Unit, vm: DataSourcesViewModel = viewModel()
                 }
             }
         }
-        item {
-            SetCard {
-                Row(
-                    modifier = Modifier.padding(top = 14.dp, bottom = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.Top,
-                ) {
-                    PaperIcon(R.drawable.ic_p_route)
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("GPX files", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = LocalPaper.current.ink)
-                        Text(
-                            "Tracks from GPSLogger or another logger. Importing only adds readings; nothing is replaced or deleted, " +
-                                "and visits are worked out again afterwards.",
-                            fontSize = 12.5.sp,
-                            color = LocalPaper.current.ink2,
-                        )
-                    }
-                }
-                Row(modifier = Modifier.padding(top = 4.dp, bottom = 14.dp)) {
-                    PaperButtonBox(onClick = { importGpx.launch(arrayOf("*/*")) }, small = true) { Text("Import GPX") }
-                }
-            }
-        }
+        item { ImportCard() }
         item {
             Text(
                 text = "The app only reads the Streak and OpenNutriTracker folders. It never changes files in them.",
