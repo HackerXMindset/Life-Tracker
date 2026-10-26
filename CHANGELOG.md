@@ -2,6 +2,18 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧭 Places and trips remake: import (C8b)
+
+### ✨ New
+
+- **Import card** (Settings > Data sources). Choose a **GPX, KML, GeoJSON or CSV** file, or a **Google Timeline** export (Records.json, or the export made on the phone). The app finds the type from what is inside.
+- **A preview first:** how many readings, on which days, how many are new, already here (same second), too inaccurate, or without a position or time. Only **Import** adds them. Nothing is replaced or deleted, and visits are worked out again afterwards.
+- Big files are read in one pass without loading them whole.
+
+### 🔧 Changed
+
+- The old Import GPX button is replaced by the card. The old monthly Google files (Semantic Location History) are not read yet, and the preview says so.
+
 ## 🧭 Places and trips remake: export (C8a)
 
 ### ✨ New
