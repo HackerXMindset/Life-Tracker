@@ -349,4 +349,52 @@ class TripEditingTest {
         val second = edit("m2", TripEditKind.MERGE, 24, 40, created = 200L)
         assertEquals("m2", TripEditing.blockedBy(first, listOf(first, second), at(0)..at(24))?.id)
     }
+
+    // ---- the fixes found in the C6 review
+
+    @Test
+    fun aGuessedModeIsGuessedAgainForTheWholeJoinedTrip() {
+        val walkGuess = a.copy(activity = "WALKING=60000", mode = "walk", modeSource = "auto")
+        val drive = b.copy(activity = "IN_VEHICLE=900000")
+        val joined = TripEditing.merge(walkGuess, drive, aPoints, bPoints, between, visits, emptyMap(), stride, t0 + 90 * min, "m1")!!.trips.single()
+        assertEquals("vehicle", joined.mode)
+        assertEquals("auto", joined.modeSource)
+    }
+
+    @Test
+    fun aTripYouHidAloneIsNotRelabelledByAMerge() {
+        val byHand = TimelineEdits.edit(TimelineEdits.TRIP, "b", startMs = b.startMs, endMs = -1L, activityId = "", hidden = true, now = t0, label = "Trip")
+        val change = merged(mapOf(byHand.key to byHand))
+        assertNull(change.timelineEdits.firstOrNull { it.key == byHand.key })
+    }
+
+    @Test
+    fun undoingAMergeDoesNotShowATripYouHidAlone() {
+        val change = merged()
+        val byHand = TimelineEdits.edit(TimelineEdits.TRIP, "b", startMs = b.startMs, endMs = -1L, activityId = "", hidden = true, now = t0, label = "Trip")
+        val undo = TripEditing.unmerge(change.journal!!, change.trips.single(), b, change.points, visits, mapOf(byHand.key to byHand), stride, t0 + 120 * min)
+        assertNull(undo.timelineEdits.firstOrNull { it.key == byHand.key })
+    }
+
+    @Test
+    fun undoingAMergeFindsTheEndPlaceFromTheStayThere() {
+        val change = merged()
+        val laterWithoutPlace = b.copy(fromPlaceId = "")
+        val undo = TripEditing.unmerge(change.journal!!, change.trips.single(), laterWithoutPlace, change.points, visits, emptyMap(), stride, t0 + 120 * min)
+        assertEquals("work", undo.trips.single().toPlaceId)
+    }
+
+    @Test
+    fun theSecondPartOfASplitIsNotMistakenForATripAMergeHid() {
+        val cut = at(2)
+        val edit = TripEditEntity("s1", TripEditKind.SPLIT, cut, 0L, t0)
+        val first = TripEntity("a", at(0), cut, "", "", 0, 0, 0, "", "walk", "auto")
+        val hiddenByMerge = TripEntity("hb", cut, at(4), "", "", 0, 0, 0, "", "walk", "auto")
+        val secondPart = TripEntity("c", cut, at(4), "", "", 0, 0, 0, "", "walk", "auto")
+        val trips = listOf(first, hiddenByMerge, secondPart)
+        assertEquals("hb", TripEditing.splitPair(edit, trips)!!.second.id)
+        assertEquals("c", TripEditing.splitPair(edit, trips, setOf("hb"))!!.second.id)
+        // When only the hidden one matches, it is still used (better than nothing).
+        assertEquals("hb", TripEditing.splitPair(edit, listOf(first, hiddenByMerge), setOf("hb"))!!.second.id)
+    }
 }

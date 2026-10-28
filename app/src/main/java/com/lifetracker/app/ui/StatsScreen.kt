@@ -32,6 +32,7 @@ import com.lifetracker.app.data.SleepNightEntity
 import com.lifetracker.app.data.SleepStats
 import com.lifetracker.app.data.StepDayEntity
 import com.lifetracker.app.data.StepStats
+import com.lifetracker.app.data.TimelineEdits
 import com.lifetracker.app.data.TripEntity
 import com.lifetracker.app.data.TripRules
 import com.lifetracker.app.data.UsageCollector
@@ -60,9 +61,11 @@ fun StatsScreen(
     val charges by vm.charges.collectAsState()
     val steps by vm.steps.collectAsState()
     val sleep by vm.sleep.collectAsState()
-    val placeVisits by vm.placeVisits.collectAsState()
+    val edits by vm.edits.collectAsState()
+    // What you hid on the Timeline (and the trips and stays a merge joined away) does not count here either.
+    val placeVisits = vm.placeVisits.collectAsState().value.filter { !TimelineEdits.isHidden(edits[TimelineEdits.key(TimelineEdits.VISIT, it.id)]) }
     val placeNames by vm.placeNames.collectAsState()
-    val trips by vm.trips.collectAsState()
+    val trips = vm.trips.collectAsState().value.filter { !TimelineEdits.isHidden(edits[TimelineEdits.key(TimelineEdits.TRIP, it.id)]) }
 
     val zone = ZoneId.systemDefault()
     val dayStartMs = date.atStartOfDay(zone).toInstant().toEpochMilli()

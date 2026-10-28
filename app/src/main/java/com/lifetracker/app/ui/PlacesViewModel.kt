@@ -7,6 +7,8 @@ import androidx.lifecycle.viewModelScope
 import com.lifetracker.app.data.AppDatabase
 import com.lifetracker.app.data.FixStats
 import com.lifetracker.app.data.Gpx
+import com.lifetracker.app.data.TimelineEdits
+import com.lifetracker.app.data.TripEditing
 import com.lifetracker.app.data.KeepAlive
 import com.lifetracker.app.data.Fix
 import com.lifetracker.app.data.PlaceCategoryEntity
@@ -348,12 +350,15 @@ class PlacesViewModel(private val app: Application) : AndroidViewModel(app) {
             transferFlow.value = runCatching {
                 withContext(Dispatchers.IO) {
                     val tripDao = AppDatabase.get(app).tripDao()
-                    val trips = tripDao.allTrips().sortedBy { it.startMs }
+                    val joinedAway = AppDatabase.get(app).timelineEditDao().all()
+                        .filter { it.kind == TimelineEdits.TRIP && TripEditing.isJoinedAway(it) }.map { it.refId }.toSet()
+                    // A trip that was joined to another is in that one's track; only the readings inside each trip's own times are written.
+                    val trips = tripDao.allTrips().filter { it.id !in joinedAway }.sortedBy { it.startMs }
                     val points = tripDao.allPoints().groupBy { it.tripId }
                     val zone = ZoneId.systemDefault()
                     val tracks = trips.map { t ->
                         val day = Instant.ofEpochMilli(t.startMs).atZone(zone).toLocalDate()
-                        "$day ${TripModes.label(t.mode)} ${TripRules.distanceText(t.distanceM)}" to (points[t.id] ?: emptyList())
+                        "$day ${TripModes.label(t.mode)} ${TripRules.distanceText(t.distanceM)}" to TripEditing.pointsOf(t, points[t.id] ?: emptyList())
                     }
                     val stream = app.contentResolver.openOutputStream(uri, "wt") ?: throw IOException("Android would not open that file for writing.")
                     stream.bufferedWriter(Charsets.UTF_8).use { Gpx.writeTrips(it, tracks) }
