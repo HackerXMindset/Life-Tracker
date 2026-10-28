@@ -112,6 +112,7 @@ object TripEditing {
         strideM: Double,
         nowMs: Long,
         editId: String,
+        learned: List<TripModes.Learned> = emptyList(),
     ): TripChange? {
         if (earlier.id == later.id || later.startMs < earlier.endMs) return null
         val all = (
@@ -119,15 +120,22 @@ object TripEditing {
                 pointsOf(later, laterPoints) +
                 between.filter { it.ms in earlier.endMs..later.startMs }.map { TripPointEntity(earlier.id, it.ms, it.lat, it.lng, it.acc, it.steps) }
             ).map { it.copy(tripId = earlier.id) }.sortedBy { it.ms }.distinctBy { it.ms }
-        val joined = withStats(
-            earlier.copy(endMs = later.endMs, toPlaceId = later.toPlaceId, activity = addActivity(earlier.activity, later.activity)),
-            all,
-            strideM,
-        )
+        var base = earlier.copy(endMs = later.endMs, toPlaceId = later.toPlaceId, activity = addActivity(earlier.activity, later.activity))
+        // Your own answer stays. A guess is made again for the whole joined trip (a walk and a drive are not a walk).
+        val own = pointsOf(base, all)
+        if (earlier.modeSource != "you" && own.size >= 2) {
+            base = base.copy(
+                mode = TripModes.guess(measure(base, own), TripModes.parseActivity(base.activity), base.fromPlaceId, base.toPlaceId, learned),
+            )
+        }
+        val joined = withStats(base, all, strideM)
+        // Something you had hidden yourself is left as it is, so Undo does not bring it back.
         val hidden = ArrayList<TimelineEditEntity>()
-        hidden += hide(editOf(edits, TimelineEdits.TRIP, later.id), TimelineEdits.TRIP, later.id, later.startMs, JOINED_TRIP_LABEL, nowMs)
+        val laterOld = editOf(edits, TimelineEdits.TRIP, later.id)
+        if (laterOld?.hidden != true) hidden += hide(laterOld, TimelineEdits.TRIP, later.id, later.startMs, JOINED_TRIP_LABEL, nowMs)
         for (v in staysBetween(visits, earlier.endMs, later.startMs)) {
-            hidden += hide(editOf(edits, TimelineEdits.VISIT, v.id), TimelineEdits.VISIT, v.id, v.startMs, JOINED_STAY_LABEL, nowMs)
+            val old = editOf(edits, TimelineEdits.VISIT, v.id)
+            if (old?.hidden != true) hidden += hide(old, TimelineEdits.VISIT, v.id, v.startMs, JOINED_STAY_LABEL, nowMs)
         }
         return TripChange(
             trips = listOf(joined),
@@ -158,12 +166,17 @@ object TripEditing {
         nowMs: Long,
     ): TripChange {
         val restored = withStats(
-            earlier.copy(endMs = edit.atMs, toPlaceId = later.fromPlaceId, activity = subtractActivity(earlier.activity, later.activity)),
+            earlier.copy(
+                endMs = edit.atMs,
+                // The place it ended at is not stored, so it is found again from the stays at that moment.
+                toPlaceId = TripBuilder.placeNear(visits, edit.atMs).ifEmpty { later.fromPlaceId },
+                activity = subtractActivity(earlier.activity, later.activity),
+            ),
             earlierPoints,
             strideM,
         )
         val shown = ArrayList<TimelineEditEntity>()
-        editOf(edits, TimelineEdits.TRIP, later.id)?.let { shown += show(it, "Trip", nowMs) }
+        editOf(edits, TimelineEdits.TRIP, later.id)?.let { if (isJoinedAway(it)) shown += show(it, "Trip", nowMs) }
         for (v in staysBetween(visits, edit.atMs, edit.otherMs)) {
             val old = editOf(edits, TimelineEdits.VISIT, v.id)
             if (isJoinedAway(old)) shown += show(old!!, "", nowMs)
@@ -206,10 +219,12 @@ object TripEditing {
     }
 
     /** The two trips a split made, found again by the time of the cut. */
-    fun splitPair(edit: TripEditEntity, trips: List<TripEntity>): Pair<TripEntity, TripEntity>? {
+    fun splitPair(edit: TripEditEntity, trips: List<TripEntity>, joinedAway: Set<String> = emptySet()): Pair<TripEntity, TripEntity>? {
         if (edit.kind != TripEditKind.SPLIT) return null
         val first = trips.firstOrNull { it.endMs == edit.atMs && it.startMs < edit.atMs } ?: return null
-        val second = trips.firstOrNull { it.id != first.id && it.startMs == edit.atMs && it.endMs > edit.atMs } ?: return null
+        // A trip hidden by an earlier merge can start at the same moment: the one that is still shown is the second part.
+        val seconds = trips.filter { it.id != first.id && it.startMs == edit.atMs && it.endMs > edit.atMs }
+        val second = seconds.firstOrNull { it.id !in joinedAway } ?: seconds.firstOrNull() ?: return null
         return first to second
     }
 

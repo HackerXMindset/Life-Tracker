@@ -266,15 +266,18 @@ fun PlacesScreen(onBack: () -> Unit, onOpen: (Page) -> Unit, onOpenPlace: (Strin
         item { PaperSection("How it works") }
         item {
             Text(
-                "Android wakes the app when you come near a place, leave one, or the phone goes still or starts moving. " +
-                    "Then the app reads your position (a notification shows while it does). Staying in one spot for 3 minutes is a stay: " +
-                    "inside a place's circle it is a visit to that place, anywhere else it waits for you to name it. " +
-                    "A trip is the way between two stays. If the phone has no record of how you got from one place to another, the Places list " +
-                    "shows an unknown journey with the straight-line distance, and you can say how you went. " +
+                "Recording has two ways. Gentle wakes the app when you come near a place, leave one, or the phone goes still or starts moving, " +
+                    "and reads your position only then. GPS all day reads your position all day at the pace you set (a notification stays) " +
+                    "and keeps every good reading, so the path is exact; tracking profiles change the pace while something is true, " +
+                    "and a pause zone at a place stops the readings there. " +
+                    "Staying in one spot for 3 minutes is a stay: inside a place's circle it is a visit to that place, anywhere else it waits " +
+                    "for you to name it in the Location page. A trip is the way between two stays. On a trip's page you can join it to a neighbour, " +
+                    "cut it in two, write a note on one reading, or hide it, and every change can be undone. " +
                     "The circle you give a place is the real size used to decide you are there; Android's own ring around it is at least 150 m, only to wake the app. " +
-                    "Names for unnamed spots are suggested by OpenStreetMap over the internet (only the position of that stop is sent, once). " +
-                    "Places, trips and readings are never deleted: \"not watched\" only stops the watching, and \"Not a place\" only hides. " +
-                    "Backups include your places, visits and trips. Nothing leaves the phone.",
+                    "Names for unnamed spots are suggested by OpenStreetMap over the internet (only the position of that stop is sent, once), " +
+                    "and map pictures are fetched from the map style you chose when you view a map or download an offline area. " +
+                    "Your readings, places and trips never leave the phone except when you export or back them up. " +
+                    "Nothing is deleted: \"not watched\" only stops the watching, and hiding keeps what you hid. Backups include your places, visits, trips and readings.",
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

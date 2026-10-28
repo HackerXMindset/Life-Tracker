@@ -47,6 +47,7 @@ object TripEditor {
             db.tripDao().points(earlier.id), db.tripDao().points(later.id),
             db.rawDao().between(earlier.endMs, later.startMs + 1),
             visits, timelineEdits(db), strideM, nowMs, newId(),
+            learned = db.tripDao().corrected().map { TripModes.learned(it) },
         ) ?: return false
         save(db, change, nowMs)
         AppLog.i("Trips", "Merged two trips into one (${LogFormat.clock(earlier.startMs)}-${LogFormat.clock(later.endMs)})")
@@ -78,7 +79,8 @@ object TripEditor {
                 TripEditing.unmerge(edit, earlier, later, db.tripDao().points(earlier.id), visits, edits, strideM, nowMs)
             }
             TripEditKind.SPLIT -> {
-                val (first, second) = TripEditing.splitPair(edit, trips) ?: return UndoResult(UndoResult.Outcome.GONE)
+                val joinedAway = edits.values.filter { it.kind == TimelineEdits.TRIP && TripEditing.isJoinedAway(it) }.map { it.refId }.toSet()
+                val (first, second) = TripEditing.splitPair(edit, trips, joinedAway) ?: return UndoResult(UndoResult.Outcome.GONE)
                 TripEditing.blockedBy(edit, active, first.startMs..second.endMs)?.let {
                     return UndoResult(UndoResult.Outcome.BLOCKED, it)
                 }

@@ -2,6 +2,21 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧭 Places and trips remake: the finish (C9)
+
+### 🔧 Fixed
+
+- **Trips as GPX** no longer writes stray readings after you split a trip or undo a merge, and leaves out a trip that was joined to another (it is already in that trip's track).
+- **Stats** no longer count trips or stays you hid, or that a merge joined away, in the Travel line and the place times.
+- **Undoing a split** takes the right trip back when a merge once hid a trip starting at the same moment.
+- **Joining a walk to a drive** guesses the way you travelled again for the whole trip (your own answer still stays).
+- **Undoing a merge** finds the trip's end place again, and no longer shows a trip you had hidden yourself.
+- **Tidy everything from my readings** now builds a trip that crosses from one week into the next.
+
+### 📝 Changed
+
+- The help text in Settings > Places and trips now explains both recording ways, the Location page, trip editing, maps and what goes online.
+
 ## 🧭 Places and trips remake: import (C8b)
 
 ### ✨ New

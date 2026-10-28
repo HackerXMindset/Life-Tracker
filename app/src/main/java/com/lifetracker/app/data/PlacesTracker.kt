@@ -507,7 +507,8 @@ object PlacesTracker {
                     val fresh = TripBuilder.plan(
                         readings, allStays, db.tripDao().allTrips(), saved2, db.tripEditDao().active(), learned,
                         settings.strideM(), settledBeforeMs = end,
-                    ).filter { it.trip.startMs >= fromMs }
+                    // A trip that began before this stretch but ends in it is built too (a week-long rebuild would otherwise skip it).
+                    ).filter { it.trip.endMs >= fromMs }
                     if (fresh.isNotEmpty()) {
                         db.withTransaction {
                             db.tripDao().insertMissingTrips(fresh.map { it.trip })
