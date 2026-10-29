@@ -116,9 +116,12 @@ flowchart LR
 - [x] Tests
 
 #### E4 Settings and switches
-- [ ] Research how well-organised settings are grouped in open-source apps
-- [ ] Places and trips settings: a short first page with groups in plain words (Recording, Places, Maps, Trips and data, Advanced), each its own page with one sentence on what it is for; beginner choices first, the rest under Advanced
-- [ ] **Features** page: a switch for Food, Habits, Money, Stats, Steps and sleep, Calls, Charging, Phone usage, Places and trips, Maps, Focus and the rest. Off means gone from the tabs, Settings, Timeline and Stats and **no new data collected** until switched on; old data is kept
+- [x] Research: Android's own settings guidelines (frequent items first, keep a screen to 10 to 15 items, an Advanced part only when it hides 3 or more things)
+- [ ] Rules in one tested file: which switch controls which tab, row and card; which tab to land on when yours is switched off
+- [ ] **Features** page (Settings > This app): a switch for Food, Habits, Money, Stats, Steps and sleep, Phone usage, Calls, Charging, Places and trips, Maps
+- [ ] Off means gone from the tabs, Settings, Timeline and Stats
+- [ ] Off also means **nothing new is collected** (phone usage, steps, calls, charging, positions, map downloads, food and habit imports, reminders, monthly money entries) until you switch it on; your old data is kept
+- [ ] Places and trips settings: a short first page (the master switch and five rows), each row its own page with one sentence on what it is for: Recording, Places, Maps, Trips and data, Advanced
 - [ ] Tests
 
 #### E5 Place names
