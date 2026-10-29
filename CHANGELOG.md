@@ -2,6 +2,14 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧭 Places and trips round 2: the live map (E3)
+
+### ✨ New
+
+- **On the move** row at the top of today on the Timeline. While you are moving it shows how long, how far and how fast, refreshes every few seconds (only while the screen is on) and opens the live map.
+- **Live map**: your position follows you smoothly like Google Maps, with the accuracy circle, today's path so far, your saved places as circles and your offline map areas. Move the map yourself and following stops; **Centre on me** turns it back on. It uses the readings the app already takes, so it does not ask the phone for a second position.
+- **Status card** under the map: recording on, paused or waiting, the last reading and how exact it is, how often readings are taken, and the profile in force, with a **Pause / Resume** button.
+
 ## 🧭 Places and trips round 2: the Trips view (E2)
 
 ### ✨ New

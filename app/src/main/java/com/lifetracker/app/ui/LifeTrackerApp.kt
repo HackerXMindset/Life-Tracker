@@ -134,6 +134,7 @@ fun LifeTrackerApp() {
                     Page.Apps -> AppsScreen(onBack = back)
                     Page.PlaceCategories -> PlaceCategoriesScreen(onBack = { page = Page.Places })
                     Page.Profiles -> ProfilesScreen(onBack = { page = Page.Places })
+                    Page.Live -> LiveScreen(onBack = back)
                     Page.Trips -> TripsScreen(onBack = back, onOpenTrip = { openTrip = it })
                     Page.Changes -> ChangesScreen(onBack = { page = Page.Places })
                     Page.Maps -> MapsScreen(onBack = { page = Page.Places })
@@ -157,6 +158,7 @@ fun LifeTrackerApp() {
                         onOpenPlace = { openPlace = it },
                         onOpenCalls = { openPage(Page.Calls, Part.Data) },
                         onOpenFood = { tab = Tab.Food },
+                        onOpenLive = { openPage(Page.Live, Part.Data) },
                     )
                     Tab.Habits -> HabitsScreen()
                     Tab.Food -> FoodScreen()

@@ -116,9 +116,12 @@ fun TimelineScreen(
     onOpenPlace: (String) -> Unit,
     onOpenCalls: () -> Unit,
     onOpenFood: () -> Unit,
+    onOpenLive: () -> Unit,
     vm: TimelineViewModel = viewModel(),
 ) {
     val date by vm.date.collectAsState()
+    // The live position, looked at every few seconds while this screen is showing and the screen is on.
+    val live by rememberLive(withPath = false)
     val entries by vm.entries.collectAsState()
     val todos by vm.todos.collectAsState()
     val notes by vm.notes.collectAsState()
@@ -417,6 +420,9 @@ fun TimelineScreen(
             item(key = "header") { TimelineHeader(date) }
             item(key = "week") {
                 PaperWeekStrip(selected = date, datesWithEntries = datesWithEntries, onSelect = vm::selectDate)
+            }
+            if (date == java.time.LocalDate.now() && live?.live?.state == com.lifetracker.app.data.LiveRules.State.MOVING) {
+                item(key = "on-the-move") { OnTheMoveRow(live!!, onOpenLive) }
             }
             item(key = "view-switch") {
                 PaperSegmented(listOf("Timeline", "Pie"), if (pie) 1 else 0, { pie = it == 1 })

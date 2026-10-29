@@ -76,6 +76,10 @@ interface RawFixDao {
     @Query("SELECT * FROM raw_fixes ORDER BY ms")
     suspend fun all(): List<RawFixEntity>
 
+    /** The newest reading, or null when there is none. */
+    @Query("SELECT * FROM raw_fixes ORDER BY ms DESC LIMIT 1")
+    suspend fun latest(): RawFixEntity?
+
     @Query("SELECT COUNT(*) FROM raw_fixes")
     suspend fun count(): Int
 
