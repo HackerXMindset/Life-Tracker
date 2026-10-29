@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
@@ -102,6 +103,8 @@ class DayActions(
     val onFood: () -> Unit,
     val onFillIn: (startMs: Long, endMs: Long) -> Unit,
     val onTripMode: (TripEntity, String) -> Unit,
+    /** Tapping a trip shows just that trip on a map in a card. */
+    val onShowTrip: (TripEntity) -> Unit,
     val onUnknownJourney: (DayLayout.Travel, String) -> Unit,
     /** What you changed about things on the Timeline, by [TimelineEdits.key]. */
     val edits: Map<String, TimelineEditEntity>,
@@ -753,11 +756,7 @@ private fun TravelCard(t: DayLayout.Travel, a: DayActions) {
                 .penOutline(shape, if (unknown) paper.sun else paper.line, width = if (unknown) 1.5.dp else 1.25.dp)
                 .clip(shape)
                 .clickable {
-                    if (!unknown && trip != null) {
-                        picking = true
-                    } else if (trip != null) {
-                        open = !open
-                    }
+                    if (trip != null) a.onShowTrip(trip)
                 },
         ) {
             Row(
@@ -781,7 +780,11 @@ private fun TravelCard(t: DayLayout.Travel, a: DayActions) {
                     Icon(
                         painter = painterResource(R.drawable.ic_edit),
                         contentDescription = "Change how you travelled",
-                        modifier = Modifier.size(14.dp),
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .clickable { if (!unknown) picking = true else open = !open }
+                            .padding(8.dp)
+                            .size(14.dp),
                         tint = paper.ink2,
                     )
                 }

@@ -50,6 +50,7 @@ fun StatsScreen(
     onOpenPhone: () -> Unit,
     onOpenSteps: () -> Unit,
     onOpenPlaces: () -> Unit,
+    onOpenTrips: () -> Unit,
     onOpenCalls: () -> Unit,
     onOpenCharging: () -> Unit,
     vm: TimelineViewModel = viewModel(),
@@ -88,8 +89,37 @@ fun StatsScreen(
         }
         item(key = "steps") { HealthSummary(steps, sleep, onClick = onOpenSteps) }
         item(key = "places") { PlacesSummary(dayPlaces, placeNames, trips, onClick = onOpenPlaces) }
+        item(key = "trips") { TripsSummaryCard(trips, onClick = onOpenTrips) }
         item(key = "calls") { CallsSummary(calls, onClick = onOpenCalls) }
         item(key = "charging") { ChargingSummary(charges, onClick = onOpenCharging) }
+    }
+}
+
+/** The day's trips in one line; tap for whole trips over any stretch of days (a week, a month, a year, your own dates). */
+@Composable
+internal fun TripsSummaryCard(trips: List<TripEntity>, onClick: () -> Unit) {
+    val sum = com.lifetracker.app.data.TripsRange.summary(trips)
+    Surface(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+    ) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                MonoLabel("Trips")
+                Text(
+                    text = if (sum.trips == 0) "–" else "${sum.trips} · " + TripRules.distanceText(sum.distanceM.toInt()),
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+            Text(
+                text = "Tap for whole trips over a week, a month, a year or any dates",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
