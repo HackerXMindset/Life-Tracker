@@ -27,6 +27,8 @@ import com.lifetracker.app.data.CallEntity
 import com.lifetracker.app.data.CallStats
 import com.lifetracker.app.data.ChargeSessionEntity
 import com.lifetracker.app.data.ChargeStats
+import com.lifetracker.app.data.Feature
+import com.lifetracker.app.data.Features
 import com.lifetracker.app.data.PlaceRules
 import com.lifetracker.app.data.SleepNightEntity
 import com.lifetracker.app.data.SleepStats
@@ -56,6 +58,9 @@ fun StatsScreen(
     vm: TimelineViewModel = viewModel(),
 ) {
     val context = LocalContext.current
+    // A part of the app you switched off (Settings > Features) has no card here.
+    val featureTick by Features.changes.collectAsState()
+    fun featureOn(f: Feature) = featureTick >= 0 && Features.isOn(context, f)
     val date by vm.date.collectAsState()
     val usageDay by vm.usageDay.collectAsState()
     val calls by vm.calls.collectAsState()
@@ -83,15 +88,15 @@ fun StatsScreen(
         item {
             MonoLabel("For " + date.format(DateTimeFormatter.ofPattern("EEEE d MMMM")) + " (change the day on the Timeline)")
         }
-        item(key = "phone") {
+        if (featureOn(Feature.PHONE_USAGE)) item(key = "phone") {
             if (usageAccess) PhoneSummary(usageDay, onClick = onOpenPhone)
             else SetupNote("Phone usage is not switched on yet. Allow it in the Settings tab to see your app time here.")
         }
-        item(key = "steps") { HealthSummary(steps, sleep, onClick = onOpenSteps) }
-        item(key = "places") { PlacesSummary(dayPlaces, placeNames, trips, onClick = onOpenPlaces) }
-        item(key = "trips") { TripsSummaryCard(trips, onClick = onOpenTrips) }
-        item(key = "calls") { CallsSummary(calls, onClick = onOpenCalls) }
-        item(key = "charging") { ChargingSummary(charges, onClick = onOpenCharging) }
+        if (featureOn(Feature.STEPS_SLEEP)) item(key = "steps") { HealthSummary(steps, sleep, onClick = onOpenSteps) }
+        if (featureOn(Feature.PLACES)) item(key = "places") { PlacesSummary(dayPlaces, placeNames, trips, onClick = onOpenPlaces) }
+        if (featureOn(Feature.PLACES)) item(key = "trips") { TripsSummaryCard(trips, onClick = onOpenTrips) }
+        if (featureOn(Feature.CALLS)) item(key = "calls") { CallsSummary(calls, onClick = onOpenCalls) }
+        if (featureOn(Feature.CHARGING)) item(key = "charging") { ChargingSummary(charges, onClick = onOpenCharging) }
     }
 }
 

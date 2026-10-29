@@ -16,6 +16,12 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+import com.lifetracker.app.data.FeatureRules
+import com.lifetracker.app.data.Features
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,6 +38,10 @@ import com.lifetracker.app.ui.theme.pencilShadow
 @Composable
 fun PaperNavBar(selected: Tab, onSelect: (Tab) -> Unit) {
     val p = LocalPaper.current
+    val context = LocalContext.current
+    // A tab whose feature you switched off is not shown.
+    val changed by Features.changes.collectAsState()
+    val shown = remember(changed) { FeatureRules.tabNames { Features.isOn(context, it) } }
     Row(
         modifier = Modifier
             .windowInsetsPadding(WindowInsets.navigationBars)
@@ -44,7 +54,7 @@ fun PaperNavBar(selected: Tab, onSelect: (Tab) -> Unit) {
             .padding(6.dp),
         horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        Tab.entries.forEach { tab ->
+        Tab.entries.filter { it.title in shown }.forEach { tab ->
             val on = tab == selected
             Column(
                 modifier = Modifier

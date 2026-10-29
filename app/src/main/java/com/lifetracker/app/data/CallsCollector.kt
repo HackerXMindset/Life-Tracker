@@ -38,6 +38,7 @@ object CallsCollector {
 
     /** Copies new calls. Returns how many were read, or null without permission. */
     suspend fun sync(context: Context, now: Long = System.currentTimeMillis()): Int? = withContext(Dispatchers.IO) {
+        if (!Features.isOn(context, Feature.CALLS)) return@withContext null
         if (!hasAccess(context)) return@withContext null
         val dao = AppDatabase.get(context).callDao()
         val latest = dao.latestStart()

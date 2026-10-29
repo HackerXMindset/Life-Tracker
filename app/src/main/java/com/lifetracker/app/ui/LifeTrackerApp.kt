@@ -17,6 +17,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,6 +32,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifetracker.app.R
 import com.lifetracker.app.data.BackupManager
+import com.lifetracker.app.data.FeatureRules
+import com.lifetracker.app.data.Features
 import com.lifetracker.app.data.DataSources
 import com.lifetracker.app.data.CallsCollector
 import com.lifetracker.app.data.ChargeSettings
@@ -69,6 +72,15 @@ fun LifeTrackerApp() {
     fun openPage(target: Page, half: Part) {
         part = half
         page = target
+    }
+
+    // If the tab you are on was switched off (on the Features page), go back to the Timeline.
+    val featuresChanged by Features.changes.collectAsState()
+    val featureContext = LocalContext.current
+    LaunchedEffect(featuresChanged) {
+        val visible = FeatureRules.tabNames { Features.isOn(featureContext, it) }
+        val landing = FeatureRules.landing(tab.title, visible)
+        if (landing != tab.title) tab = Tab.entries.first { it.title == landing }
     }
 
     // One automatic backup per day, the first time the app is opened.
@@ -135,6 +147,7 @@ fun LifeTrackerApp() {
                     Page.PlaceCategories -> PlaceCategoriesScreen(onBack = { page = Page.Places })
                     Page.Profiles -> ProfilesScreen(onBack = { page = Page.Places })
                     Page.Live -> LiveScreen(onBack = back)
+                    Page.Features -> FeaturesScreen(onBack = back)
                     Page.Trips -> TripsScreen(onBack = back, onOpenTrip = { openTrip = it })
                     Page.Changes -> ChangesScreen(onBack = { page = Page.Places })
                     Page.Maps -> MapsScreen(onBack = { page = Page.Places })

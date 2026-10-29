@@ -15,6 +15,7 @@ import androidx.work.WorkerParameters
  */
 class MapDownloadWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
+        if (!Features.isOn(applicationContext, Feature.MAPS)) return Result.success()
         val db = AppDatabase.get(applicationContext)
         return try {
             MapAreas.reconcile(applicationContext, db)
@@ -40,6 +41,7 @@ object MapScheduler {
      * (the mobile-data switch, the style).
      */
     fun kick(context: Context, replace: Boolean = false) {
+        if (!Features.isOn(context, Feature.MAPS)) return
         val app = context.applicationContext
         val settings = MapSettings(app)
         val network = if (settings.mobileData) NetworkType.CONNECTED else NetworkType.UNMETERED

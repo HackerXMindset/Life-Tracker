@@ -2,6 +2,18 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧭 Places and trips round 2: settings and switches (E4)
+
+### ✨ New
+
+- **Features** (Settings > This app). One switch each for Food, Habits, Money, Stats, Steps and sleep, Phone usage, Calls, Charging, Places and trips, and Maps. Switched off, a part disappears from the tabs, Settings, the Timeline and Stats, and **nothing new is collected for it** (no position readings, usage, calls, charging, steps, map downloads, imports, reminders or monthly money entries) until you switch it on again. Everything collected before is kept and comes back with the switch.
+
+### 🔧 Changed
+
+- **Places and trips settings** are now a short first page: the master switch and five rows, each one a page of its own with one line on what it is for (Recording, Places, Maps, Trips and data, Advanced).
+- With Maps switched off, trips and places are drawn on plain paper and no map pictures are fetched.
+- The "how it works" text no longer mentions joining trips.
+
 ## 🧭 Places and trips round 2: the live map (E3)
 
 ### ✨ New

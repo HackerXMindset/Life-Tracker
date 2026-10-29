@@ -8,6 +8,7 @@ import java.time.LocalDate
 object MoneyPoster {
     /** Returns how many entries were added. */
     suspend fun postDue(context: Context, today: LocalDate = LocalDate.now()): Int {
+        if (!Features.isOn(context, Feature.MONEY)) return 0
         val db = AppDatabase.get(context)
         return db.withTransaction {
             var added = 0
