@@ -223,6 +223,8 @@ fun TimelineScreen(
     var comboFor by remember { mutableStateOf<UsageDays.Block?>(null) }
     var fillIn by remember { mutableStateOf<Pair<Long, Long>?>(null) }
     var editTarget by remember { mutableStateOf<EditTarget?>(null) }
+    // The trip shown alone on a map in a card (tap a trip on the Timeline).
+    var popupTrip by remember { mutableStateOf<String?>(null) }
     var showHidden by remember { mutableStateOf(false) }
     val usageApps by vm.usageApps.collectAsState()
     val placeLooks by vm.placeLooks.collectAsState()
@@ -347,6 +349,7 @@ fun TimelineScreen(
         onFood = onOpenFood,
         onFillIn = { s, e -> fillIn = s to e },
         onTripMode = vm::setTripMode,
+        onShowTrip = { popupTrip = it.id },
         onUnknownJourney = vm::setUnknownJourney,
         edits = edits,
         appIcons = usageApps.mapValues { it.value.icon }.filterValues { it.isNotEmpty() },
@@ -490,6 +493,15 @@ fun TimelineScreen(
                 .align(Alignment.BottomEnd)
                 .padding(16.dp),
         )
+
+        popupTrip?.let { id ->
+            TripPopup(
+                tripId = id,
+                onDismiss = { popupTrip = null },
+                onOpenTrip = { popupTrip = null; onOpenTrip(id) },
+                onMode = { t, m -> vm.setTripMode(t, m) },
+            )
+        }
     }
 
     if (showLog) {

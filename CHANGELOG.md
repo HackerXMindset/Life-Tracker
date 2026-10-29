@@ -2,6 +2,18 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧭 Places and trips round 2: the Trips view (E2)
+
+### ✨ New
+
+- **Trips** page (Stats tab > Trips, or Location > See whole trips). Pick a day, week, month, year or your own dates and see whole trips in three tabs: **Map** (every trip in its own colour, tap a path to pick it), **Trips** (a list by day) and **Data** (distance, time on the move, average speed, longest and fastest trip, totals by way of travelling and by day).
+- **Tap a trip on the Timeline** and a card opens with only that trip on the map (coloured by speed), its numbers and where it began and ended, with a button to the full trip page. The small pencil on the row still changes how you travelled.
+- A **Trips** card on the Stats tab shows the day's trips and opens the page.
+
+### 🔧 Changed
+
+- Hidden trips, and trips a join took away, are left out of the Trips page, the same as on the Timeline. Nothing is changed or deleted by looking.
+
 ## 🧭 Places and trips round 2: undo and cleanup (E1)
 
 ### ✨ New

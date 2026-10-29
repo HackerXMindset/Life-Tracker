@@ -43,7 +43,7 @@ Life Tracker is an Android app built for one person: its owner. It replaces a pi
 | Habits (H1 to H13) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done |
 | The paper look (Timeline, Habits, Settings, Food) | ▰▰▰▰▰▰▰▱▱▱ | 🟡 Money and Stats still to restyle |
 | Places and trips remake (C1 to C9) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done, 11 pull requests |
-| **Places and trips round 2 (E1 to E10)** | ▰▱▱▱▱▱▱▱▱▱ | 🔨 E1 built, E2 next |
+| **Places and trips round 2 (E1 to E10)** | ▰▰▱▱▱▱▱▱▱▱ | 🔨 E2 built, E3 next |
 | Money editing (R6b, R6c) | ▰▰▱▱▱▱▱▱▱▱ | ⏳ Data done, screens next |
 | Life events, month and year views (Step 14) | ▱▱▱▱▱▱▱▱▱▱ | 💤 Later |
 
@@ -74,7 +74,7 @@ flowchart LR
 | # | Stage | What you get | Size |
 | --- | --- | --- | --- |
 | **E1** ✅ | Undo and cleanup | No more Merge; every joined trip can be brought back; a **Changes** page with Restore for everything you hid or cut; repeated stays at one place become one | S |
-| **E2** | The Trips view | A page with Map, Trips and Data for any day, week, month, year or your own range; on the Timeline a trip opens in a popup with only that trip on the map | M |
+| **E2** ✅ | The Trips view | A page with Map, Trips and Data for any day, week, month, year or your own range; on the Timeline a trip opens in a popup with only that trip on the map | M |
 | **E3** | Live map | Tap **On the move** to see where you are now, following you like Google Maps, with today's path, your places and offline areas | L |
 | **E4** | Settings and switches | Places and trips settings in branches anyone can follow; a **Features** page with a switch for every feature (off means gone and not collecting) | M |
 | **E5** | Place names | Exact shops and landmarks, several to pick from, names remembered, an optional "Where are you?" notification you control | M |
@@ -98,13 +98,13 @@ flowchart LR
 - [x] Tests
 
 #### E2 The Trips view
-- [ ] Research Colota's History and open-source GPS-track apps
-- [ ] Trips page with Map, Trips and Data tabs
-- [ ] Pick a day, week, month, year or your own from-to range
-- [ ] Every trip of the range drawn in its own colour; list and numbers (distance, time, by way of travelling, longest) follow
-- [ ] Timeline: a trip opens in a popup showing only that trip on the map, with a link to the full trip page
-- [ ] A Stats card that opens the same view
-- [ ] Tests
+- [x] Research Colota's History and open-source GPS-track apps
+- [x] Trips page with Map, Trips and Data tabs
+- [x] Pick a day, week, month, year or your own from-to range
+- [x] Every trip of the range drawn in its own colour; list and numbers (distance, time, by way of travelling, longest) follow
+- [x] Timeline: a trip opens in a popup showing only that trip on the map, with a link to the full trip page
+- [x] A Stats card that opens the same view
+- [x] Tests
 
 #### E3 Live map
 - [ ] Research Colota's dashboard and open-source navigation and tracker apps

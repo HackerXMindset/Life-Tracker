@@ -78,6 +78,7 @@ fun LocationScreen(
     onBack: () -> Unit,
     onOpenTrip: (String) -> Unit,
     onOpenPlace: (String) -> Unit,
+    onOpenTrips: () -> Unit = {},
     vm: LocationViewModel = viewModel(),
     places: PlacesViewModel = viewModel(),
 ) {
@@ -106,6 +107,10 @@ fun LocationScreen(
         item { SettingsTop("Location", "Where you were and how you got there, on this phone", onBack) }
         if (!enabled) {
             item { SetupNote("Place watching is switched off. Turn it on in the Settings tab, under Places and trips.") }
+        }
+
+        item {
+            PaperButton("See whole trips (map, list, totals)", onOpenTrips, style = PaperButtonStyle.Ghost, small = true)
         }
 
         if (clusters.isNotEmpty()) {
