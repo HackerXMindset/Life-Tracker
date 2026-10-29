@@ -44,7 +44,7 @@ object ChangesRules {
                         why = when {
                             pair == null -> "The trips were changed since, so this cannot be undone from here."
                             blocker != null -> "A newer change sits on top of this one. Undo that one first."
-                            else -> "",
+                            else -> ""
                         },
                     )
                 }
@@ -59,7 +59,7 @@ object ChangesRules {
                         why = when {
                             pair == null -> "The trips were changed since, so this cannot be undone from here."
                             blocker != null -> "A newer change sits on top of this one. Undo that one first."
-                            else -> "",
+                            else -> ""
                         },
                     )
                 }
