@@ -43,7 +43,7 @@ Life Tracker is an Android app built for one person: its owner. It replaces a pi
 | Habits (H1 to H13) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done |
 | The paper look (Timeline, Habits, Settings, Food) | ▰▰▰▰▰▰▰▱▱▱ | 🟡 Money and Stats still to restyle |
 | Places and trips remake (C1 to C9) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done, 11 pull requests |
-| **Places and trips round 2 (E1 to E10)** | ▰▰▱▱▱▱▱▱▱▱ | 🔨 E2 built, E3 next |
+| **Places and trips round 2 (E1 to E10)** | ▰▰▰▱▱▱▱▱▱▱ | 🔨 E3 built, E4 next |
 | Money editing (R6b, R6c) | ▰▰▱▱▱▱▱▱▱▱ | ⏳ Data done, screens next |
 | Life events, month and year views (Step 14) | ▱▱▱▱▱▱▱▱▱▱ | 💤 Later |
 
@@ -75,7 +75,7 @@ flowchart LR
 | --- | --- | --- | --- |
 | **E1** ✅ | Undo and cleanup | No more Merge; every joined trip can be brought back; a **Changes** page with Restore for everything you hid or cut; repeated stays at one place become one | S |
 | **E2** ✅ | The Trips view | A page with Map, Trips and Data for any day, week, month, year or your own range; on the Timeline a trip opens in a popup with only that trip on the map | M |
-| **E3** | Live map | Tap **On the move** to see where you are now, following you like Google Maps, with today's path, your places and offline areas | L |
+| **E3** ✅ | Live map | Tap **On the move** to see where you are now, following you like Google Maps, with today's path, your places and offline areas | L |
 | **E4** | Settings and switches | Places and trips settings in branches anyone can follow; a **Features** page with a switch for every feature (off means gone and not collecting) | M |
 | **E5** | Place names | Exact shops and landmarks, several to pick from, names remembered, an optional "Where are you?" notification you control | M |
 | **E6** | Journeys and travel mode | Trains and long drives drawn as the route; stations as small stops; a far better guess of how you travelled; a "How did you travel?" sheet with icons | L |
@@ -107,11 +107,13 @@ flowchart LR
 - [x] Tests
 
 #### E3 Live map
-- [ ] Research Colota's dashboard and open-source navigation and tracker apps
-- [ ] The **On the move** row updates by itself (distance and time so far) and opens the live map
-- [ ] Smooth follow like Google Maps, accuracy circle, today's path, your places as circles, your offline areas, a "centre on me" button, a Pause/Stop tracking button, a status card (tracking, accuracy, how often, profile in force)
-- [ ] Works hard only while the screen is on
-- [ ] Tests for the follow and update rules
+- [x] Research: Colota's home screen (position, accuracy, status) and open-source map apps. Decision: use the follow mode that comes with MapLibre (the map library we already ship), fed by our own readings, so there is no second GPS request
+- [x] Rules in one tested file: still or on the move, since when, distance so far, speed, reading too old
+- [x] **On the move** row on today's Timeline that refreshes every few seconds (only while the screen is on) and opens the live map
+- [x] Live map: smooth follow like Google Maps, accuracy circle, today's path, your places as circles, your offline map areas
+- [x] A **centre on me** button (follow stops when you move the map, the button turns it back on)
+- [x] Status card: recording or paused, last reading and how exact, how often, profile in force; a **Pause / Resume** button
+- [x] Tests
 
 #### E4 Settings and switches
 - [ ] Research how well-organised settings are grouped in open-source apps
