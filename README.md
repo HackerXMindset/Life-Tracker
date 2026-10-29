@@ -107,11 +107,13 @@ flowchart LR
 - [x] Tests
 
 #### E3 Live map
-- [ ] Research Colota's dashboard and open-source navigation and tracker apps
-- [ ] The **On the move** row updates by itself (distance and time so far) and opens the live map
-- [ ] Smooth follow like Google Maps, accuracy circle, today's path, your places as circles, your offline areas, a "centre on me" button, a Pause/Stop tracking button, a status card (tracking, accuracy, how often, profile in force)
-- [ ] Works hard only while the screen is on
-- [ ] Tests for the follow and update rules
+- [x] Research: Colota's home screen (position, accuracy, status) and open-source map apps. Decision: use the follow mode that comes with MapLibre (the map library we already ship), fed by our own readings, so there is no second GPS request
+- [ ] Rules in one tested file: still or on the move, since when, distance so far, speed, reading too old
+- [ ] **On the move** row on today's Timeline that refreshes every few seconds (only while the screen is on) and opens the live map
+- [ ] Live map: smooth follow like Google Maps, accuracy circle, today's path, your places as circles, your offline map areas
+- [ ] A **centre on me** button (follow stops when you move the map, the button turns it back on)
+- [ ] Status card: recording or paused, last reading and how exact, how often, profile in force; a **Pause / Resume** button
+- [ ] Tests
 
 #### E4 Settings and switches
 - [ ] Research how well-organised settings are grouped in open-source apps
