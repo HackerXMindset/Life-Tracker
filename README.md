@@ -16,9 +16,6 @@ What you did, what you ate, which habits you kept, where you went and where your
 
 </div>
 
-> [!WARNING]
-> **Keep this repository private.** The signing key that lets new versions install over old ones is committed on purpose (see [How a version gets built](#how-a-version-gets-built)).
-
 Life Tracker is an Android app built for one person: its owner. It replaces a pile of separate apps with one place and keeps every byte on your own phone. There is no account, no server and no subscription.
 
 ---
