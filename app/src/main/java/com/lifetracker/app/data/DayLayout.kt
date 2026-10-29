@@ -160,6 +160,7 @@ object DayLayout {
 
         val stays = ArrayList<Stay>()
         if (showPlaces) {
+            val separate = ArrayList<Stay>()
             // An old open visit can outlive the real stay it represents. End it at the next visit's
             // actual start; never push that next visit forward to the stale end.
             val candidates = visits
@@ -175,8 +176,15 @@ object DayLayout {
                 val nextStart = candidates.getOrNull(index + 1)?.startMs ?: Long.MAX_VALUE
                 val end = min(s.endMs, nextStart)
                 if (end > s.startMs) {
-                    stays += Stay(s.visit, s.startMs, end, s.ongoing && end == s.endMs)
+                    separate += Stay(s.visit, s.startMs, end, s.ongoing && end == s.endMs)
                 }
+            }
+            // Two stays in a row at the same named place, with no trip between them and less than a visible gap, are one stay.
+            for (s in separate) {
+                val last = stays.lastOrNull()
+                val together = last != null && s.visit.placeId.isNotEmpty() && s.visit.placeId == last.visit.placeId &&
+                    s.startMs - last.endMs < minGapMs && trips.none { it.startMs < s.startMs && it.endMs > last.endMs }
+                if (together && last != null) stays[stays.size - 1] = Stay(last.visit, last.startMs, s.endMs, s.ongoing) else stays += s
             }
         }
 

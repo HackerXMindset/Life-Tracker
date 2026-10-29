@@ -110,6 +110,10 @@ fun PlacesScreen(onBack: () -> Unit, onOpen: (Page) -> Unit, onOpenPlace: (Strin
             }
         }
 
+        item { PaperSection("Changes") }
+        item {
+            SettingsRow(R.drawable.ic_p_route, "Changes", "Trips and stays you joined, cut or hid, and the way back") { onOpen(Page.Changes) }
+        }
         item { PaperSection("Maps") }
         item {
             SettingsRow(R.drawable.ic_p_route, "Maps", "The map style for trips and places, and your own styles") { onOpen(Page.Maps) }

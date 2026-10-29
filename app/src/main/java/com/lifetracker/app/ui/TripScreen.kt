@@ -210,38 +210,6 @@ fun TripScreen(
                     }
                 }
 
-                item { PaperSection("Join with a neighbour") }
-                item {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        val before = p.previous
-                        val after = p.next
-                        PaperButton(
-                            "Merge with previous",
-                            { vm.merge(p, withPrevious = true) },
-                            modifier = Modifier.fillMaxWidth(),
-                            style = PaperButtonStyle.Ghost,
-                            enabled = before != null,
-                        )
-                        Text(
-                            if (before == null) "There is no trip before this one." else neighbourText(before, trip.startMs - before.endMs),
-                            fontSize = 12.sp,
-                            color = paper.ink2,
-                        )
-                        PaperButton(
-                            "Merge with next",
-                            { vm.merge(p, withPrevious = false) },
-                            modifier = Modifier.fillMaxWidth(),
-                            style = PaperButtonStyle.Ghost,
-                            enabled = after != null,
-                        )
-                        Text(
-                            if (after == null) "There is no trip after this one." else neighbourText(after, after.startMs - trip.endMs),
-                            fontSize = 12.sp,
-                            color = paper.ink2,
-                        )
-                    }
-                }
-
                 if (p.changes.isNotEmpty()) {
                     item { PaperSection("Changes", "kept, so they can be undone") }
                     item {
@@ -315,7 +283,3 @@ fun TripScreen(
         }
     }
 }
-
-private fun neighbourText(trip: com.lifetracker.app.data.TripEntity, gapMs: Long): String =
-    clockOf(trip.startMs) + " to " + clockOf(trip.endMs) + " · " + TripRules.distanceText(trip.distanceM) +
-        " · " + PlaceRules.durationText(gapMs.coerceAtLeast(0L)) + " between them"

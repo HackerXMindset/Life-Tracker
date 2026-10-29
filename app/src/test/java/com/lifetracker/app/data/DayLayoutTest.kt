@@ -277,4 +277,27 @@ class DayLayoutTest {
         assertEquals("Green Park Mosque", stays[1].name)
         assertTrue(stays[2].ongoing)
     }
+
+    @Test
+    fun twoBackToBackStaysAtTheSameNamedPlaceAreOneRow() {
+        val rows = build(visits = listOf(visit("a", "park", 100, 104), visit("b", "park", 104, 112))).filterIsInstance<DayLayout.Place>()
+        assertEquals(1, rows.size)
+        assertEquals(100 * min, rows[0].startMs)
+        assertEquals(112 * min, rows[0].endMs)
+    }
+
+    @Test
+    fun aTripBetweenTwoStaysKeepsThemApart() {
+        val rows = build(
+            visits = listOf(visit("a", "park", 100, 104), visit("b", "park", 106, 112)),
+            trips = listOf(trip("t", 104, 106, "park", "park")),
+        ).filterIsInstance<DayLayout.Place>()
+        assertEquals(2, rows.size)
+    }
+
+    @Test
+    fun aVisibleGapOrAnotherPlaceKeepsStaysApart() {
+        assertEquals(2, build(visits = listOf(visit("a", "park", 100, 104), visit("b", "park", 130, 140))).filterIsInstance<DayLayout.Place>().size)
+        assertEquals(2, build(visits = listOf(visit("a", "park", 100, 104), visit("b", "home", 104, 112))).filterIsInstance<DayLayout.Place>().size)
+    }
 }

@@ -2,6 +2,18 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧭 Places and trips round 2: undo and cleanup (E1)
+
+### ✨ New
+
+- **Changes** (Settings > Places and trips > Changes). Every trip you joined or cut and every trip or stay you hid is listed, newest first, with a button to bring it back. Nothing is ever deleted.
+- **Bring back all joined trips**: one button undoes every join, newest first. A join you cut afterwards is left for you to undo, and says so.
+
+### 🔧 Changed
+
+- **Merge is gone** from the trip page. Trips you had already joined can be brought back from the Changes page, and the trip page still shows its own changes with Undo.
+- **Two stays in a row at the same named place** (for example a station stop split in two) now show as one stay, as long as no trip lies between them and there is no visible gap. Both are still kept in the data.
+
 ## 🧭 Places and trips remake: the finish (C9)
 
 ### 🔧 Fixed

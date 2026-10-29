@@ -93,6 +93,28 @@ object TripEditor {
         return UndoResult(UndoResult.Outcome.DONE)
     }
 
+    /** What "bring back all joined trips" did. */
+    class BringBack(val restored: Int, val blocked: Int)
+
+    /** Undoes every merge, newest first, so a chain of merges comes apart in the right order. A merge with a cut on top of it is left for you to undo. */
+    suspend fun bringBackAllJoins(db: AppDatabase, strideM: Double, nowMs: Long = System.currentTimeMillis()): BringBack {
+        var restored = 0
+        val skipped = HashSet<String>()
+        while (true) {
+            val next = db.tripEditDao().active()
+                .filter { it.kind == TripEditKind.MERGE && it.id !in skipped }
+                .maxWithOrNull(compareBy<TripEditEntity>({ it.createdMs }, { it.id })) ?: break
+            if (undo(db, next.id, strideM, nowMs).outcome == UndoResult.Outcome.DONE) restored++ else skipped += next.id
+        }
+        return BringBack(restored, skipped.size)
+    }
+
+    /** Shows a stay you hid again (it was only hidden). */
+    suspend fun showStay(db: AppDatabase, visitId: String, nowMs: Long = System.currentTimeMillis()) {
+        val old = db.timelineEditDao().all().firstOrNull { it.kind == TimelineEdits.VISIT && it.refId == visitId } ?: return
+        db.timelineEditDao().upsert(old.copy(hidden = false, updatedMs = nowMs))
+    }
+
     /** Hides a trip from the Timeline and the lists (it is kept) or shows it again. */
     suspend fun setHidden(db: AppDatabase, trip: TripEntity, hidden: Boolean, nowMs: Long = System.currentTimeMillis()) {
         val old = db.timelineEditDao().all().firstOrNull { it.kind == TimelineEdits.TRIP && it.refId == trip.id }
