@@ -139,21 +139,6 @@ class TripViewModel(app: Application) : AndroidViewModel(app) {
     fun canSplit(page: TripPage, atMs: Long): Boolean =
         TripEditRules.canSplit(Segment(page.points.map { RawFixEntity(it.ms, it.lat, it.lng, it.acc, steps = it.steps) }), atMs)
 
-    /** Joins the trip to the one before it (the page then shows the joined trip) or to the one after it. */
-    fun merge(page: TripPage, withPrevious: Boolean) {
-        viewModelScope.launch {
-            val first = if (withPrevious) page.previous else page.trip
-            val second = if (withPrevious) page.trip else page.next
-            if (first == null || second == null) return@launch
-            if (TripEditor.merge(db, first.id, second.id, settings.strideM())) {
-                idFlow.value = first.id
-                messageFlow.value = "Joined into one trip. You can undo it under Changes."
-            } else {
-                messageFlow.value = "These two trips could not be joined."
-            }
-        }
-    }
-
     fun split(page: TripPage, atMs: Long) {
         viewModelScope.launch {
             val ok = TripEditor.split(db, page.trip.id, atMs, settings.strideM())

@@ -43,7 +43,7 @@ Life Tracker is an Android app built for one person: its owner. It replaces a pi
 | Habits (H1 to H13) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done |
 | The paper look (Timeline, Habits, Settings, Food) | ▰▰▰▰▰▰▰▱▱▱ | 🟡 Money and Stats still to restyle |
 | Places and trips remake (C1 to C9) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done, 11 pull requests |
-| **Places and trips round 2 (E1 to E10)** | ▱▱▱▱▱▱▱▱▱▱ | ⏳ Planned, waiting for your "continue" |
+| **Places and trips round 2 (E1 to E10)** | ▰▱▱▱▱▱▱▱▱▱ | 🔨 E1 built, E2 next |
 | Money editing (R6b, R6c) | ▰▰▱▱▱▱▱▱▱▱ | ⏳ Data done, screens next |
 | Life events, month and year views (Step 14) | ▱▱▱▱▱▱▱▱▱▱ | 💤 Later |
 
@@ -73,7 +73,7 @@ flowchart LR
 
 | # | Stage | What you get | Size |
 | --- | --- | --- | --- |
-| **E1** | Undo and cleanup | No more Merge; every joined trip can be brought back; a **Changes** page with Restore for everything you hid or cut; repeated stays at one place become one | S |
+| **E1** ✅ | Undo and cleanup | No more Merge; every joined trip can be brought back; a **Changes** page with Restore for everything you hid or cut; repeated stays at one place become one | S |
 | **E2** | The Trips view | A page with Map, Trips and Data for any day, week, month, year or your own range; on the Timeline a trip opens in a popup with only that trip on the map | M |
 | **E3** | Live map | Tap **On the move** to see where you are now, following you like Google Maps, with today's path, your places and offline areas | L |
 | **E4** | Settings and switches | Places and trips settings in branches anyone can follow; a **Features** page with a switch for every feature (off means gone and not collecting) | M |
@@ -90,12 +90,12 @@ flowchart LR
 <summary><b>The steps inside each stage</b> (what I will build, in order)</summary>
 
 #### E1 Undo and cleanup
-- [ ] Look at how open-source timeline and trip apps keep edit history
-- [ ] Take the Merge buttons off the trip page
-- [ ] **Changes** page: everything you joined, cut or hid, with a Restore button each (nothing is ever deleted)
-- [ ] One-time **Bring back my joined trips** (each one, or all at once)
-- [ ] Two stays in a row at the same place become one stay
-- [ ] Tests
+- [x] Look at how open-source timeline and trip apps keep edit history (Dawarich and Reitti: both AGPL server apps that rebuild everything from raw points; edits are layers on top, as ours already are)
+- [x] Take the Merge buttons off the trip page
+- [x] **Changes** page: everything you joined, cut or hid, with a Restore button each (nothing is ever deleted)
+- [x] One-time **Bring back my joined trips** (each one, or all at once)
+- [x] Two stays in a row at the same named place, with no trip and no visible gap between, are shown as one stay (the second is kept in the data)
+- [x] Tests
 
 #### E2 The Trips view
 - [ ] Research Colota's History and open-source GPS-track apps
