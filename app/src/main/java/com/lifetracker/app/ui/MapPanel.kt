@@ -37,7 +37,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.lifetracker.app.data.AppDatabase
-import com.lifetracker.app.data.Feature
+import com.lifetracker.app.data.Feature as AppFeature
 import com.lifetracker.app.data.Features
 import com.lifetracker.app.data.MapEngine
 import com.lifetracker.app.data.MapStyleStore
@@ -171,7 +171,7 @@ fun MapPanel(
     val context = LocalContext.current
     val paper = LocalPaper.current
     // With Maps switched off (Settings > Features) no map picture is fetched: the path is drawn on plain paper.
-    val mapsOn = Features.isOn(context, Feature.MAPS)
+    val mapsOn = Features.isOn(context, AppFeature.MAPS)
     var styleUrl by remember { mutableStateOf<String?>(null) }
     var failed by remember { mutableStateOf(false) }
     var overlay by remember { mutableStateOf<Pair<MapLibreMap, Style>?>(null) }

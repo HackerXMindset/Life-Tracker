@@ -33,7 +33,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifetracker.app.data.AppDatabase
-import com.lifetracker.app.data.Feature
+import com.lifetracker.app.data.Feature as AppFeature
 import com.lifetracker.app.data.Features
 import com.lifetracker.app.data.MapStyleStore
 import com.lifetracker.app.ui.theme.LocalPaper
@@ -78,7 +78,7 @@ fun TripsMap(
 ) {
     val context = LocalContext.current
     val paper = LocalPaper.current
-    val mapsOn = Features.isOn(context, Feature.MAPS)
+    val mapsOn = Features.isOn(context, AppFeature.MAPS)
     var styleUrl by remember { mutableStateOf<String?>(null) }
     var failed by remember { mutableStateOf(false) }
     var ready by remember { mutableStateOf<Pair<MapLibreMap, Style>?>(null) }
