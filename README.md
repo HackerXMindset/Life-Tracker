@@ -125,11 +125,12 @@ flowchart LR
 - [x] Tests
 
 #### E5 Place names
-- [ ] Research OpenStreetMap place search, nearby-places queries and apps that name stops
-- [ ] Suggest the exact places near a stop (shops, stations, campuses, landmarks within a few tens of metres), nearest first, several to choose from, not only the town
-- [ ] Names in the language you choose (English first)
-- [ ] A spot you named once is named again by itself
-- [ ] Optional **Where are you?** notification for a new stop: your own minimum stay, quiet hours and snooze, answered from the notification
+- [x] Research: how open-source apps name stops (Reitti and Dawarich reverse-geocode with Photon or Nominatim; both are AGPL so only the idea is used). Decision: keep OpenStreetMap's Overpass and Nominatim that the app already uses (no new service), but ask for more kinds of places and keep several answers
+- [ ] Rules in one tested file: pick the name in your language, rank shops, stations and landmarks above plain buildings, drop repeats, keep the five best
+- [ ] Several suggestions for each stop (exact place first, street address last), shown as buttons in **Location** and in the naming box
+- [ ] Names in English first (your choice in Settings: English or the local language)
+- [ ] A spot you named once is suggested again first ("You named this"), even if you stopped watching that place
+- [ ] Optional **Where are you?** notification for a new stop: your own minimum stay, quiet hours and snooze; answer with a suggestion, type a name, or not now, all from the notification
 - [ ] Tests
 
 #### E6 Journeys and travel mode
