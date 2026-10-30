@@ -10,7 +10,10 @@ class DayLayoutTest {
     private val min = 60_000L
     private val dayStart = 0L
     private val dayEnd = 24 * 60 * min
-    private val names = mapOf("home" to "Home", "park" to "Park", "mosque" to "Green Park Mosque")
+    private val names = mapOf(
+        "home" to "Home", "park" to "Park", "mosque" to "Green Park Mosque",
+        "sta" to "Praya Station", "stb" to "Midway Station", "far" to "Far City",
+    )
 
     private fun visit(id: String, place: String, from: Long, to: Long, ongoing: Boolean = false) =
         PlaceVisitEntity(id, place, from * min, to * min, 0.0, 0.0, "auto", ongoing, false)
@@ -299,5 +302,120 @@ class DayLayoutTest {
     fun aVisibleGapOrAnotherPlaceKeepsStaysApart() {
         assertEquals(2, build(visits = listOf(visit("a", "park", 100, 104), visit("b", "park", 130, 140))).filterIsInstance<DayLayout.Place>().size)
         assertEquals(2, build(visits = listOf(visit("a", "park", 100, 104), visit("b", "home", 104, 112))).filterIsInstance<DayLayout.Place>().size)
+    }
+
+    private fun ride(id: String, from: Long, to: Long, km: Int, fromPlace: String, toPlace: String, mode: String = "train") =
+        TripEntity(id, from * min, to * min, fromPlace, toPlace, km * 1000, 50, 90, "", mode, "auto")
+
+    /** The train day: asleep at home until 5:30, then three legs of one train ride with two stations between them. */
+    private fun trainDay(extra: List<DayLayout.Item> = emptyList(), stationMinutes: Long = 8, withEntry: Boolean = false): List<DayLayout.Row> {
+        val sleep = DayLayout.Item("sleep1", DayLayout.Kind.SLEEP, 136 * min, 546 * min, true, null)
+        val logged = if (withEntry) listOf(DayLayout.Item("note1", DayLayout.Kind.NOTE, 412 * min, 412 * min, false, null)) else emptyList()
+        return build(
+            items = listOf(sleep) + extra + logged,
+            visits = listOf(
+                visit("v1", "home", 0, 330),
+                visit("v2", "sta", 410, 410 + stationMinutes),
+                visit("v3", "stb", 520, 528),
+                visit("v4", "far", 600, 700),
+            ),
+            trips = listOf(
+                ride("t1", 330, 410, 60, "home", "sta"),
+                ride("t2", 410 + stationMinutes, 520, 90, "sta", "stb"),
+                ride("t3", 528, 600, 40, "stb", "far"),
+            ),
+        )
+    }
+
+    @Test
+    fun stationsInsideOneTrainJourneyBecomeSmallStopsNotRows() {
+        val rows = trainDay()
+        val shape = rows.map { if (it is DayLayout.Place) it.name else if (it is DayLayout.Travel) "journey" else "?" }
+        assertEquals(listOf("Home", "journey", "Far City"), shape)
+        val journey = rows[1] as DayLayout.Travel
+        assertEquals(3, journey.legs.size)
+        assertEquals(listOf("Praya Station", "Midway Station"), journey.stops.map { it.name })
+        assertEquals(330 * min, journey.startMs)
+        assertEquals(600 * min, journey.endMs)
+        assertEquals("Home", journey.fromName)
+        assertEquals("Far City", journey.toName)
+        assertEquals(190_000, journey.distanceM)
+        assertTrue(journey.routeKnown)
+    }
+
+    @Test
+    fun theSleepRowStopsWhereTheTrainJourneyBegins() {
+        val rows = trainDay()
+        val home = rows[0] as DayLayout.Place
+        val sleep = home.children.filterIsInstance<DayLayout.Thing>().single { it.item.kind == DayLayout.Kind.SLEEP }
+        assertEquals(136 * min, sleep.item.startMs)
+        assertEquals(330 * min, sleep.item.endMs)
+        assertTrue(rows.filterIsInstance<DayLayout.Thing>().none { it.item.kind == DayLayout.Kind.SLEEP })
+    }
+
+    @Test
+    fun aStopWithSomethingYouLoggedStaysItsOwnRow() {
+        val rows = trainDay(withEntry = true)
+        assertTrue(rows.count { it is DayLayout.Travel } == 2)
+        assertTrue(rows.any { it is DayLayout.Place && it.name == "Praya Station" })
+    }
+
+    @Test
+    fun aLongStopIsAPlaceYouWentTo() {
+        val rows = trainDay(stationMinutes = 40)
+        val journeys = rows.filterIsInstance<DayLayout.Travel>()
+        assertEquals(2, journeys.size)
+        assertEquals(listOf(0, 1), journeys.map { it.stops.size })
+        assertTrue(rows.any { it is DayLayout.Place && it.name == "Praya Station" })
+    }
+
+    @Test
+    fun walkingLegsWithAStopBetweenAreNotOneJourney() {
+        val rows = build(
+            visits = listOf(visit("v1", "home", 0, 60), visit("v2", "park", 80, 90), visit("v3", "far", 110, 150)),
+            trips = listOf(trip("t1", 60, 80, "home", "park"), trip("t2", 90, 110, "park", "far")),
+        )
+        assertEquals(2, rows.count { it is DayLayout.Travel })
+        assertEquals(3, rows.count { it is DayLayout.Place })
+    }
+
+    @Test
+    fun twoFastTripsWithNoStayBetweenThemJoin() {
+        val rows = build(
+            visits = listOf(visit("v1", "home", 0, 60), visit("v4", "far", 200, 260)),
+            trips = listOf(ride("t1", 60, 120, 50, "home", ""), ride("t2", 125, 200, 70, "", "far")),
+        )
+        val journey = rows.filterIsInstance<DayLayout.Travel>().single()
+        assertEquals(2, journey.legs.size)
+        assertEquals(120_000, journey.distanceM)
+    }
+
+    @Test
+    fun aJourneyYouAnsweredByHandHasNoRecordOfTheRoute() {
+        val manual = TripEntity("manual100-v1-v2", 60 * min, 120 * min, "home", "far", 343_000, 343, 0, "", "train", "you")
+        val rows = build(visits = listOf(visit("v1", "home", 0, 60), visit("v2", "far", 120, 200)), trips = listOf(manual))
+        val journey = rows.filterIsInstance<DayLayout.Travel>().single()
+        assertFalse(journey.routeKnown)
+        assertFalse(DayLayout.hasRoute(manual))
+        assertTrue(DayLayout.hasRoute(ride("t1", 0, 10, 5, "", "")))
+    }
+
+    @Test
+    fun clippingSleepAroundJourneys() {
+        val j = listOf(330 * min to 600 * min)
+        assertEquals(136 * min to 330 * min, DayLayout.clipSleep(136 * min, 546 * min, j))
+        assertEquals(600 * min to 700 * min, DayLayout.clipSleep(500 * min, 700 * min, j))
+        assertNull(DayLayout.clipSleep(340 * min, 560 * min, j))
+        assertEquals(0L to 100 * min, DayLayout.clipSleep(0, 100 * min, j))
+        assertNull(DayLayout.clipSleep(325 * min, 340 * min, j))
+    }
+
+    @Test
+    fun aSecondBarWithTheSameNameRightAfterTheFirstDoesNotWriteItAgain() {
+        val a = DayLayout.BarName("Praya", 0, 100 * min)
+        assertTrue(DayLayout.repeatsName(a, DayLayout.BarName("Praya", 101 * min, 200 * min)))
+        assertFalse(DayLayout.repeatsName(a, DayLayout.BarName("Praya", 300 * min, 400 * min)))
+        assertFalse(DayLayout.repeatsName(a, DayLayout.BarName("Home", 101 * min, 200 * min)))
+        assertFalse(DayLayout.repeatsName(null, a))
     }
 }

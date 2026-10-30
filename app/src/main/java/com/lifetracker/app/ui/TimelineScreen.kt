@@ -283,7 +283,9 @@ fun TimelineScreen(
     val collectedSegs = buildList {
         sleepShown?.let {
             val t = typeOf(TimelineEdits.SLEEP, it.date)
-            add(DaySegments.Seg(it.startMs, it.endMs, t?.displayColor()?.toArgb() ?: sleepArgb, t?.name ?: "Sleep", false))
+            // The same cut as the Sleep row: no sleep over a journey you were awake on.
+            val kept = if (showTrips) DayLayout.clipSleep(it.startMs, it.endMs, DayLayout.journeySpans(tripsEff)) else it.startMs to it.endMs
+            if (kept != null) add(DaySegments.Seg(kept.first, kept.second, t?.displayColor()?.toArgb() ?: sleepArgb, t?.name ?: "Sleep", false))
         }
         mealsEff.forEach {
             val t = typeOf(TimelineEdits.MEAL, it.id)

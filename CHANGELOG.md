@@ -2,6 +2,19 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧭 Places and trips round 2: journey fixes (E6b)
+
+### ✨ New
+
+- **Dense recording when you move fast**: from about 25 km/h the app asks for a reading every 10 seconds by itself, in Gentle mode as well as GPS all day, so a train or car route is drawn exactly. It stays dense for 3 minutes after the last fast reading (a station stop does not drop it) and it never slows recording down.
+- **One journey, small stops**: fast trips with only short stops between them (up to 15 minutes, with nothing you logged there) are one Travel row, with the stations listed as "Stops" and the distance added up along the route. Changing the way of travel changes every leg.
+
+### 🔧 Changed
+
+- A journey that is only your own answer (no readings) now says **no record of the route** and does not open a map; its distance is called a straight line.
+- The **Sleep** row, and its slice of the day pie, stops where a vehicle journey begins (and starts again where it ends), so it no longer runs over a train you were awake on.
+- A place bar no longer writes its name a second time right under itself.
+
 ## 🧭 Places and trips round 2: a much better travel-mode guess (E6a)
 
 ### ✨ New

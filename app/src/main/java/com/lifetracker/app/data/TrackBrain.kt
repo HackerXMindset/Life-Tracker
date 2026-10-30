@@ -67,8 +67,11 @@ object TrackBrain {
         nextCheckMs: Long?,
         status: String,
         profileName: String?,
+        recent: List<RawFixEntity> = emptyList(),
+        nowMs: Long = 0L,
     ) = Plan(
-        intervalSec = eff.settings.intervalSec,
+        // Fast movement records densely by itself, whatever the profile says (it never slows anything down).
+        intervalSec = FastPace.cap(eff.settings.intervalSec, FastPace.lastFastMs(recent), nowMs),
         accuracyMode = eff.settings.accuracyMode,
         gpsOff = gpsOff,
         heartbeatInMs = heartbeatInMs,
@@ -99,7 +102,7 @@ object TrackBrain {
         val reject = verdict.reject
         if (reject != null && reject != Reject.TOO_CLOSE) {
             // Out of order, too inaccurate or a jump: it counts for nothing, not even for working out whether you are still.
-            val plan = planOf(eff, false, heartbeatIn(state.pause, ctx.places, ctx.nowMs), pick.nextCheckMs, "Recording", name)
+            val plan = planOf(eff, false, heartbeatIn(state.pause, ctx.places, ctx.nowMs), pick.nextCheckMs, "Recording", name, state.recent, ctx.nowMs)
             return BrainStep(state.copy(filter = verdict.state, profile = pick.state), emptyList(), plan, reject, false)
         }
         val pause = PauseZoneRules.step(
@@ -113,7 +116,7 @@ object TrackBrain {
         val recent = (state.recent + tagged).takeLast(RECENT)
         val next = BrainState(verdict.state, pause.state, pick.state, recent)
         val plan = planOf(
-            eff, pause.gpsOff, heartbeatIn(pause.state, ctx.places, ctx.nowMs), pick.nextCheckMs, pause.status, name,
+            eff, pause.gpsOff, heartbeatIn(pause.state, ctx.places, ctx.nowMs), pick.nextCheckMs, pause.status, name, recent, ctx.nowMs,
         )
         return BrainStep(next, saves, plan, reject, pause.heartbeatNow)
     }
@@ -131,13 +134,13 @@ object TrackBrain {
         }
         val last = state.recent.lastOrNull()
         if (last == null) {
-            return BrainStep(state.copy(profile = pick.state), emptyList(), planOf(eff, false, null, pick.nextCheckMs, "Recording", name), null, false)
+            return BrainStep(state.copy(profile = pick.state), emptyList(), planOf(eff, false, null, pick.nextCheckMs, "Recording", name, state.recent, ctx.nowMs), null, false)
         }
         val pause = PauseZoneRules.step(
             state.pause, ctx.places, last.lat, last.lng, ctx.base.wifiName, ctx.motionless, ctx.nowMs, eff.settings.intervalSec,
         )
         val next = state.copy(pause = pause.state, profile = pick.state)
-        val plan = planOf(eff, pause.gpsOff, heartbeatIn(pause.state, ctx.places, ctx.nowMs), pick.nextCheckMs, pause.status, name)
+        val plan = planOf(eff, pause.gpsOff, heartbeatIn(pause.state, ctx.places, ctx.nowMs), pick.nextCheckMs, pause.status, name, state.recent, ctx.nowMs)
         return BrainStep(next, emptyList(), plan, null, pause.heartbeatNow)
     }
 
