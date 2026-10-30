@@ -43,7 +43,7 @@ Life Tracker is an Android app built for one person: its owner. It replaces a pi
 | Habits (H1 to H13) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done |
 | The paper look (Timeline, Habits, Settings, Food) | ▰▰▰▰▰▰▰▱▱▱ | 🟡 Money and Stats still to restyle |
 | Places and trips remake (C1 to C9) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done, 11 pull requests |
-| **Places and trips round 2 (E1 to E10)** | ▰▰▰▰▰▱▱▱▱▱ | 🔨 E5 built, E6 next |
+| **Places and trips round 2 (E1 to E10)** | ▰▰▰▰▰▱▱▱▱▱ | 🔨 E6a built (guess and icon sheet), E6b next |
 | Money editing (R6b, R6c) | ▰▰▱▱▱▱▱▱▱▱ | ⏳ Data done, screens next |
 | Life events, month and year views (Step 14) | ▱▱▱▱▱▱▱▱▱▱ | 💤 Later |
 
@@ -138,11 +138,11 @@ Done in two pull requests: **E6a** is the travel-mode guess and the icon sheet, 
 
 **E6a**
 - [x] Research: e-mission (a Berkeley research project that infers the way you travelled from speed patterns; I could not open its page to check stars and licence, so only the general ideas are used: speed percentiles, stops, learning from your answers). Code is written fresh
-- [ ] Shape of a trip from its readings: moving speed, steadiness, how often and how long it stood still, how smooth the speed changes were, how straight the way was
-- [ ] A rule order that tells train, metro, bus, car and flight apart; Android's own "walking" is only believed when the speed agrees; your own answers still come first
-- [ ] More ways to travel: flight, boat, scooter, skateboard (you choose these; they are never guessed)
-- [ ] **How did you travel?** sheet with big icons and From, To, Distance and Average speed
-- [ ] Tests, including a train, a metro, a bus, a car and a flight
+- [x] Shape of a trip from its readings: moving speed, steadiness, how often and how long it stood still, how smooth the speed changes were, how straight the way was
+- [x] A rule order that tells train, metro, bus, car and flight apart; Android's own "walking" is only believed when the speed agrees; your own answers still come first
+- [x] More ways to travel: flight, boat, scooter, skateboard (you choose these; they are never guessed)
+- [x] **How did you travel?** sheet with big icons and From, To, Distance and Average speed
+- [x] Tests, including a train, a metro, a bus, a car and a flight
 
 **E6b**
 - [ ] Fast movement switches GPS all day to a dense profile by itself, so the route is exact even in Gentle mode
