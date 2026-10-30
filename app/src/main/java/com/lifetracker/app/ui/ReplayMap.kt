@@ -2,6 +2,9 @@ package com.lifetracker.app.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
@@ -15,6 +18,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -49,6 +54,14 @@ import org.maplibre.geojson.Polygon
 
 private fun hexOf(argb: Int) = String.format("#%06X", argb and 0xFFFFFF)
 
+/** Lets the screen's + and - buttons zoom the map the replay shows. */
+internal class ReplayCamera {
+    var map: MapLibreMap? = null
+    fun zoom(by: Double) {
+        map?.animateCamera(CameraUpdateFactory.zoomBy(by), 250)
+    }
+}
+
 /**
  * The map of the day replay: the path so far trailing behind a dot, and your places as circles. The dot and the trail are redrawn
  * about fifteen times a second from [clockMs]; with [follow] the camera keeps the dot in view. Bump [fitRequest] to show the
@@ -61,9 +74,13 @@ internal fun ReplayMap(
     places: List<PlaceEntity>,
     follow: Boolean,
     fitRequest: Int,
+    icon: String,
+    camera: ReplayCamera,
+    onUserMoved: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val density = androidx.compose.ui.platform.LocalDensity.current
     val paper = LocalPaper.current
     val mapsOn = Features.isOn(context, AppFeature.MAPS)
     var styleUrl by remember { mutableStateOf<String?>(null) }
@@ -71,6 +88,8 @@ internal fun ReplayMap(
     var ready by remember { mutableStateOf<Pair<MapLibreMap, Style>?>(null) }
     val clock by rememberUpdatedState(clockMs)
     val following by rememberUpdatedState(follow)
+    val movedNow by rememberUpdatedState(onUserMoved)
+    var marker by remember { mutableStateOf<IntOffset?>(null) }
 
     LaunchedEffect(Unit) {
         styleUrl = withContext(Dispatchers.IO) { MapStyleStore.current(context, AppDatabase.get(context)).url }
@@ -93,10 +112,28 @@ internal fun ReplayMap(
                 modifier = Modifier.fillMaxSize(),
                 onStyle = { map, style ->
                     addLayers(style, paper.accent.toArgb(), paper.ink.toArgb())
+                    camera.map = map
+                    // Moving the map with a finger stops the camera from following the dot (it would fight the finger).
+                    map.addOnCameraMoveStartedListener { reason ->
+                        if (reason == MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE) movedNow()
+                    }
                     ready = map to style
                 },
                 onFailed = { failed = true },
             )
+            // The picture of how you were travelling at this moment sits on the dot.
+            val at = marker
+            if (at != null) {
+                val half = with(density) { 18.dp.roundToPx() }
+                Box(
+                    modifier = Modifier
+                        .offset { IntOffset(at.x - half, at.y - half) }
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(paper.surface.copy(alpha = 0.9f)),
+                    contentAlignment = Alignment.Center,
+                ) { Text(icon, fontSize = 20.sp) }
+            }
         }
     }
 
@@ -117,6 +154,10 @@ internal fun ReplayMap(
             paintTrail(style, parts)
             val here = ReplayRules.positionAt(samples, now)
             paintDot(style, here)
+            marker = here?.let { h ->
+                val p = map.projection.toScreenLocation(LatLng(h.first, h.second))
+                IntOffset(p.x.toInt(), p.y.toInt())
+            }
             if (here != null && following) {
                 val target = LatLng(here.first, here.second)
                 if (!started) {
@@ -149,7 +190,7 @@ private fun addLayers(style: Style, accent: Int, ink: Int) {
     style.addSource(GeoJsonSource("replay-dot-src"))
     style.addLayer(
         CircleLayer("replay-dot", "replay-dot-src").withProperties(
-            PropertyFactory.circleRadius(8f),
+            PropertyFactory.circleRadius(3f),
             PropertyFactory.circleColor(hexOf(accent)),
             PropertyFactory.circleStrokeColor(hexOf(ink)),
             PropertyFactory.circleStrokeWidth(3f),
