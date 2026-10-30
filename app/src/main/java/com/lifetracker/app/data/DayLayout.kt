@@ -51,7 +51,13 @@ object DayLayout {
         val children: List<Row>,
     ) : Row
 
-    /** The way from one place to the next. [trip] is null when the phone has no record of how you went. */
+    /** A station or other short stop inside one journey. */
+    class Stop(val name: String, val startMs: Long, val endMs: Long)
+
+    /**
+     * The way from one place to the next. [trip] is null when the phone has no record of how you went. A journey with stops on the
+     * way (a train) is one row: [legs] are the trips it is made of ([trip] is the longest) and [stops] the stops between them.
+     */
     class Travel(
         override val key: String,
         override val startMs: Long,
@@ -63,7 +69,15 @@ object DayLayout {
         val from: PlaceVisitEntity? = null,
         val to: PlaceVisitEntity? = null,
         val straightLineM: Int = 0,
-    ) : Row
+        val legs: List<TripEntity> = listOfNotNull(trip),
+        val stops: List<Stop> = emptyList(),
+    ) : Row {
+        /** Whether the phone kept the readings of the way; false when there is no trip or the trip was only your own answer. */
+        val routeKnown: Boolean get() = legs.isNotEmpty() && legs.all { hasRoute(it) }
+
+        /** Along the route when it is known, else the straight line (see [routeKnown]). */
+        val distanceM: Int get() = if (legs.isNotEmpty()) legs.sumOf { it.distanceM } else straightLineM
+    }
 
     class Thing(val item: Item) : Row {
         override val key: String get() = item.key
@@ -135,7 +149,7 @@ object DayLayout {
     }
 
     fun build(
-        items: List<Item>,
+        allItems: List<Item>,
         visits: List<PlaceVisitEntity>,
         trips: List<TripEntity>,
         placeNames: Map<String, String>,
@@ -148,6 +162,13 @@ object DayLayout {
         offs: List<Off> = emptyList(),
         showGaps: Boolean = true,
     ): List<Row> {
+        // A Sleep row never runs over a journey you were awake on.
+        val awake = if (showTrips) journeySpans(trips) else emptyList()
+        val items = allItems.mapNotNull { item ->
+            if (item.kind != Kind.SLEEP) return@mapNotNull item
+            val kept = clipSleep(item.startMs, item.endMs, awake) ?: return@mapNotNull null
+            if (kept.first == item.startMs && kept.second == item.endMs) item else Item(item.key, item.kind, kept.first, kept.second, item.showEnd, item.ref)
+        }
         // On today nothing after now can be missing yet.
         val limit = if (nowMs in dayStartMs until dayEndMs) nowMs else dayEndMs
 
@@ -247,8 +268,129 @@ object DayLayout {
                 frontierRow = row
             }
         }
-        return joinGaps(out)
+        return joinGaps(if (showTrips) mergeJourneys(out) else out)
     }
+
+    /** A stop shorter than this, between two fast trips, is a station on the way and not a place you went to. */
+    const val MAX_STOP_MS = 15 * 60_000L
+
+    /** A trip is a vehicle journey from this average speed. */
+    const val FAST_KMH = 15
+
+    /** A journey shorter than this does not count as time you were awake on the way. */
+    const val MIN_JOURNEY_MS = 15 * 60_000L
+
+    /** A piece of sleep shorter than this is not worth a row once a journey has cut into it. */
+    const val MIN_SLEEP_PIECE_MS = 10 * 60_000L
+
+    private val ON_FOOT = setOf("walk", "run", "cycle", "skateboard")
+
+    /** Trips that were made by hand from your answer for a journey with no readings have no route to show. */
+    fun hasRoute(trip: TripEntity): Boolean = !trip.id.startsWith("manual")
+
+    private fun kmh(distanceM: Int, ms: Long): Double = if (ms <= 0L) 0.0 else distanceM / 1000.0 / (ms / 3_600_000.0)
+
+    private fun movesFast(t: Travel): Boolean {
+        val ms = t.endMs - t.startMs
+        if (ms <= 0L) return false
+        val trip = t.trip ?: return t.legs.isEmpty() && kmh(t.straightLineM, ms) >= 20.0
+        if (trip.modeSource == "you") return trip.mode !in ON_FOOT
+        return maxOf(trip.medianKmh.toDouble(), kmh(trip.distanceM, trip.endMs - trip.startMs)) >= FAST_KMH
+    }
+
+    /** The stretches of the day spent on a vehicle journey (a trip of at least [MIN_JOURNEY_MS] at vehicle speed). */
+    fun journeySpans(trips: List<TripEntity>): List<Pair<Long, Long>> =
+        trips.filter {
+            val ms = it.endMs - it.startMs
+            ms >= MIN_JOURNEY_MS && (it.modeSource != "you" || it.mode !in ON_FOOT) &&
+                maxOf(it.medianKmh.toDouble(), kmh(it.distanceM, ms)) >= FAST_KMH
+        }.map { it.startMs to it.endMs }.sortedBy { it.first }
+
+    /**
+     * The part of the sleep [start, end) that is not on a journey: the part before the first journey, or after the one it
+     * started in. Null when too little is left.
+     */
+    fun clipSleep(start: Long, end: Long, journeys: List<Pair<Long, Long>>): Pair<Long, Long>? {
+        var s = start
+        var e = end
+        for ((a, b) in journeys.sortedBy { it.first }) {
+            if (b <= s || a >= e) continue
+            if (a <= s) {
+                s = max(s, b)
+            } else {
+                e = a
+                break
+            }
+        }
+        return if (e - s >= MIN_SLEEP_PIECE_MS) s to e else null
+    }
+
+    private fun join(a: Travel, b: Travel, stop: Stop?): Travel {
+        val legs = a.legs + b.legs
+        val main = legs.maxByOrNull { it.endMs - it.startMs }
+        val from = a.from
+        val to = b.to
+        return Travel(
+            key = a.key, startMs = a.startMs, endMs = max(a.endMs, b.endMs), trip = main,
+            fromName = a.fromName, toName = b.toName, from = from, to = to,
+            straightLineM = if (from != null && to != null) PlaceTrail.straightLineM(from, to) else a.straightLineM + b.straightLineM,
+            legs = legs, stops = a.stops + listOfNotNull(stop) + b.stops,
+        )
+    }
+
+    /** A short stop at a place with nothing of yours logged in it. */
+    private fun isStation(p: Place): Boolean =
+        !p.ongoing && p.endMs - p.startMs <= MAX_STOP_MS &&
+            p.children.none { it is Thing && it.item.kind in setOf(Kind.ENTRY, Kind.TODO, Kind.NOTE, Kind.MEAL) }
+
+    /**
+     * Fast trips with only short stops between them are one journey: the stations become small stops inside it (a train
+     * day shows one Travel row and its stops, not Travel, Place, Travel, Place). Things the phone noted at a station stay as rows.
+     */
+    fun mergeJourneys(rows: List<Row>): List<Row> {
+        val out = ArrayList<Row>()
+        var i = 0
+        while (i < rows.size) {
+            val first = rows[i]
+            if (first !is Travel || !movesFast(first)) {
+                out += first
+                i++
+                continue
+            }
+            var cur: Travel = first
+            var j = i + 1
+            val spare = ArrayList<Row>()
+            while (j < rows.size) {
+                val a = rows[j]
+                if (a is Travel && movesFast(a) && a.startMs - cur.endMs <= MAX_STOP_MS) {
+                    cur = join(cur, a, null)
+                    j++
+                } else if (a is Place && isStation(a) && j + 1 < rows.size) {
+                    val b = rows[j + 1]
+                    if (b is Travel && movesFast(b) && b.startMs - a.endMs <= MAX_STOP_MS) {
+                        cur = join(cur, b, Stop(a.name, a.startMs, a.endMs))
+                        spare += a.children.filterIsInstance<Thing>()
+                        j += 2
+                    } else {
+                        break
+                    }
+                } else {
+                    break
+                }
+            }
+            out += cur
+            out += spare
+            i = j
+        }
+        return out
+    }
+
+    /** What the sideways name on a bar would say, and where the bar is. */
+    class BarName(val name: String, val startMs: Long, val endMs: Long)
+
+    /** Whether [next] would write the same name as [prev] right after it (two bars of one place with no gap), so it is left unwritten. */
+    fun repeatsName(prev: BarName?, next: BarName): Boolean =
+        prev != null && prev.name == next.name && next.startMs - prev.endMs <= MIN_GAP_MS
 
     /**
      * Back-to-back stretches of the same kind (No data, then another No data a few minutes later with nothing between)

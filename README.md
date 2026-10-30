@@ -43,7 +43,7 @@ Life Tracker is an Android app built for one person: its owner. It replaces a pi
 | Habits (H1 to H13) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done |
 | The paper look (Timeline, Habits, Settings, Food) | ▰▰▰▰▰▰▰▱▱▱ | 🟡 Money and Stats still to restyle |
 | Places and trips remake (C1 to C9) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done, 11 pull requests |
-| **Places and trips round 2 (E1 to E10)** | ▰▰▰▰▰▱▱▱▱▱ | 🔨 E6a built (guess and icon sheet), E6b next |
+| **Places and trips round 2 (E1 to E10)** | ▰▰▰▰▰▱▱▱▱▱ | 🔨 E6 built (guess, icon sheet, journey fixes), E7 next |
 | Money editing (R6b, R6c) | ▰▰▱▱▱▱▱▱▱▱ | ⏳ Data done, screens next |
 | Life events, month and year views (Step 14) | ▱▱▱▱▱▱▱▱▱▱ | 💤 Later |
 
@@ -145,11 +145,11 @@ Done in two pull requests: **E6a** is the travel-mode guess and the icon sheet, 
 - [x] Tests, including a train, a metro, a bus, a car and a flight
 
 **E6b**
-- [ ] Fast movement switches GPS all day to a dense profile by itself, so the route is exact even in Gentle mode
-- [ ] A journey's distance follows the route; a journey with no readings says so
-- [ ] Stations inside one journey become small stops inside it, not separate Travel rows
-- [ ] A Sleep row does not run over a journey you were awake on; the strip's sideways labels stop doubling
-- [ ] Tests with the train day as one example
+- [x] Fast movement (from 25 km/h) switches recording to one reading every 10 seconds by itself, in Gentle mode and GPS all day; it holds 3 minutes after the last fast reading and never slows anything down
+- [x] A journey's distance is the sum of the route's trips; a journey that is only your own answer says "no record of the route" and has no map to open
+- [x] Fast trips with short stops (up to 15 minutes, nothing of yours logged) between them are one Travel row with the stations listed as stops
+- [x] A Sleep row (and its slice of the day pie) stops where a vehicle journey begins; a bar never writes the same name again right under itself
+- [x] Tests, with the train day as one example
 
 #### E7 Day replay
 - [ ] Research how games keep snapshots and fill in between, and open-source GPS replay apps

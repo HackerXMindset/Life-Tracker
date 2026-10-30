@@ -265,6 +265,20 @@ fun DayCalendar(rows: List<DayLayout.Row>, a: DayActions) {
         i to maxOf(i, f.members.maxOfOrNull { slots.indexOf(it) } ?: i)
     }
 
+    // A bar that would write the same name as the bar just above it (one place split in two) stays unwritten, so names do not double.
+    val unwritten = HashSet<String>()
+    run {
+        var prev: DayLayout.BarName? = null
+        for (s in slots) {
+            if (s.bar != Bar.PLACE) {
+                if (s.lane == 0) prev = null
+                continue
+            }
+            val here = DayLayout.BarName(s.label.orEmpty(), s.startMs, s.endMs)
+            if (DayLayout.repeatsName(prev, here)) unwritten += s.key
+            prev = here
+        }
+    }
     androidx.compose.ui.layout.Layout(
         modifier = Modifier
             .fillMaxWidth()
@@ -304,7 +318,7 @@ fun DayCalendar(rows: List<DayLayout.Row>, a: DayActions) {
                             val px = centre - placeBar / 2
                             drawRoundRect(s.color, Offset(px, top), androidx.compose.ui.geometry.Size(placeBar, height), CornerRadius(placeBar / 2))
                             val name = s.label
-                            if (name != null && height > 44.dp.toPx()) {
+                            if (name != null && s.key !in unwritten && height > 44.dp.toPx()) {
                                 val light = s.color.red * 0.299f + s.color.green * 0.587f + s.color.blue * 0.114f > 0.6f
                                 val text = measurer.measure(
                                     text = name.uppercase(),
@@ -745,7 +759,13 @@ private fun TravelCard(t: DayLayout.Travel, a: DayActions) {
         trip == null || unknown -> "Unknown way of travel"
         else -> TripModes.label(trip.mode) + (if (trip.modeSource == "you") "" else " (guess)")
     }
-    val numbers = if (trip != null) length + " · " + TripRules.distanceText(trip.distanceM) else length
+    val stopsText = if (t.stops.isEmpty()) "" else " · " + t.stops.size + (if (t.stops.size == 1) " stop" else " stops")
+    val numbers = when {
+        trip == null -> length
+        // A trip that is only your own answer has no readings: say so instead of showing a distance as if it were the route.
+        !t.routeKnown -> length + " · no record of the route"
+        else -> length + " · " + TripRules.distanceText(t.distanceM) + stopsText
+    }
     val shape = Wobble.Small
     val asks = a.askHowTravelled && unknown && (trip != null || (t.from != null && t.to != null))
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -756,7 +776,7 @@ private fun TravelCard(t: DayLayout.Travel, a: DayActions) {
                 .penOutline(shape, if (unknown) paper.sun else paper.line, width = if (unknown) 1.5.dp else 1.25.dp)
                 .clip(shape)
                 .clickable {
-                    if (trip != null) a.onShowTrip(trip)
+                    if (trip != null && t.routeKnown) a.onShowTrip(trip)
                 },
         ) {
             Row(
@@ -789,6 +809,15 @@ private fun TravelCard(t: DayLayout.Travel, a: DayActions) {
                     )
                 }
             }
+            if (t.stops.isNotEmpty()) {
+                Text(
+                    text = "Stops: " + t.stops.joinToString(", ") { tripEnd(it.name) + " " + clock(it.startMs) },
+                    fontSize = 11.sp,
+                    lineHeight = 14.sp,
+                    color = paper.ink2,
+                    modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 6.dp),
+                )
+            }
             if (open || asks) {
                 OpenDivider()
                 Column(
@@ -801,7 +830,8 @@ private fun TravelCard(t: DayLayout.Travel, a: DayActions) {
                                 "How did you go? The phone has no record of the way, so the distance is a straight line" +
                                     (if (t.straightLineM > 0) " of " + TripRules.distanceText(t.straightLineM) else "") + "."
                             } else {
-                                "How did you go? Distance is worked out from the position readings."
+                                if (t.routeKnown) "How did you go? Distance is worked out from the position readings."
+                                else "How did you go? The phone has no record of the route, so " + TripRules.distanceText(t.distanceM) + " is a straight line."
                             },
                             fontSize = 11.sp,
                             lineHeight = 15.sp,
@@ -810,7 +840,7 @@ private fun TravelCard(t: DayLayout.Travel, a: DayActions) {
                         Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             QUICK_MODES.forEach { (label, mode) ->
                                 PaperPill(label, false, {
-                                    if (trip == null) a.onUnknownJourney(t, mode) else a.onTripMode(trip, mode)
+                                    if (trip == null) a.onUnknownJourney(t, mode) else t.legs.ifEmpty { listOf(trip) }.forEach { leg -> a.onTripMode(leg, mode) }
                                 })
                             }
                         }
@@ -828,7 +858,7 @@ private fun TravelCard(t: DayLayout.Travel, a: DayActions) {
             fromName = t.fromName,
             toName = t.toName,
             current = if (trip.modeSource == "you") trip.mode else "",
-            onPick = { a.onTripMode(trip, it); picking = false },
+            onPick = { mode -> t.legs.ifEmpty { listOf(trip) }.forEach { leg -> a.onTripMode(leg, mode) }; picking = false },
             onDismiss = { picking = false },
             onEdit = { picking = false; a.onEditTrip(trip) },
         )

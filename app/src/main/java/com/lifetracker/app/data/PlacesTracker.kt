@@ -280,7 +280,7 @@ object PlacesTracker {
                     settings.lastFixMs = now
                     return@withLock Watch(
                         PlaceEngine.keepWatching(settings.engine, now) || settings.alwaysOn,
-                        PlaceEngine.intervalSec(settings.engine, baseIntervalSec(settings), settings.tripIntervalSec),
+                        PlaceEngine.intervalSec(settings.engine, baseIntervalSec(settings), settings.tripIntervalSec, System.currentTimeMillis()),
                         useHighAccuracy(settings, settings.engine),
                     )
                 }
@@ -336,7 +336,7 @@ object PlacesTracker {
             settings.lastFixMs = now
             Watch(
                 step.keepWatching || settings.alwaysOn,
-                PlaceEngine.intervalSec(step.state, baseIntervalSec(settings), settings.tripIntervalSec),
+                PlaceEngine.intervalSec(step.state, baseIntervalSec(settings), settings.tripIntervalSec, System.currentTimeMillis()),
                 useHighAccuracy(settings, step.state),
             )
         }
@@ -393,7 +393,7 @@ object PlacesTracker {
             watching = settings.watching,
             lastBeatMs = settings.lastBeatMs,
             nowMs = now,
-            intervalSec = PlaceEngine.intervalSec(settings.engine, baseIntervalSec(settings), settings.tripIntervalSec),
+            intervalSec = PlaceEngine.intervalSec(settings.engine, baseIntervalSec(settings), settings.tripIntervalSec, System.currentTimeMillis()),
         )
 
     /** Starts the readings if the app should be checking where you are right now (used when the app is opened). */
@@ -437,7 +437,7 @@ object PlacesTracker {
             settings.watching,
             settings.lastBeatMs,
             now,
-            PlaceEngine.intervalSec(settings.engine, baseIntervalSec(settings), settings.tripIntervalSec),
+            PlaceEngine.intervalSec(settings.engine, baseIntervalSec(settings), settings.tripIntervalSec, System.currentTimeMillis()),
         )
         if (!PlacesHeartbeat.due(settings.enabled, settings.heartbeat, hasLocation(context), running, now, settings.lastHeartbeatMs)) return
         settings.lastHeartbeatMs = now

@@ -112,7 +112,7 @@ class PlaceWatchService : Service() {
         settings.lastBeatMs = System.currentTimeMillis()
         startMotion(settings)
         requestUpdates(
-            PlaceEngine.intervalSec(settings.engine, PlacesTracker.baseIntervalSec(settings), settings.tripIntervalSec),
+            PlaceEngine.intervalSec(settings.engine, PlacesTracker.baseIntervalSec(settings), settings.tripIntervalSec, System.currentTimeMillis()),
             PlacesTracker.useHighAccuracy(settings, settings.engine),
         )
     }

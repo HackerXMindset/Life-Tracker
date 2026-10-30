@@ -56,11 +56,13 @@ data class WatchState(
     /** What Android last said you were doing ("STILL", "WALKING", "IN_VEHICLE"...), "" if unknown, and since when. */
     val activity: String = "",
     val activitySinceMs: Long = 0L,
+    /** The time of the last reading that showed fast movement (see [FastPace]); 0 when none. */
+    val fastMs: Long = 0L,
 ) {
     fun toJson(): String {
         val o = JSONObject()
             .put("moving", moving).put("trigger", triggerMs).put("moveStart", moveStartMs).put("stillSince", stillSinceMs)
-            .put("activity", activity).put("activitySince", activitySinceMs)
+            .put("activity", activity).put("activitySince", activitySinceMs).put("fast", fastMs)
         if (trip != null) {
             val acts = JSONObject()
             trip.acts.forEach { (k, v) -> acts.put(k, v) }
@@ -121,6 +123,7 @@ data class WatchState(
                 },
                 activity = o.optString("activity", ""),
                 activitySinceMs = o.optLong("activitySince", 0L),
+                fastMs = o.optLong("fast", 0L),
             )
         } catch (e: Exception) {
             WatchState()
@@ -193,8 +196,11 @@ object PlaceEngine {
         )
 
     /** Seconds between readings right now: the quicker trip pace while you are on the move or on a trip. */
-    fun intervalSec(state: WatchState, stayIntervalSec: Int, tripIntervalSec: Int): Int =
-        if (state.trip != null || state.moving) min(stayIntervalSec, tripIntervalSec) else stayIntervalSec
+    fun intervalSec(state: WatchState, stayIntervalSec: Int, tripIntervalSec: Int, nowMs: Long = 0L): Int {
+        val base = if (state.trip != null || state.moving) min(stayIntervalSec, tripIntervalSec) else stayIntervalSec
+        // Fast movement records densely by itself, so the route is exact even in Gentle mode.
+        return FastPace.cap(base, state.fastMs, nowMs)
+    }
 
     private fun finishOf(trip: Trip, state: WatchState, endMs: Long, toPlaceId: String): TripFinish {
         val acts = if (state.activitySinceMs > 0L) addAct(trip.acts, state.activity, max(state.activitySinceMs, trip.startMs), endMs) else trip.acts
@@ -236,6 +242,7 @@ object PlaceEngine {
         val points = ArrayList<TripPointEntity>()
         var finish: TripFinish? = null
         var s = state
+        if (FastPace.isFast(fix.speedMs)) s = s.copy(fastMs = fix.timeMs)
 
         // No reading for a long time during a trip: it ended at the last reading we have.
         val old = s.trip
