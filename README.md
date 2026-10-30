@@ -43,7 +43,7 @@ Life Tracker is an Android app built for one person: its owner. It replaces a pi
 | Habits (H1 to H13) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done |
 | The paper look (Timeline, Habits, Settings, Food) | ▰▰▰▰▰▰▰▱▱▱ | 🟡 Money and Stats still to restyle |
 | Places and trips remake (C1 to C9) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done, 11 pull requests |
-| **Places and trips round 2 (E1 to E10)** | ▰▰▰▰▰▱▱▱▱▱ | 🔨 E6 built (guess, icon sheet, journey fixes), E7 next |
+| **Places and trips round 2 (E1 to E10)** | ▰▰▰▰▰▱▱▱▱▱ | 🔨 E7a built (day replay), E7b (GIF export) next |
 | Money editing (R6b, R6c) | ▰▰▱▱▱▱▱▱▱▱ | ⏳ Data done, screens next |
 | Life events, month and year views (Step 14) | ▱▱▱▱▱▱▱▱▱▱ | 💤 Later |
 
@@ -152,13 +152,18 @@ Done in two pull requests: **E6a** is the travel-mode guess and the icon sheet, 
 - [x] Tests, with the train day as one example
 
 #### E7 Day replay
-- [ ] Research how games keep snapshots and fill in between, and open-source GPS replay apps
-- [ ] A replay clock moves through the day; your position is worked out between the two nearest readings; arriving at a stay or a logged activity shows its card; speed only changes how fast the clock runs
-- [ ] Many speeds (slow up to very fast, and your own), play, pause, step, a slider to jump
-- [ ] Quiet stretches (sleep, long stays) can be skipped quickly
-- [ ] The map follows the dot with the path trailing behind, places and logged things shown as they happen
+Done in two pull requests: **E7a** is the replay itself, **E7b** is the GIF export.
+
+**E7a**
+- [x] Research: snapshot interpolation (games keep the received snapshots, run their own clock and draw between the two nearest) and clock-and-speed GPS players such as LeafletPlayback; I only saw their titles, so only the general ideas are used and the code is written fresh
+- [x] A replay clock moves through the day; your position is worked out between the two nearest readings (held still across a silence of more than 20 minutes); arriving at or leaving a stay and each logged activity shows a card; speed only changes how fast the clock runs
+- [x] Nine speeds from 1 minute to 4 hours of the day for each real second, and your own on a slider; play, pause, previous and next card, a slider to jump
+- [x] Quiet stretches (30 minutes or more within 100 m, or with no readings) go at least 4 hours a second when "Skip quiet stretches" is on
+- [x] The map follows the dot with the path trailing behind and your places as circles; "Whole day" shows everything; opened from **Replay this day** on the Timeline
+- [x] Tests for the clock, the in-between positions, the trail, the quiet stretches and the cards; plus the real train day of 27 and 28 October as a journey-merging test
+
+**E7b**
 - [ ] Export as GIF (length, speed and size chosen by you); a video file only if the GIF is too big or rough
-- [ ] Tests for the clock and the in-between positions
 
 #### E8 Triggers and actions
 - [ ] Research open-source automation apps and how they name triggers, conditions and actions

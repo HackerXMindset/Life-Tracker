@@ -2,6 +2,16 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧭 Places and trips round 2: day replay (E7a)
+
+### ✨ New
+
+- **Replay this day** (a button on the Timeline under the week): the day plays back like a film. A clock runs through the day, a dot sits where you were between the two nearest readings, and the path trails behind it on the map with your places as circles. Arriving at or leaving a place, and each activity you logged, pops up as a card when the clock reaches it.
+- **Speeds** from 1 minute to 4 hours of the day for each real second, and your own speed on a slider. Play, pause, previous and next card, and a slider to jump to any time.
+- **Skip quiet stretches**: sleep, long stays and stretches with no readings go by at least 4 hours a second.
+- **Whole day** shows the full path; **Follow the dot** brings the camera back.
+- The GIF export comes next (E7b).
+
 ## 🧭 Places and trips round 2: journey fixes (E6b)
 
 ### ✨ New
