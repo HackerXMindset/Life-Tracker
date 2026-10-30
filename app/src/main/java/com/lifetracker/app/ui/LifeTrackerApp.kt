@@ -68,6 +68,7 @@ fun LifeTrackerApp() {
     var part by rememberSaveable { mutableStateOf(Part.Data) }
     // A trip or a place opened over whatever is showing (from the Timeline or the Location page); Back returns to it.
     var openTrip by rememberSaveable { mutableStateOf<String?>(null) }
+    var replayDate by rememberSaveable { mutableStateOf<String?>(null) }
     var openPlace by rememberSaveable { mutableStateOf<String?>(null) }
     fun openPage(target: Page, half: Part) {
         part = half
@@ -127,7 +128,10 @@ fun LifeTrackerApp() {
             val current = page
             val trip = openTrip
             val place = openPlace
-            if (place != null) {
+            val replay = replayDate
+            if (replay != null) {
+                ReplayScreen(date = java.time.LocalDate.parse(replay), onBack = { replayDate = null })
+            } else if (place != null) {
                 PlaceScreen(placeId = place, onBack = { openPlace = null })
             } else if (trip != null) {
                 TripScreen(
@@ -172,6 +176,7 @@ fun LifeTrackerApp() {
                         onOpenCalls = { openPage(Page.Calls, Part.Data) },
                         onOpenFood = { tab = Tab.Food },
                         onOpenLive = { openPage(Page.Live, Part.Data) },
+                        onOpenReplay = { replayDate = it },
                     )
                     Tab.Habits -> HabitsScreen()
                     Tab.Food -> FoodScreen()

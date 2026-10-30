@@ -418,4 +418,21 @@ class DayLayoutTest {
         assertFalse(DayLayout.repeatsName(a, DayLayout.BarName("Home", 101 * min, 200 * min)))
         assertFalse(DayLayout.repeatsName(null, a))
     }
+
+    @Test
+    fun theRealTrainDayOf27And28OctoberIsTwoJourneysNotFourRows() {
+        // Times from the exported trips (minutes after 21:26): cut at the 9 and 4 minute stations, then a 26 minute wait.
+        val rows = build(
+            trips = listOf(
+                ride("a", 0, 342, 454, "", ""),
+                ride("b", 351, 488, 203, "", ""),
+                ride("c", 492, 1156, 513, "", ""),
+                ride("d", 1182, 1240, 39, "", ""),
+            ),
+        )
+        val journeys = rows.filterIsInstance<DayLayout.Travel>()
+        assertEquals(2, journeys.size)
+        assertEquals(listOf(3, 1), journeys.map { it.legs.size })
+        assertEquals(454_000 + 203_000 + 513_000, journeys[0].distanceM)
+    }
 }

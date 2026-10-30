@@ -119,6 +119,7 @@ fun TimelineScreen(
     onOpenCalls: () -> Unit,
     onOpenFood: () -> Unit,
     onOpenLive: () -> Unit,
+    onOpenReplay: (String) -> Unit,
     vm: TimelineViewModel = viewModel(),
 ) {
     val date by vm.date.collectAsState()
@@ -441,6 +442,11 @@ fun TimelineScreen(
                     phone = if (phoneMinutes > 0) formatDuration(phoneMinutes) else "–",
                     study = if (studyMinutes > 0) formatDuration(studyMinutes) else "–",
                 )
+            }
+            if (showPlaces || showTrips) {
+                item(key = "replay") {
+                    PaperButton("Replay this day", { onOpenReplay(date.toString()) }, style = PaperButtonStyle.Ghost, small = true)
+                }
             }
             if (pie) {
                 item(key = "pie") { DayPieView(whatSegs, whereSegs, if (showTrips) tripsEff else emptyList()) }
