@@ -356,7 +356,7 @@ object PlacesTracker {
             dao.dropPoints(f.id)
             return
         }
-        val guess = TripModes.guess(stats, f.acts, f.fromPlaceId, f.toPlaceId, dao.corrected().map { TripModes.learned(it) })
+        val guess = TripModes.guess(stats, f.acts, f.fromPlaceId, f.toPlaceId, dao.corrected().map { TripModes.learned(it) }, TripFeatures.of(points))
         val steps = TripRules.stepsBetween(points)
         // Learn your step length from walks where the GPS and the steps can be compared, before the distance is settled.
         TripRules.strideSample(stats.distanceM, steps, stats.medianKmh, guess)?.let {
