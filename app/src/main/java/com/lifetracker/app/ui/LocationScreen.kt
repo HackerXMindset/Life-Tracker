@@ -116,7 +116,8 @@ fun LocationScreen(
         if (clusters.isNotEmpty()) {
             item { PaperSection("To name · ${clusters.size} spot${if (clusters.size == 1) "" else "s"}", "stops at spots with no name") }
             items(clusters, key = { it.ids.first() }) { cluster ->
-                val hint = suggestions[places.suggestionKey(cluster)]
+                val names = places.namesFor(cluster, suggestions)
+                val hint = names.firstOrNull()?.name
                 PaperCard(modifier = Modifier.fillMaxWidth()) {
                     Text(
                         "${cluster.visits.size} stop${if (cluster.visits.size == 1) "" else "s"} · " + PlaceRules.durationText(cluster.totalMs),
@@ -125,7 +126,7 @@ fun LocationScreen(
                         color = paper.ink,
                     )
                     Text(
-                        (hint?.let { "Looks like: $it\n" } ?: "") + formatDateTime(cluster.firstMs) +
+                        (if (names.isEmpty()) "" else "Could be: " + names.joinToString(", ") { it.label() } + "\n") + formatDateTime(cluster.firstMs) +
                             (if (cluster.visits.size > 1) "  to  " + formatDateTime(cluster.lastMs) else "") + "\n" +
                             PlaceRules.coordinatesText(cluster.lat, cluster.lng),
                         fontSize = 13.sp,
@@ -135,8 +136,8 @@ fun LocationScreen(
                         modifier = Modifier.horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        if (hint != null) {
-                            PaperButton("Use \"$hint\"", { places.addPlace(hint, "other", PlaceRules.DEFAULT_RADIUS, cluster.lat, cluster.lng) }, small = true)
+                        names.take(3).forEach { n ->
+                            PaperButton("Use \"" + n.name + "\"", { places.addPlace(n.name, "other", PlaceRules.DEFAULT_RADIUS, cluster.lat, cluster.lng) }, small = true)
                         }
                         PaperButton(if (hint != null) "Rename" else "Name it", { naming = cluster }, style = if (hint != null) PaperButtonStyle.Ghost else PaperButtonStyle.Dark, small = true)
                         PaperButton(
@@ -210,7 +211,7 @@ fun LocationScreen(
             title = "Name this spot",
             initial = null,
             cluster = cluster,
-            suggestion = suggestions[places.suggestionKey(cluster)],
+            suggestions = places.namesFor(cluster, suggestions).map { it.name },
             categories = categories,
             onFetchHere = places::fetchHere,
             onSave = { name, kind, radius, lat, lng, pause -> places.addPlace(name, kind, radius, lat, lng, pause) },

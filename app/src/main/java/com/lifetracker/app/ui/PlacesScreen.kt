@@ -14,6 +14,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.MaterialTheme
+import com.lifetracker.app.ui.theme.PaperButton
+import com.lifetracker.app.ui.theme.PaperButtonStyle
 import com.lifetracker.app.ui.theme.PaperCard
 import com.lifetracker.app.ui.theme.PaperSegmented
 import androidx.compose.material3.Text
@@ -213,6 +215,7 @@ fun PlacesScreen(onBack: () -> Unit, onOpen: (Page) -> Unit, onOpenPlace: (Strin
         }
 
         if (group == PlacesGroup.Places) {
+            item { NameSettings() }
             item { PaperSection("Places") }
             item {
                 SettingsRow(R.drawable.ic_p_pin, "Place categories", "Colour and icon for Home, Study, Gym and your own") { onOpen(Page.PlaceCategories) }
@@ -356,14 +359,14 @@ internal fun PlaceDialog(
     title: String,
     initial: PlaceEntity?,
     cluster: PlaceRules.Cluster?,
-    suggestion: String? = null,
+    suggestions: List<String> = emptyList(),
     categories: List<com.lifetracker.app.data.PlaceCategoryEntity>,
     onFetchHere: ((com.lifetracker.app.data.Fix?) -> Unit) -> Unit,
     onSave: (String, String, Int, Double, Double, PauseSettings) -> Unit,
     onArchiveToggle: (() -> Unit)?,
     onDismiss: () -> Unit,
 ) {
-    var name by remember { mutableStateOf(initial?.name ?: suggestion ?: "") }
+    var name by remember { mutableStateOf(initial?.name ?: suggestions.firstOrNull() ?: "") }
     var kind by remember { mutableStateOf(initial?.kind ?: "other") }
     var radius by remember { mutableStateOf(initial?.radiusM ?: PlaceRules.DEFAULT_RADIUS) }
     var coords by remember {
@@ -416,6 +419,12 @@ internal fun PlaceDialog(
                     label = { Text("Name") },
                     singleLine = true,
                 )
+                if (suggestions.size > 1) {
+                    Text("Could be", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        suggestions.forEach { n -> FilterChip(selected = name == n, onClick = { name = n }, label = { Text(n) }) }
+                    }
+                }
                 Row(
                     modifier = Modifier.horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -539,6 +548,65 @@ private fun PlacesCard(title: String, text: String, actions: @Composable () -> U
             Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
             Text(text, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             actions()
+        }
+    }
+}
+
+private fun hhmm(min: Int) = String.format(java.util.Locale.ENGLISH, "%02d:%02d", min / 60, min % 60)
+
+/** How names are suggested and the optional "Where are you?" notification. Each choice is saved at once. */
+@Composable
+private fun NameSettings() {
+    val context = LocalContext.current
+    val settings = remember { com.lifetracker.app.data.PlacesSettings(context) }
+    var english by remember { mutableStateOf(settings.nameLanguage == "en") }
+    var ask by remember { mutableStateOf(settings.askWhere) }
+    var minStay by remember { mutableStateOf(settings.askMinStayMin) }
+    var from by remember { mutableStateOf(settings.askQuietFromMin) }
+    var to by remember { mutableStateOf(settings.askQuietToMin) }
+    var snooze by remember { mutableStateOf(settings.askSnoozeMin) }
+    fun pickTime(initial: Int, onPicked: (Int) -> Unit) {
+        android.app.TimePickerDialog(context, { _, h, m -> onPicked(h * 60 + m) }, initial / 60, initial % 60, true).show()
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        PaperSection("Names", "for spots you have not named")
+        Text(
+            "The app suggests names from OpenStreetMap: shops, stations and landmarks within 80 m, then the street. A spot you named before is suggested first.",
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        PaperSegmented(
+            options = listOf("English where possible", "As written on the map"),
+            selected = if (english) 0 else 1,
+            onSelect = { english = it == 0; settings.nameLanguage = if (it == 0) "en" else "" },
+        )
+        SetCard {
+            ToggleRow(
+                "Ask me \"Where are you?\"", ask, { ask = it; settings.askWhere = it },
+                hint = "A notification when you stay at a spot with no name. Answer with a suggestion, type a name, or say not now.",
+                first = true,
+            )
+        }
+        if (ask) {
+            Text("Ask after staying at least:", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            val stays = listOf(5, 10, 20, 30)
+            PaperSegmented(
+                options = stays.map { "$it min" },
+                selected = stays.indexOf(minStay).coerceAtLeast(0),
+                onSelect = { minStay = stays[it]; settings.askMinStayMin = stays[it] },
+            )
+            Text("Quiet hours (it does not ask in between):", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PaperButton("From " + hhmm(from), { pickTime(from) { from = it; settings.askQuietFromMin = it } }, style = PaperButtonStyle.Ghost, small = true)
+                PaperButton("To " + hhmm(to), { pickTime(to) { to = it; settings.askQuietToMin = it } }, style = PaperButtonStyle.Ghost, small = true)
+            }
+            Text("\"Not now\" keeps it quiet for:", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            val snoozes = listOf(30, 60, 180, 720)
+            PaperSegmented(
+                options = listOf("30 min", "1 h", "3 h", "12 h"),
+                selected = snoozes.indexOf(snooze).coerceAtLeast(0),
+                onSelect = { snooze = snoozes[it]; settings.askSnoozeMin = snoozes[it] },
+            )
         }
     }
 }
