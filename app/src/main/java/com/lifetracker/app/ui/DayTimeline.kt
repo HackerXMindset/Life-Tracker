@@ -823,22 +823,14 @@ private fun TravelCard(t: DayLayout.Travel, a: DayActions) {
         }
     }
     if (picking && trip != null) {
-        PaperDialog(
-            title = "How did you travel?",
+        ModeSheet(
+            trip = trip,
+            fromName = t.fromName,
+            toName = t.toName,
+            current = if (trip.modeSource == "you") trip.mode else "",
+            onPick = { a.onTripMode(trip, it); picking = false },
             onDismiss = { picking = false },
-            confirmText = "Edit time and category",
-            onConfirm = { picking = false; a.onEditTrip(trip) },
-            dismissText = "Close",
-        ) {
-            Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                TripModes.list.filter { it.id != "vehicle" }.forEach { m ->
-                    PaperPill(
-                        m.label,
-                        trip.mode == m.id && trip.modeSource == "you",
-                        { a.onTripMode(trip, m.id); picking = false },
-                    )
-                }
-            }
-        }
+            onEdit = { picking = false; a.onEditTrip(trip) },
+        )
     }
 }

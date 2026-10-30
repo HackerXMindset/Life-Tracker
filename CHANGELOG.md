@@ -2,6 +2,15 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧭 Places and trips round 2: a much better travel-mode guess (E6a)
+
+### ✨ New
+
+- **The guess now reads the shape of the trip**: how fast while moving, how steady, how often and how long it stood still (a few minutes in the middle is a station), how smoothly the speed changed and how straight the way was. From that it tells **train**, **metro** (shown as Train or metro), **bus**, **car** and **flight** apart instead of calling every vehicle trip "not sure". Your own answers still come first, and the guess still learns from them.
+- Android's own "walking" signal is now only believed when the speed agrees (a "walk" at 45 km/h is not a walk).
+- **How did you travel?** is a sheet of big pictures (walk, run, cycle, motorbike, auto-rickshaw, car, bus, train or metro, flight, boat, scooter, skateboard, other) above the trip's From, To, Distance and Average speed. It opens from the Timeline row, the trip popup and the trip page.
+- **Flight, Boat, Scooter and Skateboard** are new ways to travel. You choose them; the app never guesses them (a boat or a scooter cannot be told from the speed alone).
+
 ## 🧭 Places and trips round 2: place names (E5)
 
 ### ✨ New

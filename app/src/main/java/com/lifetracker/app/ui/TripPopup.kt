@@ -21,6 +21,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -67,6 +69,7 @@ fun TripPopup(
     val path = remember(p) { p?.points.orEmpty().map { it.lat to it.lng } }
     val times = remember(p) { p?.points.orEmpty().map { it.ms } }
     val shape = Wobble.Card
+    var choosing by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -122,11 +125,16 @@ fun TripPopup(
                     color = paper.ink2,
                 )
                 if (onMode != null) {
-                    Text("How did you travel?", fontSize = 12.sp, color = paper.ink2)
-                    Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        TripModes.list.filter { it.id != "vehicle" }.forEach { m ->
-                            PaperPill(m.label, trip.mode == m.id && !guess, { onMode(trip, m.id) })
-                        }
+                    PaperButton("How did you travel?", { choosing = true }, style = PaperButtonStyle.Ghost, small = true)
+                    if (choosing) {
+                        ModeSheet(
+                            trip = trip,
+                            fromName = p.fromName,
+                            toName = p.toName,
+                            current = if (guess) "" else trip.mode,
+                            onPick = { onMode(trip, it); choosing = false },
+                            onDismiss = { choosing = false },
+                        )
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

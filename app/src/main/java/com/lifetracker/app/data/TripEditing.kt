@@ -125,7 +125,7 @@ object TripEditing {
         val own = pointsOf(base, all)
         if (earlier.modeSource != "you" && own.size >= 2) {
             base = base.copy(
-                mode = TripModes.guess(measure(base, own), TripModes.parseActivity(base.activity), base.fromPlaceId, base.toPlaceId, learned),
+                mode = TripModes.guess(measure(base, own), TripModes.parseActivity(base.activity), base.fromPlaceId, base.toPlaceId, learned, TripFeatures.of(own)),
             )
         }
         val joined = withStats(base, all, strideM)
@@ -207,7 +207,7 @@ object TripEditing {
         val secondPoints = own.filter { it.ms >= atMs }.map { it.copy(tripId = newId) }
         val first = withStats(trip.copy(endMs = atMs, toPlaceId = ""), firstPoints, strideM)
         val secondBase = TripEntity(newId, atMs, trip.endMs, "", trip.toPlaceId, 0, 0, 0, "", "vehicle", "auto")
-        val guess = TripModes.guess(measure(secondBase, secondPoints), emptyMap(), "", "", emptyList())
+        val guess = TripModes.guess(measure(secondBase, secondPoints), emptyMap(), "", "", emptyList(), TripFeatures.of(secondPoints))
         val second = withStats(secondBase.copy(mode = guess), secondPoints, strideM)
         return TripChange(
             trips = listOf(first, second),

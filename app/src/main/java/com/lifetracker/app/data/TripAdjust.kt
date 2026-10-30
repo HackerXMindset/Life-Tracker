@@ -20,7 +20,7 @@ object TripAdjust {
         val learned = dao.corrected().map { TripModes.learned(it) }
         for (t in dao.guessed()) {
             val stats = TripStats(t.distanceM, t.endMs - t.startMs, t.medianKmh, t.topKmh, TripRules.MIN_FARTHEST_M)
-            val guess = TripModes.guess(stats, TripModes.parseActivity(t.activity), t.fromPlaceId, t.toPlaceId, learned)
+            val guess = TripModes.guess(stats, TripModes.parseActivity(t.activity), t.fromPlaceId, t.toPlaceId, learned, TripFeatures.of(dao.points(t.id)))
             if (guess != t.mode) {
                 dao.setMode(t.id, guess, "auto")
                 refresh(db, t.id, strideM)

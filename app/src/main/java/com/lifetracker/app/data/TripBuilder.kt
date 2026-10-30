@@ -40,7 +40,7 @@ object TripBuilder {
             if (!s.manual && !TripRules.isRealTrip(stats)) continue
             val from = placeNear(visits, s.startMs)
             val to = placeNear(visits, s.endMs)
-            val mode = TripModes.guess(stats, emptyMap(), from, to, learned)
+            val mode = TripModes.guess(stats, emptyMap(), from, to, learned, TripFeatures.of(points))
             val distance = TripRules.adjust(stats.distanceM, stats.durationMs, mode, TripRules.stepsBetween(points), strideM)
             built += BuiltTrip(
                 TripEntity(id, s.startMs, s.endMs, from, to, distance, stats.medianKmh, stats.topKmh, "", mode, "auto"),

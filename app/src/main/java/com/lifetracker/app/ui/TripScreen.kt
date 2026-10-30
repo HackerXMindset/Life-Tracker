@@ -79,6 +79,7 @@ fun TripScreen(
     val times = remember(fixes) { fixes.map { it.ms } }
     val noted = remember(fixes, p?.notes) { fixes.indices.filter { p?.notes?.containsKey(fixes[it].ms) == true }.toSet() }
     var noting by remember { mutableStateOf(false) }
+    var choosingMode by remember { mutableStateOf(false) }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -157,10 +158,16 @@ fun TripScreen(
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(TripModes.label(trip.mode) + if (trip.modeSource == "you") "" else " (guess)", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = paper.ink)
-                        Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            TripModes.list.filter { it.id != "vehicle" }.forEach { m ->
-                                PaperPill(m.label, selected = trip.mode == m.id && trip.modeSource == "you", onClick = { vm.setMode(trip, m.id) })
-                            }
+                        PaperButton("Choose how you travelled", { choosingMode = true }, style = PaperButtonStyle.Ghost, small = true)
+                        if (choosingMode) {
+                            ModeSheet(
+                                trip = trip,
+                                fromName = p.fromName,
+                                toName = p.toName,
+                                current = if (trip.modeSource == "you") trip.mode else "",
+                                onPick = { vm.setMode(trip, it); choosingMode = false },
+                                onDismiss = { choosingMode = false },
+                            )
                         }
                     }
                 }

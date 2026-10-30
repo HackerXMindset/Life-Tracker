@@ -138,6 +138,10 @@ object TripModes {
         Mode("bus", "Bus"),
         Mode("train", "Train or metro"),
         Mode("other", "Other"),
+        Mode("flight", "Flight"),
+        Mode("boat", "Boat"),
+        Mode("scooter", "Scooter"),
+        Mode("skateboard", "Skateboard"),
         Mode("vehicle", "Vehicle (not sure which)"),
     )
 
@@ -155,16 +159,24 @@ object TripModes {
         map.filter { it.value > 0L && it.key != "STILL" }.entries.sortedBy { it.key }.joinToString(",") { "${it.key}=${it.value}" }
 
     /** A past trip whose mode you set yourself. */
-    class Learned(val from: String, val to: String, val mode: String, val medianKmh: Int, val topKmh: Int)
+    class Learned(
+        val from: String,
+        val to: String,
+        val mode: String,
+        val medianKmh: Int,
+        val topKmh: Int,
+        val distanceM: Int = 0,
+        val durationMs: Long = 0L,
+    )
 
-    fun learned(t: TripEntity) = Learned(t.fromPlaceId, t.toPlaceId, t.mode, t.medianKmh, t.topKmh)
+    fun learned(t: TripEntity) = Learned(t.fromPlaceId, t.toPlaceId, t.mode, t.medianKmh, t.topKmh, t.distanceM, t.endMs - t.startMs)
 
     /**
      * The app's guess. First what you said about trips between the same two named places, then Android's walking,
      * running and cycling signals and the speeds; for anything in a vehicle it looks for the trips you labelled that
      * had the most similar speeds, and otherwise says "vehicle" until you tell it which.
      */
-    fun guess(stats: TripStats, activity: Map<String, Long>, from: String, to: String, learned: List<Learned>): String {
+    fun guess(stats: TripStats, activity: Map<String, Long>, from: String, to: String, learned: List<Learned>, features: TripFeatures? = null): String {
         if (from.isNotEmpty() && to.isNotEmpty()) {
             val same = learned.filter { (it.from == from && it.to == to) || (it.from == to && it.to == from) }
             if (same.size >= 2) {
@@ -172,6 +184,9 @@ object TripModes {
                 if (top != null && top.value.toDouble() / same.size >= 0.6) return top.key
             }
         }
+
+        // Above any road speed for most of the trip: the usual speed figures drop such jumps as bad readings, the features do not.
+        if (features != null && features.p95Kmh >= 250 && features.movingMedianKmh >= 150) return "flight"
 
         val onFoot = (activity["WALKING"] ?: 0L)
         val running = (activity["RUNNING"] ?: 0L)
@@ -181,22 +196,36 @@ object TripModes {
         val median = stats.medianKmh
         val top = stats.topKmh
 
+        // Android's own signal is believed only when the speed does not argue with it (a "walk" at 30 km/h was a vehicle).
+        fun plausible(mode: String) = if (features == null) true else when (mode) {
+            "walk" -> median <= 9 && top <= 16
+            "run" -> median <= 16 && top <= 26
+            "cycle" -> median <= 30 && top <= 45
+            else -> true
+        }
         if (total > 0L) {
             val best = listOf("walk" to onFoot, "run" to running, "cycle" to cycling, "vehicle" to driving).maxByOrNull { it.second }!!
             if (best.second * 2 >= total) {
-                if (best.first != "vehicle") return best.first
-                return vehicleGuess(median, top, learned)
+                if (best.first != "vehicle" && plausible(best.first)) return best.first
+                if (best.first == "vehicle") return vehicleGuess(median, top, learned, features, activity)
             }
         }
         return when {
             median < 7 && top < 12 -> "walk"
             median < 9 && top < 16 -> "run"
-            median < 22 && top < 35 -> "cycle"
-            else -> vehicleGuess(median, top, learned)
+            median < 22 && top < 35 && (features == null || features.stopShare < 0.2) -> "cycle"
+            else -> vehicleGuess(median, top, learned, features, activity)
         }
     }
 
-    private fun vehicleGuess(median: Int, top: Int, learned: List<Learned>): String {
+    /** A vehicle trip: first the trips you labelled that were most like it, then what the shape of the trip says. */
+    private fun vehicleGuess(median: Int, top: Int, learned: List<Learned>, features: TripFeatures?, activity: Map<String, Long>): String {
+        val fromYou = learnedVehicle(median, top, learned)
+        if (fromYou != "vehicle") return fromYou
+        return if (features != null) ModeGuess.fromFeatures(features, activity) else "vehicle"
+    }
+
+    private fun learnedVehicle(median: Int, top: Int, learned: List<Learned>): String {
         val near = learned
             .filter { it.mode != "walk" && it.mode != "run" && it.mode != "cycle" }
             .map { it to Math.abs(it.medianKmh - median) / 10.0 + Math.abs(it.topKmh - top) / 20.0 }
