@@ -1,6 +1,11 @@
 package com.lifetracker.app.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
+import com.lifetracker.app.ui.theme.Wobble
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,12 +36,9 @@ import androidx.compose.runtime.withFrameMillis
 import com.lifetracker.app.data.AppDatabase
 import com.lifetracker.app.data.PlaceEntity
 import com.lifetracker.app.data.PlaceRules
+import com.lifetracker.app.data.TripEntity
 import com.lifetracker.app.data.ReplayRules
 import com.lifetracker.app.ui.theme.LocalPaper
-import com.lifetracker.app.ui.theme.PaperButton
-import com.lifetracker.app.ui.theme.PaperButtonStyle
-import com.lifetracker.app.ui.theme.PaperCard
-import com.lifetracker.app.ui.theme.PaperPill
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -50,6 +52,7 @@ private class ReplayDay(
     val samples: List<ReplayRules.Sample>,
     val events: List<ReplayRules.Event>,
     val places: List<PlaceEntity>,
+    val trips: List<TripEntity>,
     val startMs: Long,
     val endMs: Long,
 )
@@ -80,7 +83,8 @@ private suspend fun loadDay(context: android.content.Context, date: LocalDate): 
     }
     val start = samples.firstOrNull()?.ms ?: from
     val end = maxOf(samples.lastOrNull()?.ms ?: limit, events.maxOfOrNull { it.ms } ?: 0L).coerceAtMost(limit).coerceAtLeast(start + 1)
-    ReplayDay(samples, events.sortedBy { it.ms }, places, start, end)
+    val trips = db.tripDao().tripsBetween(from, to).first()
+    ReplayDay(samples, events.sortedBy { it.ms }, places, trips, start, end)
 }
 
 /** The speed slider is a log scale from 1 to 480 minutes of the day for each real second. */
@@ -142,9 +146,25 @@ fun ReplayScreen(date: LocalDate, onBack: () -> Unit) {
         recent = loaded.events.filter { it.ms <= target }.takeLast(3)
     }
 
+    val camera = remember { ReplayCamera() }
+    // How you were travelling at the clock's time: the picture on the dot.
+    val icon = remember(d, clock) {
+        val trip = d?.trips?.firstOrNull { clock in it.startMs..it.endMs }
+        if (trip != null) modeIcon(trip.mode) else "\uD83D\uDCCD"
+    }
+
     Column(modifier = Modifier.fillMaxSize()) {
-        Box(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp)) {
-            SettingsTop("Replay " + date, if (d == null) "Loading the day..." else if (d.samples.isEmpty()) "No position readings on this day" else ReplayRules.clockText(clock, zone), onBack)
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text("\u2039 Back", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = paper.ink, modifier = Modifier.clickable(onClick = onBack).padding(vertical = 4.dp))
+            Text(
+                if (d != null && d.samples.isEmpty()) "No readings on $date" else "Replay $date",
+                fontSize = 13.sp, color = paper.ink2, modifier = Modifier.weight(1f), maxLines = 1,
+            )
+            Text(ReplayRules.clockText(clock, zone), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = paper.ink)
         }
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             ReplayMap(
@@ -153,49 +173,67 @@ fun ReplayScreen(date: LocalDate, onBack: () -> Unit) {
                 places = d?.places.orEmpty(),
                 follow = follow,
                 fitRequest = fit,
+                icon = icon,
+                camera = camera,
+                onUserMoved = { follow = false },
                 modifier = Modifier.fillMaxSize(),
             )
             recent.lastOrNull()?.let { e ->
-                PaperCard(modifier = Modifier.align(Alignment.TopStart).padding(12.dp), padding = 10.dp) {
-                    Text(ReplayRules.clockText(e.ms, zone) + " · " + e.title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = paper.ink)
-                    if (e.subtitle.isNotEmpty()) Text(e.subtitle, fontSize = 12.sp, color = paper.ink2)
+                Column(
+                    modifier = Modifier.align(Alignment.TopStart).padding(8.dp).background(paper.surface.copy(alpha = 0.92f), Wobble.Small).padding(horizontal = 8.dp, vertical = 5.dp),
+                ) {
+                    Text(ReplayRules.clockText(e.ms, zone) + " \u00b7 " + e.title, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = paper.ink, maxLines = 2)
+                    if (e.subtitle.isNotEmpty()) Text(e.subtitle, fontSize = 10.sp, color = paper.ink2)
                 }
             }
-            if (!follow) {
-                PaperButton("Follow the dot", { follow = true }, small = true, modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp))
+            Column(modifier = Modifier.align(Alignment.CenterEnd).padding(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                MiniButton("+", false) { camera.zoom(1.0) }
+                MiniButton("\u2212", false) { camera.zoom(-1.0) }
             }
         }
-        Column(
-            modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            if (d != null) {
+        if (d != null) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
                 Slider(
                     value = (clock - d.startMs).toFloat(),
                     onValueChange = { playing = false; jump(d.startMs + it.toLong()) },
                     valueRange = 0f..(d.endMs - d.startMs).toFloat(),
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    PaperButton("Previous", { ReplayRules.stepTo(d.events, clock, false)?.let { playing = false; jump(it) } }, style = PaperButtonStyle.Ghost, small = true)
-                    PaperButton(if (playing) "Pause" else "Play", { playing = !playing }, small = true)
-                    PaperButton("Next", { ReplayRules.stepTo(d.events, clock, true)?.let { playing = false; jump(it) } }, style = PaperButtonStyle.Ghost, small = true)
-                    PaperButton("Whole day", { follow = false; fit++ }, style = PaperButtonStyle.Ghost, small = true)
+                Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    MiniButton("\u2039 Card", false) { ReplayRules.stepTo(d.events, clock, false)?.let { playing = false; jump(it) } }
+                    MiniButton(if (playing) "Pause" else "Play", true) { playing = !playing }
+                    MiniButton("Card \u203a", false) { ReplayRules.stepTo(d.events, clock, true)?.let { playing = false; jump(it) } }
+                    MiniButton("Whole day", false) { follow = false; fit++ }
+                    MiniButton("Skip quiet", skip) { skip = !skip }
+                    MiniButton("Follow", follow) { follow = !follow }
                 }
                 Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    ReplayRules.SPEEDS.forEach { s -> PaperPill(ReplayRules.speedLabel(s), minPerS == s, { minPerS = s }) }
+                    ReplayRules.SPEEDS.forEach { sp -> MiniButton(ReplayRules.speedLabel(sp), minPerS == sp) { minPerS = sp } }
                 }
-                Text("Speed: " + ReplayRules.speedLabel(minPerS) + " (drag for your own)", fontSize = 12.sp, color = paper.ink2)
-                Slider(value = positionOf(minPerS), onValueChange = { minPerS = speedOf(it) }, valueRange = 0f..1f)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    PaperPill("Skip quiet stretches", skip, { skip = !skip })
-                    PaperPill("Follow the dot", follow, { follow = !follow })
-                }
-                if (recent.size > 1) {
-                    recent.dropLast(1).reversed().forEach { e ->
-                        Text(ReplayRules.clockText(e.ms, zone) + " · " + e.title, fontSize = 12.sp, color = paper.ink2)
-                    }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Speed " + ReplayRules.speedLabel(minPerS), fontSize = 11.sp, color = paper.ink2)
+                    Slider(value = positionOf(minPerS), onValueChange = { minPerS = speedOf(it) }, valueRange = 0f..1f, modifier = Modifier.weight(1f).padding(start = 8.dp))
                 }
             }
         }
+    }
+}
+
+/** A small button for the replay's controls: small text so the map keeps the room. */
+@Composable
+private fun MiniButton(text: String, on: Boolean, onClick: () -> Unit) {
+    val p = LocalPaper.current
+    val shape = Wobble.Pill
+    Box(
+        modifier = Modifier
+            .clip(shape)
+            .background(if (on) p.ink else p.surface, shape)
+            .border(1.dp, p.pen, shape)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 5.dp),
+    ) {
+        Text(text, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (on) p.bg else p.ink, maxLines = 1)
     }
 }

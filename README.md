@@ -160,6 +160,7 @@ Done in two pull requests: **E7a** is the replay itself, **E7b** is the GIF expo
 - [x] Nine speeds from 1 minute to 4 hours of the day for each real second, and your own on a slider; play, pause, previous and next card, a slider to jump
 - [x] Quiet stretches (30 minutes or more within 100 m, or with no readings) go at least 4 hours a second when "Skip quiet stretches" is on
 - [x] The map follows the dot with the path trailing behind and your places as circles; "Whole day" shows everything; opened from **Replay this day** on the Timeline
+- [x] After the first try on a phone: a compact layout with small text so the map keeps the room, + and - zoom buttons, moving the map with a finger stops the camera following (it was fighting the fingers), and the dot is the picture of how you were travelling at that moment (walk, car, train, ...), a pin when you were at a place
 - [x] Tests for the clock, the in-between positions, the trail, the quiet stretches and the cards; plus the real train day of 27 and 28 October as a journey-merging test
 
 **E7b**

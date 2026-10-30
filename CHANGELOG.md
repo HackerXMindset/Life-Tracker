@@ -2,6 +2,14 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧭 Places and trips round 2: day replay fixes (E7a)
+
+### 🔧 Changed
+
+- **The replay map is bigger**: the title, clock and controls are small and compact, so the map takes the rest of the screen.
+- **You can zoom**: pinch as usual, or use the new **+** and **−** buttons. Moving the map with your finger stops the camera from following the dot (before, it pulled the map back many times a second); the **Follow** button brings it back.
+- **The dot shows how you were travelling**: a walker, a car, a train, an auto-rickshaw and so on, taken from the trip you were on at that moment (your answer, or the guess). A pin shows when you were at a place.
+
 ## 🧭 Places and trips round 2: day replay (E7a)
 
 ### ✨ New
