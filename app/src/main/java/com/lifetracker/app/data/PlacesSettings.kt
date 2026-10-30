@@ -5,11 +5,12 @@ import androidx.core.content.edit
 
 /** Places settings and the small bits of state the background code keeps, all on the phone. */
 class PlacesSettings(context: Context) {
-    private val prefs = context.applicationContext.getSharedPreferences("places", Context.MODE_PRIVATE)
+    private val appContext = context.applicationContext
+    private val prefs = appContext.getSharedPreferences("places", Context.MODE_PRIVATE)
 
-    /** Whether places are watched at all. Off until you switch it on (after allowing location). */
+    /** Whether places are watched at all. Off until you switch it on (after allowing location), and off while the Places and trips feature is switched off. */
     var enabled: Boolean
-        get() = prefs.getBoolean("enabled", false)
+        get() = prefs.getBoolean("enabled", false) && Features.isOn(appContext, Feature.PLACES)
         set(value) = prefs.edit { putBoolean("enabled", value) }
 
     /** Your height in cm, or 0 when you have not said. Step length starts from it. */

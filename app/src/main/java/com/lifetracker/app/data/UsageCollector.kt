@@ -68,6 +68,7 @@ object UsageCollector {
 
     /** Copies new app history into the database. Returns how many sessions were read, or null without access. */
     suspend fun sync(context: Context, now: Long = System.currentTimeMillis()): Int? = withContext(Dispatchers.IO) {
+        if (!Features.isOn(context, Feature.PHONE_USAGE)) return@withContext null
         if (!hasAccess(context)) {
             AppLog.w("Phone usage", "Sync skipped: no usage access")
             return@withContext null

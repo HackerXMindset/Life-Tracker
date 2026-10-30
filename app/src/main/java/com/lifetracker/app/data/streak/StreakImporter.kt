@@ -72,6 +72,7 @@ object StreakImporter {
      */
     suspend fun importIfNew(context: Context, force: Boolean = false): ImportResult? =
         withContext(Dispatchers.IO) {
+            if (!com.lifetracker.app.data.Features.isOn(context, com.lifetracker.app.data.Feature.HABITS)) return@withContext null
             val sources = DataSources(context)
             val folder = sources.folder(DataSources.Slot.Streak)
                 ?: throw IOException("Choose the Streak folder first.")

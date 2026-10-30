@@ -42,6 +42,7 @@ object OntImporter {
 
     suspend fun importIfNew(context: Context, force: Boolean = false): OntResult? =
         withContext(Dispatchers.IO) {
+            if (!com.lifetracker.app.data.Features.isOn(context, com.lifetracker.app.data.Feature.FOOD)) return@withContext null
             val sources = DataSources(context)
             val folder = sources.folder(DataSources.Slot.OpenNutriTracker)
                 ?: throw IOException("Choose the OpenNutriTracker folder first.")

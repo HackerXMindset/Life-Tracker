@@ -70,6 +70,8 @@ import com.lifetracker.app.data.CallStats
 import com.lifetracker.app.data.CallsCollector
 import com.lifetracker.app.data.CallsSettings
 import com.lifetracker.app.data.ChargeSessionEntity
+import com.lifetracker.app.data.Feature
+import com.lifetracker.app.data.Features
 import com.lifetracker.app.data.ChargeSettings
 import com.lifetracker.app.data.ChargeStats
 import com.lifetracker.app.data.DayLayout
@@ -124,7 +126,7 @@ fun TimelineScreen(
     val live by rememberLive(withPath = false)
     val entries by vm.entries.collectAsState()
     val todos by vm.todos.collectAsState()
-    val notes by vm.notes.collectAsState()
+    val notesAll by vm.notes.collectAsState()
     val meals by vm.meals.collectAsState()
     val projectNames by vm.projectNames.collectAsState()
     val habitNames by vm.habitNames.collectAsState()
@@ -145,17 +147,21 @@ fun TimelineScreen(
 
     // Read fresh each time the Timeline comes into view, so changes made on the Phone usage screen show up.
     val context = LocalContext.current
+    // A part of the app you switched off (Settings > Features) is left off the Timeline too.
+    val featureTick by Features.changes.collectAsState()
+    fun featureOn(f: Feature) = featureTick >= 0 && Features.isOn(context, f)
+    val notes = if (featureOn(Feature.HABITS)) notesAll else emptyList()
     val usageSettings = remember { UsageSettings(context) }
     val callsSettings = remember { CallsSettings(context) }
-    val showCharging = remember { ChargeSettings(context) }.showOnTimeline
-    val showHealth = remember { HealthSettings(context) }.showOnTimeline
-    val showPlaces = remember { PlacesSettings(context) }.showOnTimeline
-    val showTrips = remember { PlacesSettings(context) }.showTripsOnTimeline
+    val showCharging = remember { ChargeSettings(context) }.showOnTimeline && featureOn(Feature.CHARGING)
+    val showHealth = remember { HealthSettings(context) }.showOnTimeline && featureOn(Feature.STEPS_SLEEP)
+    val showPlaces = remember { PlacesSettings(context) }.showOnTimeline && featureOn(Feature.PLACES)
+    val showTrips = remember { PlacesSettings(context) }.showTripsOnTimeline && featureOn(Feature.PLACES)
     val zone = ZoneId.systemDefault()
     val dayStartMs = date.atStartOfDay(zone).toInstant().toEpochMilli()
     val dayEndMs = date.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
     val nowMs = System.currentTimeMillis()
-    val usageAccess = UsageCollector.hasAccess(context)
+    val usageAccess = UsageCollector.hasAccess(context) && featureOn(Feature.PHONE_USAGE)
     val sleepShown = if (showHealth) {
         sleepNight?.takeIf { it.source != SleepStats.SKIPPED && !TimelineEdits.isHidden(edits[TimelineEdits.key(TimelineEdits.SLEEP, it.date)]) }?.let {
             val (s, en) = TimelineEdits.times(it.startMs, it.endMs, edits[TimelineEdits.key(TimelineEdits.SLEEP, it.date)])
@@ -166,7 +172,7 @@ fun TimelineScreen(
     }
     val showPhone = usageAccess && usageSettings.showOnTimeline
     val minBlockMs = usageSettings.minBlockMinutes * 60_000L
-    val callsAccess = CallsCollector.hasAccess(context)
+    val callsAccess = CallsCollector.hasAccess(context) && featureOn(Feature.CALLS)
     val showCalls = callsAccess && callsSettings.showOnTimeline
     val minTalk = callsSettings.minTalkMinutes
 
@@ -183,32 +189,32 @@ fun TimelineScreen(
     } else {
         emptyList()
     }
-    val chargesEff = charges.mapNotNull { c ->
+    val chargesEff = (if (featureOn(Feature.CHARGING)) charges else emptyList()).mapNotNull { c ->
         val e = editOf(TimelineEdits.CHARGE, c.id)
         if (TimelineEdits.isHidden(e)) return@mapNotNull null
         val (s, en) = TimelineEdits.times(c.startMs, c.endMs, e)
         c.copy(startMs = s, endMs = en)
     }
-    val mealsEff = meals.mapNotNull { m ->
+    val mealsEff = (if (featureOn(Feature.FOOD)) meals else emptyList()).mapNotNull { m ->
         val e = editOf(TimelineEdits.MEAL, m.id)
         if (TimelineEdits.isHidden(e)) return@mapNotNull null
         val origStart = dayStartMs + m.minuteOfDay * 60_000L
         val (s, _) = TimelineEdits.times(origStart, origStart, e)
         m.copy(minuteOfDay = TimelineEdits.minuteOf(s, dayStartMs))
     }
-    val visitsEff = placeVisits.mapNotNull { v ->
+    val visitsEff = (if (featureOn(Feature.PLACES)) placeVisits else emptyList()).mapNotNull { v ->
         val e = editOf(TimelineEdits.VISIT, v.id)
         if (TimelineEdits.isHidden(e)) return@mapNotNull null
         val (s, en) = TimelineEdits.times(v.startMs, v.endMs, e)
         v.copy(startMs = s, endMs = en)
     }
-    val tripsEff = dayTrips.mapNotNull { t ->
+    val tripsEff = (if (featureOn(Feature.PLACES)) dayTrips else emptyList()).mapNotNull { t ->
         val e = editOf(TimelineEdits.TRIP, t.id)
         if (TimelineEdits.isHidden(e)) return@mapNotNull null
         val (s, en) = TimelineEdits.times(t.startMs, t.endMs, e)
         t.copy(startMs = s, endMs = en)
     }
-    val blocksEff = usageDay.blocks.mapNotNull { b ->
+    val blocksEff = (if (featureOn(Feature.PHONE_USAGE)) usageDay.blocks else emptyList()).mapNotNull { b ->
         val e = editOf(TimelineEdits.APP, TimelineEdits.appRef(b.pkg, b.refStartMs))
         if (TimelineEdits.isHidden(e)) return@mapNotNull null
         val (s, en) = TimelineEdits.times(b.startMs, b.endMs, e)

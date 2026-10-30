@@ -24,6 +24,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -44,6 +45,9 @@ import com.lifetracker.app.data.PauseText
 import com.lifetracker.app.data.SystemSituation
 import com.lifetracker.app.data.PlaceKinds
 import com.lifetracker.app.data.PlaceRules
+
+/** The parts of the Places and trips settings; the first page is a short list of them. */
+private enum class PlacesGroup { Recording, Places, TripsData, Advanced }
 
 /** Places: the spots you named, the stops waiting for a name, and every visit. */
 @Composable
@@ -71,7 +75,9 @@ fun PlacesScreen(onBack: () -> Unit, onOpen: (Page) -> Unit, onOpenPlace: (Strin
     val readings by vm.readings.collectAsState()
     val rebuilding by vm.rebuilding.collectAsState()
     var adding by remember { mutableStateOf(false) }
-    BackHandler(onBack = onBack)
+    var group by rememberSaveable { mutableStateOf<PlacesGroup?>(null) }
+    // Back goes from a part to the short first page, and from the first page out.
+    BackHandler { if (group != null) group = null else onBack() }
 
 
     DisposableEffect(context) {
@@ -89,90 +95,66 @@ fun PlacesScreen(onBack: () -> Unit, onOpen: (Page) -> Unit, onOpenPlace: (Strin
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        item { SettingsTop("Places and trips", "Permissions and recording", onBack) }
-
         item {
-            SetCard {
-                ToggleRow("Watch my places", enabled, vm::setEnabled, hint = "Needs location all the time, set once", first = true)
+            when (group) {
+                null -> SettingsTop("Places and trips", "Where you were and how you got there", onBack)
+                PlacesGroup.Recording -> SettingsTop("Recording", "How and how often your position is read", { group = null })
+                PlacesGroup.Places -> SettingsTop("Places", "The spots you named, like Home, Library and Gym", { group = null })
+                PlacesGroup.TripsData -> SettingsTop("Trips and data", "Changes you made, step length, the Timeline and stored readings", { group = null })
+                PlacesGroup.Advanced -> SettingsTop("Advanced", "Profiles, status and how it all works", { group = null })
             }
         }
 
-        recordingItems(recording, vm)
-
-        if (!access.all || !access.battery) {
+        if (group == null) {
             item {
-                SetupNote(
-                    "Needs location all the time, physical activity and unrestricted battery" +
-                        " (location " + tick(access.location) + ", all the time " + tick(access.background) +
-                        ", activity " + tick(access.activity) + ", battery " + tick(access.battery) + ")." +
-                        " Allow them in Settings > Permissions, where each says why and how.",
-                )
+                SetCard {
+                    ToggleRow("Watch my places", enabled, vm::setEnabled, hint = "Needs location all the time, set once", first = true)
+                }
             }
-        }
 
-        item { PaperSection("Changes") }
-        item {
-            SettingsRow(R.drawable.ic_p_route, "Changes", "Trips and stays you joined, cut or hid, and the way back") { onOpen(Page.Changes) }
-        }
-        item { PaperSection("Maps") }
-        item {
-            SettingsRow(R.drawable.ic_p_route, "Maps", "The map style for trips and places, and your own styles") { onOpen(Page.Maps) }
-        }
-        item { PaperSection("Profiles") }
-        item {
-            SettingsRow(R.drawable.ic_p_pin, "Tracking profiles", "Change how GPS all day records while charging, driving, on a Wi-Fi...") { onOpen(Page.Profiles) }
-        }
+            if (!access.all || !access.battery) {
+                item {
+                    SetupNote(
+                        "Needs location all the time, physical activity and unrestricted battery" +
+                            " (location " + tick(access.location) + ", all the time " + tick(access.background) +
+                            ", activity " + tick(access.activity) + ", battery " + tick(access.battery) + ")." +
+                            " Allow them in Settings > Permissions, where each says why and how.",
+                    )
+                }
+            }
 
-        item { PaperSection("Places") }
-        item {
-            SettingsRow(R.drawable.ic_p_pin, "Place categories", "Colour and icon for Home, Study, Gym and your own") { onOpen(Page.PlaceCategories) }
-        }
-        if (places.isEmpty()) {
             item {
                 Text(
-                    "No places yet. Add one (Home, Library, Gym), or stay somewhere for 3 minutes and it appears on the Location page for you to name.",
+                    if (enabled) "Watching your places. Pick a part below to change it." else "Switched off: nothing is recorded until you switch it on.",
+                    fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-        } else {
-            items(places, key = { it.id }) { place ->
-                SettingsRow(
-                    icon = null,
-                    title = place.name + if (place.archived) "  (not watched)" else "",
-                    hint = "${place.radiusM} m circle · " + (if (place.pauseHere) "pause zone · " else "") + (placeCategories.firstOrNull { it.id == place.kind }?.name ?: PlaceKinds.label(place.kind)),
-                    onClick = { onOpenPlace(place.id) },
-                )
-            }
+            item { SettingsRow(R.drawable.ic_p_pin, "Recording", "How and how often your position is read") { group = PlacesGroup.Recording } }
+            item { SettingsRow(R.drawable.ic_p_pin, "Places", "The spots you named: Home, Library, Gym (" + places.size + ")") { group = PlacesGroup.Places } }
+            item { SettingsRow(R.drawable.ic_p_route, "Maps", "The map style for trips and places, and your offline areas") { onOpen(Page.Maps) } }
+            item { SettingsRow(R.drawable.ic_p_route, "Trips and data", "Joined and hidden trips, step length, the Timeline and stored readings") { group = PlacesGroup.TripsData } }
+            item { SettingsRow(R.drawable.ic_p_gear, "Advanced", "Tracking profiles, status and how it all works") { group = PlacesGroup.Advanced } }
         }
-        item { Button(onClick = { adding = true }) { Text("Add a place") } }
 
-        item { PaperSection("How closely to watch") }
-        item {
-            Text(
-                "At a spot the app does not know, it checks your position this often until you leave. At a place you named it checks twice and then rests.",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        item {
-            val options = listOf(60, 120, 300)
-            PaperSegmented(
-                options = listOf("1 min", "2 min", "5 min"),
-                selected = options.indexOf(interval),
-                onSelect = { vm.setIntervalSec(options[it]) },
-            )
-        }
-        item {
-            SetCard {
-                ToggleRow("Use GPS", useGps, vm::setUseGps, hint = "Most exact, more battery", first = true)
-                ToggleRow("Always on", alwaysOn, vm::setAlwaysOn, hint = "More complete, more battery")
-                ToggleRow("Check once every 15 minutes", heartbeat, vm::setHeartbeat, hint = "A safety net: one position now and then, so a stop is not missed")
+        if (group == PlacesGroup.Recording) {
+            if (!access.all || !access.battery) {
+                item {
+                    SetupNote(
+                        "Needs location all the time, physical activity and unrestricted battery" +
+                            " (location " + tick(access.location) + ", all the time " + tick(access.background) +
+                            ", activity " + tick(access.activity) + ", battery " + tick(access.battery) + ")." +
+                            " Allow them in Settings > Permissions, where each says why and how.",
+                    )
+                }
             }
-        }
-        if (alwaysOn) {
+
+            recordingItems(recording, vm)
+
+            item { PaperSection("How closely to watch") }
             item {
                 Text(
-                    "Reads your position all the time, using Wi-Fi and mobile network while you stand still and GPS while you move. A notification shows all the time. How often while standing still:",
+                    "At a spot the app does not know, it checks your position this often until you leave. At a place you named it checks twice and then rests.",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -181,110 +163,175 @@ fun PlacesScreen(onBack: () -> Unit, onOpen: (Page) -> Unit, onOpenPlace: (Strin
                 val options = listOf(60, 120, 300)
                 PaperSegmented(
                     options = listOf("1 min", "2 min", "5 min"),
-                    selected = options.indexOf(alwaysOnInterval),
-                    onSelect = { vm.setAlwaysOnIntervalSec(options[it]) },
+                    selected = options.indexOf(interval),
+                    onSelect = { vm.setIntervalSec(options[it]) },
                 )
             }
-        }
-
-        item { PaperSection("Record my trips", "how often to check") }
-        item { SetCard { ToggleRow("Record my trips", recordTrips, vm::setRecordTrips, first = true) } }
-        item {
-            Text(
-                "While you are on the way, the app reads your position this often. Quicker is more exact for speed and route, and uses more battery. Trips need place watching to be switched on.",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        item {
-            val options = listOf(15, 30, 60)
-            PaperSegmented(
-                options = listOf("15 s", "30 s", "1 min"),
-                selected = options.indexOf(tripPace),
-                onSelect = { vm.setTripIntervalSec(options[it]) },
-            )
-        }
-
-        item { PaperSection("Walking", "step length for walks") }
-        item {
-            Text(
-                "For a walk, the app counts your steps and trusts them over the position readings when the readings wander. Your step length starts at your height times 0.415 and is learned from your own walks.",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        item {
-            OutlinedTextField(
-                value = heightText,
-                onValueChange = { text -> heightText = text.filter { it.isDigit() }.take(3) },
-                label = { Text("Your height in cm") },
-                singleLine = true,
-                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
-            )
-        }
-        item {
-            SetCard {
-                KvRow("Step length in use", String.format(java.util.Locale.ENGLISH, "%.2f m", strideM) + if (strideLearned) " (learned)" else "", first = true)
+            item {
+                SetCard {
+                    ToggleRow("Use GPS", useGps, vm::setUseGps, hint = "Most exact, more battery", first = true)
+                    ToggleRow("Always on", alwaysOn, vm::setAlwaysOn, hint = "More complete, more battery")
+                    ToggleRow("Check once every 15 minutes", heartbeat, vm::setHeartbeat, hint = "A safety net: one position now and then, so a stop is not missed")
+                }
             }
-        }
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { vm.setHeightCm(heightText.toIntOrNull() ?: 0) }) { Text("Save height") }
-                OutlinedButton(enabled = strideLearned, onClick = vm::resetStride) { Text("Learn again") }
+            if (alwaysOn) {
+                item {
+                    Text(
+                        "Reads your position all the time, using Wi-Fi and mobile network while you stand still and GPS while you move. A notification shows all the time. How often while standing still:",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                item {
+                    val options = listOf(60, 120, 300)
+                    PaperSegmented(
+                        options = listOf("1 min", "2 min", "5 min"),
+                        selected = options.indexOf(alwaysOnInterval),
+                        onSelect = { vm.setAlwaysOnIntervalSec(options[it]) },
+                    )
+                }
             }
+
+            item { PaperSection("Record my trips", "how often to check") }
+            item { SetCard { ToggleRow("Record my trips", recordTrips, vm::setRecordTrips, first = true) } }
+            item {
+                Text(
+                    "While you are on the way, the app reads your position this often. Quicker is more exact for speed and route, and uses more battery. Trips need place watching to be switched on.",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            item {
+                val options = listOf(15, 30, 60)
+                PaperSegmented(
+                    options = listOf("15 s", "30 s", "1 min"),
+                    selected = options.indexOf(tripPace),
+                    onSelect = { vm.setTripIntervalSec(options[it]) },
+                )
+            }
+
         }
 
-        item { PaperSection("On the Timeline") }
-        item {
-            SetCard {
-                ToggleRow("Show visits on the Timeline", showOnTimeline, vm::setShowOnTimeline, first = true)
-                ToggleRow("Show trips on the Timeline", showTripsOnTimeline, vm::setShowTripsOnTimeline)
+        if (group == PlacesGroup.Places) {
+            item { PaperSection("Places") }
+            item {
+                SettingsRow(R.drawable.ic_p_pin, "Place categories", "Colour and icon for Home, Study, Gym and your own") { onOpen(Page.PlaceCategories) }
             }
+            if (places.isEmpty()) {
+                item {
+                    Text(
+                        "No places yet. Add one (Home, Library, Gym), or stay somewhere for 3 minutes and it appears on the Location page for you to name.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            } else {
+                items(places, key = { it.id }) { place ->
+                    SettingsRow(
+                        icon = null,
+                        title = place.name + if (place.archived) "  (not watched)" else "",
+                        hint = "${place.radiusM} m circle · " + (if (place.pauseHere) "pause zone · " else "") + (placeCategories.firstOrNull { it.id == place.kind }?.name ?: PlaceKinds.label(place.kind)),
+                        onClick = { onOpenPlace(place.id) },
+                    )
+                }
+            }
+            item { Button(onClick = { adding = true }) { Text("Add a place") } }
+
         }
 
-        item { PaperSection("Readings") }
-        item {
-            PlacesCard(
-                title = "${readings.total} readings stored",
-                text = "Every position reading is kept for good, so visits and trips can be worked out again later.\n\n" +
-                    "Readings in each of the last 24 hours (oldest first):\n" + readings.hourly.joinToString(" ") + "\n\n" + readings.gapText,
-            ) {
-                OutlinedButton(enabled = !rebuilding, onClick = vm::rebuildAll) {
-                    Text(if (rebuilding) "Tidying..." else "Tidy everything from my readings")
+        if (group == PlacesGroup.TripsData) {
+            item { PaperSection("Changes") }
+            item {
+                SettingsRow(R.drawable.ic_p_route, "Changes", "Trips and stays you joined, cut or hid, and the way back") { onOpen(Page.Changes) }
+            }
+            item { PaperSection("Walking", "step length for walks") }
+            item {
+                Text(
+                    "For a walk, the app counts your steps and trusts them over the position readings when the readings wander. Your step length starts at your height times 0.415 and is learned from your own walks.",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            item {
+                OutlinedTextField(
+                    value = heightText,
+                    onValueChange = { text -> heightText = text.filter { it.isDigit() }.take(3) },
+                    label = { Text("Your height in cm") },
+                    singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                )
+            }
+            item {
+                SetCard {
+                    KvRow("Step length in use", String.format(java.util.Locale.ENGLISH, "%.2f m", strideM) + if (strideLearned) " (learned)" else "", first = true)
+                }
+            }
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = { vm.setHeightCm(heightText.toIntOrNull() ?: 0) }) { Text("Save height") }
+                    OutlinedButton(enabled = strideLearned, onClick = vm::resetStride) { Text("Learn again") }
+                }
+            }
+
+            item { PaperSection("On the Timeline") }
+            item {
+                SetCard {
+                    ToggleRow("Show visits on the Timeline", showOnTimeline, vm::setShowOnTimeline, first = true)
+                    ToggleRow("Show trips on the Timeline", showTripsOnTimeline, vm::setShowTripsOnTimeline)
+                }
+            }
+
+            item { PaperSection("Readings") }
+            item {
+                PlacesCard(
+                    title = "${readings.total} readings stored",
+                    text = "Every position reading is kept for good, so visits and trips can be worked out again later.\n\n" +
+                        "Readings in each of the last 24 hours (oldest first):\n" + readings.hourly.joinToString(" ") + "\n\n" + readings.gapText,
+                ) {
+                    OutlinedButton(enabled = !rebuilding, onClick = vm::rebuildAll) {
+                        Text(if (rebuilding) "Tidying..." else "Tidy everything from my readings")
+                    }
                 }
             }
         }
-        item { PaperSection("Status") }
-        item {
-            PlacesCard(title = if (enabled) "Status" else "Status (switched off)", text = status) {}
-        }
-        item {
-            PlacesCard(
-                title = "If visits never appear",
-                text = "Open Android Settings > Apps > this app, set Battery to No restrictions, " +
-                    "and set Location to Allow all the time. Android otherwise stops background work to save battery. " +
-                    "The status above shows when Android last told the app something, so you can tell whether it works.",
-            ) {}
-        }
 
-        item { PaperSection("How it works") }
-        item {
-            Text(
-                "Recording has two ways. Gentle wakes the app when you come near a place, leave one, or the phone goes still or starts moving, " +
-                    "and reads your position only then. GPS all day reads your position all day at the pace you set (a notification stays) " +
-                    "and keeps every good reading, so the path is exact; tracking profiles change the pace while something is true, " +
-                    "and a pause zone at a place stops the readings there. " +
-                    "Staying in one spot for 3 minutes is a stay: inside a place's circle it is a visit to that place, anywhere else it waits " +
-                    "for you to name it in the Location page. A trip is the way between two stays. On a trip's page you can join it to a neighbour, " +
-                    "cut it in two, write a note on one reading, or hide it, and every change can be undone. " +
-                    "The circle you give a place is the real size used to decide you are there; Android's own ring around it is at least 150 m, only to wake the app. " +
-                    "Names for unnamed spots are suggested by OpenStreetMap over the internet (only the position of that stop is sent, once), " +
-                    "and map pictures are fetched from the map style you chose when you view a map or download an offline area. " +
-                    "Your readings, places and trips never leave the phone except when you export or back them up. " +
-                    "Nothing is deleted: \"not watched\" only stops the watching, and hiding keeps what you hid. Backups include your places, visits, trips and readings.",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        if (group == PlacesGroup.Advanced) {
+            item { PaperSection("Profiles") }
+            item {
+                SettingsRow(R.drawable.ic_p_pin, "Tracking profiles", "Change how GPS all day records while charging, driving, on a Wi-Fi...") { onOpen(Page.Profiles) }
+            }
+
+            item { PaperSection("Status") }
+            item {
+                PlacesCard(title = if (enabled) "Status" else "Status (switched off)", text = status) {}
+            }
+            item {
+                PlacesCard(
+                    title = "If visits never appear",
+                    text = "Open Android Settings > Apps > this app, set Battery to No restrictions, " +
+                        "and set Location to Allow all the time. Android otherwise stops background work to save battery. " +
+                        "The status above shows when Android last told the app something, so you can tell whether it works.",
+                ) {}
+            }
+
+            item { PaperSection("How it works") }
+            item {
+                Text(
+                    "Recording has two ways. Gentle wakes the app when you come near a place, leave one, or the phone goes still or starts moving, " +
+                        "and reads your position only then. GPS all day reads your position all day at the pace you set (a notification stays) " +
+                        "and keeps every good reading, so the path is exact; tracking profiles change the pace while something is true, " +
+                        "and a pause zone at a place stops the readings there. " +
+                        "Staying in one spot for 3 minutes is a stay: inside a place's circle it is a visit to that place, anywhere else it waits " +
+                        "for you to name it in the Location page. A trip is the way between two stays. On a trip's page you can cut it in two, " +
+                        "write a note on one reading, or hide it, and everything you cut or hid can be brought back from the Changes page. " +
+                        "The circle you give a place is the real size used to decide you are there; Android's own ring around it is at least 150 m, only to wake the app. " +
+                        "Names for unnamed spots are suggested by OpenStreetMap over the internet (only the position of that stop is sent, once), " +
+                        "and map pictures are fetched from the map style you chose when you view a map or download an offline area. " +
+                        "Your readings, places and trips never leave the phone except when you export or back them up. " +
+                        "Nothing is deleted: \"not watched\" only stops the watching, and hiding keeps what you hid. Backups include your places, visits, trips and readings.",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 

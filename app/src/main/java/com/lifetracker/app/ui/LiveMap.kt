@@ -20,6 +20,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifetracker.app.data.AppDatabase
+import com.lifetracker.app.data.Feature as AppFeature
+import com.lifetracker.app.data.Features
 import com.lifetracker.app.data.MapAreaEntity
 import com.lifetracker.app.data.MapStyleStore
 import com.lifetracker.app.data.PathSpeeds
@@ -67,6 +69,7 @@ internal fun LiveMap(
 ) {
     val context = LocalContext.current
     val paper = LocalPaper.current
+    val mapsOn = Features.isOn(context, AppFeature.MAPS)
     var styleUrl by remember { mutableStateOf<String?>(null) }
     var failed by remember { mutableStateOf(false) }
     var ready by remember { mutableStateOf<Pair<MapLibreMap, Style>?>(null) }
@@ -78,9 +81,10 @@ internal fun LiveMap(
 
     val url = styleUrl
     Box(modifier = modifier.background(paper.surface2)) {
-        if (url == null || failed) {
+        if (!mapsOn || url == null || failed) {
             Text(
-                if (failed) "The map could not load (no connection, and no downloaded map for this spot). The status below still works."
+                if (!mapsOn) "Maps are switched off (Settings > Features), so there is no map picture. The status below still works."
+                else if (failed) "The map could not load (no connection, and no downloaded map for this spot). The status below still works."
                 else "Loading the map...",
                 modifier = Modifier.align(Alignment.Center).padding(24.dp),
                 fontSize = 13.sp,

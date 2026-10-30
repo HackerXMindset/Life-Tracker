@@ -33,6 +33,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifetracker.app.data.AppDatabase
+import com.lifetracker.app.data.Feature as AppFeature
+import com.lifetracker.app.data.Features
 import com.lifetracker.app.data.MapStyleStore
 import com.lifetracker.app.ui.theme.LocalPaper
 import com.lifetracker.app.ui.theme.Wobble
@@ -76,6 +78,7 @@ fun TripsMap(
 ) {
     val context = LocalContext.current
     val paper = LocalPaper.current
+    val mapsOn = Features.isOn(context, AppFeature.MAPS)
     var styleUrl by remember { mutableStateOf<String?>(null) }
     var failed by remember { mutableStateOf(false) }
     var ready by remember { mutableStateOf<Pair<MapLibreMap, Style>?>(null) }
@@ -88,7 +91,7 @@ fun TripsMap(
 
     val url = styleUrl
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        if (url == null || failed) {
+        if (!mapsOn || url == null || failed) {
             PlainTrips(lines, selectedId, description, height)
             if (failed) {
                 Text(

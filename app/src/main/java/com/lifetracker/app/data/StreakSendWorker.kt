@@ -48,6 +48,7 @@ class StreakSendWorker(context: Context, params: WorkerParameters) : CoroutineWo
 
         /** Asks for a send in [delaySeconds]. A send already waiting is replaced, so the wait restarts. */
         fun schedule(context: Context, delaySeconds: Long) {
+            if (!Features.isOn(context, Feature.HABITS)) return
             val request = OneTimeWorkRequestBuilder<StreakSendWorker>()
                 .setInitialDelay(delaySeconds, TimeUnit.SECONDS)
                 .build()

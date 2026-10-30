@@ -50,6 +50,11 @@ class PlaceWatchService : Service() {
             AppLog.i("Service", "Readings service started" + (if (intent == null) " by Android after it had been stopped" else ""))
         }
         runCatching { showNotification() }.onFailure { AppLog.e("Service", "Could not show the notification Android needs for the readings", it) }
+        if (!PlacesSettings(this).enabled) {
+            AppLog.i("Service", "Places are switched off: the readings service stops")
+            stopSelf()
+            return START_NOT_STICKY
+        }
         if (PlacesSettings(this).allDay) {
             // GPS all day has its own service; this old one hands over (after announcing itself, as Android requires).
             AppLog.i("Service", "GPS all day is on: handing over to its own service")
@@ -222,6 +227,11 @@ class PlaceWatchService : Service() {
                 .setDescription("Shown while the app takes position readings at a place it does not know.")
                 .build()
             NotificationManagerCompat.from(context).createNotificationChannel(channel)
+        }
+
+        /** Stops the gentle readings service (the all-day one has its own stop). */
+        fun stop(context: Context) {
+            runCatching { context.stopService(Intent(context, PlaceWatchService::class.java)) }
         }
 
         /** Starts the readings. Safe to call when they are already running. Returns false if Android would not allow it. */

@@ -5,11 +5,12 @@ import androidx.core.content.edit
 
 /** Charging settings kept on the phone. */
 class ChargeSettings(context: Context) {
-    private val prefs = context.applicationContext.getSharedPreferences("charging", Context.MODE_PRIVATE)
+    private val appContext = context.applicationContext
+    private val prefs = appContext.getSharedPreferences("charging", Context.MODE_PRIVATE)
 
-    /** Whether charging sessions are recorded at all. */
+    /** Whether charging sessions are recorded at all (never while the Charging feature is switched off). */
     var track: Boolean
-        get() = prefs.getBoolean("track", true)
+        get() = prefs.getBoolean("track", true) && Features.isOn(appContext, Feature.CHARGING)
         set(value) = prefs.edit { putBoolean("track", value) }
 
     /** Whether a banner pops up when you plug in. */

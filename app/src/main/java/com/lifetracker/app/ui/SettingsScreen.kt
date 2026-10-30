@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -18,6 +20,9 @@ import androidx.compose.ui.unit.sp
 import com.lifetracker.app.R
 import com.lifetracker.app.data.CallsCollector
 import com.lifetracker.app.data.ChargeSettings
+import com.lifetracker.app.data.Feature
+import com.lifetracker.app.data.FeatureRules
+import com.lifetracker.app.data.Features
 import com.lifetracker.app.data.HabitSource
 import com.lifetracker.app.data.HabitsSettings
 import com.lifetracker.app.data.PlacesSettings
@@ -25,7 +30,7 @@ import com.lifetracker.app.data.UsageCollector
 import com.lifetracker.app.ui.theme.LocalPaper
 
 /** Everything that can be opened from the Settings tab. The numbers for each live under Stats. */
-enum class Page { Phone, Steps, Places, Location, Calls, Charging, Activities, Habits, Appearance, Backup, Timeline, Apps, PlaceCategories, Profiles, Changes, Maps, Permissions, Logs, Trips, Live }
+enum class Page { Phone, Steps, Places, Location, Calls, Charging, Activities, Habits, Appearance, Backup, Timeline, Apps, PlaceCategories, Profiles, Changes, Maps, Permissions, Logs, Trips, Live, Features }
 
 /**
  * The Settings tab, laid out like the demo: a big title, then four groups of rows. Each row has an icon, a name, one small
@@ -35,6 +40,16 @@ enum class Page { Phone, Steps, Places, Location, Calls, Charging, Activities, H
 fun SettingsScreen(onOpen: (Page) -> Unit) {
     val context = LocalContext.current
     val paper = LocalPaper.current
+    // Reading this makes the page look again when a switch on the Features page changes.
+    val changed by Features.changes.collectAsState()
+    val featureOn = { f: Feature -> changed >= 0 && Features.isOn(context, f) }
+    val phoneFeature = featureOn(Feature.PHONE_USAGE)
+    val stepsFeature = featureOn(Feature.STEPS_SLEEP)
+    val placesFeature = featureOn(Feature.PLACES)
+    val callsFeature = featureOn(Feature.CALLS)
+    val chargingFeature = featureOn(Feature.CHARGING)
+    val habitsFeature = featureOn(Feature.HABITS)
+    val featureSummary = FeatureRules.summary { Features.isOn(context, it) }
     val places = PlacesSettings(context)
     val usageOn = UsageCollector.hasAccess(context)
     val callsOn = CallsCollector.hasAccess(context)
@@ -69,8 +84,10 @@ fun SettingsScreen(onOpen: (Page) -> Unit) {
         item {
             SettingsRow(R.drawable.ic_p_list, "Activities", "The kinds of activity you sort things into") { onOpen(Page.Activities) }
         }
-        item {
-            SettingsRow(R.drawable.ic_p_link, "Apps and categories", "Which category each app counts as") { onOpen(Page.Apps) }
+        if (phoneFeature) {
+            item {
+                SettingsRow(R.drawable.ic_p_link, "Apps and categories", "Which category each app counts as") { onOpen(Page.Apps) }
+            }
         }
 
         item { PaperSection("Allowed on this phone") }
@@ -82,34 +99,34 @@ fun SettingsScreen(onOpen: (Page) -> Unit) {
         }
 
         item { PaperSection("Collected from your phone") }
-        item {
+        if (phoneFeature) item {
             SettingsRow(
                 R.drawable.ic_p_phone, "Phone and usage",
                 (if (usageOn) "" else "Not allowed yet · ") + "Short stretches and hidden apps",
             ) { onOpen(Page.Phone) }
         }
-        item { SettingsRow(R.drawable.ic_p_moon, "Sleep and steps", "Health Connect and step counter") { onOpen(Page.Steps) } }
-        item {
+        if (stepsFeature) item { SettingsRow(R.drawable.ic_p_moon, "Sleep and steps", "Health Connect and step counter") { onOpen(Page.Steps) } }
+        if (placesFeature) item {
             SettingsRow(
                 R.drawable.ic_p_pin, "Places and trips",
                 (if (places.enabled) "" else "Switched off · ") + "Recording, profiles, places and battery",
             ) { onOpen(Page.Places) }
         }
-        item {
+        if (callsFeature) item {
             SettingsRow(
                 R.drawable.ic_p_call, "Calls",
                 (if (callsOn) "" else "Not allowed yet · ") + "Shortest call to show",
             ) { onOpen(Page.Calls) }
         }
-        item {
+        if (chargingFeature) item {
             SettingsRow(
                 R.drawable.ic_p_bolt, "Charging",
                 (if (chargingOn) "" else "Switched off · ") + "Recording and the banner",
             ) { onOpen(Page.Charging) }
         }
 
-        item { PaperSection("Trackers") }
-        item {
+        if (habitsFeature) item { PaperSection("Trackers") }
+        if (habitsFeature) item {
             SettingsRow(
                 R.drawable.ic_p_habits, "Habits",
                 if (fromStreak) "Imported from Streak" else "Tracked in this app",
@@ -117,6 +134,9 @@ fun SettingsScreen(onOpen: (Page) -> Unit) {
         }
 
         item { PaperSection("This app") }
+        item {
+            SettingsRow(R.drawable.ic_p_list, "Features", "$featureSummary · Switch parts of the app off") { onOpen(Page.Features) }
+        }
         item {
             SettingsRow(R.drawable.ic_p_gear, "Appearance", "Theme, app name and home-screen icon") { onOpen(Page.Appearance) }
         }

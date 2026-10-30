@@ -316,6 +316,7 @@ object HabitReminderNotifier {
 /** Hears the alarm and the Done / Snooze buttons. */
 class HabitReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        if (!Features.isOn(context, Feature.HABITS)) return
         val action = intent.action ?: return
         val habitId = intent.getStringExtra(HabitReminderScheduler.EXTRA_HABIT) ?: return
         val reminderId = intent.getStringExtra(HabitReminderScheduler.EXTRA_REMINDER).orEmpty()
@@ -345,6 +346,7 @@ class HabitReminderReceiver : BroadcastReceiver() {
 /** After a restart, an app update, or a change of clock, time zone or alarm permission: set every alarm again. */
 class HabitReminderBootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        if (!Features.isOn(context, Feature.HABITS)) return
         val app = context.applicationContext
         val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
