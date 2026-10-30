@@ -2,6 +2,15 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧭 Places and trips round 2: place names (E5)
+
+### ✨ New
+
+- **Several name suggestions** for each unnamed spot, as buttons on the Location page and as chips in the naming box: the exact shop, station or landmark within 80 m first, the street address last. Plain buildings come after real places.
+- **English first**: names come in English where OpenStreetMap has one (Settings > Places and trips > Places > Names); you can choose the name as written on the map instead.
+- **A spot you named before** is suggested first, even if you stopped watching that place.
+- **Where are you?** notification (off until you switch it on): when you stay at a spot with no name for your own minimum time, it offers the best name as a button, lets you type a name right in the notification, or "Not now". Choose the minimum stay, quiet hours and how long "Not now" keeps it quiet.
+
 ## 🧭 Places and trips round 2: settings and switches (E4)
 
 ### ✨ New

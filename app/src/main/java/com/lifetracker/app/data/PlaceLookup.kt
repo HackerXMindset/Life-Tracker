@@ -8,36 +8,15 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
 /**
- * Suggests a name for a spot by asking OpenStreetMap: first the named shop, library, gym, hostel or other place
- * within 60 m (Overpass), then the street address (Nominatim). This is the only thing in the app that uses the
+ * Suggests names for a spot by asking OpenStreetMap: the named shops, stations, landmarks and other places within 80 m
+ * (Overpass), then the street address (Nominatim) when there are few. This is the only thing in the app that uses the
  * internet, and it sends only the coordinates of a stop you have not named, once per spot, when the review list is open.
  */
 object PlaceLookup {
     private const val USER_AGENT = "LifeTracker/1.0 (private personal app; one lookup per unnamed stop)"
-    private const val NEAR_M = 60
-
-    class Candidate(val name: String, val distanceM: Double)
-
-    /** The named things in an Overpass answer, nearest first. */
-    fun parseOverpass(json: String, lat: Double, lng: Double): List<Candidate> = try {
-        val elements = JSONObject(json).optJSONArray("elements")
-        val out = ArrayList<Candidate>()
-        if (elements != null) {
-            for (i in 0 until elements.length()) {
-                val e = elements.getJSONObject(i)
-                val name = e.optJSONObject("tags")?.optString("name", "")?.trim().orEmpty()
-                if (name.isEmpty()) continue
-                val centre = e.optJSONObject("center")
-                val eLat = if (e.has("lat")) e.getDouble("lat") else centre?.optDouble("lat", Double.NaN) ?: Double.NaN
-                val eLng = if (e.has("lon")) e.getDouble("lon") else centre?.optDouble("lon", Double.NaN) ?: Double.NaN
-                val d = if (eLat.isNaN() || eLng.isNaN()) NEAR_M.toDouble() else PlaceRules.distanceM(lat, lng, eLat, eLng)
-                out.add(Candidate(name, d))
-            }
-        }
-        out.sortedBy { it.distanceM }
-    } catch (e: Exception) {
-        emptyList()
-    }
+    /** The named things in an Overpass answer, best first (see [PlaceNames.parseOverpass]). */
+    fun parseOverpass(json: String, lat: Double, lng: Double, lang: String = ""): List<PlaceNames.Suggestion> =
+        PlaceNames.parseOverpass(json, lat, lng, lang)
 
     /** The place name or street address in a Nominatim answer, or null. */
     fun parseNominatim(json: String): String? = try {
@@ -59,27 +38,32 @@ object PlaceLookup {
     /** Cache key: about 11 m squares, so a spot is only looked up once. */
     fun key(lat: Double, lng: Double): String = String.format(java.util.Locale.ENGLISH, "%.4f_%.4f", lat, lng)
 
-    /** A suggested name for the spot, or null if nothing was found or there is no internet. */
-    suspend fun suggest(lat: Double, lng: Double): String? = withContext(Dispatchers.IO) {
-        val near = runCatching { overpass(lat, lng) }.getOrNull()?.let { parseOverpass(it, lat, lng) }?.firstOrNull()
-        if (near != null) return@withContext near.name
-        runCatching { nominatim(lat, lng) }.getOrNull()?.let { parseNominatim(it) }
+    /** The best few names for the spot (exact places first, the street address last), or an empty list with no internet. */
+    suspend fun suggestAll(lat: Double, lng: Double, lang: String): List<PlaceNames.Suggestion> = withContext(Dispatchers.IO) {
+        val nearby = runCatching { overpass(lat, lng) }.getOrNull()?.let { parseOverpass(it, lat, lng, lang) }.orEmpty()
+        val address = if (nearby.size >= 3) null else runCatching { nominatim(lat, lng, lang) }.getOrNull()?.let { parseNominatim(it) }
+            ?.let { PlaceNames.Suggestion(it, PlaceNames.Source.ADDRESS, 0.0) }
+        PlaceNames.combine(emptyList(), nearby, address)
     }
 
+    /** The single best name, or null (kept for callers that want one). */
+    suspend fun suggest(lat: Double, lng: Double, lang: String = ""): String? = suggestAll(lat, lng, lang).firstOrNull()?.name
+
     private fun overpass(lat: Double, lng: Double): String {
-        val around = "around:$NEAR_M,$lat,$lng"
-        val keys = listOf("amenity", "shop", "leisure", "tourism", "office", "building", "healthcare", "education")
-        val query = "[out:json][timeout:10];(" + keys.joinToString("") { "nwr($around)[\"name\"][\"$it\"];" } + ");out tags center 25;"
+        val around = "around:${PlaceNames.NEAR_M},$lat,$lng"
+        val keys = listOf("amenity", "shop", "leisure", "tourism", "office", "building", "healthcare", "education", "railway", "public_transport", "historic", "aeroway")
+        val query = "[out:json][timeout:10];(" + keys.joinToString("") { "nwr($around)[\"name\"][\"$it\"];" } + ");out tags center 40;"
         return request(
             URL("https://overpass-api.de/api/interpreter"),
             "data=" + URLEncoder.encode(query, "UTF-8"),
         )
     }
 
-    private fun nominatim(lat: Double, lng: Double): String =
+    private fun nominatim(lat: Double, lng: Double, lang: String): String =
         request(
             URL(
-                String.format(java.util.Locale.ENGLISH, "https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=1&lat=%.6f&lon=%.6f", lat, lng),
+                String.format(java.util.Locale.ENGLISH, "https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=1&lat=%.6f&lon=%.6f", lat, lng) +
+                    (if (lang.isNotEmpty()) "&accept-language=$lang" else ""),
             ),
             null,
         )

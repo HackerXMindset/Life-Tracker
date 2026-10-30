@@ -233,10 +233,65 @@ class PlacesSettings(context: Context) {
     /** Your own recording settings, as the rules want them. */
     fun trackSettings() = TrackSettings(trackIntervalSec, trackMinMoveM, trackAccuracyMode, trackAccuracyLimitM)
 
-    /** A name found on the internet for a spot, kept so each spot is only looked up once. */
+    /** A name found on the internet for a spot, kept so each spot is only looked up once. (Older single name; see [suggestions].) */
     fun suggestion(key: String): String? = prefs.getString("sug_$key", null)
 
     fun setSuggestion(key: String, value: String) = prefs.edit { putString("sug_$key", value) }
+
+    /** Every name found for a spot (several), or null when the spot was never looked up. An old single name still counts. */
+    fun suggestions(key: String): List<PlaceNames.Suggestion>? {
+        prefs.getString("sugs_$key", null)?.let { return PlaceNames.decode(it) }
+        return suggestion(key)?.let { if (it.isEmpty()) emptyList() else listOf(PlaceNames.Suggestion(it, PlaceNames.Source.NEARBY, 0.0)) }
+    }
+
+    fun setSuggestions(key: String, list: List<PlaceNames.Suggestion>) = prefs.edit { putString("sugs_$key", PlaceNames.encode(list)) }
+
+    /** The language for suggested names: "en" (English where the map has it) or empty for the name as written on the map. */
+    var nameLanguage: String
+        get() = prefs.getString("name_language", "en") ?: "en"
+        set(value) = prefs.edit { putString("name_language", value) }
+
+    // "Where are you?" notification for a stop at a new spot. Off until you switch it on.
+    var askWhere: Boolean
+        get() = prefs.getBoolean("ask_where", false)
+        set(value) = prefs.edit { putBoolean("ask_where", value) }
+
+    /** How long you must stay before it asks, in minutes. */
+    var askMinStayMin: Int
+        get() = prefs.getInt("ask_min_stay", 10)
+        set(value) = prefs.edit { putInt("ask_min_stay", value.coerceIn(1, 240)) }
+
+    /** Quiet hours as minutes after midnight (it does not ask in between). The same value twice means no quiet hours. */
+    var askQuietFromMin: Int
+        get() = prefs.getInt("ask_quiet_from", 22 * 60)
+        set(value) = prefs.edit { putInt("ask_quiet_from", value.coerceIn(0, 1439)) }
+
+    var askQuietToMin: Int
+        get() = prefs.getInt("ask_quiet_to", 7 * 60)
+        set(value) = prefs.edit { putInt("ask_quiet_to", value.coerceIn(0, 1439)) }
+
+    /** How long "Not now" keeps it quiet, in minutes. */
+    var askSnoozeMin: Int
+        get() = prefs.getInt("ask_snooze", 60)
+        set(value) = prefs.edit { putInt("ask_snooze", value.coerceIn(5, 24 * 60)) }
+
+    var askSnoozeUntilMs: Long
+        get() = prefs.getLong("ask_snooze_until", 0L)
+        set(value) = prefs.edit { putLong("ask_snooze_until", value) }
+
+    fun askConfig() = NameAskRules.Config(askWhere, askMinStayMin, askQuietFromMin, askQuietToMin)
+
+    /** Visits already asked about, newest last (kept short), and when each spot was last asked about. */
+    fun askedVisits(): Set<String> = (prefs.getString("asked_visits", "") ?: "").split(",").filter { it.isNotEmpty() }.toSet()
+
+    fun addAskedVisit(id: String) {
+        val list = (prefs.getString("asked_visits", "") ?: "").split(",").filter { it.isNotEmpty() && it != id } + id
+        prefs.edit { putString("asked_visits", list.takeLast(40).joinToString(",")) }
+    }
+
+    fun spotAskedMs(key: String): Long = prefs.getLong("asked_spot_$key", 0L)
+
+    fun setSpotAsked(key: String, ms: Long) = prefs.edit { putLong("asked_spot_$key", ms) }
 }
 
 /** The two ways places and trips can be recorded. */

@@ -322,6 +322,7 @@ object PlacesTracker {
                     dao.upsertVisits(step.saves)
                 }
             }
+            runCatching { NameAsker.consider(context, step.saves) }
             if (step.points.isNotEmpty()) {
                 // Note the step counter on the readings taken now (not on one placed back at the start of a stay).
                 val counter = StepCounterSync.counterNow(context)
@@ -544,12 +545,12 @@ object PlacesTracker {
         var asked = 0
         for (cluster in clusters) {
             val key = PlaceLookup.key(cluster.lat, cluster.lng)
-            if (settings.suggestion(key) != null) continue
+            if (settings.suggestions(key) != null) continue
             if (asked >= maxLookups) break
             if (asked > 0) delay(1_200L)
             asked++
-            val found = PlaceLookup.suggest(cluster.lat, cluster.lng)
-            if (found != null) settings.setSuggestion(key, found)
+            val found = PlaceLookup.suggestAll(cluster.lat, cluster.lng, settings.nameLanguage)
+            if (found.isNotEmpty()) settings.setSuggestions(key, found)
         }
         asked
     }

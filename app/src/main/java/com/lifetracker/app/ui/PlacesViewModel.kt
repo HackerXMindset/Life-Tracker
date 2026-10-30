@@ -17,6 +17,7 @@ import com.lifetracker.app.data.PauseSettings
 import com.lifetracker.app.data.MapScheduler
 import com.lifetracker.app.data.PlaceEntity
 import com.lifetracker.app.data.PlaceLookup
+import com.lifetracker.app.data.PlaceNames
 import com.lifetracker.app.data.PlaceRules
 import com.lifetracker.app.data.PlaceWatchService
 import com.lifetracker.app.data.PlacesSettings
@@ -257,10 +258,14 @@ class PlacesViewModel(private val app: Application) : AndroidViewModel(app) {
     /** Stops at unnamed spots, grouped by where they were. */
     val clusters: StateFlow<List<PlaceRules.Cluster>> = share(emptyList(), dao.observeUnknown().map { PlaceRules.clusters(it) })
 
-    private val suggestionFlow = MutableStateFlow<Map<String, String>>(emptyMap())
+    private val suggestionFlow = MutableStateFlow<Map<String, List<PlaceNames.Suggestion>>>(emptyMap())
 
-    /** Names found on the internet, by spot key (see [suggestionKey]). */
-    val suggestions: StateFlow<Map<String, String>> = suggestionFlow
+    /** Names found on the internet (several, best first), by spot key (see [suggestionKey]). */
+    val suggestions: StateFlow<Map<String, List<PlaceNames.Suggestion>>> = suggestionFlow
+
+    /** The best few names for a spot: the ones you gave before nearby first, then what the map offers. */
+    fun namesFor(cluster: PlaceRules.Cluster, found: Map<String, List<PlaceNames.Suggestion>>): List<PlaceNames.Suggestion> =
+        PlaceNames.combine(PlaceNames.remembered(places.value, cluster.lat, cluster.lng), found[suggestionKey(cluster)].orEmpty(), null)
 
     private var looking = false
 
@@ -275,7 +280,7 @@ class PlacesViewModel(private val app: Application) : AndroidViewModel(app) {
                 var asked = 0
                 for (cluster in list) {
                     val key = suggestionKey(cluster)
-                    val cached = settings.suggestion(key)
+                    val cached = settings.suggestions(key)
                     if (cached != null) {
                         if (cached.isNotEmpty()) suggestionFlow.value = suggestionFlow.value + (key to cached)
                         continue
@@ -283,9 +288,9 @@ class PlacesViewModel(private val app: Application) : AndroidViewModel(app) {
                     if (asked >= 5) break
                     if (asked > 0) kotlinx.coroutines.delay(1_200L)
                     asked++
-                    val found = PlaceLookup.suggest(cluster.lat, cluster.lng)
-                    if (found != null) {
-                        settings.setSuggestion(key, found)
+                    val found = PlaceLookup.suggestAll(cluster.lat, cluster.lng, settings.nameLanguage)
+                    if (found.isNotEmpty()) {
+                        settings.setSuggestions(key, found)
                         suggestionFlow.value = suggestionFlow.value + (key to found)
                     }
                 }

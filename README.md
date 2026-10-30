@@ -43,7 +43,7 @@ Life Tracker is an Android app built for one person: its owner. It replaces a pi
 | Habits (H1 to H13) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done |
 | The paper look (Timeline, Habits, Settings, Food) | ▰▰▰▰▰▰▰▱▱▱ | 🟡 Money and Stats still to restyle |
 | Places and trips remake (C1 to C9) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done, 11 pull requests |
-| **Places and trips round 2 (E1 to E10)** | ▰▰▰▰▱▱▱▱▱▱ | 🔨 E4 built, E5 next |
+| **Places and trips round 2 (E1 to E10)** | ▰▰▰▰▰▱▱▱▱▱ | 🔨 E5 built, E6 next |
 | Money editing (R6b, R6c) | ▰▰▱▱▱▱▱▱▱▱ | ⏳ Data done, screens next |
 | Life events, month and year views (Step 14) | ▱▱▱▱▱▱▱▱▱▱ | 💤 Later |
 
@@ -77,7 +77,7 @@ flowchart LR
 | **E2** ✅ | The Trips view | A page with Map, Trips and Data for any day, week, month, year or your own range; on the Timeline a trip opens in a popup with only that trip on the map | M |
 | **E3** ✅ | Live map | Tap **On the move** to see where you are now, following you like Google Maps, with today's path, your places and offline areas | L |
 | **E4** ✅ | Settings and switches | Places and trips settings in branches anyone can follow; a **Features** page with a switch for every feature (off means gone and not collecting) | M |
-| **E5** | Place names | Exact shops and landmarks, several to pick from, names remembered, an optional "Where are you?" notification you control | M |
+| **E5** ✅ | Place names | Exact shops and landmarks, several to pick from, names remembered, an optional "Where are you?" notification you control | M |
 | **E6** | Journeys and travel mode | Trains and long drives drawn as the route; stations as small stops; a far better guess of how you travelled; a "How did you travel?" sheet with icons | L |
 | **E7** | Day replay | Your day plays like a video with many speeds, quiet stretches skipped, export as GIF | XL |
 | **E8** | Triggers and actions | A new kind of habit that completes by itself: arrive, leave, Wi-Fi, Bluetooth, charging, apps, calls, steps, speed, time... and many actions | XL |
@@ -126,12 +126,12 @@ flowchart LR
 
 #### E5 Place names
 - [x] Research: how open-source apps name stops (Reitti and Dawarich reverse-geocode with Photon or Nominatim; both are AGPL so only the idea is used). Decision: keep OpenStreetMap's Overpass and Nominatim that the app already uses (no new service), but ask for more kinds of places and keep several answers
-- [ ] Rules in one tested file: pick the name in your language, rank shops, stations and landmarks above plain buildings, drop repeats, keep the five best
-- [ ] Several suggestions for each stop (exact place first, street address last), shown as buttons in **Location** and in the naming box
-- [ ] Names in English first (your choice in Settings: English or the local language)
-- [ ] A spot you named once is suggested again first ("You named this"), even if you stopped watching that place
-- [ ] Optional **Where are you?** notification for a new stop: your own minimum stay, quiet hours and snooze; answer with a suggestion, type a name, or not now, all from the notification
-- [ ] Tests
+- [x] Rules in one tested file: pick the name in your language, rank shops, stations and landmarks above plain buildings, drop repeats, keep the five best
+- [x] Several suggestions for each stop (exact place first, street address last), shown as buttons in **Location** and in the naming box
+- [x] Names in English first (your choice in Settings: English or the local language)
+- [x] A spot you named once is suggested again first ("You named this"), even if you stopped watching that place
+- [x] Optional **Where are you?** notification for a new stop: your own minimum stay, quiet hours and snooze; answer with a suggestion, type a name, or not now, all from the notification
+- [x] Tests
 
 #### E6 Journeys and travel mode
 - [ ] Research how open-source trackers handle trains and long drives
