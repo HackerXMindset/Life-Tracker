@@ -2,6 +2,16 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧭 Places and trips round 2: a much better replay (E7c)
+
+### ✨ New
+
+- **Smart speed**: the replay slows down when you are busy (walking about, turning a lot, or close to a place or something you logged) and speeds up when it is quiet, gliding between the two. **Tune** sets how much slower it gets when busy and how much faster when quiet, and has a Reset. The GIF uses it too.
+- **Slower speeds**: real time (1x), 2x, 5x, 10x and 30x, then 1 minute a second and up to a day a second, with a slider that starts at real time. The speed is remembered.
+- **A bar under the map** shows the whole stretch: trips in the colour of how you travelled, stays as a thin line, a tick for each card. Tap or drag it to jump anywhere.
+- **A readout** under the map: how you were travelling (or the place), your speed in km/h, how far you had gone so far, and the speed with what smart speed is doing.
+- **A bright recent trail**: the way you came is faint, the last 15 minutes are bright. Cards fade away after a few seconds instead of staying.
+
 ## 🧭 Places and trips round 2: replay for any stretch, auto zoom and GIF (E7b)
 
 ### ✨ New

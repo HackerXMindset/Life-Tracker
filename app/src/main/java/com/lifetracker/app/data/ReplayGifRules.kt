@@ -15,31 +15,42 @@ object ReplayGifRules {
     /** The lengths on offer, in seconds. */
     val LENGTHS = listOf(10, 20, 30, 60)
 
-    /** The clock time shown in each frame, from [startMs] until the end of the day or [maxFrames], whichever comes first. */
-    fun frameTimes(startMs: Long, endMs: Long, minPerS: Int, skip: Boolean, quiet: List<ReplayRules.Quiet>, maxFrames: Int): List<Long> {
+    /**
+     * The clock time shown in each frame, from [startMs] until the end of the day or [maxFrames], whichever comes first. With
+     * [smart], the clock slows when it is busy and speeds up when quiet, as in the replay itself.
+     */
+    fun frameTimes(
+        startMs: Long, endMs: Long, speed: Double, skip: Boolean, quiet: List<ReplayRules.Quiet>, maxFrames: Int,
+        smart: ReplayRules.Smart? = null, samples: List<ReplayRules.Sample> = emptyList(), events: List<ReplayRules.Event> = emptyList(),
+    ): List<Long> {
         val out = ArrayList<Long>()
         var clock = startMs
         out += clock
         val stepMs = 1000L / FPS
+        var factor = 1.0
         while (clock < endMs && out.size < maxFrames) {
-            clock = ReplayRules.advance(clock, stepMs, minPerS, skip, quiet, endMs)
+            if (smart != null) factor = ReplayRules.easeFactor(factor, ReplayRules.smartFactor(smart, samples, events, clock), stepMs)
+            clock = ReplayRules.advance(clock, stepMs, speed, skip, quiet, endMs, factor)
             out += clock
         }
         return out
     }
 
-    /** The slowest speed (minutes of the day for each real second) that still plays the whole day within [seconds]. */
-    fun fitMinPerS(startMs: Long, endMs: Long, skip: Boolean, quiet: List<ReplayRules.Quiet>, seconds: Int): Int {
+    /** The slowest speed (seconds of the day for each real second) that still plays the whole stretch within [seconds]. */
+    fun fitSpeed(
+        startMs: Long, endMs: Long, skip: Boolean, quiet: List<ReplayRules.Quiet>, seconds: Int,
+        smart: ReplayRules.Smart? = null, samples: List<ReplayRules.Sample> = emptyList(), events: List<ReplayRules.Event> = emptyList(),
+    ): Double {
         val frames = seconds * FPS
-        fun reaches(m: Int) = frameTimes(startMs, endMs, m, skip, quiet, frames).last() >= endMs
+        fun reaches(m: Int) = frameTimes(startMs, endMs, m.toDouble(), skip, quiet, frames, smart, samples, events).last() >= endMs
         var lo = 1
-        var hi = 20_000
-        if (!reaches(hi)) return hi
+        var hi = 2_000_000
+        if (!reaches(hi)) return hi.toDouble()
         while (lo < hi) {
             val mid = (lo + hi) / 2
             if (reaches(mid)) hi = mid else lo = mid + 1
         }
-        return lo
+        return lo.toDouble()
     }
 
     /** The colours: a 6 x 6 x 6 cube (216) padded with black to 256. */

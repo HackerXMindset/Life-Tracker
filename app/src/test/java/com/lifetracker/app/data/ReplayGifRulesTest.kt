@@ -12,8 +12,8 @@ class ReplayGifRulesTest {
 
     @Test
     fun framesAdvanceByTheSpeedAndStopAtTheEnd() {
-        // 10 min/s at 10 frames a second is one minute of the day per frame.
-        val t = ReplayGifRules.frameTimes(0, 5 * min, 10, false, emptyList(), 1000)
+        // 600x (10 min/s) at 10 frames a second is one minute of the day per frame.
+        val t = ReplayGifRules.frameTimes(0, 5 * min, 600.0, false, emptyList(), 1000)
         assertEquals(6, t.size)
         assertEquals(5 * min, t.last())
         assertEquals(0L, t.first())
@@ -21,16 +21,16 @@ class ReplayGifRulesTest {
 
     @Test
     fun theFrameCountIsCapped() {
-        val t = ReplayGifRules.frameTimes(0, day, 1, false, emptyList(), 50)
+        val t = ReplayGifRules.frameTimes(0, day, 60.0, false, emptyList(), 50)
         assertEquals(50, t.size)
         assertTrue(t.last() < day)
     }
 
     @Test
     fun fitFindsTheSlowestSpeedThatPlaysTheWholeDayInTime() {
-        val m = ReplayGifRules.fitMinPerS(0, day, false, emptyList(), 20)
-        // 24 hours in 20 seconds (200 frames, so 199 steps) needs 73 minutes a second.
-        assertEquals(73, m)
+        val m = ReplayGifRules.fitSpeed(0, day, false, emptyList(), 20)
+        // 200 frames (199 steps of 0.1 s) must cover 86 400 s: at least 4 341.7, so 4 342.
+        assertEquals(4342.0, m, 0.0)
         val played = ReplayGifRules.frameTimes(0, day, m, false, emptyList(), 200)
         assertEquals(day, played.last())
         val slower = ReplayGifRules.frameTimes(0, day, m - 1, false, emptyList(), 200)
@@ -40,9 +40,19 @@ class ReplayGifRulesTest {
     @Test
     fun skippingQuietStretchesLetsASlowerSpeedFit() {
         val quiet = listOf(Quiet(0, 12 * 60 * min))
-        val without = ReplayGifRules.fitMinPerS(0, day, false, emptyList(), 20)
-        val with = ReplayGifRules.fitMinPerS(0, day, true, quiet, 20)
+        val without = ReplayGifRules.fitSpeed(0, day, false, emptyList(), 20)
+        val with = ReplayGifRules.fitSpeed(0, day, true, quiet, 20)
         assertTrue(with < without)
+    }
+
+    @Test
+    fun smartSpeedChangesHowLongTheFramesTake() {
+        // A still day: the quiet boost makes it run faster, so fewer frames reach the end at the same speed.
+        val samples = listOf(Sample(0, 12.0, 77.0), Sample(10 * min, 12.0, 77.0), Sample(20 * min, 12.0, 77.0))
+        val plain = ReplayGifRules.frameTimes(0, 20 * min, 60.0, false, emptyList(), 10_000)
+        val smart = ReplayGifRules.frameTimes(0, 20 * min, 60.0, false, emptyList(), 10_000, ReplayRules.Smart(0.1, 5.0), samples, emptyList())
+        assertTrue(smart.size < plain.size)
+        assertEquals(20 * min, smart.last())
     }
 
     @Test

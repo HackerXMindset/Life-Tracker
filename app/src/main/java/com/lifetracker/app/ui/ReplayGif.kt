@@ -19,7 +19,7 @@ import kotlinx.coroutines.ensureActive
 internal class GifColors(val background: Int, val ink: Int, val ink2: Int, val accent: Int, val card: Int)
 
 /** What the user chose for the GIF. */
-internal class GifChoice(val sizePx: Int, val seconds: Int, val fitDay: Boolean, val minPerS: Int, val skip: Boolean)
+internal class GifChoice(val sizePx: Int, val seconds: Int, val fitDay: Boolean, val speed: Double, val skip: Boolean, val smart: ReplayRules.Smart?)
 
 /**
  * Draws the replay frame by frame (the path on plain paper, not map tiles, so it works offline and never waits for a map) and
@@ -39,8 +39,8 @@ internal suspend fun makeReplayGif(
     onProgress: (Float) -> Unit,
 ) {
     val size = choice.sizePx
-    val speed = if (choice.fitDay) ReplayGifRules.fitMinPerS(startMs, endMs, choice.skip, quiet, choice.seconds) else choice.minPerS
-    val times = ReplayGifRules.frameTimes(startMs, endMs, speed, choice.skip, quiet, ReplayGifRules.framesFor(choice.seconds))
+    val speed = if (choice.fitDay) ReplayGifRules.fitSpeed(startMs, endMs, choice.skip, quiet, choice.seconds, choice.smart, samples, events) else choice.speed
+    val times = ReplayGifRules.frameTimes(startMs, endMs, speed, choice.skip, quiet, ReplayGifRules.framesFor(choice.seconds), choice.smart, samples, events)
     val projection = ReplayGifRules.Projection(samples, size, size / 10)
     val zone = ZoneId.systemDefault()
 
