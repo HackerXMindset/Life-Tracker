@@ -43,7 +43,7 @@ Life Tracker is an Android app built for one person: its owner. It replaces a pi
 | Habits (H1 to H13) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done |
 | The paper look (Timeline, Habits, Settings, Food) | ▰▰▰▰▰▰▰▱▱▱ | 🟡 Money and Stats still to restyle |
 | Places and trips remake (C1 to C9) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done, 11 pull requests |
-| **Places and trips round 2 (E1 to E10)** | ▰▰▰▰▰▱▱▱▱▱ | 🔨 E7 built (replay, auto zoom, any stretch, GIF), E8 next |
+| **Places and trips round 2 (E1 to E10)** | ▰▰▰▰▰▱▱▱▱▱ | 🔨 E7 built (replay, smart speed, auto zoom, any stretch, GIF), E8 next |
 | Money editing (R6b, R6c) | ▰▰▱▱▱▱▱▱▱▱ | ⏳ Data done, screens next |
 | Life events, month and year views (Step 14) | ▱▱▱▱▱▱▱▱▱▱ | 💤 Later |
 
@@ -169,6 +169,16 @@ Done in two pull requests: **E7a** is the replay itself, **E7b** is the GIF expo
 - [x] Export as GIF: size (240, 360 or 480 px), length (10, 20, 30 or 60 s), and either the whole stretch fitted into the length or your own speed; the picture is drawn by the app (path on plain paper, places, the travel picture on the dot, the clock and the cards), so it works offline
 - [x] A GIF writer of our own (LZW, checked by a test that unpacks it again); no video file: the GIF stays small enough (about a few hundred KB to a few MB)
 - [x] Tests for the encoder, frame timing and fitting, the zoom rules and the picture fitting
+
+**E7c** (after more use on the phone)
+- [x] Research: Reitti's replay request (trips slower, long stationary stretches faster, a minimum time per leg), a boat-track player (scrubber with a tick where each trip starts, distance counter, captions that fade in), and a vehicle-fleet route replay (a colour-coded timeline bar); I read only those pages, so only the general ideas are used
+- [x] **Smart speed**: the clock slows down when you are busy (walking about, turning a lot, or close to a place or activity) and speeds up when it is quiet, gliding between the two; a **Tune** box sets how much slower and how much faster, with Reset
+- [x] Finer speeds: real time (1x), 2x, 5x, 10x, 30x, then 1 min/s up to 1 day/s, and a slider from 1x; a minute a second is no longer the slowest
+- [x] A bar under the map: trips in the colour of how you travelled, stays as a thin line, ticks for cards; tap or drag it to jump
+- [x] A readout: how you were travelling (or the place), speed in km/h, distance so far, the speed and what smart speed is doing
+- [x] The way you came is faint and the last 15 minutes are bright; cards fade after a few seconds
+- [x] The GIF follows smart speed too
+- [x] Tests for busy and quiet moments, the smart factor, the gliding, distance so far, the bright trail and the new speeds
 
 #### E8 Triggers and actions
 - [ ] Research open-source automation apps and how they name triggers, conditions and actions

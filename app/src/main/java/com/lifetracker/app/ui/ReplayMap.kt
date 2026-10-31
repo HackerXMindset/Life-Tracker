@@ -175,8 +175,9 @@ internal fun ReplayMap(
         var zoom = map.cameraPosition.zoom
         while (true) {
             val now = clock
-            val parts = ReplayRules.trail(samples, now)
-            paintTrail(style, parts)
+            // The way you came is faint; the last stretch is bright, so you can see where the dot is heading from.
+            paintTrail(style, "replay-trail-src", ReplayRules.trail(samples, now))
+            paintTrail(style, "replay-recent-src", ReplayRules.trail(samples, now, now - RECENT_MS))
             val here = ReplayRules.positionAt(samples, now)
             paintDot(style, here)
             marker = here?.let { h ->
@@ -213,7 +214,17 @@ private fun addLayers(style: Style, accent: Int, ink: Int) {
         LineLayer("replay-trail-line", "replay-trail-src").withProperties(
             PropertyFactory.lineColor(hexOf(accent)),
             PropertyFactory.lineWidth(4f),
-            PropertyFactory.lineOpacity(0.85f),
+            PropertyFactory.lineOpacity(0.35f),
+            PropertyFactory.lineCap(Property.LINE_CAP_ROUND),
+            PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND),
+        ),
+    )
+    style.addSource(GeoJsonSource("replay-recent-src"))
+    style.addLayer(
+        LineLayer("replay-recent-line", "replay-recent-src").withProperties(
+            PropertyFactory.lineColor(hexOf(accent)),
+            PropertyFactory.lineWidth(6f),
+            PropertyFactory.lineOpacity(1f),
             PropertyFactory.lineCap(Property.LINE_CAP_ROUND),
             PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND),
         ),
@@ -229,8 +240,11 @@ private fun addLayers(style: Style, accent: Int, ink: Int) {
     )
 }
 
-private fun paintTrail(style: Style, parts: List<List<Pair<Double, Double>>>) {
-    val src = style.getSourceAs<GeoJsonSource>("replay-trail-src") ?: return
+/** The last stretch of the day's time drawn bright behind the dot. */
+private const val RECENT_MS = 15 * 60_000L
+
+private fun paintTrail(style: Style, source: String, parts: List<List<Pair<Double, Double>>>) {
+    val src = style.getSourceAs<GeoJsonSource>(source) ?: return
     if (parts.isEmpty()) {
         src.setGeoJson(FeatureCollection.fromFeatures(emptyList<Feature>()))
     } else {

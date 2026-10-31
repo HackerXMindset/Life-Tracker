@@ -1,8 +1,11 @@
 package com.lifetracker.app.data
 
 import kotlin.math.ln
+import kotlin.math.exp
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.pow
+import kotlin.math.roundToLong
 
 /**
  * The rules of the day replay, with no Android in them so they can be tested. The idea is the one games use to show smooth
@@ -25,18 +28,31 @@ object ReplayRules {
     const val QUIET_RADIUS_M = 100.0
     const val QUIET_MIN_MS = 30 * 60_000L
 
-    /** While skipping, quiet stretches go at least this fast (minutes of the day for each real second). */
-    const val SKIP_MIN_PER_S = 240
+    /** While skipping, quiet stretches go at least this fast (seconds of the day for each real second: 4 hours a second). */
+    const val SKIP_SPEED = 14_400.0
 
-    /** The speeds on offer, in minutes of the day for each real second. */
-    val SPEEDS = listOf(1, 2, 5, 10, 20, 30, 60, 120, 240, 480, 1440)
+    /** The speeds on offer, in seconds of the day for each real second: 1x is real time. */
+    val SPEEDS = listOf(1.0, 2.0, 5.0, 10.0, 30.0, 60.0, 120.0, 300.0, 600.0, 1800.0, 3600.0, 14_400.0, 86_400.0)
 
-    /** "5 min/s", "1 h/s". */
-    fun speedLabel(minPerS: Int): String = when {
-        minPerS >= 1440 && minPerS % 1440 == 0 -> "${minPerS / 1440} day/s"
-        minPerS >= 60 && minPerS % 60 == 0 -> "${minPerS / 60} h/s"
-        else -> "$minPerS min/s"
+    /** "10x" (ten times real time), "5 min/s", "1 h/s", "1 day/s". */
+    fun speedLabel(speed: Double): String {
+        val n = speed.roundToLong().coerceAtLeast(1L)
+        return when {
+            n >= 86_400L && n % 86_400L == 0L -> "${n / 86_400L} day/s"
+            n >= 3_600L && n % 3_600L == 0L -> "${n / 3_600L} h/s"
+            n >= 60L && n % 60L == 0L -> "${n / 60L} min/s"
+            else -> "${n}x"
+        }
     }
+
+    /** How busy a moment is for smart speed: how much the clock slows down when busy and speeds up when quiet. */
+    class Smart(val busySlow: Double, val quietBoost: Double)
+
+    /** Within this long of an event the moment counts as busy. */
+    const val EVENT_NEAR_MS = 2 * 60_000L
+
+    /** How far each side of the clock the wandering of the path is looked at. */
+    const val WANDER_WINDOW_MS = 3 * 60_000L
 
     /** A span of the day with nothing worth watching. */
     class Quiet(val startMs: Long, val endMs: Long)
@@ -78,6 +94,21 @@ object ReplayRules {
         return PlaceRules.distanceM(a.first, a.second, b.first, b.second) / ((to - from) / 1000.0)
     }
 
+    /** How fast you moved along the path (not just from the start to the end of the window), in metres a second. */
+    fun pathSpeedMs(samples: List<Sample>, ms: Long): Double {
+        if (samples.size < 2) return 0.0
+        val from = indexAtOrBefore(samples, ms - SPEED_WINDOW_MS)
+        val to = indexAtOrBefore(samples, ms + SPEED_WINDOW_MS)
+        if (to <= from) return 0.0
+        var path = 0.0
+        for (i in from + 1..to) {
+            if (samples[i].ms - samples[i - 1].ms > MAX_GAP_MS) continue
+            path += PlaceRules.distanceM(samples[i - 1].lat, samples[i - 1].lng, samples[i].lat, samples[i].lng)
+        }
+        val seconds = (samples[to].ms - samples[from].ms) / 1000.0
+        return if (seconds <= 0.0) 0.0 else path / seconds
+    }
+
     /**
      * The map zoom that suits moving at [speedMs] metres a second: close in when walking, further out as you go faster, so the
      * stretch just covered and the stretch just ahead both stay on the screen.
@@ -91,13 +122,14 @@ object ReplayRules {
     fun easeZoom(current: Double, target: Double): Double = current + (target - current) * 0.1
 
     /** The path so far at [ms]: every reading up to it, ending at the in-between position. Sides of a long gap are not joined. */
-    fun trail(samples: List<Sample>, ms: Long): List<List<Pair<Double, Double>>> {
+    fun trail(samples: List<Sample>, ms: Long, sinceMs: Long = Long.MIN_VALUE): List<List<Pair<Double, Double>>> {
         val here = positionAt(samples, ms) ?: return emptyList()
         val upTo = indexAtOrBefore(samples, ms)
         val parts = ArrayList<MutableList<Pair<Double, Double>>>()
         var current = ArrayList<Pair<Double, Double>>()
-        for (i in 0..upTo) {
-            if (i > 0 && samples[i].ms - samples[i - 1].ms > MAX_GAP_MS) {
+        val first = if (sinceMs == Long.MIN_VALUE) 0 else indexAtOrBefore(samples, sinceMs)
+        for (i in first..upTo) {
+            if (i > first && samples[i].ms - samples[i - 1].ms > MAX_GAP_MS) {
                 parts += current
                 current = ArrayList()
             }
@@ -138,17 +170,81 @@ object ReplayRules {
         return out
     }
 
-    /** How many milliseconds of the day pass for each real millisecond at [clockMs]. */
-    fun rate(clockMs: Long, minPerS: Int, skip: Boolean, quiet: List<Quiet>): Double {
-        val base = minPerS * 60_000.0 / 1000.0
+    /** How many milliseconds of the day pass for each real millisecond at [clockMs]; [factor] is what smart speed multiplies it by. */
+    fun rate(clockMs: Long, speed: Double, skip: Boolean, quiet: List<Quiet>, factor: Double = 1.0): Double {
+        val base = speed * factor
         val inQuiet = skip && quiet.any { clockMs >= it.startMs && clockMs < it.endMs }
-        return if (inQuiet) max(base, SKIP_MIN_PER_S * 60_000.0 / 1000.0) else base
+        return if (inQuiet) max(base, SKIP_SPEED) else base
     }
 
     /** The clock after [realMs] of real time, held at [endMs]. */
-    fun advance(clockMs: Long, realMs: Long, minPerS: Int, skip: Boolean, quiet: List<Quiet>, endMs: Long): Long {
-        val next = clockMs + (realMs * rate(clockMs, minPerS, skip, quiet)).toLong()
+    fun advance(clockMs: Long, realMs: Long, speed: Double, skip: Boolean, quiet: List<Quiet>, endMs: Long, factor: Double = 1.0): Long {
+        val next = clockMs + (realMs * rate(clockMs, speed, skip, quiet, factor)).toLong()
         return min(next, endMs)
+    }
+
+    /** 0 for a quiet moment to 1 for a busy one: walking about, turning a lot, or close to something that happened. */
+    fun busyness(samples: List<Sample>, events: List<Event>, ms: Long): Double {
+        var b = 0.0
+        val v = groundSpeedMs(samples, ms)
+        val onTheMove = pathSpeedMs(samples, ms)
+        // Moving on, or walking about in one area (the path is long even though you end up where you began).
+        if (v >= 0.4 || onTheMove >= 1.0) {
+            // Slow movement on foot is the busiest; the faster you go, the less there is to see in each minute.
+            val footLike = (1.0 - (max(v, onTheMove) - 3.0) / 20.0).coerceIn(0.25, 1.0)
+            b = 0.6 * footLike + 0.4 * wander(samples, ms)
+        }
+        if (events.any { kotlin.math.abs(it.ms - ms) <= EVENT_NEAR_MS }) b += 0.5
+        return b.coerceIn(0.0, 1.0)
+    }
+
+    /** 0 for a straight line to 1 for going round in circles, over a few minutes either side of [ms]. */
+    fun wander(samples: List<Sample>, ms: Long): Double {
+        if (samples.size < 3) return 0.0
+        val from = indexAtOrBefore(samples, ms - WANDER_WINDOW_MS)
+        val to = indexAtOrBefore(samples, ms + WANDER_WINDOW_MS)
+        if (to - from < 2) return 0.0
+        var path = 0.0
+        for (i in from + 1..to) {
+            if (samples[i].ms - samples[i - 1].ms > MAX_GAP_MS) continue
+            path += PlaceRules.distanceM(samples[i - 1].lat, samples[i - 1].lng, samples[i].lat, samples[i].lng)
+        }
+        val straight = PlaceRules.distanceM(samples[from].lat, samples[from].lng, samples[to].lat, samples[to].lng)
+        if (path < 20.0) return 0.0
+        if (straight < 5.0) return 1.0
+        return ((path / straight - 1.0) / 2.0).coerceIn(0.0, 1.0)
+    }
+
+    /** What smart speed multiplies the speed by at [ms]: [Smart.quietBoost] when quiet, [Smart.busySlow] when busy. */
+    fun smartFactor(smart: Smart, samples: List<Sample>, events: List<Event>, ms: Long): Double {
+        val busy = busyness(samples, events, ms)
+        return smart.quietBoost * (smart.busySlow / smart.quietBoost).pow(busy)
+    }
+
+    /** One step of easing the factor towards [target] over [dtMs], so the clock speeds up and slows down smoothly. */
+    fun easeFactor(current: Double, target: Double, dtMs: Long): Double =
+        current + (target - current) * (1.0 - exp(-dtMs / 600.0))
+
+    /** The distance covered up to each reading, in metres (jumps across a long silence are not counted). */
+    fun cumulative(samples: List<Sample>): DoubleArray {
+        val out = DoubleArray(samples.size)
+        for (i in 1 until samples.size) {
+            val gap = samples[i].ms - samples[i - 1].ms
+            val step = if (gap > MAX_GAP_MS) 0.0 else PlaceRules.distanceM(samples[i - 1].lat, samples[i - 1].lng, samples[i].lat, samples[i].lng)
+            out[i] = out[i - 1] + step
+        }
+        return out
+    }
+
+    /** How far you had gone by [ms], using [cumulative]. */
+    fun distanceAt(samples: List<Sample>, cumulative: DoubleArray, ms: Long): Double {
+        if (samples.isEmpty() || cumulative.size != samples.size || ms < samples.first().ms) return 0.0
+        val i = indexAtOrBefore(samples, ms)
+        if (i >= samples.lastIndex) return cumulative[i]
+        val gap = samples[i + 1].ms - samples[i].ms
+        if (gap > MAX_GAP_MS || gap <= 0L) return cumulative[i]
+        val f = ((ms - samples[i].ms).toDouble() / gap).coerceIn(0.0, 1.0)
+        return cumulative[i] + (cumulative[i + 1] - cumulative[i]) * f
     }
 
     /** Events between [fromMs] (not included) and [toMs] (included), oldest first. */
