@@ -6,6 +6,7 @@ Every release page shows the sections below that were added since the last relea
 
 ### 🔧 Fixed
 
+- **The GIF had no map.** It now draws the path on the real map (the style you chose in Maps). If the map cannot be loaded it falls back to plain paper and tells you.
 - **The map was too zoomed in and the dot raced across it.** The auto zoom now widens with the replay speed: the picture always shows what the dot passes in about 5 real seconds each side, so the dot takes about 10 seconds to cross the screen at any speed, and the recent trail stays in view. The map is never closer than a few streets and can zoom out to a whole region.
 - On a very fast stretch (a flight) the clock slows down a little instead of racing across the widest map.
 
