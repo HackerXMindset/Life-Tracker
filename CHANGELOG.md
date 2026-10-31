@@ -2,6 +2,13 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧭 Places and trips round 2: the replay no longer seems too fast (E7d)
+
+### 🔧 Fixed
+
+- **The map was too zoomed in and the dot raced across it.** The auto zoom now widens with the replay speed: the picture always shows what the dot passes in about 5 real seconds each side, so the dot takes about 10 seconds to cross the screen at any speed, and the recent trail stays in view. The map is never closer than a few streets and can zoom out to a whole region.
+- On a very fast stretch (a flight) the clock slows down a little instead of racing across the widest map.
+
 ## 🧭 Places and trips round 2: a much better replay (E7c)
 
 ### ✨ New

@@ -43,7 +43,7 @@ Life Tracker is an Android app built for one person: its owner. It replaces a pi
 | Habits (H1 to H13) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done |
 | The paper look (Timeline, Habits, Settings, Food) | ▰▰▰▰▰▰▰▱▱▱ | 🟡 Money and Stats still to restyle |
 | Places and trips remake (C1 to C9) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done, 11 pull requests |
-| **Places and trips round 2 (E1 to E10)** | ▰▰▰▰▰▱▱▱▱▱ | 🔨 E7 built (replay, smart speed, auto zoom, any stretch, GIF), E8 next |
+| **Places and trips round 2 (E1 to E10)** | ▰▰▰▰▰▱▱▱▱▱ | 🔨 E7 built (replay, smart speed, zoom by pace, any stretch, GIF), E8 next |
 | Money editing (R6b, R6c) | ▰▰▱▱▱▱▱▱▱▱ | ⏳ Data done, screens next |
 | Life events, month and year views (Step 14) | ▱▱▱▱▱▱▱▱▱▱ | 💤 Later |
 
@@ -179,6 +179,11 @@ Done in two pull requests: **E7a** is the replay itself, **E7b** is the GIF expo
 - [x] The way you came is faint and the last 15 minutes are bright; cards fade after a few seconds
 - [x] The GIF follows smart speed too
 - [x] Tests for busy and quiet moments, the smart factor, the gliding, distance so far, the bright trail and the new speeds
+
+**E7d** (zoom and pace, after more use on the phone)
+- [x] The auto zoom now sizes the picture by how fast the dot would seem to move on the screen (real speed times the replay speed times what smart speed is doing), so the dot takes about 10 seconds to cross the screen whatever the replay speed; it is never closer than a few streets, and zooms out as far as a region
+- [x] On a very fast stretch (a flight) the clock slows down instead of racing past the widest picture
+- [x] Tests for the picture width, the zoom for a width, the limits and the clock cap
 
 #### E8 Triggers and actions
 - [ ] Research open-source automation apps and how they name triggers, conditions and actions

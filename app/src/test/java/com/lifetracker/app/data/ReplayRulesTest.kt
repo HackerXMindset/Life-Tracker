@@ -111,18 +111,46 @@ class ReplayRulesTest {
     }
 
     @Test
-    fun theMapZoomsOutAsYouGoFaster() {
-        val walk = ReplayRules.autoZoom(1.4)
-        val bike = ReplayRules.autoZoom(5.0)
-        val car = ReplayRules.autoZoom(15.0)
-        val train = ReplayRules.autoZoom(30.0)
-        val plane = ReplayRules.autoZoom(250.0)
-        assertTrue(walk > bike && bike > car && car > train && train > plane)
-        assertEquals(17.0, ReplayRules.autoZoom(0.0), 1e-9)
-        assertTrue(walk in 15.5..17.0)
-        assertTrue(car in 12.5..14.5)
-        assertTrue(plane >= 5.0)
-        assertEquals(17.0, ReplayRules.autoZoom(-3.0), 1e-9)
+    fun theMapIsAsWideAsWhatTheDotPassesInAFewRealSeconds() {
+        val train = (0..120).map { Sample(it * 30_000L, 12.0 + it * 0.0054, 77.0) } // 20 m/s
+        // At real time a train covers 100 m in five seconds: the picture stays at its narrowest.
+        assertEquals(ReplayRules.MIN_VIEW_M, ReplayRules.viewWidthM(train, 30 * min, 1.0), 1e-9)
+        // At 300x, five real seconds are 25 minutes of the day (30 km): the picture widens to match.
+        val wide = ReplayRules.viewWidthM(train, 30 * min, 300.0)
+        assertTrue("was $wide", wide > 50_000.0 && wide < 100_000.0)
+        // Faster still, and wider still, up to the limit.
+        assertTrue(ReplayRules.viewWidthM(train, 30 * min, 3000.0) > wide)
+        assertTrue(ReplayRules.viewWidthM(train, 30 * min, 1.0e9) <= ReplayRules.MAX_VIEW_M)
+        assertEquals(ReplayRules.MIN_VIEW_M, ReplayRules.viewWidthM(emptyList(), 0, 60.0), 1e-9)
+    }
+
+    @Test
+    fun aWalkAtTheSameSpeedAsATrainReplayGetsAWiderMapOnlyWhenItGoesFaster() {
+        val walk = (0..120).map { Sample(it * 30_000L, 12.0 + it * 0.0001, 77.0) } // about 0.4 m/s
+        assertEquals(ReplayRules.MIN_VIEW_M, ReplayRules.viewWidthM(walk, 30 * min, 30.0), 1e-9)
+        assertTrue(ReplayRules.viewWidthM(walk, 30 * min, 3600.0) > ReplayRules.MIN_VIEW_M)
+    }
+
+    @Test
+    fun theZoomMatchesTheWidthAndStaysWithinTheLimits() {
+        val near = ReplayRules.zoomForWidth(250.0, 393.0, 12.0)
+        val far = ReplayRules.zoomForWidth(60_000.0, 393.0, 12.0)
+        assertTrue(near > far)
+        assertTrue(near in 16.0..17.5)
+        assertTrue(far in 8.0..11.0)
+        assertEquals(ReplayRules.MAX_ZOOM, ReplayRules.zoomForWidth(1.0, 393.0, 12.0), 1e-9)
+        assertEquals(ReplayRules.MIN_ZOOM, ReplayRules.zoomForWidth(1.0e9, 393.0, 12.0), 1e-9)
+    }
+
+    @Test
+    fun theClockSlowsDownOnAVeryFastStretchInsteadOfRacingAcrossTheMap() {
+        // 30 m/s (a train): at most ~3 800x; at a walk much more is allowed.
+        val train = ReplayRules.rateCap(30.0)
+        assertTrue(train in 3000.0..4500.0)
+        assertTrue(ReplayRules.rateCap(1.4) > train)
+        assertTrue(ReplayRules.rateCap(0.0) > ReplayRules.rateCap(1.0) - 1e-9)
+        // advance honours the cap.
+        assertEquals(10_000L, ReplayRules.advance(0, 1000, 86_400.0, false, emptyList(), 24 * 60 * min, 1.0, 10.0))
     }
 
     @Test

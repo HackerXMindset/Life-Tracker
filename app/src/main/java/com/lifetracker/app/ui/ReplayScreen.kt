@@ -223,7 +223,9 @@ fun ReplayScreen(from: LocalDate, to: LocalDate, title: String, onBack: () -> Un
             } else {
                 1.0
             }
-            val after = ReplayRules.advance(before, dt, speed, skip, quiet, loaded.endMs, factor)
+            // Never faster than the widest map can follow: the clock slows down on a very fast stretch instead.
+            val cap = ReplayRules.rateCap(ReplayRules.groundSpeedMs(loaded.samples, before))
+            val after = ReplayRules.advance(before, dt, speed, skip, quiet, loaded.endMs, factor, cap)
             last = now
             clock = after
             val hit = ReplayRules.crossed(loaded.events, before, after)
@@ -295,6 +297,11 @@ fun ReplayScreen(from: LocalDate, to: LocalDate, title: String, onBack: () -> Un
             }
         }
     }
+    // How fast the clock is really running now (after smart speed, skipping and the limit): the map widens with it.
+    val clockRate = if (d == null) 1.0 else minOf(
+        ReplayRules.rate(clock, speed, skip, quiet, factor),
+        ReplayRules.rateCap(ReplayRules.groundSpeedMs(d.samples, clock)),
+    )
     // How you were travelling at the clock's time: the picture on the dot.
     val icon = remember(d, clock) {
         val trip = d?.trips?.firstOrNull { clock in it.startMs..it.endMs }
@@ -323,6 +330,7 @@ fun ReplayScreen(from: LocalDate, to: LocalDate, title: String, onBack: () -> Un
                 autoZoom = autoZoom,
                 fitRequest = fit,
                 icon = icon,
+                clockRate = clockRate,
                 camera = camera,
                 onUserPanned = { follow = false },
                 onUserZoomed = { autoZoom = false },
