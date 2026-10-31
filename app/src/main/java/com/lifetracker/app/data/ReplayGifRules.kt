@@ -78,6 +78,8 @@ object ReplayGifRules {
         private val cLat: Double
         private val cLng: Double
         private val kx: Double
+        val centerLat: Double get() = cLat
+        val centerLng: Double get() = cLng
         val scale: Double
 
         init {
@@ -102,6 +104,13 @@ object ReplayGifRules {
 
         fun x(lng: Double): Float = (size / 2.0 + (lng - cLng) * kx * scale).toFloat()
         fun y(lat: Double): Float = (size / 2.0 - (lat - cLat) * scale).toFloat()
+
+        /** The map zoom at which a map picture [size] pixels wide (as the map counts pixels) shows the same stretch of ground. */
+        fun mapZoom(): Double {
+            val metresPerPixelAtZoom0 = 78_271.5 * cos(Math.toRadians(cLat))
+            val metresPerPixel = 111_320.0 / scale
+            return (kotlin.math.ln(metresPerPixelAtZoom0 / metresPerPixel) / kotlin.math.ln(2.0)).coerceIn(1.0, 18.0)
+        }
 
         /** How many pixels [metres] on the ground take up. */
         fun pixels(metres: Double): Float = (metres / 111_320.0 * scale).toFloat()
