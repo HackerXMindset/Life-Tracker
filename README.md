@@ -180,7 +180,8 @@ Done in two pull requests: **E7a** is the replay itself, **E7b** is the GIF expo
 - [x] The GIF follows smart speed too
 - [x] Tests for busy and quiet moments, the smart factor, the gliding, distance so far, the bright trail and the new speeds
 
-**E7d** (zoom and pace, after more use on the phone)
+**E7d** (zoom, pace and GIF, after more use on the phone)
+- [x] The GIF now has the real map behind the path, in the map style you chose (one picture of the map fitted to the whole stretch, with a light edge under the path so it stands out); if the map cannot be loaded (no internet, maps off) the GIF is drawn on plain paper and says so
 - [x] The auto zoom now sizes the picture by how fast the dot would seem to move on the screen (real speed times the replay speed times what smart speed is doing), so the dot takes about 10 seconds to cross the screen whatever the replay speed; it is never closer than a few streets, and zooms out as far as a region
 - [x] On a very fast stretch (a flight) the clock slows down instead of racing past the widest picture
 - [x] Tests for the picture width, the zoom for a width, the limits and the clock cap

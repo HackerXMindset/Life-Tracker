@@ -91,4 +91,16 @@ class ReplayGifRulesTest {
         assertEquals(200, ReplayGifRules.framesFor(20))
         assertEquals(600, ReplayGifRules.framesFor(60))
     }
+
+    @Test
+    fun theMapPictureShowsTheSameStretchAsThePath() {
+        // About 2 km of road across a 360 px picture: roughly zoom 12, and a longer path needs a lower zoom.
+        val short = (0..10).map { Sample(it * 60_000L, 12.0 + it * 0.0018, 77.0) }
+        val long = (0..10).map { Sample(it * 60_000L, 12.0 + it * 0.18, 77.0) }
+        val z = ReplayGifRules.Projection(short, 360, 36).mapZoom()
+        assertTrue("was $z", z in 12.0..14.5)
+        assertTrue(ReplayGifRules.Projection(long, 360, 36).mapZoom() < z - 5)
+        // A day in one spot (about 200 m) is close in but never beyond the map's own limit.
+        assertTrue(ReplayGifRules.Projection(listOf(Sample(0, 12.0, 77.0)), 240, 24).mapZoom() <= 18.0)
+    }
 }

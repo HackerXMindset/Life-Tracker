@@ -48,6 +48,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.withFrameMillis
 import com.lifetracker.app.data.AppDatabase
+import com.lifetracker.app.data.Feature as AppFeature
+import com.lifetracker.app.data.Features
+import com.lifetracker.app.data.MapStyleStore
 import com.lifetracker.app.data.PlaceEntity
 import com.lifetracker.app.data.PlaceRules
 import com.lifetracker.app.data.TripEntity
@@ -260,6 +263,7 @@ fun ReplayScreen(from: LocalDate, to: LocalDate, title: String, onBack: () -> Un
     var gifFit by remember { mutableStateOf(true) }
     var gifProgress by remember { mutableStateOf<Float?>(null) }
     var gifResult by remember { mutableStateOf("") }
+    var gifNote by remember { mutableStateOf("") }
     var gifJob by remember { mutableStateOf<Job?>(null) }
     val scope = rememberCoroutineScope()
     val gifColors = GifColors(paper.bg.toArgb(), paper.ink.toArgb(), paper.ink2.toArgb(), paper.accent.toArgb(), paper.surface.toArgb())
@@ -277,15 +281,24 @@ fun ReplayScreen(from: LocalDate, to: LocalDate, title: String, onBack: () -> Un
                     override fun write(b: Int) { out.write(b); written++ }
                     override fun write(b: ByteArray, off: Int, len: Int) { out.write(b, off, len); written += len }
                 }
+                // The real map behind the path, in the style you chose; plain paper if it cannot be loaded.
+                gifNote = "Loading the map..."
+                val base = if (Features.isOn(context, AppFeature.MAPS)) {
+                    val style = withContext(Dispatchers.IO) { MapStyleStore.current(context, AppDatabase.get(context)).url }
+                    loadGifBase(context, style, loaded.samples, choice.sizePx)
+                } else {
+                    null
+                }
+                gifNote = if (base == null) "No map could be loaded, so the GIF is drawn on plain paper." else ""
                 withContext(Dispatchers.Default) {
                     counting.use {
                         makeReplayGif(
                             it, loaded.samples, loaded.events, loaded.places, loaded.trips, loaded.startMs, loaded.endMs,
-                            ReplayRules.quietSpans(loaded.samples, loaded.startMs, loaded.endMs), choice, gifColors,
+                            ReplayRules.quietSpans(loaded.samples, loaded.startMs, loaded.endMs), choice, gifColors, base,
                         ) { f -> gifProgress = f }
                     }
                 }
-                gifResult = "Saved: " + ReplayGifRules.sizeText(written)
+                gifResult = "Saved: " + ReplayGifRules.sizeText(written) + (if (gifNote.isNotEmpty()) ". $gifNote" else "")
             } catch (e: kotlinx.coroutines.CancellationException) {
                 gifResult = "Stopped"
                 throw e
@@ -452,6 +465,7 @@ fun ReplayScreen(from: LocalDate, to: LocalDate, title: String, onBack: () -> Un
                 PaperPill("My speed", !gifFit, { if (!running) gifFit = false })
             }
             Text(speedNote + (if (skip) " Quiet stretches are skipped." else ""), fontSize = 12.sp, color = paper.ink2)
+            if (running && gifNote.isNotEmpty()) Text(gifNote, fontSize = 13.sp, color = paper.ink2)
             gifProgress?.let { Text("Making the GIF... " + (it * 100).toInt() + "%", fontSize = 13.sp, color = paper.ink) }
             if (gifResult.isNotEmpty()) Text(gifResult, fontSize = 13.sp, color = paper.ink)
         }

@@ -4,7 +4,19 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.PointF
 import android.graphics.RectF
+import android.content.Context
+import com.lifetracker.app.data.MapEngine
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import org.maplibre.android.camera.CameraPosition
+import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.maps.Style
+import org.maplibre.android.snapshotter.MapSnapshotter
+import kotlin.coroutines.resume
 import com.lifetracker.app.data.GifEncoder
 import com.lifetracker.app.data.PlaceEntity
 import com.lifetracker.app.data.ReplayGifRules
@@ -21,8 +33,54 @@ internal class GifColors(val background: Int, val ink: Int, val ink2: Int, val a
 /** What the user chose for the GIF. */
 internal class GifChoice(val sizePx: Int, val seconds: Int, val fitDay: Boolean, val speed: Double, val skip: Boolean, val smart: ReplayRules.Smart?)
 
+/** A picture of the real map behind the GIF and how to find a place on it. */
+internal class GifBase(val bitmap: Bitmap, private val snap: org.maplibre.android.snapshotter.MapSnapshot, private val oneMetre: Float) {
+    fun point(lat: Double, lng: Double): PointF = snap.pixelForLatLng(LatLng(lat, lng))
+    fun pixels(metres: Double): Float = (metres * oneMetre).toFloat()
+}
+
 /**
- * Draws the replay frame by frame (the path on plain paper, not map tiles, so it works offline and never waits for a map) and
+ * Asks the map library for one picture of the map (your chosen style) that fits the whole stretch, the same size as the GIF.
+ * Null when it cannot be made (no internet and nothing saved, a style that will not load, or too slow); the GIF then uses plain paper.
+ */
+internal suspend fun loadGifBase(context: Context, styleUrl: String, samples: List<ReplayRules.Sample>, size: Int): GifBase? {
+    if (samples.isEmpty()) return null
+    val projection = ReplayGifRules.Projection(samples, size, size / 10)
+    return withTimeoutOrNull(45_000L) {
+        withContext(Dispatchers.Main) {
+            MapEngine.start(context)
+            var snapshotter: MapSnapshotter? = null
+            try {
+                suspendCancellableCoroutine { cont ->
+                    val options = MapSnapshotter.Options(size, size)
+                        .withPixelRatio(1f)
+                        .withStyleBuilder(Style.Builder().fromUri(styleUrl))
+                        .withCameraPosition(
+                            CameraPosition.Builder().target(LatLng(projection.centerLat, projection.centerLng)).zoom(projection.mapZoom()).build(),
+                        )
+                    val shooter = MapSnapshotter(context.applicationContext, options)
+                    snapshotter = shooter
+                    cont.invokeOnCancellation { shooter.cancel() }
+                    shooter.start(
+                        { snap ->
+                            val a = snap.pixelForLatLng(LatLng(projection.centerLat, projection.centerLng))
+                            val b = snap.pixelForLatLng(LatLng(projection.centerLat, projection.centerLng + 0.001))
+                            val metresPerDegree = 111_320.0 * kotlin.math.cos(Math.toRadians(projection.centerLat))
+                            val oneMetre = (kotlin.math.abs(b.x - a.x) / (0.001 * metresPerDegree)).toFloat()
+                            if (cont.isActive) cont.resume(GifBase(snap.bitmap, snap, oneMetre))
+                        },
+                        { _ -> if (cont.isActive) cont.resume(null) },
+                    )
+                }
+            } finally {
+                snapshotter?.cancel()
+            }
+        }
+    }
+}
+
+/**
+ * Draws the replay frame by frame (on the map picture [base], or plain paper when there is none) and
  * writes each frame to [out] as it goes. [onProgress] gets 0 to 1. Stops quickly when the coroutine is cancelled.
  */
 internal suspend fun makeReplayGif(
@@ -36,6 +94,7 @@ internal suspend fun makeReplayGif(
     quiet: List<ReplayRules.Quiet>,
     choice: GifChoice,
     colors: GifColors,
+    base: GifBase?,
     onProgress: (Float) -> Unit,
 ) {
     val size = choice.sizePx
@@ -54,11 +113,15 @@ internal suspend fun makeReplayGif(
     val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     val text = Paint(Paint.ANTI_ALIAS_FLAG).apply { isFakeBoldText = true }
 
+    fun px(lat: Double, lng: Double): PointF = base?.point(lat, lng) ?: PointF(projection.x(lng), projection.y(lat))
+    fun metres(m: Double): Float = base?.pixels(m) ?: projection.pixels(m)
+
     fun pathOf(part: List<Pair<Double, Double>>): Path {
         val p = Path()
         part.forEachIndexed { i, pt ->
-            val x = projection.x(pt.second)
-            val y = projection.y(pt.first)
+            val q = px(pt.first, pt.second)
+            val x = q.x
+            val y = q.y
             if (i == 0) p.moveTo(x, y) else p.lineTo(x, y)
         }
         return p
@@ -79,25 +142,35 @@ internal suspend fun makeReplayGif(
             }
             previous = clock
 
-            canvas.drawColor(colors.background)
+            if (base != null) canvas.drawBitmap(base.bitmap, 0f, 0f, null) else canvas.drawColor(colors.background)
             for (p in places.filter { !it.archived }) {
-                val r = projection.pixels(p.radiusM.toDouble())
+                val r = metres(p.radiusM.toDouble())
+                val c = px(p.lat, p.lng)
                 fill.color = colors.accent
                 fill.alpha = 50
-                canvas.drawCircle(projection.x(p.lng), projection.y(p.lat), maxOf(r, 3f), fill)
+                canvas.drawCircle(c.x, c.y, maxOf(r, 3f), fill)
             }
             line.strokeWidth = size / 120f + 1f
-            line.color = colors.ink2
-            line.alpha = 70
+            line.color = if (base != null) colors.ink else colors.ink2
+            line.alpha = if (base != null) 110 else 70
             faint.forEach { canvas.drawPath(it, line) }
+            val travelled = ReplayRules.trail(samples, clock).map { pathOf(it) }
+            if (base != null) {
+                // A light edge under the path so it stands out from the streets.
+                line.strokeWidth = size / 80f + 4.5f
+                line.color = colors.background
+                line.alpha = 230
+                travelled.forEach { canvas.drawPath(it, line) }
+            }
             line.strokeWidth = size / 80f + 1.5f
             line.color = colors.accent
             line.alpha = 255
-            ReplayRules.trail(samples, clock).forEach { canvas.drawPath(pathOf(it), line) }
+            travelled.forEach { canvas.drawPath(it, line) }
 
             ReplayRules.positionAt(samples, clock)?.let { here ->
-                val x = projection.x(here.second)
-                val y = projection.y(here.first)
+                val where = px(here.first, here.second)
+                val x = where.x
+                val y = where.y
                 val trip = trips.firstOrNull { clock in it.startMs..it.endMs }
                 val icon = if (trip != null) modeIcon(trip.mode) else "📍"
                 fill.color = colors.card
