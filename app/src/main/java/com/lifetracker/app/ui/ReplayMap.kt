@@ -76,6 +76,7 @@ internal fun ReplayMap(
     autoZoom: Boolean,
     fitRequest: Int,
     icon: String,
+    clockRate: Double,
     camera: ReplayCamera,
     onUserPanned: () -> Unit,
     onUserZoomed: () -> Unit,
@@ -93,6 +94,7 @@ internal fun ReplayMap(
     val pannedNow by rememberUpdatedState(onUserPanned)
     val zoomedNow by rememberUpdatedState(onUserZoomed)
     val auto by rememberUpdatedState(autoZoom)
+    val rate by rememberUpdatedState(clockRate)
     val samplesNow by rememberUpdatedState(samples)
     var touching by remember { mutableStateOf(false) }
     var zoomAtStart by remember { mutableStateOf(0.0) }
@@ -187,8 +189,9 @@ internal fun ReplayMap(
             if (here != null && following && !touching) {
                 val target = LatLng(here.first, here.second)
                 if (auto) {
-                    // The zoom follows how fast you were really moving, glided towards so it does not jump.
-                    val wanted = ReplayRules.autoZoom(ReplayRules.groundSpeedMs(samples, now))
+                    // The picture is as wide as what the dot passes in a few real seconds, so it never seems to race, at any replay speed.
+                    val widthDp = context.resources.displayMetrics.let { it.widthPixels / it.density }.toDouble()
+                    val wanted = ReplayRules.zoomForWidth(ReplayRules.viewWidthM(samples, now, rate), widthDp, here.first)
                     zoom = if (!started) wanted else ReplayRules.easeZoom(zoom, wanted)
                     map.moveCamera(CameraUpdateFactory.newCameraPosition(CameraPosition.Builder().target(target).zoom(zoom).build()))
                 } else {

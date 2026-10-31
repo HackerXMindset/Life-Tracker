@@ -109,14 +109,52 @@ object ReplayRules {
         return if (seconds <= 0.0) 0.0 else path / seconds
     }
 
+    /** The dot takes about this long to cross the screen at the most, whatever the replay speed. */
+    const val LOOK_SECONDS = 5.0
+
+    /** Room left round everything that should be on the screen. */
+    const val VIEW_MARGIN = 1.15
+
+    /** The map is never narrower than this (a few streets), so a slow walk is not zoomed in on a single house. */
+    const val MIN_VIEW_M = 400.0
+
+    /** The widest picture of the ground the map is asked to show (about a region): faster than this, the clock is slowed instead. */
+    const val MAX_VIEW_M = 1_300_000.0
+
+    const val MIN_ZOOM = 4.5
+    const val MAX_ZOOM = 17.5
+
     /**
-     * The map zoom that suits moving at [speedMs] metres a second: close in when walking, further out as you go faster, so the
-     * stretch just covered and the stretch just ahead both stay on the screen.
+     * How wide a stretch of ground the map should show at [ms] when the clock runs at [rate] (milliseconds of the day for each
+     * real millisecond): the dot in the middle and everything it passes in the next and last few real seconds on screen. So the
+     * faster the replay, the wider the picture, and the dot always seems to move at the same calm pace.
      */
-    fun autoZoom(speedMs: Double): Double {
-        val v = max(0.0, speedMs)
-        return (17.0 - 1.3 * (ln(1.0 + v / 3.0) / ln(2.0))).coerceIn(5.0, 17.0)
+    fun viewWidthM(samples: List<Sample>, ms: Long, rate: Double): Double {
+        val here = positionAt(samples, ms) ?: return MIN_VIEW_M
+        val span = (LOOK_SECONDS * 1000.0 * rate).toLong().coerceAtLeast(0L)
+        val from = max(ms - span, samples.first().ms)
+        val to = min(ms + span, samples.last().ms)
+        var r = 0.0
+        fun consider(p: Pair<Double, Double>?) {
+            if (p != null) r = max(r, PlaceRules.distanceM(here.first, here.second, p.first, p.second))
+        }
+        consider(positionAt(samples, from))
+        consider(positionAt(samples, to))
+        for (i in indexAtOrBefore(samples, from)..indexAtOrBefore(samples, to)) {
+            val s = samples[i]
+            if (s.ms in from..to) consider(s.lat to s.lng)
+        }
+        return max(MIN_VIEW_M, 2.0 * r * VIEW_MARGIN).coerceAtMost(MAX_VIEW_M)
     }
+
+    /** The map zoom that shows [widthM] metres of ground across a screen [widthDp] wide at latitude [lat]. */
+    fun zoomForWidth(widthM: Double, widthDp: Double, lat: Double): Double {
+        val metresPerDpAtZoom0 = 78_271.5 * kotlin.math.cos(Math.toRadians(lat))
+        return (ln(metresPerDpAtZoom0 * widthDp / max(widthM, 1.0)) / ln(2.0)).coerceIn(MIN_ZOOM, MAX_ZOOM)
+    }
+
+    /** The fastest the clock may run while moving at [groundSpeedMs], so that the dot never seems to race across the widest map. */
+    fun rateCap(groundSpeedMs: Double): Double = (MAX_VIEW_M / (2.0 * LOOK_SECONDS * VIEW_MARGIN)) / max(groundSpeedMs, 0.5)
 
     /** One step of easing the shown zoom towards [target], so the picture glides instead of jumping. */
     fun easeZoom(current: Double, target: Double): Double = current + (target - current) * 0.1
@@ -178,8 +216,11 @@ object ReplayRules {
     }
 
     /** The clock after [realMs] of real time, held at [endMs]. */
-    fun advance(clockMs: Long, realMs: Long, speed: Double, skip: Boolean, quiet: List<Quiet>, endMs: Long, factor: Double = 1.0): Long {
-        val next = clockMs + (realMs * rate(clockMs, speed, skip, quiet, factor)).toLong()
+    fun advance(
+        clockMs: Long, realMs: Long, speed: Double, skip: Boolean, quiet: List<Quiet>, endMs: Long,
+        factor: Double = 1.0, maxRate: Double = Double.MAX_VALUE,
+    ): Long {
+        val next = clockMs + (realMs * min(rate(clockMs, speed, skip, quiet, factor), maxRate)).toLong()
         return min(next, endMs)
     }
 
