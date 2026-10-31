@@ -95,4 +95,46 @@ class ReplayRulesTest {
         assertEquals(10 * min, ReplayRules.stepTo(events, 30 * min, false))
         assertNull(ReplayRules.stepTo(events, 50 * min, true))
     }
+
+    @Test
+    fun groundSpeedIsHowFastYouReallyMoved() {
+        // 0.0054 degrees of latitude is about 600 m; readings every 30 s, so 20 m/s.
+        val train = (0..10).map { s(it * 0L, 12.0) }.let { _ -> (0..10).map { Sample(it * 30_000L, 12.0 + it * 0.0054, 77.0) } }
+        assertEquals(20.0, ReplayRules.groundSpeedMs(train, 150_000L), 0.5)
+        val still = listOf(s(0, 12.0), s(10, 12.0), s(20, 12.0))
+        assertEquals(0.0, ReplayRules.groundSpeedMs(still, 10 * min), 1e-9)
+        assertEquals(0.0, ReplayRules.groundSpeedMs(emptyList(), 0), 1e-9)
+    }
+
+    @Test
+    fun theMapZoomsOutAsYouGoFaster() {
+        val walk = ReplayRules.autoZoom(1.4)
+        val bike = ReplayRules.autoZoom(5.0)
+        val car = ReplayRules.autoZoom(15.0)
+        val train = ReplayRules.autoZoom(30.0)
+        val plane = ReplayRules.autoZoom(250.0)
+        assertTrue(walk > bike && bike > car && car > train && train > plane)
+        assertEquals(17.0, ReplayRules.autoZoom(0.0), 1e-9)
+        assertTrue(walk in 15.5..17.0)
+        assertTrue(car in 12.5..14.5)
+        assertTrue(plane >= 5.0)
+        assertEquals(17.0, ReplayRules.autoZoom(-3.0), 1e-9)
+    }
+
+    @Test
+    fun theShownZoomGlidesTowardsTheWantedOne() {
+        val a = ReplayRules.easeZoom(17.0, 13.0)
+        assertTrue(a < 17.0 && a > 13.0)
+        var z = 17.0
+        repeat(100) { z = ReplayRules.easeZoom(z, 13.0) }
+        assertEquals(13.0, z, 0.01)
+    }
+
+    @Test
+    fun speedsGoUpToADayASecondAndAreNamedInPlainWords() {
+        assertEquals("1 day/s", ReplayRules.speedLabel(1440))
+        assertEquals("8 h/s", ReplayRules.speedLabel(480))
+        assertEquals("5 min/s", ReplayRules.speedLabel(5))
+        assertEquals(1440, ReplayRules.SPEEDS.last())
+    }
 }

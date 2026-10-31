@@ -2,6 +2,14 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧭 Places and trips round 2: replay for any stretch, auto zoom and GIF (E7b)
+
+### ✨ New
+
+- **The map zooms by itself while following**: close in when walking, further out in a car, further still on a train or plane, gliding between zooms. Pinch or use + and − and your zoom is kept until you tap **Auto zoom** again. Dragging the map away from the dot stops following (tap **Follow** to come back).
+- **Replay this stretch** on Stats > Trips: replays whatever the page shows, a day, a week, a month, a year or any dates. Speeds go up to a day for each real second.
+- **Make a GIF** from the replay: pick the size (240, 360 or 480 px) and the length (10, 20, 30 or 60 seconds), and either fit the whole stretch into that length or use your own speed. The picture is drawn by the app (path, your places, the travel picture on the dot, the clock and the cards), so it needs no map or connection. You choose where to save it.
+
 ## 🧭 Places and trips round 2: day replay fixes (E7a)
 
 ### 🔧 Changed

@@ -68,7 +68,8 @@ fun LifeTrackerApp() {
     var part by rememberSaveable { mutableStateOf(Part.Data) }
     // A trip or a place opened over whatever is showing (from the Timeline or the Location page); Back returns to it.
     var openTrip by rememberSaveable { mutableStateOf<String?>(null) }
-    var replayDate by rememberSaveable { mutableStateOf<String?>(null) }
+    // The replay to show: first day, last day and a title, kept together as one text.
+    var replayRange by rememberSaveable { mutableStateOf<String?>(null) }
     var openPlace by rememberSaveable { mutableStateOf<String?>(null) }
     fun openPage(target: Page, half: Part) {
         part = half
@@ -128,9 +129,14 @@ fun LifeTrackerApp() {
             val current = page
             val trip = openTrip
             val place = openPlace
-            val replay = replayDate
+            val replay = replayRange?.split("|", limit = 3)?.takeIf { it.size == 3 }
             if (replay != null) {
-                ReplayScreen(date = java.time.LocalDate.parse(replay), onBack = { replayDate = null })
+                ReplayScreen(
+                    from = java.time.LocalDate.parse(replay[0]),
+                    to = java.time.LocalDate.parse(replay[1]),
+                    title = replay[2],
+                    onBack = { replayRange = null },
+                )
             } else if (place != null) {
                 PlaceScreen(placeId = place, onBack = { openPlace = null })
             } else if (trip != null) {
@@ -152,7 +158,7 @@ fun LifeTrackerApp() {
                     Page.Profiles -> ProfilesScreen(onBack = { page = Page.Places })
                     Page.Live -> LiveScreen(onBack = back)
                     Page.Features -> FeaturesScreen(onBack = back)
-                    Page.Trips -> TripsScreen(onBack = back, onOpenTrip = { openTrip = it })
+                    Page.Trips -> TripsScreen(onBack = back, onOpenTrip = { openTrip = it }, onOpenReplay = { from, to, title -> replayRange = "$from|$to|$title" })
                     Page.Changes -> ChangesScreen(onBack = { page = Page.Places })
                     Page.Maps -> MapsScreen(onBack = { page = Page.Places })
                     Page.Permissions -> PermissionsScreen(onBack = back, onOpen = { page = it })
@@ -176,7 +182,7 @@ fun LifeTrackerApp() {
                         onOpenCalls = { openPage(Page.Calls, Part.Data) },
                         onOpenFood = { tab = Tab.Food },
                         onOpenLive = { openPage(Page.Live, Part.Data) },
-                        onOpenReplay = { replayDate = it },
+                        onOpenReplay = { replayRange = it + "|" + it + "|" + it },
                     )
                     Tab.Habits -> HabitsScreen()
                     Tab.Food -> FoodScreen()
