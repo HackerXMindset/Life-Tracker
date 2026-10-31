@@ -39,6 +39,18 @@ import com.lifetracker.app.data.PlaceRules
 import com.lifetracker.app.data.TripEntity
 import com.lifetracker.app.data.ReplayRules
 import com.lifetracker.app.ui.theme.LocalPaper
+import com.lifetracker.app.ui.theme.PaperDialog
+import com.lifetracker.app.ui.theme.PaperPill
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.graphics.toArgb
+import com.lifetracker.app.data.ReplayGifRules
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import java.io.BufferedOutputStream
+import java.io.FilterOutputStream
+import java.io.OutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -57,15 +69,18 @@ private class ReplayDay(
     val endMs: Long,
 )
 
-private suspend fun loadDay(context: android.content.Context, date: LocalDate): ReplayDay = withContext(Dispatchers.IO) {
+private suspend fun loadDay(context: android.content.Context, first: LocalDate, last: LocalDate): ReplayDay = withContext(Dispatchers.IO) {
     val db = AppDatabase.get(context)
     val zone = ZoneId.systemDefault()
-    val from = date.atStartOfDay(zone).toInstant().toEpochMilli()
-    val to = date.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+    val from = first.atStartOfDay(zone).toInstant().toEpochMilli()
+    val to = last.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
     val now = System.currentTimeMillis()
     val limit = if (now in from until to) now else to
     val fixes = db.rawDao().between(from, to).filter { it.acc <= 200f }
-    val samples = fixes.map { ReplayRules.Sample(it.ms, it.lat, it.lng) }
+    // A month of readings is more than a replay needs: keep about twenty thousand, always the last one.
+    val stride = ((fixes.size + MAX_SAMPLES - 1) / MAX_SAMPLES).coerceAtLeast(1)
+    val kept = if (stride == 1) fixes else fixes.filterIndexed { i, _ -> i % stride == 0 || i == fixes.lastIndex }
+    val samples = kept.map { ReplayRules.Sample(it.ms, it.lat, it.lng) }
     val places = db.placeDao().activePlaces()
     val names = places.associate { it.id to it.name }
     val events = ArrayList<ReplayRules.Event>()
@@ -76,20 +91,28 @@ private suspend fun loadDay(context: android.content.Context, date: LocalDate): 
             if (v.startMs in from until to) events += ReplayRules.Event(v.startMs, "Arrived at $name", "", ReplayRules.Kind.ARRIVE)
             if (!v.ongoing && v.endMs in from until to) events += ReplayRules.Event(v.endMs, "Left $name", "", ReplayRules.Kind.LEAVE)
         }
-    db.entryDao().forDate(date.toString()).first().forEach { e ->
-        val ms = from + e.startMinute * 60_000L
-        val what = e.title.ifBlank { e.category }
-        events += ReplayRules.Event(ms, what, if (e.title.isBlank()) "" else e.category, ReplayRules.Kind.LOGGED)
+    var date = first
+    var days = 0
+    while (!date.isAfter(last) && days < 400) {
+        val dayStart = date.atStartOfDay(zone).toInstant().toEpochMilli()
+        db.entryDao().forDate(date.toString()).first().forEach { e ->
+            val what = e.title.ifBlank { e.category }
+            events += ReplayRules.Event(dayStart + e.startMinute * 60_000L, what, if (e.title.isBlank()) "" else e.category, ReplayRules.Kind.LOGGED)
+        }
+        date = date.plusDays(1)
+        days++
     }
+    val trips = db.tripDao().tripsBetween(from, to).first()
     val start = samples.firstOrNull()?.ms ?: from
     val end = maxOf(samples.lastOrNull()?.ms ?: limit, events.maxOfOrNull { it.ms } ?: 0L).coerceAtMost(limit).coerceAtLeast(start + 1)
-    val trips = db.tripDao().tripsBetween(from, to).first()
     ReplayDay(samples, events.sortedBy { it.ms }, places, trips, start, end)
 }
 
-/** The speed slider is a log scale from 1 to 480 minutes of the day for each real second. */
-private fun speedOf(position: Float): Int = Math.exp(position * ln(480.0)).roundToInt().coerceIn(1, 480)
-private fun positionOf(minPerS: Int): Float = (ln(minPerS.toDouble()) / ln(480.0)).toFloat().coerceIn(0f, 1f)
+private const val MAX_SAMPLES = 20_000
+
+/** The speed slider is a log scale from 1 minute to 1 day of the day for each real second. */
+private fun speedOf(position: Float): Int = Math.exp(position * ln(1440.0)).roundToInt().coerceIn(1, 1440)
+private fun positionOf(minPerS: Int): Float = (ln(minPerS.toDouble()) / ln(1440.0)).toFloat().coerceIn(0f, 1f)
 
 /**
  * A day played back like a film: a clock runs through the day, the dot sits where you were between the two nearest readings
@@ -97,7 +120,7 @@ private fun positionOf(minPerS: Int): Float = (ln(minPerS.toDouble()) / ln(480.0
  * reaches it. The speed only changes how fast the clock runs.
  */
 @Composable
-fun ReplayScreen(date: LocalDate, onBack: () -> Unit) {
+fun ReplayScreen(from: LocalDate, to: LocalDate, title: String, onBack: () -> Unit) {
     val context = LocalContext.current
     val paper = LocalPaper.current
     val zone = remember { ZoneId.systemDefault() }
@@ -107,12 +130,13 @@ fun ReplayScreen(date: LocalDate, onBack: () -> Unit) {
     var minPerS by remember { mutableIntStateOf(20) }
     var skip by remember { mutableStateOf(true) }
     var follow by remember { mutableStateOf(true) }
+    var autoZoom by remember { mutableStateOf(true) }
     var fit by remember { mutableIntStateOf(0) }
     var recent by remember { mutableStateOf<List<ReplayRules.Event>>(emptyList()) }
     BackHandler(onBack = onBack)
 
-    LaunchedEffect(date) {
-        val d = loadDay(context, date)
+    LaunchedEffect(from, to) {
+        val d = loadDay(context, from, to)
         day = d
         clock = d.startMs
         recent = emptyList()
@@ -147,6 +171,51 @@ fun ReplayScreen(date: LocalDate, onBack: () -> Unit) {
     }
 
     val camera = remember { ReplayCamera() }
+
+    // The GIF: what you chose, how far along it is, and how it ended.
+    var showGif by remember { mutableStateOf(false) }
+    var gifSize by remember { mutableIntStateOf(1) }
+    var gifLength by remember { mutableIntStateOf(1) }
+    var gifFit by remember { mutableStateOf(true) }
+    var gifProgress by remember { mutableStateOf<Float?>(null) }
+    var gifResult by remember { mutableStateOf("") }
+    var gifJob by remember { mutableStateOf<Job?>(null) }
+    val scope = rememberCoroutineScope()
+    val gifColors = GifColors(paper.bg.toArgb(), paper.ink.toArgb(), paper.ink2.toArgb(), paper.accent.toArgb(), paper.surface.toArgb())
+    val saveGif = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("image/gif")) { uri ->
+        val loaded = day
+        if (uri == null || loaded == null) return@rememberLauncherForActivityResult
+        gifResult = ""
+        gifProgress = 0f
+        val choice = GifChoice(ReplayGifRules.SIZES[gifSize].second, ReplayGifRules.LENGTHS[gifLength], gifFit, minPerS, skip)
+        gifJob = scope.launch {
+            try {
+                var written = 0L
+                val raw = context.contentResolver.openOutputStream(uri) ?: error("Could not open the file")
+                val counting = object : FilterOutputStream(BufferedOutputStream(raw, 64 * 1024)) {
+                    override fun write(b: Int) { out.write(b); written++ }
+                    override fun write(b: ByteArray, off: Int, len: Int) { out.write(b, off, len); written += len }
+                }
+                withContext(Dispatchers.Default) {
+                    counting.use {
+                        makeReplayGif(
+                            it, loaded.samples, loaded.events, loaded.places, loaded.trips, loaded.startMs, loaded.endMs,
+                            ReplayRules.quietSpans(loaded.samples, loaded.startMs, loaded.endMs), choice, gifColors,
+                        ) { f -> gifProgress = f }
+                    }
+                }
+                gifResult = "Saved: " + ReplayGifRules.sizeText(written)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                gifResult = "Stopped"
+                throw e
+            } catch (e: Exception) {
+                gifResult = "Could not make the GIF: " + (e.message ?: e.javaClass.simpleName)
+            } finally {
+                gifProgress = null
+                gifJob = null
+            }
+        }
+    }
     // How you were travelling at the clock's time: the picture on the dot.
     val icon = remember(d, clock) {
         val trip = d?.trips?.firstOrNull { clock in it.startMs..it.endMs }
@@ -161,7 +230,7 @@ fun ReplayScreen(date: LocalDate, onBack: () -> Unit) {
         ) {
             Text("\u2039 Back", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = paper.ink, modifier = Modifier.clickable(onClick = onBack).padding(vertical = 4.dp))
             Text(
-                if (d != null && d.samples.isEmpty()) "No readings on $date" else "Replay $date",
+                if (d != null && d.samples.isEmpty()) "No readings for $title" else "Replay $title",
                 fontSize = 13.sp, color = paper.ink2, modifier = Modifier.weight(1f), maxLines = 1,
             )
             Text(ReplayRules.clockText(clock, zone), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = paper.ink)
@@ -172,10 +241,12 @@ fun ReplayScreen(date: LocalDate, onBack: () -> Unit) {
                 clockMs = clock,
                 places = d?.places.orEmpty(),
                 follow = follow,
+                autoZoom = autoZoom,
                 fitRequest = fit,
                 icon = icon,
                 camera = camera,
-                onUserMoved = { follow = false },
+                onUserPanned = { follow = false },
+                onUserZoomed = { autoZoom = false },
                 modifier = Modifier.fillMaxSize(),
             )
             recent.lastOrNull()?.let { e ->
@@ -187,8 +258,8 @@ fun ReplayScreen(date: LocalDate, onBack: () -> Unit) {
                 }
             }
             Column(modifier = Modifier.align(Alignment.CenterEnd).padding(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                MiniButton("+", false) { camera.zoom(1.0) }
-                MiniButton("\u2212", false) { camera.zoom(-1.0) }
+                MiniButton("+", false) { autoZoom = false; camera.zoom(1.0) }
+                MiniButton("\u2212", false) { autoZoom = false; camera.zoom(-1.0) }
             }
         }
         if (d != null) {
@@ -208,6 +279,8 @@ fun ReplayScreen(date: LocalDate, onBack: () -> Unit) {
                     MiniButton("Whole day", false) { follow = false; fit++ }
                     MiniButton("Skip quiet", skip) { skip = !skip }
                     MiniButton("Follow", follow) { follow = !follow }
+                    MiniButton("Auto zoom", autoZoom) { autoZoom = !autoZoom }
+                    MiniButton("Make a GIF", false) { gifResult = ""; showGif = true }
                 }
                 Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     ReplayRules.SPEEDS.forEach { sp -> MiniButton(ReplayRules.speedLabel(sp), minPerS == sp) { minPerS = sp } }
@@ -217,6 +290,37 @@ fun ReplayScreen(date: LocalDate, onBack: () -> Unit) {
                     Slider(value = positionOf(minPerS), onValueChange = { minPerS = speedOf(it) }, valueRange = 0f..1f, modifier = Modifier.weight(1f).padding(start = 8.dp))
                 }
             }
+        }
+    }
+
+
+    if (showGif && d != null) {
+        val running = gifProgress != null
+        val seconds = ReplayGifRules.LENGTHS[gifLength]
+        val speedNote = if (gifFit) "The whole day plays in $seconds seconds." else "Plays at " + ReplayRules.speedLabel(minPerS) + ", and stops after $seconds seconds if the day is longer."
+        PaperDialog(
+            title = "Make a GIF",
+            onDismiss = { if (running) gifJob?.cancel() else showGif = false },
+            confirmText = if (running) null else "Save GIF",
+            onConfirm = { saveGif.launch("replay-" + title.replace(Regex("[^A-Za-z0-9-]+"), "-").trim('-') + ".gif") },
+            dismissText = if (running) "Stop" else "Close",
+        ) {
+            Text("Size", fontSize = 12.sp, color = paper.ink2)
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                ReplayGifRules.SIZES.forEachIndexed { k, (label, px) -> PaperPill("$label $px", gifSize == k, { if (!running) gifSize = k }) }
+            }
+            Text("Length", fontSize = 12.sp, color = paper.ink2)
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                ReplayGifRules.LENGTHS.forEachIndexed { k, sec -> PaperPill("$sec s", gifLength == k, { if (!running) gifLength = k }) }
+            }
+            Text("Speed", fontSize = 12.sp, color = paper.ink2)
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                PaperPill("Fit the day", gifFit, { if (!running) gifFit = true })
+                PaperPill("My speed", !gifFit, { if (!running) gifFit = false })
+            }
+            Text(speedNote + (if (skip) " Quiet stretches are skipped." else ""), fontSize = 12.sp, color = paper.ink2)
+            gifProgress?.let { Text("Making the GIF... " + (it * 100).toInt() + "%", fontSize = 13.sp, color = paper.ink) }
+            if (gifResult.isNotEmpty()) Text(gifResult, fontSize = 13.sp, color = paper.ink)
         }
     }
 }

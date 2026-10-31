@@ -62,6 +62,7 @@ private fun modeText(t: TripEntity) = TripModes.label(t.mode) + (if (t.modeSourc
 fun TripsScreen(
     onBack: () -> Unit,
     onOpenTrip: (String) -> Unit,
+    onOpenReplay: (String, String, String) -> Unit = { _, _, _ -> },
     vm: TripsViewModel = viewModel(),
     tripVm: TripViewModel = viewModel(),
 ) {
@@ -110,6 +111,15 @@ fun TripsScreen(
                         PaperButton(">", { vm.step(1); selected = null }, style = PaperButtonStyle.Ghost, small = true, enabled = s?.atEnd == false)
                     }
                 }
+            }
+            item {
+                PaperButton(
+                    "Replay this stretch",
+                    { s?.let { onOpenReplay(it.window.from.toString(), it.window.to.toString(), it.title) } },
+                    style = PaperButtonStyle.Ghost,
+                    small = true,
+                    enabled = s != null,
+                )
             }
             item { PaperSegmented(TABS, tab, { tab = it }) }
 

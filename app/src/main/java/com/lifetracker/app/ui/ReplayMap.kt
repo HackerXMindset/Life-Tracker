@@ -73,10 +73,12 @@ internal fun ReplayMap(
     clockMs: Long,
     places: List<PlaceEntity>,
     follow: Boolean,
+    autoZoom: Boolean,
     fitRequest: Int,
     icon: String,
     camera: ReplayCamera,
-    onUserMoved: () -> Unit,
+    onUserPanned: () -> Unit,
+    onUserZoomed: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -88,7 +90,12 @@ internal fun ReplayMap(
     var ready by remember { mutableStateOf<Pair<MapLibreMap, Style>?>(null) }
     val clock by rememberUpdatedState(clockMs)
     val following by rememberUpdatedState(follow)
-    val movedNow by rememberUpdatedState(onUserMoved)
+    val pannedNow by rememberUpdatedState(onUserPanned)
+    val zoomedNow by rememberUpdatedState(onUserZoomed)
+    val auto by rememberUpdatedState(autoZoom)
+    val samplesNow by rememberUpdatedState(samples)
+    var touching by remember { mutableStateOf(false) }
+    var zoomAtStart by remember { mutableStateOf(0.0) }
     var marker by remember { mutableStateOf<IntOffset?>(null) }
 
     LaunchedEffect(Unit) {
@@ -113,9 +120,26 @@ internal fun ReplayMap(
                 onStyle = { map, style ->
                     addLayers(style, paper.accent.toArgb(), paper.ink.toArgb())
                     camera.map = map
-                    // Moving the map with a finger stops the camera from following the dot (it would fight the finger).
+                    // While a finger is on the map the camera is left alone (it would fight the finger). When the finger lifts: a changed
+                    // zoom is kept (auto zoom stops until you ask for it again); a map dragged away from the dot stops the following.
                     map.addOnCameraMoveStartedListener { reason ->
-                        if (reason == MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE) movedNow()
+                        if (reason == MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE) {
+                            touching = true
+                            zoomAtStart = map.cameraPosition.zoom
+                        }
+                    }
+                    map.addOnCameraIdleListener {
+                        if (!touching) return@addOnCameraIdleListener
+                        touching = false
+                        if (kotlin.math.abs(map.cameraPosition.zoom - zoomAtStart) > 0.05) zoomedNow()
+                        val here = ReplayRules.positionAt(samplesNow, clock)
+                        val centre = map.cameraPosition.target
+                        if (here != null && centre != null) {
+                            val p = map.projection.toScreenLocation(LatLng(here.first, here.second))
+                            val c = map.projection.toScreenLocation(centre)
+                            val off = kotlin.math.hypot((p.x - c.x).toDouble(), (p.y - c.y).toDouble())
+                            if (off > with(density) { 110.dp.toPx() }) pannedNow()
+                        }
                     }
                     ready = map to style
                 },
@@ -148,6 +172,7 @@ internal fun ReplayMap(
     LaunchedEffect(ready, samples) {
         val (map, style) = ready ?: return@LaunchedEffect
         var started = false
+        var zoom = map.cameraPosition.zoom
         while (true) {
             val now = clock
             val parts = ReplayRules.trail(samples, now)
@@ -158,14 +183,20 @@ internal fun ReplayMap(
                 val p = map.projection.toScreenLocation(LatLng(h.first, h.second))
                 IntOffset(p.x.toInt(), p.y.toInt())
             }
-            if (here != null && following) {
+            if (here != null && following && !touching) {
                 val target = LatLng(here.first, here.second)
-                if (!started) {
-                    started = true
-                    map.moveCamera(CameraUpdateFactory.newCameraPosition(CameraPosition.Builder().target(target).zoom(14.0).build()))
+                if (auto) {
+                    // The zoom follows how fast you were really moving, glided towards so it does not jump.
+                    val wanted = ReplayRules.autoZoom(ReplayRules.groundSpeedMs(samples, now))
+                    zoom = if (!started) wanted else ReplayRules.easeZoom(zoom, wanted)
+                    map.moveCamera(CameraUpdateFactory.newCameraPosition(CameraPosition.Builder().target(target).zoom(zoom).build()))
                 } else {
+                    zoom = map.cameraPosition.zoom
                     map.moveCamera(CameraUpdateFactory.newLatLng(target))
                 }
+                started = true
+            } else {
+                zoom = map.cameraPosition.zoom
             }
             delay(66)
         }

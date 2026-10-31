@@ -43,7 +43,7 @@ Life Tracker is an Android app built for one person: its owner. It replaces a pi
 | Habits (H1 to H13) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done |
 | The paper look (Timeline, Habits, Settings, Food) | ▰▰▰▰▰▰▰▱▱▱ | 🟡 Money and Stats still to restyle |
 | Places and trips remake (C1 to C9) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done, 11 pull requests |
-| **Places and trips round 2 (E1 to E10)** | ▰▰▰▰▰▱▱▱▱▱ | 🔨 E7a built (day replay), E7b (GIF export) next |
+| **Places and trips round 2 (E1 to E10)** | ▰▰▰▰▰▱▱▱▱▱ | 🔨 E7 built (replay, auto zoom, any stretch, GIF), E8 next |
 | Money editing (R6b, R6c) | ▰▰▱▱▱▱▱▱▱▱ | ⏳ Data done, screens next |
 | Life events, month and year views (Step 14) | ▱▱▱▱▱▱▱▱▱▱ | 💤 Later |
 
@@ -164,7 +164,11 @@ Done in two pull requests: **E7a** is the replay itself, **E7b** is the GIF expo
 - [x] Tests for the clock, the in-between positions, the trail, the quiet stretches and the cards; plus the real train day of 27 and 28 October as a journey-merging test
 
 **E7b**
-- [ ] Export as GIF (length, speed and size chosen by you); a video file only if the GIF is too big or rough
+- [x] The follow camera sets its own zoom from how fast you were really moving (zoomed in on foot, further out in a car, a train, a plane) and glides between zooms; your own pinch or + and - keeps your zoom until you tap **Auto zoom**; dragging the map away from the dot stops following
+- [x] Replay for any stretch: a **Replay this stretch** button on Stats > Trips replays the day, week, month, year or custom dates being shown; speeds go up to a day a second
+- [x] Export as GIF: size (240, 360 or 480 px), length (10, 20, 30 or 60 s), and either the whole stretch fitted into the length or your own speed; the picture is drawn by the app (path on plain paper, places, the travel picture on the dot, the clock and the cards), so it works offline
+- [x] A GIF writer of our own (LZW, checked by a test that unpacks it again); no video file: the GIF stays small enough (about a few hundred KB to a few MB)
+- [x] Tests for the encoder, frame timing and fitting, the zoom rules and the picture fitting
 
 #### E8 Triggers and actions
 - [ ] Research open-source automation apps and how they name triggers, conditions and actions
