@@ -145,6 +145,7 @@ object BackupManager {
         pointNotes = db.pointNoteDao().all(),
         trackingProfiles = db.trackingProfileDao().all(),
         mapStyles = db.mapDao().styles(),
+        rules = db.ruleDao().all(),
     )
 
     /**
@@ -262,6 +263,10 @@ object BackupManager {
             if (data.version >= 28) {
                 // Map styles you added only grow: restoring adds the ones that are missing. Downloaded map tiles are not in a backup.
                 data.mapStyles.forEach { db.mapDao().addStyleIfMissing(it) }
+            }
+            if (data.version >= 29) {
+                // Rules only grow: restoring adds the ones that are missing and keeps what you changed since.
+                db.ruleDao().insertMissing(data.rules)
             }
         }
     }

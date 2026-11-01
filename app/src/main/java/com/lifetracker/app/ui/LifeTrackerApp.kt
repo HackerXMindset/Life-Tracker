@@ -110,6 +110,8 @@ fun LifeTrackerApp() {
         // Note a charging session that ended while the app was closed, and keep the check running while the phone charges.
         runCatching { ChargeTracker.sample(context, banner = false) }
         runCatching { if (ChargeSettings(context).track) ChargeWorker.schedule(context) }
+        // Keep the 15-minute check going for time-of-day rules, if there are any.
+        runCatching { RulesWorker.refresh(context) }
         // Hand the named places to Android again (cheap), and keep the 6-hourly refresh going.
         runCatching {
             if (PlacesSettings(context).enabled) {
@@ -158,6 +160,7 @@ fun LifeTrackerApp() {
                     Page.Profiles -> ProfilesScreen(onBack = { page = Page.Places })
                     Page.Live -> LiveScreen(onBack = back)
                     Page.Features -> FeaturesScreen(onBack = back)
+                    Page.Rules -> RulesScreen(onBack = back)
                     Page.Trips -> TripsScreen(onBack = back, onOpenTrip = { openTrip = it }, onOpenReplay = { from, to, title -> replayRange = "$from|$to|$title" })
                     Page.Changes -> ChangesScreen(onBack = { page = Page.Places })
                     Page.Maps -> MapsScreen(onBack = { page = Page.Places })

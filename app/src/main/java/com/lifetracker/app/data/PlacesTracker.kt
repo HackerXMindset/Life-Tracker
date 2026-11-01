@@ -323,6 +323,8 @@ object PlacesTracker {
                 }
             }
             runCatching { NameAsker.consider(context, step.saves) }
+            // Rules: arrived, left and still here.
+            runCatching { RuleRunner.postAll(context, RuleHooks.visitEvents(step.saves, places, now)) }
             if (step.points.isNotEmpty()) {
                 // Note the step counter on the readings taken now (not on one placed back at the start of a stay).
                 val counter = StepCounterSync.counterNow(context)
@@ -330,7 +332,7 @@ object PlacesTracker {
                     if (counter == null) step.points else step.points.map { if (it.ms >= fix.timeMs - 90_000L) it.copy(steps = counter) else it },
                 )
             }
-            step.finish?.let { finishTrip(db, it, settings) }
+            step.finish?.let { finishTrip(context, db, it, settings) }
             if (!step.keepWatching && !settings.alwaysOn) AppLog.i("Service", "Readings no longer needed: $afterState")
             settings.engine = step.state
             settings.lastFixMs = now
@@ -343,7 +345,7 @@ object PlacesTracker {
     }
 
     /** Works out the distance and speeds of a trip that has ended and saves it, unless it was only GPS drift. */
-    private suspend fun finishTrip(db: AppDatabase, f: TripFinish, settings: PlacesSettings) {
+    private suspend fun finishTrip(context: Context, db: AppDatabase, f: TripFinish, settings: PlacesSettings) {
         val dao = db.tripDao()
         val points = dao.points(f.id)
         val stats = TripRules.stats(points, f.startMs, f.endMs)
@@ -367,21 +369,22 @@ object PlacesTracker {
             "Trips",
             "Trip ${LogFormat.clock(f.startMs)}-${LogFormat.clock(f.endMs)} saved: ${distance.toInt()} m, guess $guess, ${points.size} readings, $steps steps",
         )
-        dao.upsertTrip(
-            TripEntity(
-                id = f.id,
-                startMs = f.startMs,
-                endMs = f.endMs,
-                fromPlaceId = f.fromPlaceId,
-                toPlaceId = f.toPlaceId,
-                distanceM = distance,
-                medianKmh = stats.medianKmh,
-                topKmh = stats.topKmh,
-                activity = TripModes.activityText(f.acts),
-                mode = guess,
-                modeSource = "auto",
-            ),
+        val trip = TripEntity(
+            id = f.id,
+            startMs = f.startMs,
+            endMs = f.endMs,
+            fromPlaceId = f.fromPlaceId,
+            toPlaceId = f.toPlaceId,
+            distanceM = distance,
+            medianKmh = stats.medianKmh,
+            topKmh = stats.topKmh,
+            activity = TripModes.activityText(f.acts),
+            mode = guess,
+            modeSource = "auto",
         )
+        dao.upsertTrip(trip)
+        // Rules: a trip ended.
+        runCatching { RuleRunner.postAll(context, listOf(RuleHooks.tripEvent(trip, db.placeDao().activePlaces()))) }
     }
 
     /** Whether the readings should be running right now and are not. */

@@ -421,4 +421,20 @@ class BackupCodecTest {
             // expected
         }
     }
+
+    @Test
+    fun rulesComeBackExactlyAndAreKeptInTheBackup() {
+        val rules = listOf(
+            RuleEntity(
+                "r1", "Gym \"done\"", true, """{"kind":"arrive","params":{"placeId":"p1"}}""", """[{"kind":"days","params":{"days":"1,2,3"}}]""",
+                """[{"kind":"tick_habit","params":{"habitId":"h1"}}]""", 60, 1_760_000_000_000L, 1_760_100_000_000L, 4, 2,
+            ),
+            RuleEntity("r2", "Night", false, """{"kind":"time","params":{"at":"1380"}}""", "[]", "[]", 0, 1_760_000_000_001L, 0L, 0, 3),
+        )
+        val back = BackupCodec.decode(BackupCodec.encode(full.copy(rules = rules)))
+        assertEquals(rules, back.rules)
+        assertEquals(false, BackupData(29, "x", emptyList(), rules = rules).isEmpty)
+        // A file from before version 29 has no rules and still reads.
+        assertTrue(BackupCodec.decode(BackupCodec.encode(full.copy(rules = emptyList()))).rules.isEmpty())
+    }
 }

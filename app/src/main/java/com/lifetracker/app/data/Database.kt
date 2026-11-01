@@ -95,8 +95,10 @@ interface EntryDao {
         TrackingProfileEntity::class,
         MapStyleEntity::class,
         MapAreaEntity::class,
+        RuleEntity::class,
+        RuleLogEntity::class,
     ],
-    version = 28,
+    version = 29,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -122,6 +124,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun pointNoteDao(): PointNoteDao
     abstract fun trackingProfileDao(): TrackingProfileDao
     abstract fun mapDao(): MapDao
+    abstract fun ruleDao(): RuleDao
 
     companion object {
         @Volatile
@@ -134,7 +137,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "life-tracker.db",
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29)
                     .addCallback(object : RoomDatabase.Callback() {
                         // A brand new database starts with the built-in activities and money categories.
                         override fun onCreate(db: SupportSQLiteDatabase) {
@@ -587,5 +590,25 @@ val MIGRATION_27_28: Migration = object : Migration(27, 28) {
                 "`note` TEXT NOT NULL, PRIMARY KEY(`id`))",
         )
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_map_areas_styleId` ON `map_areas` (`styleId`)")
+    }
+}
+
+/**
+ * Version 28 -> 29: the rules (Rules, E8): the rules themselves (rules) and the line of what ran and why (rule_log). Nothing
+ * else is touched. The SQL must match the entities in RuleTables.kt exactly.
+ */
+val MIGRATION_28_29: Migration = object : Migration(28, 29) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `rules` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `enabled` INTEGER NOT NULL, " +
+                "`triggerJson` TEXT NOT NULL, `conditionsJson` TEXT NOT NULL, `actionsJson` TEXT NOT NULL, `cooldownSec` INTEGER NOT NULL, " +
+                "`createdMs` INTEGER NOT NULL, `lastRunMs` INTEGER NOT NULL, `runs` INTEGER NOT NULL, `sortOrder` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        )
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `rule_log` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `ruleId` TEXT NOT NULL, " +
+                "`ruleName` TEXT NOT NULL, `atMs` INTEGER NOT NULL, `event` TEXT NOT NULL, `result` TEXT NOT NULL, `detail` TEXT NOT NULL)",
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_rule_log_atMs` ON `rule_log` (`atMs`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_rule_log_ruleId` ON `rule_log` (`ruleId`)")
     }
 }

@@ -2,6 +2,18 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧭 Places and trips round 2: Rules (E8a)
+
+### ✨ New
+
+- **Rules**: tell the app "when this happens, do that". Settings > Rules has a list of your rules, each with its own switch, a **Run now** button, and a line of **what ran and why**.
+- **Things that can set a rule off:** arriving at, leaving or staying longer than some minutes at a place (any place you named, one place, or a kind of place), charging starting or stopping, a trip ending, a time of day, or you pressing Run now.
+- **Only if:** only on certain days, only between two times (even past midnight).
+- **What a rule can do:** tick a habit, add a Timeline entry at the moment it happened, or send you a notification. Messages can use {place}, {time}, {minutes}, {mode} and {km}.
+- **It cannot loop.** Each happening is acted on once per rule, a rule waits a minute between runs by default, a rule that runs 10 times in 10 minutes is switched off by itself, and a rule set off by another stops after 3 steps.
+- **A Rules switch under Settings > Features**: off means no rule runs. Time-of-day and "stay longer than" rules are checked about every 15 minutes, only if you have such a rule.
+- Rules are saved in your backup file. Database version 29; your data is untouched.
+
 ## 🧭 Places and trips round 2: the replay no longer seems too fast (E7d)
 
 ### 🔧 Fixed

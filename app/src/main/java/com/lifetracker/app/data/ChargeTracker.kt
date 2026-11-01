@@ -35,6 +35,8 @@ object ChargeTracker {
             val dao = AppDatabase.get(context).chargeDao()
             val result = ChargeSessions.apply(dao.openSession(), read(context, now), sawUnplug)
             if (result.changed.isNotEmpty()) dao.upsertAll(result.changed)
+            // Rules: charging started or stopped.
+            runCatching { RuleRunner.postAll(context, RuleHooks.chargeEvents(result.started, result.changed)) }
             val started = result.started
             if (started != null && banner && settings.showBanner) {
                 val guess = ChargeStats.guessSource(started.plugType, null, dao.allSessions())
