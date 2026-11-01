@@ -310,7 +310,7 @@ object RuleRunner {
             val text = RuleText.fill(action.text("text"), event).trim()
             val now = java.time.LocalDateTime.now()
             val note = HabitNotes.create(java.util.UUID.randomUUID().toString(), habit.id, now.toLocalDate(), text, now) ?: error("The note has no text")
-            db.habitDao().upsertNote(note)
+            db.planDao().upsertNote(note)
             "Added a note to " + habit.name
         }
         RuleKinds.RUN_RULE -> {
