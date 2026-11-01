@@ -62,6 +62,12 @@ fun FeaturesScreen(onBack: () -> Unit) {
                 featureRow(context, Feature.MAPS, changed)
             }
         }
+        item { PaperSection("Automation") }
+        item {
+            SetCard {
+                featureRow(context, Feature.RULES, changed, first = true)
+            }
+        }
         item {
             Text(
                 "Switching off Places and trips stops the position readings and the live map. Switching off Maps only stops map pictures and offline downloads: trips are then drawn on plain paper.",

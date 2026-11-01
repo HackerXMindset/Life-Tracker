@@ -43,7 +43,7 @@ Life Tracker is an Android app built for one person: its owner. It replaces a pi
 | Habits (H1 to H13) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done |
 | The paper look (Timeline, Habits, Settings, Food) | ▰▰▰▰▰▰▰▱▱▱ | 🟡 Money and Stats still to restyle |
 | Places and trips remake (C1 to C9) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done, 11 pull requests |
-| **Places and trips round 2 (E1 to E10)** | ▰▰▰▰▰▱▱▱▱▱ | 🔨 E7 built (replay, smart speed, zoom by pace, any stretch, GIF), E8 next |
+| **Places and trips round 2 (E1 to E10)** | ▰▰▰▰▰▱▱▱▱▱ | 🔨 E7 built (replay, smart speed, zoom by pace, any stretch, GIF); E8a built (rules engine, Rules page, log), E8b next |
 | Money editing (R6b, R6c) | ▰▰▱▱▱▱▱▱▱▱ | ⏳ Data done, screens next |
 | Life events, month and year views (Step 14) | ▱▱▱▱▱▱▱▱▱▱ | 💤 Later |
 
@@ -187,12 +187,25 @@ Done in two pull requests: **E7a** is the replay itself, **E7b** is the GIF expo
 - [x] Tests for the picture width, the zoom for a width, the limits and the clock cap
 
 #### E8 Triggers and actions
-- [ ] Research open-source automation apps and how they name triggers, conditions and actions
-- [ ] A new kind of habit that completes by itself or from a "this happened" button
-- [ ] **Triggers:** arrive at or leave a place or category, stay longer than a time, Wi-Fi or Bluetooth connects, charging starts or stops, an app is opened or used for a time, a call, steps reach a number, speed above or below, time of day, sleep or wake, a trip starts or ends
-- [ ] **Conditions** you can combine (days, time window, only if...)
-- [ ] **Actions:** tick a habit, add a Timeline entry, start the focus timer, send a notification, add a note, log money, run another rule
-- [ ] A log of what ran and why, a switch per rule, protection against rules that trigger each other forever
+
+**E8a Rules: the engine, the Rules page, the log and the first triggers and actions** (database version 29)
+- [x] Research: Home Assistant (words: trigger, condition, action; its "do not start again while one is running" modes) and Easer (event, condition, profile); only the ideas are used
+- [x] A rule = one **trigger**, any **conditions**, any **actions**, a cooldown and a switch; kept as small pieces of text so new kinds can be added without changing the table (`rules`, and `rule_log` for the line of what ran and why)
+- [x] **Triggers:** arrive at, leave or stay longer than (any place you named, one place, or a kind of place); charging starts or stops; a trip ends; a time of day; and a **Run now** button
+- [x] **Conditions:** only on certain days; only between two times (can run past midnight)
+- [x] **Actions:** tick a habit (yes/no and counted habits), add a Timeline entry (at the moment it happened), send a notification; messages can use {place}, {time}, {minutes}, {mode}, {km}
+- [x] **Safety:** each happening is acted on once per rule; a cooldown between runs; a rule that runs 10 times in 10 minutes is switched off and says so; a chain of rules setting each other off stops after 3 steps
+- [x] A **log** of what ran and why, and why a rule was held back ("Only on weekdays", "Ran less than 60 s ago"), with the latest 300 kept
+- [x] **Settings > Rules** (own page: new, edit, switch, run now, delete, the log) and a **Rules** switch under Features; off means nothing runs
+- [x] Time-of-day and "stay longer than" rules are checked about every 15 minutes (no extra battery use when you have none of them)
+- [x] Rules are in the backup file (format 29); the log is not
+- [x] Tests: the decisions, days and windows, cooldown, the loop stop, the events made from visits, charging and trips, time-of-day timing across midnight, the codec, the summaries, the message blanks, the backup round trip
+
+**E8b The rest of the triggers, actions and conditions, and the habit that does itself**
+- [ ] **Triggers:** Wi-Fi or Bluetooth connects or leaves, an app is opened or used for a time, a call, steps reach a number, speed above or below, sleep or wake, a trip starts, a habit is ticked
+- [ ] **Conditions:** only if charging, only at a place or kind of place, only if a habit is not done yet today, and "all of" or "any of"
+- [ ] **Actions:** start the focus timer, log money, add a note to a habit, run another rule
+- [ ] A **habit that is done by a rule** or a "this happened" button on its card
 - [ ] Tests
 
 #### E9 Place goals
