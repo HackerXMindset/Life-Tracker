@@ -2,6 +2,14 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🔄 Two-phone sync: the Supabase setup (S1)
+
+### ✨ New
+
+- **A setup script for Supabase** (`supabase/sync-setup.sql`) and a step-by-step guide (`supabase/README.md`). It makes the mailbox the two phones will use and locks it so only your own account can read or write it.
+- **A list of every table** and whether it is copied to the second phone, checked by a test so a new table can never be forgotten.
+- Nothing changes in the app yet.
+
 ## 🧭 Places and trips round 2: the replay no longer seems too fast (E7d)
 
 ### 🔧 Fixed

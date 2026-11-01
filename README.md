@@ -44,6 +44,7 @@ Life Tracker is an Android app built for one person: its owner. It replaces a pi
 | The paper look (Timeline, Habits, Settings, Food) | ▰▰▰▰▰▰▰▱▱▱ | 🟡 Money and Stats still to restyle |
 | Places and trips remake (C1 to C9) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done, 11 pull requests |
 | **Places and trips round 2 (E1 to E10)** | ▰▰▰▰▰▱▱▱▱▱ | 🔨 E7 built (replay, smart speed, zoom by pace, any stretch, GIF), E8 next |
+| **Two-phone sync (S1 to S8)** | ▰▱▱▱▱▱▱▱▱▱ | 🔨 S1 supabase setup and table list; E8 to E10 paused for it |
 | Money editing (R6b, R6c) | ▰▰▱▱▱▱▱▱▱▱ | ⏳ Data done, screens next |
 | Life events, month and year views (Step 14) | ▱▱▱▱▱▱▱▱▱▱ | 💤 Later |
 
@@ -243,6 +244,21 @@ Short stops on a long drive stay as they are now. You said no to daily recap not
 **Still open:** what should your train day have looked like if the app had worked perfectly? Your answer becomes the test for E6.
 
 </details>
+
+### Two-phone sync (S1 to S8)
+
+Planned on 31 October (full plan in the project docs: `phone-sync-plan-31-oct.md`). The main phone records; a second phone runs a **Viewer** build of the same app (a second build variant, `com.lifetracker.viewer`) that shows everything read-only. Supabase is only a mailbox: each change waits there until the second phone has taken it, nothing stays longer than 7 days, and Row Level Security means only your account can read it. Everything is copied (all history, raw GPS, settings), edits and deletes included, live within seconds while the second phone is open. Each stage is its own pull request and starts only when you say "continue".
+
+**S1 Supabase setup**
+- [x] `supabase/sync-setup.sql`: the mailbox (`sync_inbox`), requests for a full copy (`sync_requests`), Row Level Security (own rows only, no edits to mailbox rows, nothing for the public key), `sync_backlog()` for pausing uploads, Realtime on, hourly cleanup of anything older than 7 days
+- [x] `supabase/README.md`: step by step (project, sign-ups off, your one user, run the script, the four secrets)
+- [x] A list of every table and whether it is copied (`SyncTables`): 34 are, `imported_items` (import bookkeeping) and `map_areas` (offline map files) are not
+- [x] A test that reads the database source, so a table added later cannot be forgotten
+
+**S2 Capture changes (on the main phone)**
+- [ ] A change log filled by database triggers for every copied table; settings snapshot; no screen changes
+
+**S3 Upload** (sign-in, uploader, pausing when the mailbox is full, Sync screen) · **S4 First copy** (all history, GPS batches) · **S5 Viewer core** (Viewer variant, apply changes, Realtime, acknowledge) · **S6 Read-only screens** · **S7 Viewer build in CI and keep-alive** · **S8 Hardening** (7-day gap, big backlog, bad network, tests)
 
 ### Next
 
