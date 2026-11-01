@@ -2,6 +2,18 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧭 Places and trips round 2: more for Rules (E8b)
+
+### ✨ New
+
+- **More things that set a rule off:** Wi-Fi connects or disconnects (any network or one by name), a Bluetooth device connects or disconnects, an app is opened, an app is used for more than some minutes in a day, a call comes or goes (any, taken, made or missed), steps reach a number, you wake up or fall asleep, a trip starts, your speed goes above (or on a trip drops below) a number, or a habit is ticked.
+- **More "only if":** only while charging (or not), only while at a place, a kind of place or any named place (or not), only if a habit is not done yet today. A new switch says one of the conditions is enough instead of all of them.
+- **More things a rule can do:** start a focus timer, log money, add a note to a habit, or run another rule (stops after 3 steps in a row).
+- **Buttons:** a rule set to "I press Run now" appears as a button at the top of the Rules page, for things the phone cannot notice ("I went to the gym"). Rules that tick a habit make a habit done by something else.
+- Messages can also use {habit}, {app}, {name}, {steps} and {kmh}.
+- Wi-Fi, Bluetooth, apps, calls, steps and sleep are looked at about every 15 minutes, only if you have such a rule, so a very short connection can be missed. Things found by looking back from before a rule was made never set that rule off.
+- No database change.
+
 ## 🧭 Places and trips round 2: Rules (E8a)
 
 ### ✨ New

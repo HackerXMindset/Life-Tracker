@@ -225,7 +225,7 @@ object HabitReminderActions {
     /** Done is offered for yes/no, counted and tracking-only habits; Avoid habits and checklists open the app instead. */
     fun canDone(habit: HabitEntity): Boolean = habit.kind != HabitStats.KIND_RELAPSE && !HabitSteps.isChecklist(habit)
 
-    suspend fun done(context: Context, habitId: String) {
+    suspend fun done(context: Context, habitId: String, depth: Int = 0) {
         val app = context.applicationContext
         val dao = AppDatabase.get(app).habitDao()
         val habit = dao.habit(habitId)?.takeIf { it.deletedAt == 0L } ?: return
@@ -241,6 +241,8 @@ object HabitReminderActions {
             existing == null -> dao.upsertCompletion(HabitTicks.add(null, habit.id, key, maxOf(1.0, habit.target), minute))
         }
         HabitSyncState(app).stamp(habit.id)
+        // Rules: a habit was ticked (by the Done button, or by a rule, which is one step deeper).
+        runCatching { RuleRunner.postAll(app, listOf(RuleHooks.habitTicked(habit.id, habit.name, key, System.currentTimeMillis(), depth))) }
     }
 }
 

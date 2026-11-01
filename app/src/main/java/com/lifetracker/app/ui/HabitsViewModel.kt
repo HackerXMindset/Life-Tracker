@@ -25,6 +25,8 @@ import com.lifetracker.app.data.HabitSyncState
 import com.lifetracker.app.data.HabitTicks
 import com.lifetracker.app.data.HabitsSettings
 import com.lifetracker.app.data.NoteEntity
+import com.lifetracker.app.data.RuleHooks
+import com.lifetracker.app.data.RuleRunner
 import com.lifetracker.app.data.TodayProgress
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -267,7 +269,14 @@ class HabitsViewModel(app: Application) : AndroidViewModel(app) {
                 dao.deleteCompletion(habit.id, key)
             }
             sync.stamp(habit.id)
+            ruleTicked(habit, date)
         }
+    }
+
+    /** Tells the rules a habit was ticked today (nothing when it was taken back, or for another day). */
+    private suspend fun ruleTicked(habit: HabitEntity, date: LocalDate) {
+        if (date != LocalDate.now() || dao.completion(habit.id, date.toString()) == null) return
+        runCatching { RuleRunner.postAll(getApplication(), listOf(RuleHooks.habitTicked(habit.id, habit.name, date.toString(), System.currentTimeMillis()))) }
     }
 
     /** One more check on a day, at its own time ([minute]) or, when null, at the time of now for today. [amount] null means one step. */
@@ -279,6 +288,7 @@ class HabitsViewModel(app: Application) : AndroidViewModel(app) {
             if (add <= 0) return@launch
             dao.upsertCompletion(HabitTicks.add(dao.completion(habit.id, key), habit.id, key, add, minute ?: noteMinute(date)))
             sync.stamp(habit.id)
+            ruleTicked(habit, date)
         }
     }
 

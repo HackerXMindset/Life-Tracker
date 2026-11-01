@@ -333,6 +333,15 @@ object PlacesTracker {
                 )
             }
             step.finish?.let { finishTrip(context, db, it, settings) }
+            // Rules: a trip started, and how fast I am going.
+            runCatching {
+                val wasOnTrip = settings.engine.trip != null
+                val started = step.state.trip
+                val more = mutableListOf<RuleEvent>()
+                if (!wasOnTrip && started != null) more += RuleHooks.tripStartEvent(started, places)
+                RuleHooks.speedEvent(fix.speedMs, fix.timeMs, step.state.trip != null)?.let { more += it }
+                RuleRunner.postAll(context, more)
+            }
             if (!step.keepWatching && !settings.alwaysOn) AppLog.i("Service", "Readings no longer needed: $afterState")
             settings.engine = step.state
             settings.lastFixMs = now
