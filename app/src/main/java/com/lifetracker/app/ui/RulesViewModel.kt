@@ -5,7 +5,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.lifetracker.app.data.ActivityTypeEntity
 import com.lifetracker.app.data.AppDatabase
+import com.lifetracker.app.data.BluetoothWatch
 import com.lifetracker.app.data.HabitEntity
+import com.lifetracker.app.data.MoneyCategoryEntity
 import com.lifetracker.app.data.PlaceCategoryEntity
 import com.lifetracker.app.data.PlaceEntity
 import com.lifetracker.app.data.Rule
@@ -13,6 +15,7 @@ import com.lifetracker.app.data.RuleCodec
 import com.lifetracker.app.data.RuleLogEntity
 import com.lifetracker.app.data.RuleRunner
 import com.lifetracker.app.data.RulesWorker
+import com.lifetracker.app.data.UsageAppEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -35,6 +38,12 @@ class RulesViewModel(private val app: Application) : AndroidViewModel(app) {
     val categories: StateFlow<List<PlaceCategoryEntity>> = share(emptyList(), db.placeCategoryDao().observeAll())
     val habits: StateFlow<List<HabitEntity>> = share(emptyList(), db.habitDao().observeHabits())
     val activities: StateFlow<List<ActivityTypeEntity>> = share(emptyList(), db.activityDao().observeAll())
+
+    val apps: StateFlow<List<UsageAppEntity>> = share(emptyList(), db.usageDao().observeApps().map { list -> list.filter { !it.ignored } })
+    val moneyCategories: StateFlow<List<MoneyCategoryEntity>> = share(emptyList(), db.moneyDao().observeCategories())
+
+    /** Paired Bluetooth devices as (name, address); empty without the Nearby devices permission. */
+    fun pairedDevices(): List<Pair<String, String>> = BluetoothWatch.paired(app)
 
     fun save(rule: Rule) {
         viewModelScope.launch(Dispatchers.IO) {

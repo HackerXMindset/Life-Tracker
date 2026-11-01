@@ -40,6 +40,8 @@ import com.lifetracker.app.R
 import com.lifetracker.app.data.Feature
 import com.lifetracker.app.data.Features
 import com.lifetracker.app.data.Rule
+import com.lifetracker.app.data.KIND_EXPENSE
+import com.lifetracker.app.data.KIND_INCOME
 import com.lifetracker.app.data.RuleKinds
 import com.lifetracker.app.data.RuleLogEntity
 import com.lifetracker.app.data.RulePart
@@ -58,6 +60,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /** Rules: when something happens, do something. A list of your rules, each with a switch, and the line of what ran and why. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun RulesScreen(onBack: () -> Unit, vm: RulesViewModel = viewModel()) {
     val p = LocalPaper.current
@@ -78,6 +81,7 @@ fun RulesScreen(onBack: () -> Unit, vm: RulesViewModel = viewModel()) {
     fun categoryName(id: String) = categories.firstOrNull { it.id == id }?.name ?: "a kind that is gone"
     fun habitName(id: String) = habits.firstOrNull { it.id == id }?.name ?: "a habit that is gone"
     fun activityName(id: String) = activities.firstOrNull { it.id == id }?.name ?: "an activity that is gone"
+    fun ruleName(id: String) = rules.firstOrNull { it.id == id }?.name ?: "a rule that is gone"
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -87,8 +91,9 @@ fun RulesScreen(onBack: () -> Unit, vm: RulesViewModel = viewModel()) {
         item { SettingsTop("Rules", "When something happens, do something", onBack) }
         item {
             Text(
-                "A rule has one thing that sets it off (arriving somewhere, charging starting, a time of day...), optional conditions " +
-                    "(only on weekdays, only between two times) and things to do (tick a habit, add a Timeline entry, send a notification). " +
+                "A rule has one thing that sets it off (arriving somewhere, charging starting, a time of day, Wi-Fi, an app, a call...), optional conditions " +
+                    "(only on weekdays, only if charging, only if a habit is not done yet) and things to do (tick a habit, add a Timeline entry, send a notification, " +
+                    "start a focus timer, log money...). A rule that is set to \"I press Run now\" shows up as a button at the top. " +
                     "Rules use only what the phone already notices; nothing goes online. A rule that runs 10 times in 10 minutes is switched off " +
                     "by itself, so nothing can loop for ever.",
                 fontSize = 12.5.sp,
@@ -98,12 +103,22 @@ fun RulesScreen(onBack: () -> Unit, vm: RulesViewModel = viewModel()) {
         if (!featureOn) {
             item { Text("Rules are switched off in Settings > Features, so none of them runs.", fontSize = 13.sp, color = p.bad) }
         }
+        val buttons = rules.filter { it.enabled && it.trigger.kind == RuleKinds.BUTTON }
+        if (buttons.isNotEmpty()) {
+            item { PaperSection("Buttons", "One tap does what the rule says: \"this happened\" for things the phone cannot notice") }
+            item {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    buttons.forEach { b -> PaperButton(b.name, onClick = { vm.runNow(b.id) }) }
+                }
+            }
+            item { PaperSection("Your rules") }
+        }
         items(rules, key = { it.id }) { r ->
             RuleCard(
                 rule = r,
-                trigger = RuleSummary.trigger(r.trigger, ::placeName, ::categoryName),
-                conditions = r.conditions.map { RuleSummary.condition(it) },
-                actions = r.actions.map { RuleSummary.action(it, ::habitName, ::activityName) },
+                trigger = RuleSummary.trigger(r.trigger, ::placeName, ::categoryName, ::habitName),
+                conditions = r.conditions.map { RuleSummary.condition(it, ::placeName, ::categoryName, ::habitName) },
+                actions = r.actions.map { RuleSummary.action(it, ::habitName, ::activityName, ::ruleName) },
                 onClick = { editing = r },
                 onToggle = { vm.setEnabled(r.id, it) },
             )
@@ -196,6 +211,18 @@ private fun LogLine(line: RuleLogEntity) {
     }
 }
 
+/** The settings each trigger keeps in its own part (everything else typed in the window is left out). */
+private val TRIGGER_KEYS = mapOf(
+    RuleKinds.HABIT_TICKED to listOf("habitId"),
+    RuleKinds.WIFI_ON to listOf("name"),
+    RuleKinds.WIFI_OFF to listOf("name"),
+    RuleKinds.BT_ON to listOf("device", "deviceName"),
+    RuleKinds.BT_OFF to listOf("device", "deviceName"),
+    RuleKinds.APP_OPEN to listOf("pkg", "label"),
+    RuleKinds.APP_USED to listOf("pkg", "label"),
+    RuleKinds.CALL to listOf("type"),
+)
+
 private val DAY_LABELS = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 
 private fun clamp(text: String, lo: Int, hi: Int, default: Int): Int = (text.trim().toIntOrNull() ?: default).coerceIn(lo, hi)
@@ -209,8 +236,14 @@ private fun RuleEditor(initial: Rule?, vm: RulesViewModel, onClose: () -> Unit) 
     val categories by vm.categories.collectAsState()
     val habits by vm.habits.collectAsState()
     val activities by vm.activities.collectAsState()
+    val allRules by vm.rules.collectAsState()
+    val apps by vm.apps.collectAsState()
+    val moneyCategories by vm.moneyCategories.collectAsState()
+    val paired = remember { vm.pairedDevices() }
 
     val t0 = initial?.trigger
+    var tp by remember { mutableStateOf(t0?.params ?: emptyMap<String, String>()) }
+    fun tset(key: String, value: String) { tp = tp + (key to value) }
     var name by remember { mutableStateOf(initial?.name.orEmpty()) }
     var kind by remember { mutableStateOf(t0?.kind ?: RuleKinds.ARRIVE) }
     var whereMode by remember { mutableStateOf(if (t0?.text("placeId").orEmpty().isNotEmpty()) 1 else if (t0?.text("category").orEmpty().isNotEmpty()) 2 else 0) }
@@ -224,6 +257,19 @@ private fun RuleEditor(initial: Rule?, vm: RulesViewModel, onClose: () -> Unit) 
     val windowPart = initial?.conditions?.firstOrNull { it.kind == RuleKinds.WINDOW }
     var daysOn by remember { mutableStateOf(daysPart != null) }
     var days by remember { mutableStateOf(daysPart?.let { RuleSummary.days(it) } ?: setOf(1, 2, 3, 4, 5)) }
+    val chargingPart = initial?.conditions?.firstOrNull { it.kind == RuleKinds.CHARGING }
+    val atPart = initial?.conditions?.firstOrNull { it.kind == RuleKinds.AT_PLACE }
+    val notDonePart = initial?.conditions?.firstOrNull { it.kind == RuleKinds.HABIT_NOT_DONE }
+    var chargingOn by remember { mutableStateOf(chargingPart != null) }
+    var chargingState by remember { mutableStateOf(chargingPart?.text("state", "on") ?: "on") }
+    var atOn by remember { mutableStateOf(atPart != null) }
+    var atMode by remember { mutableStateOf(if (atPart?.text("placeId").orEmpty().isNotEmpty()) 1 else if (atPart?.text("category").orEmpty().isNotEmpty()) 2 else 0) }
+    var atPlaceId by remember { mutableStateOf(atPart?.text("placeId").orEmpty()) }
+    var atCategory by remember { mutableStateOf(atPart?.text("category").orEmpty()) }
+    var atState by remember { mutableStateOf(atPart?.text("state", "on") ?: "on") }
+    var notDoneOn by remember { mutableStateOf(notDonePart != null) }
+    var notDoneHabit by remember { mutableStateOf(notDonePart?.text("habitId").orEmpty()) }
+    var matchAny by remember { mutableStateOf(initial?.conditions?.any { it.kind == RuleKinds.MATCH && it.text("mode") == "any" } == true) }
     var windowOn by remember { mutableStateOf(windowPart != null) }
     var fromText by remember { mutableStateOf(RuleSummary.clock(windowPart?.int("from", 540) ?: 540)) }
     var toText by remember { mutableStateOf(RuleSummary.clock(windowPart?.int("to", 1080) ?: 1080)) }
@@ -254,7 +300,29 @@ private fun RuleEditor(initial: Rule?, vm: RulesViewModel, onClose: () -> Unit) 
             val at = clamp(atHour, 0, 23, 8) * 60 + clamp(atMinute, 0, 59, 0)
             trigger = trigger.with("at", at.toString())
         }
+        val keys = TRIGGER_KEYS[kind].orEmpty()
+        keys.forEach { k -> tp[k]?.takeIf { it.isNotEmpty() }?.let { trigger = trigger.with(k, it) } }
+        if (kind == RuleKinds.SPEED_OVER) trigger = trigger.with("kmh", clamp(tp["kmh"].orEmpty(), 1, 400, 60).toString())
+        if (kind == RuleKinds.SPEED_UNDER) trigger = trigger.with("kmh", clamp(tp["kmh"].orEmpty(), 0, 400, 10).toString())
+        if (kind == RuleKinds.APP_USED) {
+            if (tp["pkg"].orEmpty().isEmpty()) { error = "Pick the app."; return null }
+            trigger = trigger.with("minutes", clamp(tp["minutes"].orEmpty(), 1, 1440, 60).toString())
+        }
+        if (kind == RuleKinds.STEPS) trigger = trigger.with("steps", clamp(tp["steps"].orEmpty(), 1, 100_000, 8000).toString())
         val conditions = mutableListOf<RulePart>()
+        if (chargingOn) conditions += RulePart(RuleKinds.CHARGING).with("state", chargingState)
+        if (atOn) {
+            if (atMode == 1 && atPlaceId.isEmpty()) { error = "Pick the place for the condition."; return null }
+            if (atMode == 2 && atCategory.isEmpty()) { error = "Pick the kind of place for the condition."; return null }
+            var c = RulePart(RuleKinds.AT_PLACE).with("state", atState)
+            if (atMode == 1) c = c.with("placeId", atPlaceId)
+            if (atMode == 2) c = c.with("category", atCategory)
+            conditions += c
+        }
+        if (notDoneOn) {
+            if (notDoneHabit.isEmpty()) { error = "Pick the habit for the condition."; return null }
+            conditions += RulePart(RuleKinds.HABIT_NOT_DONE).with("habitId", notDoneHabit)
+        }
         if (daysOn) {
             if (days.isEmpty()) { error = "Pick at least one day, or switch the days off."; return null }
             conditions += RulePart(RuleKinds.DAYS).with("days", days.sorted().joinToString(","))
@@ -265,16 +333,20 @@ private fun RuleEditor(initial: Rule?, vm: RulesViewModel, onClose: () -> Unit) 
             if (from == null || to == null) { error = "Write the times like 09:00."; return null }
             conditions += RulePart(RuleKinds.WINDOW).with("from", from.toString()).with("to", to.toString())
         }
+        if (matchAny && conditions.size >= 2) conditions += RulePart(RuleKinds.MATCH).with("mode", "any")
         if (actions.isEmpty()) { error = "Add something to do."; return null }
         actions.forEach { a ->
             when (a.kind) {
                 RuleKinds.TICK_HABIT -> if (a.text("habitId").isEmpty()) { error = "Pick the habit to tick."; return null }
                 RuleKinds.ENTRY -> if (a.text("title").isBlank()) { error = "Give the Timeline entry a name."; return null }
                 RuleKinds.NOTIFY -> if (a.text("title").isBlank()) { error = "Give the notification a title."; return null }
+                RuleKinds.NOTE -> if (a.text("habitId").isEmpty() || a.text("text").isBlank()) { error = "Pick the habit and write the note."; return null }
+                RuleKinds.RUN_RULE -> if (a.text("ruleId").isEmpty()) { error = "Pick the rule to run."; return null }
+                RuleKinds.MONEY -> if (a.text("amount").replace(',', '.').toDoubleOrNull()?.let { it > 0.0 } != true) { error = "Write the amount to log, above 0."; return null }
             }
         }
         val now = System.currentTimeMillis()
-        val shown = RuleSummary.trigger(trigger, { id -> places.firstOrNull { it.id == id }?.name ?: "a place" }, { id -> categories.firstOrNull { it.id == id }?.name ?: "a kind" })
+        val shown = RuleSummary.trigger(trigger, { id -> places.firstOrNull { it.id == id }?.name ?: "a place" }, { id -> categories.firstOrNull { it.id == id }?.name ?: "a kind" }, { id -> habits.firstOrNull { it.id == id }?.name ?: "a habit" })
         return Rule(
             id = initial?.id ?: "r$now",
             name = name.trim().ifEmpty { shown.replaceFirstChar { it.uppercase() } },
@@ -339,10 +411,102 @@ private fun RuleEditor(initial: Rule?, vm: RulesViewModel, onClose: () -> Unit) 
             }
             Text("Checked about every 15 minutes, so it can be a little late.", fontSize = 12.sp, color = p.ink2)
         }
-        if (kind == RuleKinds.BUTTON) Text("This rule only runs when you press Run now in this window.", fontSize = 12.sp, color = p.ink2)
+        if (kind == RuleKinds.BUTTON) Text("This rule only runs when you press it: in this window, or from the Buttons at the top of the Rules page.", fontSize = 12.sp, color = p.ink2)
+        if (kind == RuleKinds.SPEED_OVER || kind == RuleKinds.SPEED_UNDER) {
+            PaperField(
+                value = tp["kmh"] ?: (if (kind == RuleKinds.SPEED_OVER) "60" else "10"), onValueChange = { tset("kmh", it.filter(Char::isDigit).take(3)) }, label = "Kilometres per hour",
+                modifier = Modifier.fillMaxWidth(), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            )
+            Text("Needs GPS readings (Places). It speaks at most once in 10 minutes.", fontSize = 12.sp, color = p.ink2)
+        }
+        if (kind == RuleKinds.TRIP_START) Text("Needs trips to be recorded in Places.", fontSize = 12.sp, color = p.ink2)
+        if (kind == RuleKinds.HABIT_TICKED) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                PaperPill("Any habit", tp["habitId"].orEmpty().isEmpty(), { tset("habitId", "") })
+                habits.filter { !it.archived }.forEach { h -> PaperPill(h.name, tp["habitId"] == h.id, { tset("habitId", h.id) }) }
+            }
+            Text("Once a day for each habit, however many times it is ticked.", fontSize = 12.sp, color = p.ink2)
+        }
+        if (kind == RuleKinds.WIFI_ON || kind == RuleKinds.WIFI_OFF) {
+            PaperField(value = tp["name"].orEmpty(), onValueChange = { tset("name", it) }, label = "Network name (empty = any)", modifier = Modifier.fillMaxWidth(), singleLine = true)
+            Text("Android only shows the network name when the app may use your location. Looked at about every 15 minutes.", fontSize = 12.sp, color = p.ink2)
+        }
+        if (kind == RuleKinds.BT_ON || kind == RuleKinds.BT_OFF) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                PaperPill("Any device", tp["device"].orEmpty().isEmpty(), { tp = tp + ("device" to "") + ("deviceName" to "") })
+                paired.forEach { (n, addr) -> PaperPill(n.ifEmpty { addr }, tp["device"] == addr, { tp = tp + ("device" to addr) + ("deviceName" to n) }) }
+            }
+            if (paired.isEmpty()) Text("No paired device can be shown (the Nearby devices permission may be off).", fontSize = 12.sp, color = p.ink2)
+            Text("Looked at about every 15 minutes, so a short connection can be missed.", fontSize = 12.sp, color = p.ink2)
+        }
+        if (kind == RuleKinds.APP_OPEN || kind == RuleKinds.APP_USED) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                if (kind == RuleKinds.APP_OPEN) PaperPill("Any app", tp["pkg"].orEmpty().isEmpty(), { tp = tp + ("pkg" to "") + ("label" to "") })
+                apps.take(60).forEach { a -> PaperPill(a.label.ifEmpty { a.pkg }, tp["pkg"] == a.pkg, { tp = tp + ("pkg" to a.pkg) + ("label" to a.label) }) }
+            }
+            if (apps.isEmpty()) Text("No app is known yet: switch on Phone usage and let it sync first.", fontSize = 12.sp, color = p.ink2)
+            if (kind == RuleKinds.APP_USED) {
+                PaperField(
+                    value = tp["minutes"] ?: "60", onValueChange = { tset("minutes", it.filter(Char::isDigit).take(4)) }, label = "Minutes in a day",
+                    modifier = Modifier.fillMaxWidth(), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                )
+            }
+            Text("Comes from Phone usage, which is saved about every 15 minutes or less often, so it can be late.", fontSize = 12.sp, color = p.ink2)
+        }
+        if (kind == RuleKinds.CALL) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf("" to "Any call", "in" to "I take one", "out" to "I make one", "missed" to "I miss one").forEach { (v, label) ->
+                    PaperPill(label, tp["type"].orEmpty() == v, { tset("type", v) })
+                }
+            }
+            Text("Needs Calls to be switched on, and is a little late.", fontSize = 12.sp, color = p.ink2)
+        }
+        if (kind == RuleKinds.STEPS) {
+            PaperField(
+                value = tp["steps"] ?: "8000", onValueChange = { tset("steps", it.filter(Char::isDigit).take(6)) }, label = "Steps in a day",
+                modifier = Modifier.fillMaxWidth(), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            )
+            Text("Once a day. Looked at about every 15 minutes.", fontSize = 12.sp, color = p.ink2)
+        }
+        if (kind == RuleKinds.WAKE || kind == RuleKinds.SLEEP) {
+            Text("From your Sleep nights (estimated from when you stop using the phone, or from Health Connect), so it is found some time after it happened.", fontSize = 12.sp, color = p.ink2)
+        }
 
         MonoLabel("Only if")
-        ToggleRow("Only on certain days", daysOn, { daysOn = it }, first = true)
+        ToggleRow("The phone is charging (or not)", chargingOn, { chargingOn = it }, first = true)
+        if (chargingOn) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                PaperPill("Charging", chargingState == "on", { chargingState = "on" })
+                PaperPill("Not charging", chargingState == "off", { chargingState = "off" })
+            }
+        }
+        ToggleRow("I am at a place (or not)", atOn, { atOn = it })
+        if (atOn) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                PaperPill("At", atState == "on", { atState = "on" })
+                PaperPill("Not at", atState == "off", { atState = "off" })
+                PaperPill("Any place I named", atMode == 0, { atMode = 0 })
+                PaperPill("One place", atMode == 1, { atMode = 1 })
+                PaperPill("A kind of place", atMode == 2, { atMode = 2 })
+            }
+            if (atMode == 1) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    places.filter { !it.archived }.forEach { pl -> PaperPill(pl.name, atPlaceId == pl.id, { atPlaceId = pl.id }) }
+                }
+            }
+            if (atMode == 2) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    categories.filter { !it.archived }.forEach { c -> PaperPill(c.name, atCategory == c.id, { atCategory = c.id }) }
+                }
+            }
+        }
+        ToggleRow("A habit is not done yet today", notDoneOn, { notDoneOn = it })
+        if (notDoneOn) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                habits.filter { !it.archived }.forEach { h -> PaperPill(h.name, notDoneHabit == h.id, { notDoneHabit = h.id }) }
+            }
+        }
+        ToggleRow("Only on certain days", daysOn, { daysOn = it })
         if (daysOn) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 DAY_LABELS.forEachIndexed { i, label ->
@@ -359,6 +523,8 @@ private fun RuleEditor(initial: Rule?, vm: RulesViewModel, onClose: () -> Unit) 
             }
             Text("A window can run past midnight, for example 22:00 to 06:00.", fontSize = 12.sp, color = p.ink2)
         }
+        ToggleRow("One of these is enough (instead of all)", matchAny, { matchAny = it })
+        Text("With this on, the rule runs when any one of the conditions you switched on holds.", fontSize = 12.sp, color = p.ink2)
 
         MonoLabel("Then")
         actions.forEachIndexed { i, a ->
@@ -392,13 +558,60 @@ private fun RuleEditor(initial: Rule?, vm: RulesViewModel, onClose: () -> Unit) 
                         PaperField(value = a.text("title"), onValueChange = { actions[i] = a.with("title", it) }, label = "Title", modifier = Modifier.fillMaxWidth(), placeholder = "e.g. Welcome to {place}", singleLine = true)
                         PaperField(value = a.text("text"), onValueChange = { actions[i] = a.with("text", it) }, label = "Message (optional)", modifier = Modifier.fillMaxWidth())
                     }
+                    RuleKinds.START_FOCUS -> {
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            PaperField(
+                                value = a.text("minutes", "25"), onValueChange = { actions[i] = a.with("minutes", it.filter(Char::isDigit).take(3)) }, label = "Minutes",
+                                modifier = Modifier.weight(1f), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            )
+                            PaperField(
+                                value = a.text("breakMinutes", "5"), onValueChange = { actions[i] = a.with("breakMinutes", it.filter(Char::isDigit).take(2)) }, label = "Break",
+                                modifier = Modifier.weight(1f), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            )
+                        }
+                        PaperField(value = a.text("label"), onValueChange = { actions[i] = a.with("label", it) }, label = "Label (optional)", modifier = Modifier.fillMaxWidth(), singleLine = true)
+                        Text("For which habit (optional)", fontSize = 12.sp, color = p.ink2)
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            PaperPill("None", a.text("habitId").isEmpty(), { actions[i] = a.with("habitId", "") })
+                            habits.filter { !it.archived }.forEach { h -> PaperPill(h.name, a.text("habitId") == h.id, { actions[i] = a.with("habitId", h.id) }) }
+                        }
+                        Text("Does nothing if a focus timer is already running.", fontSize = 12.sp, color = p.ink2)
+                    }
+                    RuleKinds.MONEY -> {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            PaperPill("Spending", a.int("kind", KIND_EXPENSE) == KIND_EXPENSE, { actions[i] = a.with("kind", KIND_EXPENSE.toString()).with("categoryId", "") })
+                            PaperPill("Income", a.int("kind", KIND_EXPENSE) == KIND_INCOME, { actions[i] = a.with("kind", KIND_INCOME.toString()).with("categoryId", "") })
+                        }
+                        PaperField(value = a.text("name"), onValueChange = { actions[i] = a.with("name", it) }, label = "What it was", modifier = Modifier.fillMaxWidth(), placeholder = "e.g. Bus fare", singleLine = true)
+                        PaperField(
+                            value = a.text("amount"), onValueChange = { actions[i] = a.with("amount", it.filter { c -> c.isDigit() || c == '.' || c == ',' }.take(10)) }, label = "Amount",
+                            modifier = Modifier.fillMaxWidth(), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        )
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            moneyCategories.filter { it.kind == a.int("kind", KIND_EXPENSE) }.forEach { c -> PaperPill(c.name, a.text("categoryId") == c.id, { actions[i] = a.with("categoryId", c.id) }) }
+                        }
+                        Text("Without a category, the first one of that kind is used. It is dated the day it happened.", fontSize = 12.sp, color = p.ink2)
+                    }
+                    RuleKinds.NOTE -> {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            habits.filter { !it.archived }.forEach { h -> PaperPill(h.name, a.text("habitId") == h.id, { actions[i] = a.with("habitId", h.id) }) }
+                        }
+                        PaperField(value = a.text("text"), onValueChange = { actions[i] = a.with("text", it) }, label = "Note", modifier = Modifier.fillMaxWidth(), placeholder = "e.g. Left {place} at {time}")
+                    }
+                    RuleKinds.RUN_RULE -> {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            allRules.filter { it.id != initial?.id }.forEach { r -> PaperPill(r.name, a.text("ruleId") == r.id, { actions[i] = a.with("ruleId", r.id) }) }
+                        }
+                        if (allRules.none { it.id != initial?.id }) Text("You have no other rule yet.", fontSize = 12.sp, color = p.ink2)
+                        Text("Runs that rule's actions, whatever its own trigger and conditions say. Rules that run each other stop after 3 steps.", fontSize = 12.sp, color = p.ink2)
+                    }
                 }
             }
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             RuleKinds.ACTIONS.forEach { (k, label) -> PaperPill("+ $label", false, { actions.add(RulePart(k)) }) }
         }
-        Text("In names and messages, {place}, {time}, {minutes}, {mode} and {km} are filled in.", fontSize = 12.sp, color = p.ink2)
+        Text("In names and messages, {place}, {time}, {minutes}, {mode}, {km}, {habit}, {app}, {name}, {steps} and {kmh} are filled in where they apply.", fontSize = 12.sp, color = p.ink2)
 
         PaperField(
             value = cooldown, onValueChange = { cooldown = it.filter(Char::isDigit).take(5) }, label = "Least seconds between two runs",

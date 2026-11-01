@@ -43,7 +43,7 @@ Life Tracker is an Android app built for one person: its owner. It replaces a pi
 | Habits (H1 to H13) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done |
 | The paper look (Timeline, Habits, Settings, Food) | ▰▰▰▰▰▰▰▱▱▱ | 🟡 Money and Stats still to restyle |
 | Places and trips remake (C1 to C9) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done, 11 pull requests |
-| **Places and trips round 2 (E1 to E10)** | ▰▰▰▰▰▱▱▱▱▱ | 🔨 E7 built (replay, smart speed, zoom by pace, any stretch, GIF); E8a built (rules engine, Rules page, log), E8b next |
+| **Places and trips round 2 (E1 to E10)** | ▰▰▰▰▰▱▱▱▱▱ | 🔨 E7 built (replay, smart speed, zoom by pace, any stretch, GIF); E8 built (rules engine, Rules page, log, more triggers/conditions/actions, buttons); E9 place goals next |
 | Money editing (R6b, R6c) | ▰▰▱▱▱▱▱▱▱▱ | ⏳ Data done, screens next |
 | Life events, month and year views (Step 14) | ▱▱▱▱▱▱▱▱▱▱ | 💤 Later |
 
@@ -202,11 +202,11 @@ Done in two pull requests: **E7a** is the replay itself, **E7b** is the GIF expo
 - [x] Tests: the decisions, days and windows, cooldown, the loop stop, the events made from visits, charging and trips, time-of-day timing across midnight, the codec, the summaries, the message blanks, the backup round trip
 
 **E8b The rest of the triggers, actions and conditions, and the habit that does itself**
-- [ ] **Triggers:** Wi-Fi or Bluetooth connects or leaves, an app is opened or used for a time, a call, steps reach a number, speed above or below, sleep or wake, a trip starts, a habit is ticked
-- [ ] **Conditions:** only if charging, only at a place or kind of place, only if a habit is not done yet today, and "all of" or "any of"
-- [ ] **Actions:** start the focus timer, log money, add a note to a habit, run another rule
-- [ ] A **habit that is done by a rule** or a "this happened" button on its card
-- [ ] Tests
+- [x] **Triggers:** Wi-Fi connects or disconnects (any network or one by name), a Bluetooth device connects or disconnects, an app is opened, an app is used for some minutes in a day, a call (any, taken, made or missed), steps reach a number, speed goes above (or on a trip drops below) some km/h, I wake up, I fall asleep, a trip starts, a habit is ticked (any or one). Wi-Fi, Bluetooth, apps, calls, steps and sleep are looked at about every 15 minutes; trip start, speed and habit ticks are the moment they happen
+- [x] **Conditions:** only if charging (or not), only at a place, a kind of place or anywhere named (or not), only if a habit is not done yet today, and "one of these is enough" instead of all
+- [x] **Actions:** start the focus timer, log money (spending or income, with a category), add a note to a habit, run another rule (stops after 3 steps)
+- [x] **Buttons:** a rule set to "I press Run now" shows as a button at the top of the Rules page. Together with the rules that tick habits, that is the habit that is done by something else, or by a "this happened" button. A new kind of habit with its own card was not added: it would have needed changes to the habit editor, streaks and stats, and a rule that ticks a habit already gives the same result
+- [x] Tests: the new triggers and hooks, the conditions (charging, place, habit, any-of), the saved form, the words, the look-back
 
 #### E9 Place goals
 - [ ] Research open-source goal and quest trackers
