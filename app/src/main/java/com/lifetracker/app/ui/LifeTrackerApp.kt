@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import com.lifetracker.app.R
 import com.lifetracker.app.data.BackupManager
 import com.lifetracker.app.data.FeatureRules
+import com.lifetracker.app.data.RulesWorker
 import com.lifetracker.app.data.Features
 import com.lifetracker.app.data.DataSources
 import com.lifetracker.app.data.CallsCollector
