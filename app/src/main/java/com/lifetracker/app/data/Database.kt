@@ -95,8 +95,9 @@ interface EntryDao {
         TrackingProfileEntity::class,
         MapStyleEntity::class,
         MapAreaEntity::class,
+        SyncOutboxEntity::class,
     ],
-    version = 28,
+    version = 29,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -122,6 +123,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun pointNoteDao(): PointNoteDao
     abstract fun trackingProfileDao(): TrackingProfileDao
     abstract fun mapDao(): MapDao
+    abstract fun syncOutboxDao(): SyncOutboxDao
 
     companion object {
         @Volatile
@@ -134,13 +136,19 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "life-tracker.db",
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29)
                     .addCallback(object : RoomDatabase.Callback() {
                         // A brand new database starts with the built-in activities and money categories.
                         override fun onCreate(db: SupportSQLiteDatabase) {
                             DefaultActivities.seed(db)
                             DefaultMoneyCategories.seed(db)
                             DefaultPlaceCategories.seed(db)
+                        }
+
+                        // Two-phone sync: the change log triggers are on only while sync is switched on, and are put back on
+                        // each start because a database upgrade that rebuilds a table drops its triggers.
+                        override fun onOpen(db: SupportSQLiteDatabase) {
+                            if (SyncSettings(context).enabled) SyncCapture.install(db)
                         }
                     })
                     .build()
@@ -587,5 +595,19 @@ val MIGRATION_27_28: Migration = object : Migration(27, 28) {
                 "`note` TEXT NOT NULL, PRIMARY KEY(`id`))",
         )
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_map_areas_styleId` ON `map_areas` (`styleId`)")
+    }
+}
+
+/**
+ * Version 28 -> 29: the two-phone sync change log (sync_outbox). Nothing else is touched. The SQL must match the entity in
+ * SyncOutbox.kt exactly.
+ */
+val MIGRATION_28_29: Migration = object : Migration(28, 29) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `sync_outbox` (`seq` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `tableName` TEXT NOT NULL, " +
+                "`rowKey` TEXT NOT NULL, `changedMs` INTEGER NOT NULL)",
+        )
+        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_sync_outbox_tableName_rowKey` ON `sync_outbox` (`tableName`, `rowKey`)")
     }
 }

@@ -2,6 +2,15 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🔄 Two-phone sync: noting every change (S2)
+
+### ✨ New
+
+- **A hidden change log** on the main phone: when sync is switched on, every change to your data (a visit, a habit tick, a meal, a GPS reading, a delete) is noted in a small list of "this row changed". Nothing is sent yet and nothing in the app looks different.
+- **Off by default.** Until you switch sync on (a later step) nothing is noted at all.
+- **Settings that will be copied** (theme, features, timeline, habits, money, map, replay) can be packed as one piece of text. Tracking, permissions and the sync login are never included.
+- Database version 29 (adds the change log); your data is untouched.
+
 ## 🔄 Two-phone sync: the Supabase setup (S1)
 
 ### ✨ New

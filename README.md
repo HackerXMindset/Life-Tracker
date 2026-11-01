@@ -44,7 +44,7 @@ Life Tracker is an Android app built for one person: its owner. It replaces a pi
 | The paper look (Timeline, Habits, Settings, Food) | ▰▰▰▰▰▰▰▱▱▱ | 🟡 Money and Stats still to restyle |
 | Places and trips remake (C1 to C9) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done, 11 pull requests |
 | **Places and trips round 2 (E1 to E10)** | ▰▰▰▰▰▱▱▱▱▱ | 🔨 E7 built (replay, smart speed, zoom by pace, any stretch, GIF), E8 next |
-| **Two-phone sync (S1 to S8)** | ▰▱▱▱▱▱▱▱▱▱ | 🔨 S1 supabase setup and table list; E8 to E10 paused for it |
+| **Two-phone sync (S1 to S8)** | ▰▰▱▱▱▱▱▱▱▱ | 🔨 S1 Supabase setup, S2 change capture; E8 to E10 paused for it |
 | Money editing (R6b, R6c) | ▰▰▱▱▱▱▱▱▱▱ | ⏳ Data done, screens next |
 | Life events, month and year views (Step 14) | ▱▱▱▱▱▱▱▱▱▱ | 💤 Later |
 
@@ -256,7 +256,12 @@ Planned on 31 October (full plan in the project docs: `phone-sync-plan-31-oct.md
 - [x] A test that reads the database source, so a table added later cannot be forgotten
 
 **S2 Capture changes (on the main phone)**
-- [ ] A change log filled by database triggers for every copied table; settings snapshot; no screen changes
+- [x] A change log (`sync_outbox`, database version 29) filled by database triggers on all 34 copied tables: it holds only which row changed, never the data, so a row changed ten times is sent once and always as it is at that moment (or as deleted); a change of key is noted as the old row gone and the new one there
+- [x] The triggers exist only while sync is switched on (off by default), are put back on every start, and are never put on the change log itself
+- [x] "Queue everything" SQL for the first full copy, which can be narrowed (for example to one day of GPS readings)
+- [x] A settings snapshot (theme, features, timeline, habits, money, map, replay) as text, with an allow-list so tracking, permissions and the sync login can never be copied
+- [x] Tests for the generated SQL, the snapshot and the settings allow-list; the trigger design was also run against a real SQLite
+- No screen changes: nothing can switch sync on until S3
 
 **S3 Upload** (sign-in, uploader, pausing when the mailbox is full, Sync screen) · **S4 First copy** (all history, GPS batches) · **S5 Viewer core** (Viewer variant, apply changes, Realtime, acknowledge) · **S6 Read-only screens** · **S7 Viewer build in CI and keep-alive** · **S8 Hardening** (7-day gap, big backlog, bad network, tests)
 

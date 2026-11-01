@@ -60,6 +60,7 @@ object SyncTables {
         t("trip_points", "tripId", "ms"),
         t("raw_fixes", "ms", note = "Every GPS reading; sent in compressed batches, by day."),
         no("imported_items", "source", "sourceId", note = "Bookkeeping so a Streak or OpenNutriTracker import never doubles; the second phone never imports."),
+        no("sync_outbox", "seq", note = "The change log itself."),
         no("map_areas", "id", note = "Offline map areas live as files on one phone, so they cannot be copied as rows."),
     )
 

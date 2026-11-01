@@ -57,7 +57,7 @@ class SyncTablesTest {
 
     @Test
     fun onlyBookkeepingAndPerPhoneFilesAreLeftOut() {
-        assertEquals(listOf("imported_items", "map_areas"), SyncTables.all.filter { !it.synced }.map { it.name }.sorted())
+        assertEquals(listOf("imported_items", "map_areas", "sync_outbox"), SyncTables.all.filter { !it.synced }.map { it.name }.sorted())
         assertTrue(SyncTables.byName("raw_fixes")!!.synced)
         assertEquals("raw_fixes", SyncTables.syncedNames.last())
         assertEquals("trip_points", SyncTables.syncedNames[SyncTables.syncedNames.size - 2])
