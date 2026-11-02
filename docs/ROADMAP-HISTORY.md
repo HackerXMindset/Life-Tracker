@@ -161,9 +161,9 @@ Each step is small enough to build, install and try before the next begins. The 
   PLANNED      E5 Places and trips round 2: Better place names: exact shops and landmarks, several choices, learns, optional ask-me notification
   PLANNED      E6 Places and trips round 2: Journey quality and travel mode: trains and long drives, a far better mode guess, the icon sheet
   PLANNED      E7 Places and trips round 2: Day replay: a moving diary of the day, many speeds, skip quiet stretches, export as GIF
-  PLANNED      E8 Places and trips round 2: Triggers and actions: a new kind of habit that happens by itself
-  PLANNED      E9 Places and trips round 2: Place goals (quests): hours out, visits, gym time, any measure, daily or weekly
-  PLANNED      E10 Places and trips round 2: Round 2 finish: docs, help text, tests, release notes
+  DONE         E8 Places and trips round 2: Triggers and actions (Rules: triggers, conditions, actions, buttons; no new habit kind, a rule that ticks a habit does the job)
+  DONE         E9 Places and trips round 2: Place goals: hours at a place or kind, visits, hours out, distance, hours travelling; day, week, month or last N days; rings on Timeline and Habits
+  DONE         E10 Places and trips round 2: Round 2 finish: docs, tests across the stages, the train day through rules and goals
   NEXT ──►    R6b/R6c Money (see below)
               R6b/R6c Money: editing and the paper look (after the habits): "Deduct it from", separate expense and income categories, edit anything, paper look (includes Paper P5)
   DONE         Paper P4 New look: Food
