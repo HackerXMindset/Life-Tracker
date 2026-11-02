@@ -427,7 +427,9 @@ fun TimelineScreen(
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 96.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            item(key = "header") { TimelineHeader(date) }
+            item(key = "header") {
+                TimelineHeader(date, onReplay = if (showPlaces || showTrips) ({ onOpenReplay(date.toString()) }) else null)
+            }
             item(key = "week") {
                 PaperWeekStrip(selected = date, datesWithEntries = datesWithEntries, onSelect = vm::selectDate)
             }
@@ -444,11 +446,6 @@ fun TimelineScreen(
                     phone = if (phoneMinutes > 0) formatDuration(phoneMinutes) else "–",
                     study = if (studyMinutes > 0) formatDuration(studyMinutes) else "–",
                 )
-            }
-            if (showPlaces || showTrips) {
-                item(key = "replay") {
-                    PaperButton("Replay this day", { onOpenReplay(date.toString()) }, style = PaperButtonStyle.Ghost, small = true)
-                }
             }
             if (pie) {
                 item(key = "pie") { DayPieView(whatSegs, whereSegs, if (showTrips) tripsEff else emptyList()) }

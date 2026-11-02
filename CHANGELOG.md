@@ -2,6 +2,13 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧭 Timeline header: rewind button, goal rings off by default
+
+### ✨ Changed
+
+- **Replay this day is now a small rewind button** at the top right of the Timeline, beside the "left today" arc, instead of a wide button on the page. It works for any day.
+- **The goal rings are off by default.** Switch them on under Settings > Place goals ("Show goal rings on the Timeline and in Habits"). The goals themselves are unchanged.
+
 ## 🧭 Places and trips round 2 is finished (E10)
 
 ### ✨ In short

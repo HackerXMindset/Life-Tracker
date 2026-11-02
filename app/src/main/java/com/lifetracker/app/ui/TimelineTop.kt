@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
@@ -30,11 +31,13 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lifetracker.app.R
 import com.lifetracker.app.ui.theme.LocalPaper
 import com.lifetracker.app.ui.theme.PaperCard
 import com.lifetracker.app.ui.theme.Wobble
@@ -66,9 +69,12 @@ object TimelineTop {
     fun leftText(minuteOfDay: Int): String = formatDuration((1440 - minuteOfDay.coerceIn(0, 1440)).coerceAtLeast(0)) + " left today"
 }
 
-/** The big title, the date under it, and (today only) the sun arc. */
+/**
+ * The big title, the date under it, and (today only) the sun arc. When [onReplay] is given, a small rewind button sits at the
+ * top right, beside the arc, and opens the replay of the day.
+ */
 @Composable
-fun TimelineHeader(date: LocalDate) {
+fun TimelineHeader(date: LocalDate, onReplay: (() -> Unit)? = null) {
     val p = LocalPaper.current
     val today = LocalDate.now()
     Row(
@@ -87,7 +93,32 @@ fun TimelineHeader(date: LocalDate) {
             )
             Text(text = TimelineTop.subtitle(date), fontSize = 12.sp, color = p.ink2)
         }
-        if (date == today) SunArc()
+        Box {
+            if (date == today) SunArc()
+            if (onReplay != null) ReplayButton(onReplay, Modifier.align(Alignment.TopEnd))
+        }
+    }
+}
+
+/** A small round rewind button: 30 dp to look at, 44 dp to tap. It sits in the free corner beside the sun arc. */
+@Composable
+private fun ReplayButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val p = LocalPaper.current
+    Box(
+        modifier = modifier
+            .offset(x = 7.dp)
+            .size(44.dp)
+            .clip(CircleShape)
+            .clickable(role = Role.Button, onClickLabel = "Replay this day", onClick = onClick)
+            .semantics { contentDescription = "Replay this day" },
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier = Modifier.size(30.dp).background(p.surface, CircleShape).border(1.25.dp, p.line, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            PaperIcon(R.drawable.ic_p_rewind, size = 16.dp, tint = p.ink)
+        }
     }
 }
 
