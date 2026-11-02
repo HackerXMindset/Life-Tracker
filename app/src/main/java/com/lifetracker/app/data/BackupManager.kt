@@ -147,6 +147,7 @@ object BackupManager {
         mapStyles = db.mapDao().styles(),
         rules = db.ruleDao().all(),
         goals = db.goalDao().all(),
+        lifeEvents = db.lifeEventDao().all(),
     )
 
     /**
@@ -272,6 +273,10 @@ object BackupManager {
             if (data.version >= 30) {
                 // Goals only grow too.
                 db.goalDao().insertMissing(data.goals)
+            }
+            if (data.version >= 31) {
+                // Life events only grow too.
+                db.lifeEventDao().insertMissing(data.lifeEvents)
             }
         }
     }

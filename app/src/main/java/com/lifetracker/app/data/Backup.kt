@@ -45,6 +45,7 @@ data class BackupData(
     val mapStyles: List<MapStyleEntity> = emptyList(),
     val rules: List<RuleEntity> = emptyList(),
     val goals: List<GoalEntity> = emptyList(),
+    val lifeEvents: List<LifeEventEntity> = emptyList(),
 ) {
     val isEmpty: Boolean
         get() = entries.isEmpty() && habits.isEmpty() && completions.isEmpty() && categories.isEmpty() &&
@@ -52,7 +53,7 @@ data class BackupData(
             moneyItems.isEmpty() && moneyEntries.isEmpty() && usageSessions.isEmpty() && calls.isEmpty() &&
             chargeSessions.isEmpty() && stepDays.isEmpty() && sleepNights.isEmpty() && places.isEmpty() && placeVisits.isEmpty() &&
             trips.isEmpty() && tripPoints.isEmpty() && rawFixes.isEmpty() && timelineEdits.isEmpty() && usageCombos.isEmpty() && usageStates.isEmpty() && focusSessions.isEmpty() &&
-            tripEdits.isEmpty() && pointNotes.isEmpty() && trackingProfiles.isEmpty() && mapStyles.isEmpty() && rules.isEmpty() && goals.isEmpty()
+            tripEdits.isEmpty() && pointNotes.isEmpty() && trackingProfiles.isEmpty() && mapStyles.isEmpty() && rules.isEmpty() && goals.isEmpty() && lifeEvents.isEmpty()
 }
 
 /**
@@ -65,7 +66,7 @@ data class BackupData(
  */
 object BackupCodec {
     const val APP_NAME = "life-tracker"
-    const val FORMAT_VERSION = 30
+    const val FORMAT_VERSION = 31
 
     fun encode(data: BackupData): String =
         JSONObject()
@@ -109,6 +110,7 @@ object BackupCodec {
             .put("mapStyles", array(data.mapStyles, ::mapStyleJson))
             .put("rules", array(data.rules, ::ruleJson))
             .put("goals", array(data.goals, ::placeGoalJson))
+            .put("lifeEvents", array(data.lifeEvents, ::lifeEventJson))
             .toString(2)
 
     /** Reads a backup. Throws [IllegalArgumentException] with a readable reason if it is not usable. */
@@ -160,6 +162,7 @@ object BackupCodec {
                 mapStyles = list(root, "mapStyles", required = false, ::mapStyle),
                 rules = list(root, "rules", required = false, ::rule),
                 goals = list(root, "goals", required = false, ::placeGoal),
+                lifeEvents = list(root, "lifeEvents", required = false, ::lifeEvent),
             )
         } catch (e: JSONException) {
             throw IllegalArgumentException("This file is damaged or is not a backup.")
@@ -668,6 +671,19 @@ object BackupCodec {
         enabled = o.optBoolean("enabled", true),
         createdMs = o.optLong("createdMs", 0L),
         sortOrder = o.optInt("sortOrder", 0),
+    )
+
+    // Version 31 adds the life events.
+    private fun lifeEventJson(e: LifeEventEntity) = JSONObject()
+        .put("id", e.id).put("date", e.date).put("title", e.title).put("note", e.note).put("mark", e.mark).put("createdMs", e.createdMs)
+
+    private fun lifeEvent(o: JSONObject) = LifeEventEntity(
+        id = o.getString("id"),
+        date = o.getString("date"),
+        title = o.getString("title"),
+        note = o.optString("note", ""),
+        mark = o.optString("mark", ""),
+        createdMs = o.optLong("createdMs", 0L),
     )
 
     private fun mapStyleJson(m: MapStyleEntity) = JSONObject()
