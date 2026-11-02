@@ -30,7 +30,7 @@ import com.lifetracker.app.data.UsageCollector
 import com.lifetracker.app.ui.theme.LocalPaper
 
 /** Everything that can be opened from the Settings tab. The numbers for each live under Stats. */
-enum class Page { Rules, Phone, Steps, Places, Location, Calls, Charging, Activities, Habits, Appearance, Backup, Timeline, Apps, PlaceCategories, Profiles, Changes, Maps, Permissions, Logs, Trips, Live, Features }
+enum class Page { Goals, Rules, Phone, Steps, Places, Location, Calls, Charging, Activities, Habits, Appearance, Backup, Timeline, Apps, PlaceCategories, Profiles, Changes, Maps, Permissions, Logs, Trips, Live, Features }
 
 /**
  * The Settings tab, laid out like the demo: a big title, then four groups of rows. Each row has an icon, a name, one small
@@ -50,6 +50,7 @@ fun SettingsScreen(onOpen: (Page) -> Unit) {
     val chargingFeature = featureOn(Feature.CHARGING)
     val habitsFeature = featureOn(Feature.HABITS)
     val rulesFeature = featureOn(Feature.RULES)
+    val goalsFeature = featureOn(Feature.GOALS)
     val featureSummary = FeatureRules.summary { Features.isOn(context, it) }
     val places = PlacesSettings(context)
     val usageOn = UsageCollector.hasAccess(context)
@@ -132,6 +133,11 @@ fun SettingsScreen(onOpen: (Page) -> Unit) {
                 R.drawable.ic_p_habits, "Habits",
                 if (fromStreak) "Imported from Streak" else "Tracked in this app",
             ) { onOpen(Page.Habits) }
+        }
+
+        if (goalsFeature) item { PaperSection("Goals") }
+        if (goalsFeature) item {
+            SettingsRow(R.drawable.ic_p_stats, "Place goals", "Targets and limits from where you go") { onOpen(Page.Goals) }
         }
 
         if (rulesFeature) item { PaperSection("Automation") }

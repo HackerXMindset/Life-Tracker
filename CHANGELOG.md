@@ -2,6 +2,16 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧭 Places and trips round 2: place goals (E9)
+
+### ✨ New
+
+- **Place goals**: Settings > Place goals. Make a goal from where you go: hours at a place or a kind of place, visits, hours out of the house, distance, or hours travelling (any way, or one way such as car).
+- **A day, a week, a month or the last few days**, as a **target to reach** ("10 hours out of the house a week") or a **limit to stay under** ("at most 2 hours travelling a day"). A week runs Monday to Sunday.
+- **Rings** for your goals on the Timeline (today) and at the top of Habits. Tap them to open the goals. A ring fills as you get closer, shows "Done" or "Kept", and turns red when a limit is passed.
+- One stay or trip counts towards every goal it fits. Hidden and very short stays are left out, a stay across midnight is split between the days, and a stay that is still going counts up to now.
+- A **Place goals** switch under Settings > Features. Goals are saved in your backup file. Database version 30; your data is untouched.
+
 ## 🧭 Places and trips round 2: more for Rules (E8b)
 
 ### ✨ New

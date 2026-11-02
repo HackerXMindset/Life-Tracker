@@ -437,4 +437,17 @@ class BackupCodecTest {
         // A file from before version 29 has no rules and still reads.
         assertTrue(BackupCodec.decode(BackupCodec.encode(full.copy(rules = emptyList()))).rules.isEmpty())
     }
+
+    @Test
+    fun goalsComeBackExactlyAndAreKeptInTheBackup() {
+        val goals = listOf(
+            GoalEntity("g1", "Out \"more\"", GoalMeasures.HOURS_OUT, "", "home", "", GoalPeriods.WEEK, 7, GoalDirections.AT_LEAST, 10.0, true, 1_760_000_000_000L, 0),
+            GoalEntity("g2", "Less travel", GoalMeasures.HOURS_TRAVEL, "", "", "car", GoalPeriods.DAYS, 30, GoalDirections.AT_MOST, 2.5, false, 1_760_000_000_001L, 1),
+        )
+        val back = BackupCodec.decode(BackupCodec.encode(full.copy(goals = goals)))
+        assertEquals(goals, back.goals)
+        assertEquals(false, BackupData(30, "x", emptyList(), goals = goals).isEmpty)
+        // A file from before version 30 has no goals and still reads.
+        assertTrue(BackupCodec.decode(BackupCodec.encode(full.copy(goals = emptyList()))).goals.isEmpty())
+    }
 }

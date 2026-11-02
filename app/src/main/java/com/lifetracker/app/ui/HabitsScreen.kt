@@ -101,7 +101,7 @@ private val PAUSED_BLUE = Color(0xFF4A90D9)
 
 /** The Habits tab, laid out like Streak's classic view. */
 @Composable
-fun HabitsScreen(vm: HabitsViewModel = viewModel()) {
+fun HabitsScreen(onOpenGoals: () -> Unit = {}, vm: HabitsViewModel = viewModel()) {
     val ui by vm.state.collectAsState()
     val context = LocalContext.current
     val source = remember { HabitsSettings(context).source }
@@ -178,6 +178,7 @@ fun HabitsScreen(vm: HabitsViewModel = viewModel()) {
                 onNotes = { showNotes = true },
             )
         }
+        item(key = "goal-rings") { GoalStrip(onOpenGoals) }
         item(key = "streak-strip") { StreakStrip(source) }
         item(key = "today") { TodayCard(ui.today, ui.progress) }
         if (!ui.hasAny) {

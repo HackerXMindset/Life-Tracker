@@ -43,7 +43,7 @@ Life Tracker is an Android app built for one person: its owner. It replaces a pi
 | Habits (H1 to H13) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done |
 | The paper look (Timeline, Habits, Settings, Food) | ▰▰▰▰▰▰▰▱▱▱ | 🟡 Money and Stats still to restyle |
 | Places and trips remake (C1 to C9) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done, 11 pull requests |
-| **Places and trips round 2 (E1 to E10)** | ▰▰▰▰▰▱▱▱▱▱ | 🔨 E7 built (replay, smart speed, zoom by pace, any stretch, GIF); E8 built (rules engine, Rules page, log, more triggers/conditions/actions, buttons); E9 place goals next |
+| **Places and trips round 2 (E1 to E10)** | ▰▰▰▰▰▱▱▱▱▱ | 🔨 E7 built (replay, smart speed, zoom by pace, any stretch, GIF); E8 built (rules engine, Rules page, log, more triggers/conditions/actions, buttons); E9 built (place goals with rings); E10 finish next |
 | Money editing (R6b, R6c) | ▰▰▱▱▱▱▱▱▱▱ | ⏳ Data done, screens next |
 | Life events, month and year views (Step 14) | ▱▱▱▱▱▱▱▱▱▱ | 💤 Later |
 
@@ -209,11 +209,12 @@ Done in two pull requests: **E7a** is the replay itself, **E7b** is the GIF expo
 - [x] Tests: the new triggers and hooks, the conditions (charging, place, habit, any-of), the saved form, the words, the look-back
 
 #### E9 Place goals
-- [ ] Research open-source goal and quest trackers
-- [ ] Goals from places and trips: hours at a place or category, visits, time out of the house, gym time, distance, time travelling
-- [ ] Daily, weekly, monthly or your own period; a target to reach or to stay under
-- [ ] A progress ring on the Timeline and in Habits; one trigger can feed several goals
-- [ ] Tests
+- [x] Research: looked for open-source goal trackers; only the general idea of "x per period, or at most x" targets (as in Loop Habit Tracker) is used, the code is new
+- [x] Goals from places and trips: hours at one place, a kind of place or any named place; visits; hours out of the house (any stay not at your "home" kind, plus trips); distance; hours travelling (any way, or one way such as car)
+- [x] A day, a week (Monday to Sunday), a month, or the last N days; a target to reach or a limit to stay under
+- [x] A ring for each goal on the Timeline (today) and at the top of Habits, and a **Place goals** page in Settings to make, change, switch off and delete them; one stay or trip feeds every goal it fits; a **Place goals** switch under Features
+- [x] Goals are in the backup file (format 30, database version 30)
+- [x] Tests: periods, stays across midnight, ongoing stays, hidden and short stays, time out, distance and travel time by way of travelling, target and limit states, the words, the backup round trip
 
 #### E10 Finish
 - [ ] Help text, CHANGELOG, README, tests across the stages, a check against the train day

@@ -66,6 +66,7 @@ fun FeaturesScreen(onBack: () -> Unit) {
         item {
             SetCard {
                 featureRow(context, Feature.RULES, changed, first = true)
+                featureRow(context, Feature.GOALS, changed)
             }
         }
         item {
