@@ -108,7 +108,7 @@ object BackupCodec {
             .put("trackingProfiles", array(data.trackingProfiles, ::profileJson))
             .put("mapStyles", array(data.mapStyles, ::mapStyleJson))
             .put("rules", array(data.rules, ::ruleJson))
-            .put("goals", array(data.goals, ::goalJson))
+            .put("goals", array(data.goals, ::placeGoalJson))
             .toString(2)
 
     /** Reads a backup. Throws [IllegalArgumentException] with a readable reason if it is not usable. */
@@ -159,7 +159,7 @@ object BackupCodec {
                 trackingProfiles = list(root, "trackingProfiles", required = false, ::profile),
                 mapStyles = list(root, "mapStyles", required = false, ::mapStyle),
                 rules = list(root, "rules", required = false, ::rule),
-                goals = list(root, "goals", required = false, ::goal),
+                goals = list(root, "goals", required = false, ::placeGoal),
             )
         } catch (e: JSONException) {
             throw IllegalArgumentException("This file is damaged or is not a backup.")
@@ -649,12 +649,12 @@ object BackupCodec {
     )
 
     // Version 30 adds the place goals.
-    private fun goalJson(g: GoalEntity) = JSONObject()
+    private fun placeGoalJson(g: GoalEntity) = JSONObject()
         .put("id", g.id).put("name", g.name).put("measure", g.measure).put("placeId", g.placeId).put("category", g.category)
         .put("mode", g.mode).put("period", g.period).put("days", g.days).put("direction", g.direction).put("target", g.target)
         .put("enabled", g.enabled).put("createdMs", g.createdMs).put("sortOrder", g.sortOrder)
 
-    private fun goal(o: JSONObject) = GoalEntity(
+    private fun placeGoal(o: JSONObject) = GoalEntity(
         id = o.getString("id"),
         name = o.getString("name"),
         measure = o.getString("measure"),

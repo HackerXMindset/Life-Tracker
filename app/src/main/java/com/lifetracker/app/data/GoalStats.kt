@@ -98,8 +98,8 @@ object GoalStats {
     fun value(goal: GoalEntity, visits: List<PlaceVisitEntity>, trips: List<TripEntity>, places: List<PlaceEntity>, nowMs: Long, today: LocalDate, zone: ZoneId): Double {
         val r = range(goal, today, zone)
         val to = min(r.toMs, nowMs)
-        val shown = visits.filter { PlaceStats.isShown(it, nowMs) }
-        fun visitMs(v: PlaceVisitEntity) = overlap(v.startMs, v.startMs + PlaceStats.lengthMs(v, nowMs), r.fromMs, to)
+        val shown = visits.filter { PlaceRules.isShown(it, nowMs) }
+        fun visitMs(v: PlaceVisitEntity) = overlap(v.startMs, v.startMs + PlaceRules.lengthMs(v, nowMs), r.fromMs, to)
         return when (goal.measure) {
             GoalMeasures.HOURS_AT -> shown.filter { placeMatches(goal, it, places) }.sumOf { visitMs(it) } / HOUR_MS
             GoalMeasures.VISITS -> shown.count { placeMatches(goal, it, places) && it.startMs >= r.fromMs && it.startMs < r.toMs }.toDouble()
