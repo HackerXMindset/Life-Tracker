@@ -43,7 +43,7 @@ Life Tracker is an Android app built for one person: its owner. It replaces a pi
 | Habits (H1 to H13) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done |
 | The paper look (Timeline, Habits, Settings, Food) | ▰▰▰▰▰▰▰▱▱▱ | 🟡 Money and Stats still to restyle |
 | Places and trips remake (C1 to C9) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done, 11 pull requests |
-| **Places and trips round 2 (E1 to E10)** | ▰▰▰▰▰▱▱▱▱▱ | 🔨 E7 built (replay, smart speed, zoom by pace, any stretch, GIF); E8 built (rules engine, Rules page, log, more triggers/conditions/actions, buttons); E9 built (place goals with rings); E10 finish next |
+| Places and trips round 2 (E1 to E10) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done (stays and names, live map, replay and GIF, journeys and travel mode, Rules, place goals); needs your check on the phone, see the list below |
 | Money editing (R6b, R6c) | ▰▰▱▱▱▱▱▱▱▱ | ⏳ Data done, screens next |
 | Life events, month and year views (Step 14) | ▱▱▱▱▱▱▱▱▱▱ | 💤 Later |
 
@@ -217,7 +217,11 @@ Done in two pull requests: **E7a** is the replay itself, **E7b** is the GIF expo
 - [x] Tests: periods, stays across midnight, ongoing stays, hidden and short stays, time out, distance and travel time by way of travelling, target and limit states, the words, the backup round trip
 
 #### E10 Finish
-- [ ] Help text, CHANGELOG, README, tests across the stages, a check against the train day
+- [x] Help text: each new page (Rules, Place goals) explains itself at the top and in the editor; the Features page lists both switches
+- [x] CHANGELOG: one summary of round 2, with the changes of E7 to E9 above it
+- [x] README and the history updated; round 2 marked done
+- [x] Tests across the stages: the train day through the rules and the goals (one arrival and one leave for the merged stop, 405 km, 8.5 h out, the trip-end rule firing once), unique switch ids and words for every kind, the backup of a rule and a goal together
+- [x] A check against the train day: see "What your train day showed" below. Each point has a test from its stage; the real data is on your phone, so the last check is yours (first item below)
 
 </details>
 
@@ -231,7 +235,7 @@ Short stops on a long drive stay as they are now. You said no to daily recap not
 </details>
 
 <details>
-<summary><b>What your train day showed</b> (read from your screenshots, not yet checked in the data)</summary>
+<summary><b>What your train day showed</b> (read from your screenshots; each point now has a test, the real data still needs your look)</summary>
 
 - Two stays in a row at one place ("Prayagraj Junction" 5:34 to 5:38 and 5:38 to 5:46, "Platform no. 2" twice) that should be one stay (E1)
 - Place names that are only a town or locality ("Tundla, Firozabad") and one in Urdu script (E5)
@@ -291,6 +295,8 @@ Everything, step by step, is in [docs/ROADMAP-HISTORY.md](docs/ROADMAP-HISTORY.m
 <summary><b>Things only you can do</b></summary>
 
 - [ ] Make this repository private
+- [ ] Open the Timeline for the train day of 27 and 28 October and compare it with the list in "What your train day showed" (one stay at Prayagraj Junction, real place names, two journeys with a map, Sleep ending where the train begins, a sensible travel mode); tell me what is still wrong
+- [ ] Try one rule (for example "Charging starts" and a notification, or a Wi-Fi rule) and one goal (for example hours out of the house a week), and look at the log and the ring
 - [ ] Close the old pull requests #146, #147 and #148
 - [ ] Back up, then try GPS all day (notification, Pause and Resume, the Timeline), a charging profile and a Bluetooth profile
 - [ ] A short focus-timer test with the screen off, and a reminders test

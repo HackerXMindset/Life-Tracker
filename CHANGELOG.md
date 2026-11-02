@@ -2,6 +2,17 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧭 Places and trips round 2 is finished (E10)
+
+### ✨ In short
+
+Round 2 of Places and trips is done. Since the remake: stays that no longer split in two, better place names with suggestions, a live map that follows you, a replay of your day (with speeds, a zoom that follows your pace, and a GIF with the real map), journeys with a map and a much better guess of how you travelled, **Rules** (when something happens, do something), and **Place goals** with rings. Every part has its own switch under Settings > Features.
+
+### 🔧 Checked
+
+- The train day of 27 and 28 October runs through the rules and the goals in the tests: one stop at Prayagraj Junction (one arrival, one leave), two journeys of 343 km and 60 km, 405 km and 8.5 hours out of the house in all.
+- Please look at that day on your phone and tell me what is still wrong.
+
 ## 🧭 Places and trips round 2: place goals (E9)
 
 ### ✨ New
