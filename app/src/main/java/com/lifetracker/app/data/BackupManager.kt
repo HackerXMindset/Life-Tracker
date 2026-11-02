@@ -146,6 +146,7 @@ object BackupManager {
         trackingProfiles = db.trackingProfileDao().all(),
         mapStyles = db.mapDao().styles(),
         rules = db.ruleDao().all(),
+        goals = db.goalDao().all(),
     )
 
     /**
@@ -267,6 +268,10 @@ object BackupManager {
             if (data.version >= 29) {
                 // Rules only grow: restoring adds the ones that are missing and keeps what you changed since.
                 db.ruleDao().insertMissing(data.rules)
+            }
+            if (data.version >= 30) {
+                // Goals only grow too.
+                db.goalDao().insertMissing(data.goals)
             }
         }
     }

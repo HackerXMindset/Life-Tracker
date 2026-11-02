@@ -24,6 +24,7 @@ enum class Feature(val id: String, val title: String, val hint: String, val tabN
     PLACES("places", "Places and trips", "Your position, stays, trips and the live map"),
     MAPS("maps", "Maps", "Map pictures, offline areas and their downloads"),
     RULES("rules", "Rules", "Things that happen by themselves when something else happens"),
+    GOALS("goals", "Place goals", "Goals from your places and trips, with progress rings"),
 }
 
 /** The small rules around the switches, free of Android so they can be tested. */

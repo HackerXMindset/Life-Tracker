@@ -44,6 +44,7 @@ data class BackupData(
     val trackingProfiles: List<TrackingProfileEntity> = emptyList(),
     val mapStyles: List<MapStyleEntity> = emptyList(),
     val rules: List<RuleEntity> = emptyList(),
+    val goals: List<GoalEntity> = emptyList(),
 ) {
     val isEmpty: Boolean
         get() = entries.isEmpty() && habits.isEmpty() && completions.isEmpty() && categories.isEmpty() &&
@@ -51,7 +52,7 @@ data class BackupData(
             moneyItems.isEmpty() && moneyEntries.isEmpty() && usageSessions.isEmpty() && calls.isEmpty() &&
             chargeSessions.isEmpty() && stepDays.isEmpty() && sleepNights.isEmpty() && places.isEmpty() && placeVisits.isEmpty() &&
             trips.isEmpty() && tripPoints.isEmpty() && rawFixes.isEmpty() && timelineEdits.isEmpty() && usageCombos.isEmpty() && usageStates.isEmpty() && focusSessions.isEmpty() &&
-            tripEdits.isEmpty() && pointNotes.isEmpty() && trackingProfiles.isEmpty() && mapStyles.isEmpty() && rules.isEmpty()
+            tripEdits.isEmpty() && pointNotes.isEmpty() && trackingProfiles.isEmpty() && mapStyles.isEmpty() && rules.isEmpty() && goals.isEmpty()
 }
 
 /**
@@ -64,7 +65,7 @@ data class BackupData(
  */
 object BackupCodec {
     const val APP_NAME = "life-tracker"
-    const val FORMAT_VERSION = 29
+    const val FORMAT_VERSION = 30
 
     fun encode(data: BackupData): String =
         JSONObject()
@@ -107,6 +108,7 @@ object BackupCodec {
             .put("trackingProfiles", array(data.trackingProfiles, ::profileJson))
             .put("mapStyles", array(data.mapStyles, ::mapStyleJson))
             .put("rules", array(data.rules, ::ruleJson))
+            .put("goals", array(data.goals, ::placeGoalJson))
             .toString(2)
 
     /** Reads a backup. Throws [IllegalArgumentException] with a readable reason if it is not usable. */
@@ -157,6 +159,7 @@ object BackupCodec {
                 trackingProfiles = list(root, "trackingProfiles", required = false, ::profile),
                 mapStyles = list(root, "mapStyles", required = false, ::mapStyle),
                 rules = list(root, "rules", required = false, ::rule),
+                goals = list(root, "goals", required = false, ::placeGoal),
             )
         } catch (e: JSONException) {
             throw IllegalArgumentException("This file is damaged or is not a backup.")
@@ -642,6 +645,28 @@ object BackupCodec {
         createdMs = o.optLong("createdMs", 0L),
         lastRunMs = o.optLong("lastRunMs", 0L),
         runs = o.optInt("runs", 0),
+        sortOrder = o.optInt("sortOrder", 0),
+    )
+
+    // Version 30 adds the place goals.
+    private fun placeGoalJson(g: GoalEntity) = JSONObject()
+        .put("id", g.id).put("name", g.name).put("measure", g.measure).put("placeId", g.placeId).put("category", g.category)
+        .put("mode", g.mode).put("period", g.period).put("days", g.days).put("direction", g.direction).put("target", g.target)
+        .put("enabled", g.enabled).put("createdMs", g.createdMs).put("sortOrder", g.sortOrder)
+
+    private fun placeGoal(o: JSONObject) = GoalEntity(
+        id = o.getString("id"),
+        name = o.getString("name"),
+        measure = o.getString("measure"),
+        placeId = o.optString("placeId", ""),
+        category = o.optString("category", ""),
+        mode = o.optString("mode", ""),
+        period = o.optString("period", GoalPeriods.WEEK),
+        days = o.optInt("days", 7),
+        direction = o.optString("direction", GoalDirections.AT_LEAST),
+        target = o.optDouble("target", 1.0),
+        enabled = o.optBoolean("enabled", true),
+        createdMs = o.optLong("createdMs", 0L),
         sortOrder = o.optInt("sortOrder", 0),
     )
 

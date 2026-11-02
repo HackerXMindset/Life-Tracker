@@ -120,6 +120,7 @@ fun TimelineScreen(
     onOpenFood: () -> Unit,
     onOpenLive: () -> Unit,
     onOpenReplay: (String) -> Unit,
+    onOpenGoals: () -> Unit = {},
     vm: TimelineViewModel = viewModel(),
 ) {
     val date by vm.date.collectAsState()
@@ -433,6 +434,7 @@ fun TimelineScreen(
             if (date == java.time.LocalDate.now() && live?.live?.state == com.lifetracker.app.data.LiveRules.State.MOVING) {
                 item(key = "on-the-move") { OnTheMoveRow(live!!, onOpenLive) }
             }
+            if (date == java.time.LocalDate.now()) item(key = "goal-rings") { GoalStrip(onOpenGoals) }
             item(key = "view-switch") {
                 PaperSegmented(listOf("Timeline", "Pie"), if (pie) 1 else 0, { pie = it == 1 })
             }
