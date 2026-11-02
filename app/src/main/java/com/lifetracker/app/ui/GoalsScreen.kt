@@ -56,6 +56,7 @@ import com.lifetracker.app.data.GoalMeasures
 import com.lifetracker.app.data.GoalPeriods
 import com.lifetracker.app.data.GoalProgress
 import com.lifetracker.app.data.GoalStats
+import com.lifetracker.app.data.GoalsSettings
 import com.lifetracker.app.data.TripModes
 import com.lifetracker.app.ui.theme.LocalPaper
 import com.lifetracker.app.ui.theme.PaperButton
@@ -93,9 +94,11 @@ fun GoalRing(goal: GoalEntity, progress: GoalProgress, size: Dp = 56.dp, modifie
 fun GoalStrip(onOpen: () -> Unit, vm: GoalsViewModel = viewModel()) {
     val context = LocalContext.current
     val changes by Features.changes.collectAsState()
+    val ringChoice by GoalsSettings.changes.collectAsState()
     val items by vm.items.collectAsState()
     val shown = items.filter { it.goal.enabled }
-    if (changes < 0 || !Features.isOn(context, Feature.GOALS) || shown.isEmpty()) return
+    // Off until you switch the rings on (Settings > Place goals).
+    if (changes < 0 || ringChoice == false || !GoalsSettings.showRings(context) || !Features.isOn(context, Feature.GOALS) || shown.isEmpty()) return
     val p = LocalPaper.current
     val shape = Wobble.Small
     Row(
@@ -143,10 +146,22 @@ fun GoalsScreen(onBack: () -> Unit, vm: GoalsViewModel = viewModel()) {
                 "A goal counts something from your places and trips over a day, a week, a month or the last few days: hours at a place or kind of place, " +
                     "visits, hours out of the house, distance, hours travelling. Set it as a target to reach (10 hours out of the house a week) " +
                     "or a limit to stay under (at most 2 hours of travelling a day). One stay or trip counts towards every goal it fits. " +
-                    "The rings show on the Timeline and in Habits.",
+                    "The rings can be shown on the Timeline and in Habits: they are off until you switch them on below.",
                 fontSize = 12.5.sp,
                 color = p.ink2,
             )
+        }
+        item {
+            val ringsOn by GoalsSettings.changes.collectAsState()
+            SetCard {
+                ToggleRow(
+                    "Show goal rings on the Timeline and in Habits",
+                    ringsOn ?: GoalsSettings.showRings(context),
+                    { GoalsSettings.setShowRings(context, it) },
+                    hint = "A row of rings for the goals that are switched on",
+                    first = true,
+                )
+            }
         }
         if (!featureOn) item { Text("Place goals are switched off in Settings > Features, so no ring is shown.", fontSize = 13.sp, color = p.bad) }
         items(items, key = { it.goal.id }) { item ->
