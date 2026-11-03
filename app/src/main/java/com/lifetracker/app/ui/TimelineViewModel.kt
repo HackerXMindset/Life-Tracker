@@ -17,6 +17,7 @@ import com.lifetracker.app.data.TimelineEditEntity
 import com.lifetracker.app.data.TimelineSettings
 import com.lifetracker.app.data.PlaceVisitEntity
 import com.lifetracker.app.data.SleepNightEntity
+import com.lifetracker.app.data.InsideWalk
 import com.lifetracker.app.data.StepDayEntity
 import com.lifetracker.app.data.TodoEntity
 import com.lifetracker.app.data.PlacesSettings
@@ -37,6 +38,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -162,6 +164,39 @@ class TimelineViewModel(app: Application) : AndroidViewModel(app) {
         },
     )
 
+    /** Trips of the day that never left the place they began at; the Timeline shows them as a walk inside the stay. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val insideTrips: StateFlow<Set<String>> = share(
+        emptySet(),
+        selectedDate.flatMapLatest { d ->
+            val zone = ZoneId.systemDefault()
+            val start = d.atStartOfDay(zone).toInstant().toEpochMilli()
+            val end = d.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+            combine(
+                db.tripDao().tripsBetween(start, end),
+                db.tripDao().observePointsBetween(start - 3_600_000L, end),
+                db.placeDao().observePlaces(),
+            ) { trips, points, places ->
+                val same = trips.filter { it.fromPlaceId.isNotEmpty() && it.fromPlaceId == it.toPlaceId }
+                if (same.isEmpty()) emptySet() else InsideWalk.insideTrips(same, points.groupBy { it.tripId }, places)
+            }
+        },
+    )
+
+    /** The stretches of the day in which the readings say you were walking (for the "Walked about" line of a place). */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val walks: StateFlow<List<Pair<Long, Long>>> = share(
+        emptyList(),
+        selectedDate.flatMapLatest { d ->
+            kotlinx.coroutines.flow.flow {
+                val zone = ZoneId.systemDefault()
+                val start = d.atStartOfDay(zone).toInstant().toEpochMilli()
+                val end = d.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+                emit(InsideWalk.spans(db.rawDao().between(start, end)))
+            }.flowOn(kotlinx.coroutines.Dispatchers.IO)
+        },
+    )
+
     /** Place name by id, for labelling visits. */
     val placeNames: StateFlow<Map<String, String>> =
         share(emptyMap(), db.placeDao().observePlaces().map { list -> list.associate { it.id to it.name } })
@@ -260,6 +295,26 @@ class TimelineViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             db.tripDao().setMode(trip.id, mode, "you")
             TripAdjust.refresh(db, trip.id, PlacesSettings(getApplication<android.app.Application>()).strideM())
+        }
+    }
+
+    /** The trips you deleted that can still be brought back. */
+    val deletedTrips: StateFlow<List<TripEntity>> = share(emptyList(), db.tripDao().observeDeleted())
+
+    /** Deletes a trip: it leaves the Timeline, the totals and the goals, and waits in the Deleted list. */
+    fun deleteTrip(id: String) {
+        viewModelScope.launch { db.tripDao().setDeleted(id, System.currentTimeMillis()) }
+    }
+
+    fun restoreTrip(id: String) {
+        viewModelScope.launch { db.tripDao().setDeleted(id, 0L) }
+    }
+
+    /** Removes a deleted trip for good (its route readings go too). */
+    fun removeTripForGood(id: String) {
+        viewModelScope.launch {
+            db.tripDao().removeRoute(id)
+            db.tripDao().setDeleted(id, -1L)
         }
     }
 

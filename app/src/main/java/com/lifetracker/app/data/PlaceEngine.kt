@@ -253,7 +253,12 @@ object PlaceEngine {
         val stay = s.stay
         if (stay != null) {
             val d = PlaceRules.distanceM(stay.lat, stay.lng, fix.lat, fix.lng)
-            if (d <= STAY_RADIUS_M + min(fix.accuracyM.toDouble(), 50.0)) {
+            // Moving about inside a named place (walking around the house) is still the same stay: only leaving it ends the stay.
+            val roaming = d > STAY_RADIUS_M + min(fix.accuracyM.toDouble(), 50.0) &&
+                PlaceRules.stillInside(places, stay.placeId, fix.lat, fix.lng, fix.accuracyM)
+            if (roaming) {
+                s = s.copy(stay = stay.copy(n = stay.n + 1, lastSeenMs = max(stay.lastSeenMs, fix.timeMs)))
+            } else if (d <= STAY_RADIUS_M + min(fix.accuracyM.toDouble(), 50.0)) {
                 val n = stay.n + 1
                 val lat = stay.lat + (fix.lat - stay.lat) / n
                 val lng = stay.lng + (fix.lng - stay.lng) / n

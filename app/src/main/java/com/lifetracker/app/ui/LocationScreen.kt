@@ -321,7 +321,7 @@ private fun JourneyRow(journey: PlaceTrail.Journey, onMode: (PlaceTrail.Journey,
     val unknown = journey.unknownMode
     val length = PlaceRules.durationText((journey.endMs - journey.startMs).coerceAtLeast(0L))
     val distance = TripRules.distanceText(journey.distanceM) + if (trip == null) " in a straight line" else ""
-    val title = if (unknown || trip == null) "Unknown way of travel" else TripModes.label(trip.mode) + if (trip.modeSource == "you") "" else " (guess)"
+    val title = TripModes.title(trip)
     PaperCard(modifier = Modifier.fillMaxWidth().padding(start = 18.dp), shadow = false) {
         Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = if (unknown) paper.sun else paper.ink)
         Text(

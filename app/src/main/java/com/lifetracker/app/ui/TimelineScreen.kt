@@ -145,6 +145,8 @@ fun TimelineScreen(
     val placeVisits by vm.placeVisits.collectAsState()
     val placeNames by vm.placeNames.collectAsState()
     val dayTrips by vm.trips.collectAsState()
+    val insideTripIds by vm.insideTrips.collectAsState()
+    val dayWalks by vm.walks.collectAsState()
     val edits by vm.edits.collectAsState()
 
     // Read fresh each time the Timeline comes into view, so changes made on the Phone usage screen show up.
@@ -237,6 +239,16 @@ fun TimelineScreen(
     // The trip shown alone on a map in a card (tap a trip on the Timeline).
     var popupTrip by remember { mutableStateOf<String?>(null) }
     var showHidden by remember { mutableStateOf(false) }
+    // The trip just deleted (for the Undo bar) and the list of deleted trips to bring one back from.
+    var justDeleted by remember { mutableStateOf<TripEntity?>(null) }
+    var showDeleted by remember { mutableStateOf(false) }
+    val deletedTrips by vm.deletedTrips.collectAsState()
+    LaunchedEffect(justDeleted) {
+        if (justDeleted != null) {
+            kotlinx.coroutines.delay(8_000L)
+            justDeleted = null
+        }
+    }
     val usageApps by vm.usageApps.collectAsState()
     val placeLooks by vm.placeLooks.collectAsState()
     val combos by vm.usageCombos.collectAsState()
@@ -312,9 +324,10 @@ fun TimelineScreen(
     val flatAll = DaySegments.flatten(loggedSegs + collectedSegs, dayStartMs, dayEndMs)
     val nowMarker = if (nowMs in dayStartMs until dayEndMs) nowMs else null
     var pie by rememberSaveable { mutableStateOf(false) }
+    var collapsed by remember { mutableStateOf(timelineSettings.collapseAll) }
 
     val offs = usageOffs.map { DayLayout.Off(it.startMs, it.endMs, it.kind == UsageStateEntity.SHUTDOWN) }
-    val rows = DayLayout.build(items, visitsEff, tripsEff, placeNames, dayStartMs, dayEndMs, nowMs, showPlaces, showTrips, offs = offs, showGaps = timelineSettings.showGaps)
+    val rows = DayLayout.build(items, visitsEff, tripsEff, placeNames, dayStartMs, dayEndMs, nowMs, showPlaces, showTrips, offs = offs, showGaps = timelineSettings.showGaps, insideTripIds = insideTripIds, walks = dayWalks)
 
     // The "Where" line: each stay at a place, and each journey between places.
     val whereSegs = rows.mapNotNull { r ->
@@ -324,10 +337,10 @@ fun TimelineScreen(
                 typeOf(TimelineEdits.VISIT, r.visit.id)?.displayColor() ?: placeLooks[r.placeId]?.let { argbColor(it.color) } ?: placeColorOf(r.name), r.name,
             )
             is DayLayout.Travel -> {
-                val unknown = r.trip == null || (r.trip.mode == "vehicle" && r.trip.modeSource != "you")
+                val unknown = TripModes.styledUnknown(r.trip)
                 StripSeg(
                     r.startMs, r.endMs, Color(0xFF4A5568),
-                    if (unknown) "Unknown way of travel" else TripModes.label(r.trip!!.mode),
+                    TripModes.title(r.trip).removeSuffix(" (guess)"),
                     hatch = true, unknown = unknown,
                 )
             }
@@ -340,12 +353,13 @@ fun TimelineScreen(
         kind: String, ref: String, title: String, startMs: Long, endMs: Long?,
         extraLabel: String? = null, onExtra: (() -> Unit)? = null, openLabel: String? = null, onOpen: (() -> Unit)? = null,
         details: List<String> = emptyList(), detailsTitle: String = "Inside",
+        onDelete: (() -> Unit)? = null, deleteLabel: String = "Delete",
     ): EditTarget {
         val e = edits[TimelineEdits.key(kind, ref)]
         return EditTarget(
             kind, ref, title, startMs, endMs, TimelineEdits.category(e).orEmpty(), e != null && !e.hidden, dayStartOf(startMs),
             extraLabel = extraLabel, onExtra = onExtra, openLabel = openLabel, onOpen = onOpen,
-            details = details, detailsTitle = detailsTitle,
+            details = details, detailsTitle = detailsTitle, onDelete = onDelete, deleteLabel = deleteLabel,
         )
     }
     val actions = DayActions(
@@ -411,9 +425,12 @@ fun TimelineScreen(
                 onOpen = if (p.named) ({ onOpenPlace(p.visit.placeId) }) else onOpenPlaces,
             )
         },
-        askHowTravelled = timelineSettings.askHowTravelled,
+        askHowTravelled = timelineSettings.askHowTravelled && !collapsed,
         onEditTrip = { t ->
-            editTarget = target(TimelineEdits.TRIP, t.id, "Trip", t.startMs, t.endMs, openLabel = "Open trip", onOpen = { onOpenTrip(t.id) })
+            editTarget = target(
+                TimelineEdits.TRIP, t.id, "Trip", t.startMs, t.endMs, openLabel = "Open trip", onOpen = { onOpenTrip(t.id) },
+                onDelete = { vm.deleteTrip(t.id); justDeleted = t }, deleteLabel = "Delete this trip",
+            )
         },
     )
     val hiddenToday = edits.values.filter { it.hidden && !TripEditing.isJoinedAway(it) && it.startMs in dayStartMs until dayEndMs }
@@ -470,7 +487,28 @@ fun TimelineScreen(
                     }
                 }
             } else {
-                item(key = "calendar") { DayCalendar(rows, actions) }
+                justDeleted?.let { gone ->
+                    item(key = "undo-delete") {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text("Trip deleted", fontSize = 13.sp, color = LocalPaper.current.ink, modifier = Modifier.weight(1f))
+                            PaperButton("Undo", { vm.restoreTrip(gone.id); justDeleted = null }, style = PaperButtonStyle.Ghost, small = true)
+                        }
+                    }
+                }
+                if (rows.any { it is DayLayout.Place || it is DayLayout.Travel }) {
+                    item(key = "collapse-all") {
+                        PaperButton(
+                            if (collapsed) "Expand every place and trip" else "Collapse every place and trip",
+                            { collapsed = !collapsed; timelineSettings.collapseAll = collapsed },
+                            style = PaperButtonStyle.Ghost, small = true,
+                        )
+                    }
+                }
+                item(key = "calendar") { DayCalendar(rows, actions, collapsed) }
                 if (anyTimeTodos.isNotEmpty()) {
                     item(key = "todos-header") {
                         PaperSection("To do on this day", if (plannedMinutes > 0) "${formatDuration(plannedMinutes)} planned" else null)
@@ -490,6 +528,16 @@ fun TimelineScreen(
                         PaperButton(
                             text = "Hidden by you (${hiddenToday.size}), tap to bring back",
                             onClick = { showHidden = true },
+                            style = PaperButtonStyle.Ghost,
+                            small = true,
+                        )
+                    }
+                }
+                if (deletedTrips.isNotEmpty()) {
+                    item(key = "deleted-trips") {
+                        PaperButton(
+                            text = "Deleted trips (${deletedTrips.size}), tap to bring back",
+                            onClick = { showDeleted = true },
                             style = PaperButtonStyle.Ghost,
                             small = true,
                         )
@@ -612,6 +660,24 @@ fun TimelineScreen(
             onReset = { vm.resetEdit(t.kind, t.refId) },
             onDismiss = { editTarget = null },
         )
+    }
+
+    if (showDeleted) {
+        PaperDialog(title = "Deleted trips", onDismiss = { showDeleted = false }, dismissText = "Close") {
+            if (deletedTrips.isEmpty()) Text("No deleted trips.", color = LocalPaper.current.ink2)
+            deletedTrips.forEach { t ->
+                Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        formatDateTime(t.startMs) + " · " + PlaceRules.durationText((t.endMs - t.startMs).coerceAtLeast(0L)) + " · " + TripRules.distanceText(t.distanceM),
+                        fontSize = 13.sp, color = LocalPaper.current.ink,
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        PaperButton("Bring back", { vm.restoreTrip(t.id) }, style = PaperButtonStyle.Ghost, small = true)
+                        PaperButton("Remove for good", { vm.removeTripForGood(t.id) }, style = PaperButtonStyle.Danger, small = true)
+                    }
+                }
+            }
+        }
     }
 
     if (showHidden) {

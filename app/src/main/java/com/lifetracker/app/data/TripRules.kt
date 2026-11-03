@@ -147,6 +147,29 @@ object TripModes {
 
     fun label(id: String): String = list.firstOrNull { it.id == id }?.label ?: "Vehicle (not sure which)"
 
+    /** Whether [trip]'s way of travel was set by you (a green dot on the Timeline). */
+    fun isYours(trip: TripEntity?): Boolean = trip != null && trip.modeSource == "you"
+
+    /**
+     * Whether a journey is drawn as "unknown": there is no trip, or the app could only guess "vehicle" (and guessing is on).
+     * With guessing off a trip with readings is just a trip.
+     */
+    fun styledUnknown(trip: TripEntity?, guessOn: Boolean = TripGuess.enabled): Boolean =
+        trip == null || (guessOn && trip.mode == "vehicle" && trip.modeSource != "you")
+
+    /** Whether the quick buttons that ask how you travelled belong under this journey: you have not said, and the app does not say for you. */
+    fun asksHow(trip: TripEntity?, guessOn: Boolean = TripGuess.enabled): Boolean =
+        trip == null || (trip.modeSource != "you" && (!guessOn || trip.mode == "vehicle"))
+
+    /** What a trip is called: your answer, else (guessing on) the app's guess, else just "Trip". */
+    fun title(trip: TripEntity?, guessOn: Boolean = TripGuess.enabled): String = when {
+        trip == null -> "Unknown way of travel"
+        trip.modeSource == "you" -> label(trip.mode)
+        !guessOn -> "Trip"
+        trip.mode == "vehicle" -> "Unknown way of travel"
+        else -> label(trip.mode) + " (guess)"
+    }
+
     /** "WALKING=60000,IN_VEHICLE=540000" -> map. */
     fun parseActivity(text: String): Map<String, Long> =
         text.split(",").mapNotNull { part ->

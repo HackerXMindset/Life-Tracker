@@ -52,7 +52,7 @@ private val DAY_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("EEEE d 
 private fun clockOf(ms: Long): String =
     Instant.ofEpochMilli(ms).atZone(ZoneId.systemDefault()).let { formatMinute(it.hour * 60 + it.minute) }
 
-private fun modeText(t: TripEntity) = TripModes.label(t.mode) + (if (t.modeSource == "you") "" else " (guess)")
+private fun modeText(t: TripEntity) = TripModes.title(t)
 
 /**
  * Whole trips for any stretch of days, with three tabs like Colota's History: Map (every trip of the stretch, each in its own

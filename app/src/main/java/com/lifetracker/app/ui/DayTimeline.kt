@@ -77,6 +77,7 @@ import com.lifetracker.app.data.TimelineEditEntity
 import com.lifetracker.app.data.TimelineEdits
 import com.lifetracker.app.data.TodoEntity
 import com.lifetracker.app.data.TripEntity
+import com.lifetracker.app.data.InsideWalk
 import com.lifetracker.app.data.TripModes
 import com.lifetracker.app.data.TripRules
 import com.lifetracker.app.data.UsageDays
@@ -190,7 +191,7 @@ private class WarpHolder {
  * Tap a row to open it in place, long-press to edit.
  */
 @Composable
-fun DayCalendar(rows: List<DayLayout.Row>, a: DayActions) {
+fun DayCalendar(rows: List<DayLayout.Row>, a: DayActions, collapsed: Boolean = false) {
     val paper = LocalPaper.current
     val fixed = ArrayList<Slot>()
     val packed = ArrayList<Slot>()
@@ -227,7 +228,8 @@ fun DayCalendar(rows: List<DayLayout.Row>, a: DayActions) {
                 )
                 fixed += placeSlot
                 val inside = ArrayList<Slot>()
-                for (child in row.children) {
+                // Collapsed: the stay is only its heading, without the apps and entries inside it.
+                for (child in if (collapsed) emptyList() else row.children) {
                     when (child) {
                         is DayLayout.Thing -> inside += thingSlot(child.item)
                         is DayLayout.Gap -> inside += Slot("g|" + child.key, child.startMs, child.endMs, gapBar(child), paper.ink2) { GapCard(child, a) }
@@ -239,7 +241,7 @@ fun DayCalendar(rows: List<DayLayout.Row>, a: DayActions) {
             }
             is DayLayout.Travel -> {
                 val trip = row.trip
-                val unknown = trip == null || (trip.mode == "vehicle" && trip.modeSource != "you")
+                val unknown = TripModes.styledUnknown(trip)
                 fixed += Slot("t|" + row.key, row.startMs, row.endMs, if (unknown) Bar.LINE_UNKNOWN else Bar.LINE, if (unknown) paper.sun else paper.ink2) { TravelCard(row, a) }
             }
             is DayLayout.Thing -> packed += thingSlot(row.item)
@@ -427,6 +429,9 @@ private fun PlaceCard(p: DayLayout.Place, chosen: ActivityTypeEntity?, a: DayAct
                 color = paper.ink,
                 maxLines = 1,
             )
+        }
+        InsideWalk.text(p.walkedMs)?.let {
+            Text(text = it, fontSize = 11.sp, lineHeight = 14.sp, color = paper.ink2, maxLines = 1)
         }
         if (p.ongoing) NowRow()
     }
@@ -751,14 +756,11 @@ internal val QUICK_MODES = listOf(
 private fun TravelCard(t: DayLayout.Travel, a: DayActions) {
     val paper = LocalPaper.current
     val trip = t.trip
-    val unknown = trip == null || (trip.mode == "vehicle" && trip.modeSource != "you")
+    val unknown = TripModes.styledUnknown(trip)
     var picking by remember { mutableStateOf(false) }
     var open by remember { mutableStateOf(false) }
     val length = lengthText(t.endMs - t.startMs)
-    val title = when {
-        trip == null || unknown -> "Unknown way of travel"
-        else -> TripModes.label(trip.mode) + (if (trip.modeSource == "you") "" else " (guess)")
-    }
+    val title = TripModes.title(trip)
     val stopsText = if (t.stops.isEmpty()) "" else " · " + t.stops.size + (if (t.stops.size == 1) " stop" else " stops")
     val numbers = when {
         trip == null -> length
@@ -767,7 +769,7 @@ private fun TravelCard(t: DayLayout.Travel, a: DayActions) {
         else -> length + " · " + TripRules.distanceText(t.distanceM) + stopsText
     }
     val shape = Wobble.Small
-    val asks = a.askHowTravelled && unknown && (trip != null || (t.from != null && t.to != null))
+    val asks = a.askHowTravelled && TripModes.asksHow(trip) && (trip != null || (t.from != null && t.to != null))
     Column(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier
@@ -785,7 +787,13 @@ private fun TravelCard(t: DayLayout.Travel, a: DayActions) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(text = title, fontSize = 14.sp, lineHeight = 18.sp, fontWeight = FontWeight.Bold, color = paper.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        // The green dot says the way of travel is yours, not a guess.
+                        if (TripModes.isYours(trip)) {
+                            Box(modifier = Modifier.size(8.dp).background(Color(0xFF3F9B6B), CircleShape))
+                        }
+                        Text(text = title, fontSize = 14.sp, lineHeight = 18.sp, fontWeight = FontWeight.Bold, color = paper.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
                     Text(
                         text = numbers + " · " + range(t.startMs, t.endMs) + " · " + tripEnd(t.fromName) + " to " + tripEnd(t.toName),
                         fontSize = 11.sp,

@@ -65,7 +65,7 @@ data class BackupData(
  */
 object BackupCodec {
     const val APP_NAME = "life-tracker"
-    const val FORMAT_VERSION = 30
+    const val FORMAT_VERSION = 31
 
     fun encode(data: BackupData): String =
         JSONObject()
@@ -765,13 +765,13 @@ object BackupCodec {
         }
     }
 
-    // Trips are one short list each: [id, start, end, from, to, distance, medianKmh, topKmh, activity, mode, modeSource].
+    // Trips are one short list each: [id, start, end, from, to, distance, medianKmh, topKmh, activity, mode, modeSource, deletedMs] (version 31 adds the last).
     private fun tripsJson(list: List<TripEntity>): JSONArray {
         val out = JSONArray()
         for (t in list) {
             out.put(
                 JSONArray().put(t.id).put(t.startMs).put(t.endMs).put(t.fromPlaceId).put(t.toPlaceId).put(t.distanceM)
-                    .put(t.medianKmh).put(t.topKmh).put(t.activity).put(t.mode).put(t.modeSource),
+                    .put(t.medianKmh).put(t.topKmh).put(t.activity).put(t.mode).put(t.modeSource).put(t.deletedMs),
             )
         }
         return out
@@ -793,6 +793,7 @@ object BackupCodec {
                 activity = r.getString(8),
                 mode = r.getString(9),
                 modeSource = r.getString(10),
+                deletedMs = r.optLong(11, 0L),
             )
         }
     }

@@ -2,6 +2,17 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧭 Stays and trips fixes (F1)
+
+### ✨ New
+
+- **Walking about inside a named place is still one stay.** Moving up and down in your house no longer starts a trip. A trip begins only when you leave the place's circle. The stay shows a small line such as "Walked about 15 min".
+- **Guess how I travelled** (Settings > Timeline) is **off** now. With it off, a trip shows only the way you set yourself, with a small green dot; every other trip is just "Trip" with its distance and time. Turn it on to see the app's guesses again.
+- **Delete a trip**: open a trip on the Timeline, Edit, Delete this trip. A bar with Undo shows for a few seconds, and "Deleted trips" lists them to bring back or remove for good. Deleted trips leave the Timeline, the totals and the goals.
+- **Collapse every place and trip**: one button on the Timeline makes each place and trip a small row, without the apps and entries inside.
+- Trips from older versions that began and ended at the same place and never left it are shown as a walk inside the stay.
+- Database version 31 and backup format 31 (a trip remembers when it was deleted). Your data is untouched.
+
 ## 🧭 Places and trips round 2: place goals (E9)
 
 ### ✨ New

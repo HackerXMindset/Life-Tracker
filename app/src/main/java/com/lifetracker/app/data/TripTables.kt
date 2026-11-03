@@ -39,6 +39,8 @@ data class TripEntity(
     val activity: String,
     val mode: String,
     val modeSource: String,
+    /** 0 for a trip you keep; the time you deleted it (it waits in the Deleted list); -1 once removed for good. Added in database version 31. */
+    @ColumnInfo(defaultValue = "0") val deletedMs: Long = 0L,
 )
 
 @Entity(tableName = "trip_points", primaryKeys = ["tripId", "ms"])
@@ -55,14 +57,15 @@ data class TripPointEntity(
 @Dao
 interface TripDao {
     /** Trips that overlap [from, to), newest first. */
-    @Query("SELECT * FROM trips WHERE endMs >= :from AND startMs < :to ORDER BY startMs DESC")
+    @Query("SELECT * FROM trips WHERE endMs >= :from AND startMs < :to AND deletedMs = 0 ORDER BY startMs DESC")
     fun tripsBetween(from: Long, to: Long): Flow<List<TripEntity>>
 
+    /** Every trip including the deleted ones (for backups and for building trips, which must not rebuild over a deleted one). */
     @Query("SELECT * FROM trips ORDER BY startMs")
     suspend fun allTrips(): List<TripEntity>
 
-    /** Every trip, oldest first, kept up to date while a page is open. */
-    @Query("SELECT * FROM trips ORDER BY startMs")
+    /** Every trip you keep, oldest first, kept up to date while a page is open. */
+    @Query("SELECT * FROM trips WHERE deletedMs = 0 ORDER BY startMs")
     fun observeAllTrips(): Flow<List<TripEntity>>
 
     @Query("SELECT * FROM trip_points WHERE tripId = :tripId ORDER BY ms")
@@ -73,7 +76,7 @@ interface TripDao {
     fun observePointsBetween(from: Long, to: Long): Flow<List<TripPointEntity>>
 
     /** Trips that started in [from, to), read once. */
-    @Query("SELECT * FROM trips WHERE startMs >= :from AND startMs < :to ORDER BY startMs")
+    @Query("SELECT * FROM trips WHERE startMs >= :from AND startMs < :to AND deletedMs = 0 ORDER BY startMs")
     suspend fun tripsIn(from: Long, to: Long): List<TripEntity>
 
     @Query("SELECT * FROM trips WHERE id = :id")
@@ -82,10 +85,10 @@ interface TripDao {
     @Query("UPDATE trips SET distanceM = :distanceM, medianKmh = :median, topKmh = :top WHERE id = :id")
     suspend fun setStats(id: String, distanceM: Int, median: Int, top: Int)
 
-    @Query("SELECT * FROM trips WHERE modeSource = 'you' ORDER BY startMs DESC LIMIT 500")
+    @Query("SELECT * FROM trips WHERE modeSource = 'you' AND deletedMs = 0 ORDER BY startMs DESC LIMIT 500")
     suspend fun corrected(): List<TripEntity>
 
-    @Query("SELECT * FROM trips WHERE modeSource <> 'you' ORDER BY startMs DESC LIMIT 300")
+    @Query("SELECT * FROM trips WHERE modeSource <> 'you' AND deletedMs = 0 ORDER BY startMs DESC LIMIT 300")
     suspend fun guessed(): List<TripEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -93,6 +96,18 @@ interface TripDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertMissingTrips(trips: List<TripEntity>)
+
+    /** The trips you deleted that can still be brought back, newest first. */
+    @Query("SELECT * FROM trips WHERE deletedMs > 0 ORDER BY startMs DESC")
+    fun observeDeleted(): Flow<List<TripEntity>>
+
+    /** Deletes a trip (it waits in the Deleted list), or brings it back with 0. */
+    @Query("UPDATE trips SET deletedMs = :deletedMs WHERE id = :id")
+    suspend fun setDeleted(id: String, deletedMs: Long)
+
+    /** Removes a deleted trip for good: its route readings go; the empty row stays so the trip is not built again from the readings. */
+    @Query("DELETE FROM trip_points WHERE tripId = :tripId")
+    suspend fun removeRoute(tripId: String)
 
     @Query("UPDATE trips SET mode = :mode, modeSource = :source WHERE id = :id")
     suspend fun setMode(id: String, mode: String, source: String)
