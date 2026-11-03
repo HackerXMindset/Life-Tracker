@@ -23,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,7 +47,9 @@ import com.lifetracker.app.data.PauseSettings
 import com.lifetracker.app.data.PauseText
 import com.lifetracker.app.data.SystemSituation
 import com.lifetracker.app.data.PlaceKinds
+import com.lifetracker.app.data.PlaceList
 import com.lifetracker.app.data.PlaceRules
+import com.lifetracker.app.data.PlaceShape
 
 /** The parts of the Places and trips settings; the first page is a short list of them. */
 private enum class PlacesGroup { Recording, Places, TripsData, Advanced }
@@ -77,6 +80,23 @@ fun PlacesScreen(onBack: () -> Unit, onOpen: (Page) -> Unit, onOpenPlace: (Strin
     val readings by vm.readings.collectAsState()
     val rebuilding by vm.rebuilding.collectAsState()
     var adding by remember { mutableStateOf(false) }
+    val here by vm.here.collectAsState()
+    var query by rememberSaveable { mutableStateOf("") }
+    var pageNo by rememberSaveable { mutableStateOf(0) }
+    var justDeleted by remember { mutableStateOf<PlaceEntity?>(null) }
+    var wasStopped by remember { mutableStateOf(false) }
+    var showDeleted by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { vm.loadHere() }
+    LaunchedEffect(justDeleted) {
+        if (justDeleted != null) {
+            kotlinx.coroutines.delay(8_000L)
+            justDeleted = null
+        }
+    }
+    val shownPage = remember(places, query, here, pageNo, placeCategories) {
+        PlaceList.page(PlaceList.arrange(PlaceList.matching(places, query) { id -> placeCategories.firstOrNull { it.id == id }?.name ?: PlaceKinds.label(id) }, here), pageNo)
+    }
+    val deletedPlaces = places.filter { it.deletedMs > 0L }
     var group by rememberSaveable { mutableStateOf<PlacesGroup?>(null) }
     // Back goes from a part to the short first page, and from the first page out.
     BackHandler { if (group != null) group = null else onBack() }
@@ -133,7 +153,7 @@ fun PlacesScreen(onBack: () -> Unit, onOpen: (Page) -> Unit, onOpenPlace: (Strin
                 )
             }
             item { SettingsRow(R.drawable.ic_p_pin, "Recording", "How and how often your position is read") { group = PlacesGroup.Recording } }
-            item { SettingsRow(R.drawable.ic_p_pin, "Places", "The spots you named: Home, Library, Gym (" + places.size + ")") { group = PlacesGroup.Places } }
+            item { SettingsRow(R.drawable.ic_p_pin, "Places", "The spots you named: Home, Library, Gym (" + places.count { it.deletedMs == 0L } + ")") { group = PlacesGroup.Places } }
             item { SettingsRow(R.drawable.ic_p_route, "Maps", "The map style for trips and places, and your offline areas") { onOpen(Page.Maps) } }
             item { SettingsRow(R.drawable.ic_p_route, "Trips and data", "Joined and hidden trips, step length, the Timeline and stored readings") { group = PlacesGroup.TripsData } }
             item { SettingsRow(R.drawable.ic_p_gear, "Advanced", "Tracking profiles, status and how it all works") { group = PlacesGroup.Advanced } }
@@ -215,30 +235,87 @@ fun PlacesScreen(onBack: () -> Unit, onOpen: (Page) -> Unit, onOpenPlace: (Strin
         }
 
         if (group == PlacesGroup.Places) {
-            item { NameSettings() }
-            item { PaperSection("Places") }
-            item {
-                SettingsRow(R.drawable.ic_p_pin, "Place categories", "Colour and icon for Home, Study, Gym and your own") { onOpen(Page.PlaceCategories) }
+            // Add a place comes first, so it is never lost below a long list.
+            item { Button(onClick = { adding = true }) { Text("Add a place") } }
+            justDeleted?.let { gone ->
+                item(key = "undo-delete-place") {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(gone.name + " deleted", fontSize = 13.sp, modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurface)
+                        PaperButton("Undo", { vm.restorePlace(gone, watched = !wasStopped); justDeleted = null }, style = PaperButtonStyle.Ghost, small = true)
+                    }
+                }
             }
-            if (places.isEmpty()) {
+            item(key = "place-search") {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it; pageNo = 0 },
+                    label = { Text("Search places") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            item { PaperSection("Places", if (here != null) "closest first" else "by name") }
+            if (places.none { it.deletedMs == 0L }) {
                 item {
                     Text(
                         "No places yet. Add one (Home, Library, Gym), or stay somewhere for 3 minutes and it appears on the Location page for you to name.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+            } else if (shownPage.total == 0) {
+                item { Text("No place matches \"" + query.trim() + "\".", color = MaterialTheme.colorScheme.onSurfaceVariant) }
             } else {
-                items(places, key = { it.id }) { place ->
+                items(shownPage.rows, key = { it.place.id }) { row ->
+                    val place = row.place
                     SettingsRow(
                         icon = null,
                         title = place.name + if (place.archived) "  (not watched)" else "",
-                        hint = "${place.radiusM} m circle · " + (if (place.pauseHere) "pause zone · " else "") + (placeCategories.firstOrNull { it.id == place.kind }?.name ?: PlaceKinds.label(place.kind)),
+                        hint = (if (place.polygon.isEmpty()) "${place.radiusM} m circle" else "your own area") + " · " +
+                            (if (place.pauseHere) "pause zone · " else "") +
+                            (placeCategories.firstOrNull { it.id == place.kind }?.name ?: PlaceKinds.label(place.kind)) +
+                            (PlaceList.distanceText(row.distanceM)?.let { " · $it" } ?: ""),
+                        trailing = {
+                            PaperButton(
+                                "Delete",
+                                { wasStopped = place.archived; vm.deletePlace(place); justDeleted = place },
+                                style = PaperButtonStyle.Ghost,
+                                small = true,
+                            )
+                        },
                         onClick = { onOpenPlace(place.id) },
                     )
                 }
+                if (shownPage.pageCount > 1) {
+                    item(key = "place-pages") {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            PaperButton("Previous", { pageNo = shownPage.page - 1 }, style = PaperButtonStyle.Ghost, small = true, enabled = shownPage.page > 0)
+                            Text(
+                                "Page ${shownPage.page + 1} of ${shownPage.pageCount} · ${shownPage.total} places",
+                                fontSize = 12.sp, modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            PaperButton("Next", { pageNo = shownPage.page + 1 }, style = PaperButtonStyle.Ghost, small = true, enabled = shownPage.page < shownPage.pageCount - 1)
+                        }
+                    }
+                }
             }
-            item { Button(onClick = { adding = true }) { Text("Add a place") } }
-
+            if (deletedPlaces.isNotEmpty()) {
+                item(key = "deleted-places") {
+                    PaperButton("Deleted places (${deletedPlaces.size}), tap to bring back", { showDeleted = true }, style = PaperButtonStyle.Ghost, small = true)
+                }
+            }
+            item { PaperSection("More") }
+            item {
+                SettingsRow(R.drawable.ic_p_pin, "Place categories", "Colour and icon for Home, Study, Gym and your own") { onOpen(Page.PlaceCategories) }
+            }
+            item { NameSettings() }
         }
 
         if (group == PlacesGroup.TripsData) {
@@ -338,6 +415,32 @@ fun PlacesScreen(onBack: () -> Unit, onOpen: (Page) -> Unit, onOpenPlace: (Strin
         }
     }
 
+    if (showDeleted) {
+        AlertDialog(
+            onDismissRequest = { showDeleted = false },
+            title = { Text("Deleted places") },
+            text = {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    if (deletedPlaces.isEmpty()) Text("No deleted places.")
+                    deletedPlaces.forEach { place ->
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(place.name, fontWeight = FontWeight.Bold)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                PaperButton("Bring back", { vm.restorePlace(place) }, style = PaperButtonStyle.Ghost, small = true)
+                                PaperButton("Remove for good", { vm.removePlaceForGood(place) }, style = PaperButtonStyle.Danger, small = true)
+                            }
+                        }
+                    }
+                    Text(
+                        "A removed place leaves this list for good. Your visits there stay on the Timeline with its name.",
+                        fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            },
+            confirmButton = { TextButton(onClick = { showDeleted = false }) { Text("Close") } },
+        )
+    }
+
     if (adding) {
         PlaceDialog(
             title = "Add a place",
@@ -345,7 +448,7 @@ fun PlacesScreen(onBack: () -> Unit, onOpen: (Page) -> Unit, onOpenPlace: (Strin
             cluster = null,
             categories = placeCategories,
             onFetchHere = vm::fetchHere,
-            onSave = { name, kind, radius, lat, lng, pause -> vm.addPlace(name, kind, radius, lat, lng, pause) },
+            onSave = { name, kind, radius, lat, lng, pause, polygon -> vm.addPlace(name, kind, radius, lat, lng, pause, polygon) },
             onArchiveToggle = null,
             onDismiss = { adding = false },
         )
@@ -362,9 +465,10 @@ internal fun PlaceDialog(
     suggestions: List<String> = emptyList(),
     categories: List<com.lifetracker.app.data.PlaceCategoryEntity>,
     onFetchHere: ((com.lifetracker.app.data.Fix?) -> Unit) -> Unit,
-    onSave: (String, String, Int, Double, Double, PauseSettings) -> Unit,
+    onSave: (String, String, Int, Double, Double, PauseSettings, String) -> Unit,
     onArchiveToggle: (() -> Unit)?,
     onDismiss: () -> Unit,
+    onDelete: (() -> Unit)? = null,
 ) {
     var name by remember { mutableStateOf(initial?.name ?: suggestions.firstOrNull() ?: "") }
     var kind by remember { mutableStateOf(initial?.kind ?: "other") }
@@ -380,6 +484,9 @@ internal fun PlaceDialog(
     }
     var fetching by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
+    // A drawn area ("" for a plain circle). While it is set the circle size does not apply.
+    var polygon by remember { mutableStateOf(initial?.polygon ?: "") }
+    var drawing by remember { mutableStateOf(false) }
     val parsed = PlaceRules.parseCoordinates(coords)
     val context = LocalContext.current
     val start = remember { initial?.let { PauseSettings.of(it) } ?: PauseSettings() }
@@ -396,6 +503,22 @@ internal fun PlaceDialog(
     )
     val pauseProblem = PauseText.problem(pause)
     var picking by remember { mutableStateOf(false) }
+    if (drawing) {
+        val corners = PlaceShape.parse(polygon)
+        AreaEditorDialog(
+            startCorners = corners.ifEmpty { parsed?.let { PlaceShape.fromCircle(it.first, it.second, radius.toDouble()) } ?: emptyList() },
+            startLat = parsed?.first,
+            startLng = parsed?.second,
+            onDone = { drawn ->
+                val middle = PlaceShape.centre(drawn)
+                polygon = PlaceShape.format(drawn)
+                coords = PlaceRules.coordinatesText(middle.first, middle.second)
+                radius = PlaceShape.boundingRadiusM(PlaceShape.parse(polygon), middle).coerceAtLeast(PlaceRules.RADII.first())
+                drawing = false
+            },
+            onDismiss = { drawing = false },
+        )
+    }
     if (picking) {
         MapPickDialog(
             startLat = parsed?.first,
@@ -433,10 +556,25 @@ internal fun PlaceDialog(
                         FilterChip(selected = kind == k.id, onClick = { kind = k.id }, label = { Text(k.name) })
                     }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    PlaceRules.RADII.forEach { r ->
-                        FilterChip(selected = radius == r, onClick = { radius = r }, label = { Text("$r m") })
+                if (polygon.isEmpty()) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        PlaceRules.RADII.forEach { r ->
+                            FilterChip(selected = radius == r, onClick = { radius = r }, label = { Text("$r m") })
+                        }
                     }
+                } else {
+                    Text(
+                        "Your own area · " + PlaceShape.parse(polygon).size + " corners",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+                OutlinedButton(enabled = parsed != null || polygon.isNotEmpty(), onClick = { drawing = true }) {
+                    Text(if (polygon.isEmpty()) "Draw the area on the map" else "Change the area on the map")
+                }
+                if (polygon.isNotEmpty()) {
+                    OutlinedButton(onClick = { polygon = ""; radius = PlaceRules.DEFAULT_RADIUS }) { Text("Back to a circle") }
                 }
                 OutlinedTextField(
                     value = coords,
@@ -520,6 +658,9 @@ internal fun PlaceDialog(
                     fontSize = 12.sp,
                     color = if (pauseProblem != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                if (onDelete != null) {
+                    TextButton(onClick = { onDelete(); onDismiss() }) { Text("Delete this place", color = MaterialTheme.colorScheme.error) }
+                }
                 if (onArchiveToggle != null) {
                     TextButton(onClick = {
                         onArchiveToggle()
@@ -532,7 +673,7 @@ internal fun PlaceDialog(
             TextButton(
                 enabled = name.isNotBlank() && parsed != null && pauseProblem == null,
                 onClick = {
-                    parsed?.let { onSave(name, kind, radius, it.first, it.second, PauseText.clean(pause)) }
+                    parsed?.let { onSave(name, kind, radius, it.first, it.second, PauseText.clean(pause), polygon) }
                     onDismiss()
                 },
             ) { Text("Save") }

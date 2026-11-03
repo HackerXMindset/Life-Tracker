@@ -316,7 +316,9 @@ private fun paintCircle(style: Style, circle: PathFrame.Circle?) {
         source.setGeoJson(FeatureCollection.fromFeatures(emptyList<Feature>()))
         return
     }
-    val ring = PathSpeeds.circle(circle.lat, circle.lng, circle.radiusM).map { Point.fromLngLat(it.second, it.first) }
+    // A drawn area is shown as its own shape; the ring of a Polygon must end where it began.
+    val line = if (circle.corners.size >= 3) circle.corners + circle.corners.first() else PathSpeeds.circle(circle.lat, circle.lng, circle.radiusM)
+    val ring = line.map { Point.fromLngLat(it.second, it.first) }
     source.setGeoJson(FeatureCollection.fromFeature(Feature.fromGeometry(Polygon.fromLngLats(listOf(ring)))))
 }
 
@@ -348,7 +350,7 @@ private fun fit(map: MapLibreMap, path: List<Pair<Double, Double>>, circle: Path
     val all = ArrayList<LatLng>()
     path.forEach { all += LatLng(it.first, it.second) }
     spots.forEach { all += LatLng(it.first, it.second) }
-    if (circle != null) PathSpeeds.circle(circle.lat, circle.lng, circle.radiusM, 8).forEach { all += LatLng(it.first, it.second) }
+    if (circle != null) (if (circle.corners.size >= 3) circle.corners else PathSpeeds.circle(circle.lat, circle.lng, circle.radiusM, 8)).forEach { all += LatLng(it.first, it.second) }
     if (all.isEmpty()) return
     val spread = all.maxOf { it.latitude } - all.minOf { it.latitude } + all.maxOf { it.longitude } - all.minOf { it.longitude }
     if (all.size < 2 || spread < 1e-6) {

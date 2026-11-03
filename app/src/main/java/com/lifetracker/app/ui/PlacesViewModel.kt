@@ -400,6 +400,40 @@ class PlacesViewModel(private val app: Application) : AndroidViewModel(app) {
     }
 
     /** One quick position read for the "use where I am" button. */
+    /** Where the phone last was (its newest reading), for putting the closest place first; null when there is none. */
+    private val hereFlow = MutableStateFlow<Pair<Double, Double>?>(null)
+    val here: StateFlow<Pair<Double, Double>?> = hereFlow
+
+    fun loadHere() {
+        viewModelScope.launch {
+            val fix = withContext(Dispatchers.IO) { AppDatabase.get(app).rawDao().latest() }
+            hereFlow.value = fix?.let { it.lat to it.lng }
+        }
+    }
+
+    /** Deletes a place: it leaves the list and stops being watched, but old visits keep its name. */
+    fun deletePlace(place: PlaceEntity) {
+        viewModelScope.launch {
+            dao.setDeleted(place.id, System.currentTimeMillis(), true)
+            runCatching { PlacesTracker.syncAll(app) }
+            statusFlow.value = readStatus()
+        }
+    }
+
+    /** Brings a deleted place back, watched again unless you had stopped watching it before. */
+    fun restorePlace(place: PlaceEntity, watched: Boolean = true) {
+        viewModelScope.launch {
+            dao.setDeleted(place.id, 0L, !watched)
+            runCatching { PlacesTracker.syncAll(app) }
+            statusFlow.value = readStatus()
+        }
+    }
+
+    /** Removes a deleted place for good: it leaves the Deleted list too, and old visits still keep its name. */
+    fun removePlaceForGood(place: PlaceEntity) {
+        viewModelScope.launch { dao.setDeleted(place.id, -1L, true) }
+    }
+
     fun fetchHere(onResult: (Fix?) -> Unit) {
         viewModelScope.launch { onResult(PlacesTracker.currentFix(app, 15_000L)) }
     }
@@ -408,16 +442,16 @@ class PlacesViewModel(private val app: Application) : AndroidViewModel(app) {
      * Saves a new place. If it comes from the review list, that spot's stops (and any other unnamed stop
      * inside the new circle) become visits to it.
      */
-    fun addPlace(name: String, kind: String, radiusM: Int, lat: Double, lng: Double, pause: PauseSettings = PauseSettings()) {
+    fun addPlace(name: String, kind: String, radiusM: Int, lat: Double, lng: Double, pause: PauseSettings = PauseSettings(), polygon: String = "") {
         viewModelScope.launch {
             val now = System.currentTimeMillis()
             val place = PlaceEntity(
                 "p$now", name.trim(), kind, lat, lng, radiusM, false, now,
                 pauseHere = pause.pauseHere, pauseWifi = pause.wifi, pauseMotionless = pause.motionless,
-                heartbeatMin = pause.heartbeatMin, entryDelaySec = pause.entryDelaySec,
+                heartbeatMin = pause.heartbeatMin, entryDelaySec = pause.entryDelaySec, polygon = polygon,
             )
             dao.upsertPlace(place)
-            val inside = dao.unknownOnce().filter { PlaceRules.distanceM(lat, lng, it.lat, it.lng) <= radiusM }
+            val inside = dao.unknownOnce().filter { com.lifetracker.app.data.PlaceShape.within(place, it.lat, it.lng) }
             if (inside.isNotEmpty()) dao.assign(inside.map { it.id }, place.id, lat, lng)
             runCatching { PlacesTracker.syncAll(app) }
             runCatching { MapScheduler.kick(app) }

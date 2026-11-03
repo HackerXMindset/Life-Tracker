@@ -83,6 +83,7 @@ class BackupCodecTest {
             PlaceEntity(
                 "p2", "Old gym", "gym", -33.8688, 151.2093, 100, true, 1_760_000_500_000L,
                 pauseHere = true, pauseWifi = "Home Wi-Fi\nGym, guest", pauseMotionless = true, heartbeatMin = 30, entryDelaySec = 45,
+                polygon = "-33.868800,151.209300;-33.868900,151.209500;-33.868700,151.209600", deletedMs = 1_760_100_000_000L,
             ),
         ),
         placeVisits = listOf(

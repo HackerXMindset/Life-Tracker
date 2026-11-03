@@ -65,7 +65,7 @@ data class BackupData(
  */
 object BackupCodec {
     const val APP_NAME = "life-tracker"
-    const val FORMAT_VERSION = 31
+    const val FORMAT_VERSION = 32
 
     fun encode(data: BackupData): String =
         JSONObject()
@@ -589,6 +589,9 @@ object BackupCodec {
             if (p.pauseMotionless) o.put("pauseMotionless", true)
             if (p.heartbeatMin != 0) o.put("heartbeatMin", p.heartbeatMin)
             if (p.entryDelaySec != -1) o.put("entryDelaySec", p.entryDelaySec)
+            // A drawn area and a deleted place (version 32).
+            if (p.polygon.isNotEmpty()) o.put("polygon", p.polygon)
+            if (p.deletedMs != 0L) o.put("deletedMs", p.deletedMs)
         }
 
     private fun place(o: JSONObject) = PlaceEntity(
@@ -605,6 +608,8 @@ object BackupCodec {
         pauseMotionless = o.optBoolean("pauseMotionless", false),
         heartbeatMin = o.optInt("heartbeatMin", 0),
         entryDelaySec = o.optInt("entryDelaySec", -1),
+        polygon = o.optString("polygon", ""),
+        deletedMs = o.optLong("deletedMs", 0L),
     )
 
     private fun tripEditJson(e: TripEditEntity) = JSONObject()

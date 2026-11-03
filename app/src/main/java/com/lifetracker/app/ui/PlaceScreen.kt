@@ -24,6 +24,7 @@ import com.lifetracker.app.data.PauseSettings
 import com.lifetracker.app.data.PauseText
 import com.lifetracker.app.data.PlaceKinds
 import com.lifetracker.app.data.PlaceRules
+import com.lifetracker.app.data.PlaceShape
 import com.lifetracker.app.ui.theme.LocalPaper
 import com.lifetracker.app.ui.theme.PaperButton
 import com.lifetracker.app.ui.theme.PaperButtonStyle
@@ -68,14 +69,14 @@ fun PlaceScreen(
                 MapPanel(
                     path = emptyList(),
                     description = "The circle of ${place.name}, ${place.radiusM} metres",
-                    circle = PathFrame.Circle(place.lat, place.lng, place.radiusM.toDouble()),
+                    circle = PathFrame.Circle(place.lat, place.lng, place.radiusM.toDouble(), PlaceShape.parse(place.polygon)),
                     spots = listOf(place.lat to place.lng),
                     height = 200.dp,
                 )
             }
             item {
                 SetCard {
-                    KvRow("Circle", "${place.radiusM} m", first = true)
+                    KvRow(if (place.polygon.isEmpty()) "Circle" else "Area", if (place.polygon.isEmpty()) "${place.radiusM} m" else "your own shape, ${PlaceShape.parse(place.polygon).size} corners", first = true)
                     KvRow("Position", PlaceRules.coordinatesText(place.lat, place.lng))
                     KvRow("Stays", p.visits.size.toString())
                     KvRow("Time here", PlaceRules.durationText(p.totalMs))
@@ -119,16 +120,17 @@ fun PlaceScreen(
             cluster = null,
             categories = categories,
             onFetchHere = places::fetchHere,
-            onSave = { name, kind, radius, lat, lng, pause ->
+            onSave = { name, kind, radius, lat, lng, pause, polygon ->
                 places.updatePlace(
                     place.copy(
-                        name = name.trim(), kind = kind, radiusM = radius, lat = lat, lng = lng,
+                        name = name.trim(), kind = kind, radiusM = radius, lat = lat, lng = lng, polygon = polygon,
                         pauseHere = pause.pauseHere, pauseWifi = pause.wifi, pauseMotionless = pause.motionless,
                         heartbeatMin = pause.heartbeatMin, entryDelaySec = pause.entryDelaySec,
                     ),
                 )
             },
             onArchiveToggle = { places.updatePlace(place.copy(archived = !place.archived)) },
+            onDelete = { places.deletePlace(place); onBack() },
             onDismiss = { editing = false },
         )
     }

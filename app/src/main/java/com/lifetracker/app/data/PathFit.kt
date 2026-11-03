@@ -54,7 +54,7 @@ class PathFrame private constructor(
         return best
     }
 
-    class Circle(val lat: Double, val lng: Double, val radiusM: Double)
+    class Circle(val lat: Double, val lng: Double, val radiusM: Double, val corners: List<Pair<Double, Double>> = emptyList())
 
     companion object {
         const val METRES_PER_DEGREE = 111_320.0
