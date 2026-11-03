@@ -83,7 +83,7 @@ fun ChargingScreen(onBack: () -> Unit, part: Part = Part.Data, vm: ChargingViewM
             item {
                 SetCard {
                     ToggleRow("Record charging", track, vm::setTrack, hint = "Start, end, battery level and speed", first = true)
-                    ToggleRow("Banner when I plug in", showBanner, vm::setShowBanner, hint = "Asks what you are charging with")
+                    ToggleRow("Ask \"What are you charging with?\" when I plug in", showBanner, vm::setShowBanner, hint = "Off by default. A banner with Wall, Power bank and Laptop buttons")
                     ToggleRow("Show charging on the Timeline", showOnTimeline, vm::setShowOnTimeline)
                 }
             }
