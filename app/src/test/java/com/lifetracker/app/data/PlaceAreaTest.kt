@@ -116,7 +116,7 @@ class PlaceAreaTest {
     fun theCutOutCornerIsOutsideSoItEndsTheStay() {
         val run = Run(listOf(placeFrom(l)))
         for (m in 0..3) run.feed(fix(m, 28.6004, 77.2014))
-        for (m in 4..7) run.feed(fix(m, 28.6014, 77.2014))
+        for (m in 4..5) run.feed(fix(m, 28.6014, 77.2014))
         assertNotNull(run.state.trip)
     }
 
