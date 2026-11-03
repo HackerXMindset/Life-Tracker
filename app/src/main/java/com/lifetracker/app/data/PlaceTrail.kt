@@ -50,7 +50,7 @@ object PlaceTrail {
     }
 
     /** No trip at all, or a trip the phone could only call "vehicle" and you have not answered. */
-    fun isUnknownMode(trip: TripEntity?): Boolean = trip == null || (trip.mode == "vehicle" && trip.modeSource != "you")
+    fun isUnknownMode(trip: TripEntity?): Boolean = TripModes.styledUnknown(trip)
 
     fun build(
         visits: List<PlaceVisitEntity>,

@@ -95,10 +95,13 @@ class PlaceTrailTest {
 
     @Test
     fun aVehicleGuessCountsAsUnknownUntilYouAnswer() {
+        TripGuess.forTest(true)
         assertTrue(PlaceTrail.isUnknownMode(trip("t", 0, 10, mode = "vehicle")))
         assertFalse(PlaceTrail.isUnknownMode(trip("t", 0, 10, mode = "vehicle", source = "you")))
         assertFalse(PlaceTrail.isUnknownMode(trip("t", 0, 10, mode = "bus")))
         assertTrue(PlaceTrail.isUnknownMode(null))
+        TripGuess.forTest(false)
+        assertFalse(PlaceTrail.isUnknownMode(trip("t", 0, 10, mode = "vehicle")))
     }
 
     @Test

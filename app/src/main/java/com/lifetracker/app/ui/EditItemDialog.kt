@@ -51,6 +51,9 @@ class EditTarget(
     /** Lines of what is inside this thing (every app in a phone period, with its time), shown under [detailsTitle]. */
     val details: List<String> = emptyList(),
     val detailsTitle: String = "Inside",
+    /** For things you can delete (a trip): a button that deletes it, with Undo and a Deleted list to bring it back from. */
+    val onDelete: (() -> Unit)? = null,
+    val deleteLabel: String = "Delete",
 )
 
 /** Change when something happened and which category it counts as, hide it, or put it back the way the phone recorded it. */
@@ -137,5 +140,8 @@ fun EditItemWindow(
             PaperButton("Back to as recorded", { onReset(); onDismiss() }, style = PaperButtonStyle.Ghost, small = true)
         }
         PaperButton("Hide from the Timeline", { onHide(); onDismiss() }, style = PaperButtonStyle.Ghost, small = true)
+        if (target.onDelete != null) {
+            PaperButton(target.deleteLabel, { target.onDelete.invoke(); onDismiss() }, style = PaperButtonStyle.Danger, small = true)
+        }
     }
 }

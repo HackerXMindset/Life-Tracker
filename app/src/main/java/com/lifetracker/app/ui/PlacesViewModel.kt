@@ -358,7 +358,7 @@ class PlacesViewModel(private val app: Application) : AndroidViewModel(app) {
                     val joinedAway = AppDatabase.get(app).timelineEditDao().all()
                         .filter { it.kind == TimelineEdits.TRIP && TripEditing.isJoinedAway(it) }.map { it.refId }.toSet()
                     // A trip that was joined to another is in that one's track; only the readings inside each trip's own times are written.
-                    val trips = tripDao.allTrips().filter { it.id !in joinedAway }.sortedBy { it.startMs }
+                    val trips = tripDao.allTrips().filter { it.id !in joinedAway && it.deletedMs == 0L }.sortedBy { it.startMs }
                     val points = tripDao.allPoints().groupBy { it.tripId }
                     val zone = ZoneId.systemDefault()
                     val tracks = trips.map { t ->

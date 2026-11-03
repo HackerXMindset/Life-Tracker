@@ -95,9 +95,8 @@ fun TripPopup(
                 PaperButton("Close", onDismiss, style = PaperButtonStyle.Ghost, small = true)
             } else {
                 val trip = p.trip
-                val guess = trip.modeSource != "you"
                 Text(
-                    TripModes.label(trip.mode) + (if (guess) " (guess)" else ""),
+                    TripModes.title(trip),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = paper.ink,
@@ -131,7 +130,7 @@ fun TripPopup(
                             trip = trip,
                             fromName = p.fromName,
                             toName = p.toName,
-                            current = if (guess) "" else trip.mode,
+                            current = if (trip.modeSource != "you") "" else trip.mode,
                             onPick = { onMode(trip, it); choosing = false },
                             onDismiss = { choosing = false },
                         )

@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifetracker.app.data.TimelineSettings
+import com.lifetracker.app.data.TripGuess
 
 /**
  * What the Timeline shows and asks. Every switch only changes how a day is drawn or what is asked: nothing saved is
@@ -29,6 +30,8 @@ fun TimelineSettingsScreen(onBack: () -> Unit) {
     var group by remember { mutableStateOf(settings.groupRepeatedOpens) }
     var ask by remember { mutableStateOf(settings.askHowTravelled) }
     var keep by remember { mutableStateOf(settings.rememberCategoryChanges) }
+    val context = LocalContext.current
+    var guess by remember { mutableStateOf(TripGuess.enabled) }
     BackHandler(onBack = onBack)
 
     LazyColumn(
@@ -48,6 +51,16 @@ fun TimelineSettingsScreen(onBack: () -> Unit) {
                 ToggleRow(
                     "Group repeated opens", group, { group = it; settings.groupRepeatedOpens = it },
                     hint = "Apps used again within 5 minutes make one row",
+                )
+            }
+        }
+
+        item { PaperSection("How trips are named") }
+        item {
+            SetCard {
+                ToggleRow(
+                    "Guess how I travelled", guess, { guess = it; TripGuess.set(context, it) },
+                    hint = "Off: a trip shows only the way you set yourself, marked with a green dot", first = true,
                 )
             }
         }

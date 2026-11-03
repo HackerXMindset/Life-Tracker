@@ -49,6 +49,8 @@ object DayLayout {
         val ongoing: Boolean,
         val visit: PlaceVisitEntity,
         val children: List<Row>,
+        /** How long you walked about inside this place during the stay (not a trip: you never left). */
+        val walkedMs: Long = 0L,
     ) : Row
 
     /** A station or other short stop inside one journey. */
@@ -151,7 +153,7 @@ object DayLayout {
     fun build(
         allItems: List<Item>,
         visits: List<PlaceVisitEntity>,
-        trips: List<TripEntity>,
+        allTrips: List<TripEntity>,
         placeNames: Map<String, String>,
         dayStartMs: Long,
         dayEndMs: Long,
@@ -161,7 +163,13 @@ object DayLayout {
         minGapMs: Long = MIN_GAP_MS,
         offs: List<Off> = emptyList(),
         showGaps: Boolean = true,
+        /** Trips that never left the place they began at: they are folded into the stay as a walk. */
+        insideTripIds: Set<String> = emptySet(),
+        /** Stretches when you were walking (from the readings), used for the "Walked about" line of a place. */
+        walks: List<Pair<Long, Long>> = emptyList(),
     ): List<Row> {
+        val trips = allTrips.filter { it.id !in insideTripIds }
+        val walkSpans = walks + allTrips.filter { it.id in insideTripIds }.map { it.startMs to it.endMs }
         // A Sleep row never runs over a journey you were awake on.
         val awake = if (showTrips) journeySpans(trips) else emptyList()
         val items = allItems.mapNotNull { item ->
@@ -231,6 +239,7 @@ object DayLayout {
                 ongoing = s.ongoing,
                 visit = s.visit,
                 children = joinGaps((things + holes).sortedBy { it.startMs }),
+                walkedMs = InsideWalk.walkedMs(walkSpans, s.startMs, s.endMs),
             )
         }
 

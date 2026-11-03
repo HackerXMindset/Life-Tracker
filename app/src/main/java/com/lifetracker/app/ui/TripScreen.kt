@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lifetracker.app.data.PlaceRules
+import com.lifetracker.app.data.TripGuess
 import com.lifetracker.app.data.TripModes
 import com.lifetracker.app.data.TripRules
 import com.lifetracker.app.ui.theme.LocalPaper
@@ -154,10 +155,10 @@ fun TripScreen(
                     }
                 }
 
-                item { PaperSection("How did you travel?", if (trip.modeSource == "you") "your answer" else "the app's guess") }
+                item { PaperSection("How did you travel?", if (trip.modeSource == "you") "your answer" else if (TripGuess.enabled) "the app's guess" else "not set") }
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(TripModes.label(trip.mode) + if (trip.modeSource == "you") "" else " (guess)", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = paper.ink)
+                        Text(TripModes.title(trip), fontSize = 15.sp, fontWeight = FontWeight.Bold, color = paper.ink)
                         PaperButton("Choose how you travelled", { choosingMode = true }, style = PaperButtonStyle.Ghost, small = true)
                         if (choosingMode) {
                             ModeSheet(

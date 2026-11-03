@@ -82,13 +82,20 @@ object PlaceRules {
     }
 
     /** The watched place this point is inside, or null. If it is inside several, the smallest one (a hostel inside a campus). */
-    fun placeAt(places: List<PlaceEntity>, lat: Double, lng: Double): PlaceEntity? =
+    fun placeAt(places: List<PlaceEntity>, lat: Double, lng: Double, slackM: Double = 0.0): PlaceEntity? =
         places
             .filter { !it.archived }
             .map { it to distanceM(it.lat, it.lng, lat, lng) }
-            .filter { it.second <= it.first.radiusM }
+            .filter { it.second <= it.first.radiusM + slackM }
             .minWithOrNull(compareBy<Pair<PlaceEntity, Double>>({ it.first.radiusM }, { it.second }))
             ?.first
+
+    /** How much of a reading's own error is forgiven when asking whether it is still inside the place you are at. */
+    const val INSIDE_SLACK_M = 30.0
+
+    /** Whether a reading is still inside the named place [placeId] and in no smaller place of its own (a hostel inside a campus). */
+    fun stillInside(places: List<PlaceEntity>, placeId: String, lat: Double, lng: Double, accuracyM: Float): Boolean =
+        placeId.isNotEmpty() && placeAt(places, lat, lng, min(accuracyM.toDouble(), INSIDE_SLACK_M))?.id == placeId
 
     /** How far a reading is from a spot, less its own error (up to 100 m), so one poor reading does not look like leaving. */
     fun awayM(lat: Double, lng: Double, fixLat: Double, fixLng: Double, accuracyM: Float): Double =

@@ -26,4 +26,9 @@ class TimelineSettings(context: Context) {
     var rememberCategoryChanges: Boolean
         get() = prefs.getBoolean("remember_category_changes", true)
         set(value) = prefs.edit { putBoolean("remember_category_changes", value) }
+
+    /** Every place and trip row is drawn small: only its name and time, without what happened inside it. */
+    var collapseAll: Boolean
+        get() = prefs.getBoolean("collapse_all", false)
+        set(value) = prefs.edit { putBoolean("collapse_all", value) }
 }

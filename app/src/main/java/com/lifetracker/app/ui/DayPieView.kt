@@ -223,7 +223,7 @@ private fun HowYouGotAround(trips: List<TripEntity>) {
     if (trips.isEmpty()) return
     val paper = LocalPaper.current
     val groups = trips.groupBy {
-        if (it.mode == "vehicle" && it.modeSource != "you") "Unknown way of travel" else TripModes.label(it.mode)
+        TripModes.title(it).removeSuffix(" (guess)")
     }.map { (label, list) -> Triple(label, list.sumOf { it.endMs - it.startMs }, list.sumOf { it.distanceM }) }
         .sortedByDescending { it.second }
     val totalMs = groups.sumOf { it.second }

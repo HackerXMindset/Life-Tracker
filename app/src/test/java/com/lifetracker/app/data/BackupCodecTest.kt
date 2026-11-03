@@ -91,7 +91,7 @@ class BackupCodecTest {
         ),
         trips = listOf(
             TripEntity("t1760003600000", 1_760_003_600_000L, 1_760_004_800_000L, "p1", "", 4450, 26, 31, "IN_VEHICLE=595000,WALKING=30000", "auto", "you"),
-            TripEntity("t1760020000000", 1_760_020_000_000L, 1_760_020_600_000L, "", "p2", 800, 5, 7, "", "walk", "auto"),
+            TripEntity("t1760020000000", 1_760_020_000_000L, 1_760_020_600_000L, "", "p2", 800, 5, 7, "", "walk", "auto", deletedMs = 1_760_030_000_000L),
         ),
         tripPoints = listOf(
             TripPointEntity("t1760003600000", 1_760_003_600_000L, 28.61, 77.21, 15f),
