@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import androidx.room.withTransaction
+import java.io.File
 import java.io.IOException
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -69,9 +70,9 @@ object BackupManager {
         name
     }
 
-    /** Every backup and safety copy in the folder, newest first. */
-    suspend fun list(context: Context, folder: Uri): List<BackupFile> = withContext(Dispatchers.IO) {
-        tree(context, folder).listFiles()
+    /** Every backup and safety copy in the folder (and the safety copies kept inside the app), newest first. */
+    suspend fun list(context: Context, folder: Uri?): List<BackupFile> = withContext(Dispatchers.IO) {
+        val inFolder = if (folder == null) emptyList() else tree(context, folder).listFiles()
             .mapNotNull { f ->
                 val name = f.name ?: return@mapNotNull null
                 if (f.isFile && name.startsWith("life-tracker-") && name.endsWith(".json")) {
@@ -80,7 +81,20 @@ object BackupManager {
                     null
                 }
             }
-            .sortedByDescending { it.name.substringAfter('_') }
+        val inApp = safetyDir(context).listFiles().orEmpty()
+            .filter { it.isFile && it.name.startsWith(SAFETY_PREFIX) && it.name.endsWith(".json") }
+            .map { BackupFile(it.name, Uri.fromFile(it), it.lastModified()) }
+        (inFolder + inApp).sortedByDescending { it.name.substringAfter('_') }
+    }
+
+    /** What a restore did: how many settings were put back (the app restarts to use them). */
+    class RestoreResult(val settings: Int, val data: BackupData)
+
+    /** Reads and checks a backup without changing anything, so its contents can be shown before it replaces anything. */
+    suspend fun peek(context: Context, uri: Uri): BackupData = withContext(Dispatchers.IO) {
+        val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+            ?: throw IOException("Could not open that backup.")
+        BackupCodec.decode(bytes.toString(Charsets.UTF_8))
     }
 
     /**
@@ -88,26 +102,61 @@ object BackupManager {
      * first, and the current data is saved as a safety copy before anything is
      * removed, so a bad file or a wrong tap changes nothing or can be undone.
      */
-    suspend fun restore(context: Context, folder: Uri, file: BackupFile) = withContext(Dispatchers.IO) {
-        val bytes = context.contentResolver.openInputStream(file.uri)?.use { it.readBytes() }
-            ?: throw IOException("Could not open that backup.")
-        val data = BackupCodec.decode(bytes.toString(Charsets.UTF_8))
+    suspend fun restore(context: Context, file: BackupFile): RestoreResult = restoreData(context, peek(context, file.uri), file.name)
 
+    /** Same, from a file you picked anywhere on the phone. */
+    suspend fun restoreFromFile(context: Context, uri: Uri): RestoreResult = restoreData(context, peek(context, uri), uri.lastPathSegment ?: "a file")
+
+    private suspend fun restoreData(context: Context, data: BackupData, label: String): RestoreResult = withContext(Dispatchers.IO) {
         val db = AppDatabase.get(context)
-        if (!snapshot(db).isEmpty) {
-            write(context, folder, SAFETY_PREFIX, KEEP_SAFETY)
-        }
+        saveSafetyCopy(context)
         replaceAll(db, data)
-        AppLog.w("Backup", "Restored everything from ${file.name}")
+        val settings = if (data.version >= 33) SettingsBackup.apply(context, data.settings) else 0
+        AppLog.w("Backup", "Restored everything from $label ($settings settings)")
         // Let the next open import the newest Streak backup again, to catch up on anything newer.
         DataSources(context).apply {
             streakSeenExportedAt = null
             ontSeenKey = null
         }
+        RestoreResult(settings, data)
     }
 
-    /** All of the app's data as it is right now. */
-    suspend fun snapshot(db: AppDatabase): BackupData = BackupData(
+    /** Saves the current data (and settings) before a restore: in the backup folder if there is one, otherwise inside the app. */
+    private suspend fun saveSafetyCopy(context: Context) {
+        val db = AppDatabase.get(context)
+        if (snapshot(db).isEmpty) return
+        val folder = DataSources(context).folder(DataSources.Slot.Backup)
+        if (folder != null) write(context, folder, SAFETY_PREFIX, KEEP_SAFETY) else writeInApp(context)
+    }
+
+    private fun safetyDir(context: Context): File = File(context.filesDir, "safety-copies").also { it.mkdirs() }
+
+    private suspend fun writeInApp(context: Context) {
+        val dir = safetyDir(context)
+        val text = BackupCodec.encode(snapshot(AppDatabase.get(context), context))
+        val base = SAFETY_PREFIX + STAMP.format(LocalDateTime.now())
+        val part = File(dir, "$base.json.part")
+        part.writeText(text, Charsets.UTF_8)
+        if (!part.renameTo(File(dir, "$base.json"))) throw IOException("Could not save the safety copy.")
+        dir.listFiles().orEmpty().filter { it.name.endsWith(".part") }.forEach { runCatching { it.delete() } }
+        dir.listFiles().orEmpty().filter { it.name.endsWith(".json") }.sortedByDescending { it.name }.drop(KEEP_SAFETY).forEach { runCatching { it.delete() } }
+    }
+
+    /** Saves the one backup file to a place you picked (a file Android made for you). Returns what it holds. */
+    suspend fun exportTo(context: Context, uri: Uri): BackupData = withContext(Dispatchers.IO) {
+        val data = snapshot(AppDatabase.get(context), context)
+        val text = BackupCodec.encode(data)
+        val out = context.contentResolver.openOutputStream(uri, "wt") ?: throw IOException("Android would not open that file for writing.")
+        out.use { it.write(text.toByteArray(Charsets.UTF_8)) }
+        AppLog.i("Backup", "Backup saved to a chosen file")
+        data
+    }
+
+    /** The name a backup saved by hand gets. */
+    fun fileName(): String = BACKUP_PREFIX + STAMP.format(LocalDateTime.now()) + ".json"
+
+    /** All of the app's data as it is right now, and with a [context] every setting too. */
+    suspend fun snapshot(db: AppDatabase, context: Context? = null): BackupData = BackupData(
         version = BackupCodec.FORMAT_VERSION,
         exportedAt = LocalDateTime.now().toString(),
         entries = db.entryDao().all(),
@@ -147,6 +196,8 @@ object BackupManager {
         mapStyles = db.mapDao().styles(),
         rules = db.ruleDao().all(),
         goals = db.goalDao().all(),
+        mapAreas = db.mapDao().areas(),
+        settings = context?.let { SettingsBackup.collect(it) } ?: emptyMap(),
     )
 
     /**
@@ -273,12 +324,16 @@ object BackupManager {
                 // Goals only grow too.
                 db.goalDao().insertMissing(data.goals)
             }
+            if (data.version >= 33) {
+                // The offline areas are remembered (their tiles are not in a backup): one that is already here is left as it is.
+                data.mapAreas.forEach { if (db.mapDao().area(it.id) == null) db.mapDao().upsertArea(it) }
+            }
         }
     }
 
     private suspend fun write(context: Context, folder: Uri, prefix: String, keep: Int): String {
         val dir = tree(context, folder)
-        val text = BackupCodec.encode(snapshot(AppDatabase.get(context)))
+        val text = BackupCodec.encode(snapshot(AppDatabase.get(context), context))
         val base = prefix + STAMP.format(LocalDateTime.now())
 
         val part = dir.createFile("application/octet-stream", "$base.json.part")

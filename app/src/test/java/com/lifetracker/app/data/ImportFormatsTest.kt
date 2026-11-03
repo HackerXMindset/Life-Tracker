@@ -197,10 +197,43 @@ class ImportFormatsTest {
          "userLocationProfile":{"frequentPlaces":[]}}"""
         val p = read(text)
         assertEquals(ImportKind.TIMELINE_NEW, p.kind)
-        assertEquals(3, p.fixes.size)
+        // The visit gives two readings (where you were when it started and when it ended), the path two, the raw signal one.
+        assertEquals(5, p.fixes.size)
         assertEquals(0, p.skipped)
-        assertEquals(25f, p.fixes.acc(2), 0.01f)
-        assertEquals(28.62, p.fixes.lat(2), 1e-6)
+        assertEquals(25f, p.fixes.acc(4), 0.01f)
+        assertEquals(28.62, p.fixes.lat(4), 1e-6)
+    }
+
+    @Test
+    fun anActivityGivesItsStartAndEndAsReadings() {
+        val text = """{"semanticSegments":[
+          {"startTime":"2025-10-09T09:00:00Z","endTime":"2025-10-09T09:20:00Z",
+           "activity":{"start":{"latLng":"28.6°, 77.2°"},"end":{"latLng":"28.7°, 77.3°"},"distanceMeters":9000,"topCandidate":{"type":"IN_PASSENGER_VEHICLE"}}}]}"""
+        val p = read(text)
+        assertEquals(ImportKind.TIMELINE_NEW, p.kind)
+        assertEquals(2, p.fixes.size)
+        assertEquals(28.6, p.fixes.lat(0), 1e-6)
+        assertEquals(28.7, p.fixes.lat(1), 1e-6)
+        assertEquals(ImportFormats.parseTime("2025-10-09T09:20:00Z")!!, p.fixes.ms(1))
+    }
+
+    @Test
+    fun theTimelineFileThisAppWritesIsReadBack() {
+        val fixes = (0 until 6).map { RawFixEntity(t0 + it * 30_000L, 10.0 + it * 0.001, 20.0 + it * 0.002, 8f, 1.5f) } +
+            listOf(RawFixEntity(t0 + 4 * 3_600_000L, 11.0, 21.0, 8f, 1.5f))
+        val sb = StringBuilder()
+        val w = ReadingsWriter(sb, ExportFormat.TIMELINE, "Test")
+        w.begin()
+        w.add(fixes)
+        w.end()
+        val text = sb.toString()
+        assertEquals(ImportKind.TIMELINE_NEW, ImportFormats.detect(text.take(4000)))
+        val p = read(text)
+        assertEquals(fixes.size, p.fixes.size)
+        assertEquals(10.003, p.fixes.lat(3), 1e-6)
+        assertEquals(21.0, p.fixes.lng(6), 1e-6)
+        // The 4 hour silence starts a second segment, like in the other formats.
+        assertEquals(2, Regex("\"startTime\"").findAll(text).count())
     }
 
     @Test

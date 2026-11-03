@@ -109,6 +109,13 @@ class ExportFormatsTest {
         assertTrue(write(ExportFormat.GEOJSON, emptyList()).contains("\"features\":[]"))
         assertTrue(write(ExportFormat.KML, emptyList()).trimEnd().endsWith("</kml>"))
         assertTrue(write(ExportFormat.GPX, emptyList()).trimEnd().endsWith("</gpx>"))
+        assertTrue(write(ExportFormat.TIMELINE, emptyList()).contains("\"semanticSegments\":[]"))
+    }
+
+    @Test
+    fun everyFormatSaysWhatItIsFor() {
+        ExportFormat.entries.forEach { assertTrue(it.name, it.help.isNotBlank() && it.label.isNotBlank() && it.extension.isNotBlank()) }
+        assertEquals(ExportFormat.TIMELINE, ExportFormat.of("timeline"))
     }
 
     @Test

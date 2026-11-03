@@ -61,6 +61,12 @@ class ExportViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** How many readings a plan would save. */
+    suspend fun count(plan: ExportPlan): Int = withContext(Dispatchers.IO) { AppDatabase.get(context).rawDao().countBetween(plan.fromMs, plan.toMs) }
+
+    /** How many readings a plan would save. */
+    suspend fun count(plan: ExportPlan): Int = withContext(Dispatchers.IO) { AppDatabase.get(context).rawDao().countBetween(plan.fromMs, plan.toMs) }
+
     fun setMode(mode: String) {
         settings.mode = mode
         ExportScheduler.apply(context)

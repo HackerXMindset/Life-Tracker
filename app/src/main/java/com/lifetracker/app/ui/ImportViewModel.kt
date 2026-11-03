@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.lifetracker.app.data.AppDatabase
 import com.lifetracker.app.data.AppLog
 import com.lifetracker.app.data.ImportFormats
+import com.lifetracker.app.data.ImportKind
 import com.lifetracker.app.data.ImportParse
 import com.lifetracker.app.data.ImportPlanner
 import com.lifetracker.app.data.ImportPreview
@@ -33,8 +34,11 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
     private var pending: Pair<ImportParse, ImportPlanner.Plan>? = null
     private val zone: ZoneId = ZoneId.systemDefault()
 
-    /** Reads the file and works out the preview. Nothing is added yet. */
-    fun choose(uri: Uri) {
+    /**
+     * Reads the file and works out the preview. Nothing is added yet. With [only] the file must be that kind (the Google Timeline
+     * card takes only the phone's Timeline.json); anything else is refused with a plain reason.
+     */
+    fun choose(uri: Uri, only: ImportKind? = null) {
         pending = null
         stateFlow.value = State(busy = true, message = "Reading the file...")
         viewModelScope.launch {
@@ -46,6 +50,12 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
                         if (n > 0) String(bytes, 0, n, Charsets.UTF_8) else ""
                     } ?: throw IOException("Android would not open that file.")
                     val kind = ImportFormats.detect(head)
+                    if (only != null && kind != only) {
+                        return@withContext State(
+                            message = "That is not the phone's Timeline.json (it looks like ${kind.label}). " +
+                                "Export it from Google Maps on the phone: Timeline settings, then Export Timeline data.",
+                        )
+                    }
                     val parse = context.contentResolver.openInputStream(uri)?.use { ImportFormats.parse(kind, it, zone) }
                         ?: throw IOException("Android would not open that file.")
                     val existing = existingSeconds(parse)

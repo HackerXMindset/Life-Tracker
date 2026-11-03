@@ -45,6 +45,9 @@ data class BackupData(
     val mapStyles: List<MapStyleEntity> = emptyList(),
     val rules: List<RuleEntity> = emptyList(),
     val goals: List<GoalEntity> = emptyList(),
+    val mapAreas: List<MapAreaEntity> = emptyList(),
+    /** Every setting of the app: file name, then key, then value. See [SettingsBackup]. */
+    val settings: Map<String, Map<String, Any>> = emptyMap(),
 ) {
     val isEmpty: Boolean
         get() = entries.isEmpty() && habits.isEmpty() && completions.isEmpty() && categories.isEmpty() &&
@@ -52,7 +55,7 @@ data class BackupData(
             moneyItems.isEmpty() && moneyEntries.isEmpty() && usageSessions.isEmpty() && calls.isEmpty() &&
             chargeSessions.isEmpty() && stepDays.isEmpty() && sleepNights.isEmpty() && places.isEmpty() && placeVisits.isEmpty() &&
             trips.isEmpty() && tripPoints.isEmpty() && rawFixes.isEmpty() && timelineEdits.isEmpty() && usageCombos.isEmpty() && usageStates.isEmpty() && focusSessions.isEmpty() &&
-            tripEdits.isEmpty() && pointNotes.isEmpty() && trackingProfiles.isEmpty() && mapStyles.isEmpty() && rules.isEmpty() && goals.isEmpty()
+            tripEdits.isEmpty() && pointNotes.isEmpty() && trackingProfiles.isEmpty() && mapStyles.isEmpty() && rules.isEmpty() && goals.isEmpty() && mapAreas.isEmpty() && settings.isEmpty()
 }
 
 /**
@@ -65,7 +68,7 @@ data class BackupData(
  */
 object BackupCodec {
     const val APP_NAME = "life-tracker"
-    const val FORMAT_VERSION = 32
+    const val FORMAT_VERSION = 33
 
     fun encode(data: BackupData): String =
         JSONObject()
@@ -109,6 +112,8 @@ object BackupCodec {
             .put("mapStyles", array(data.mapStyles, ::mapStyleJson))
             .put("rules", array(data.rules, ::ruleJson))
             .put("goals", array(data.goals, ::placeGoalJson))
+            .put("mapAreas", array(data.mapAreas, ::mapAreaJson))
+            .put("settings", SettingsCodec.toJson(data.settings))
             .toString(2)
 
     /** Reads a backup. Throws [IllegalArgumentException] with a readable reason if it is not usable. */
@@ -160,6 +165,8 @@ object BackupCodec {
                 mapStyles = list(root, "mapStyles", required = false, ::mapStyle),
                 rules = list(root, "rules", required = false, ::rule),
                 goals = list(root, "goals", required = false, ::placeGoal),
+                mapAreas = list(root, "mapAreas", required = false, ::mapArea),
+                settings = SettingsCodec.fromJson(root.optJSONObject("settings")),
             )
         } catch (e: JSONException) {
             throw IllegalArgumentException("This file is damaged or is not a backup.")
@@ -651,6 +658,38 @@ object BackupCodec {
         lastRunMs = o.optLong("lastRunMs", 0L),
         runs = o.optInt("runs", 0),
         sortOrder = o.optInt("sortOrder", 0),
+    )
+
+    // Version 33 adds every setting ("settings") and the offline map areas you made (each area as an object; the downloaded tiles are not kept).
+    private fun mapAreaJson(a: MapAreaEntity) = JSONObject()
+        .put("id", a.id).put("name", a.name).put("styleId", a.styleId).put("styleUrl", a.styleUrl)
+        .put("west", a.west).put("south", a.south).put("east", a.east).put("north", a.north)
+        .put("minZoom", a.minZoom).put("maxZoom", a.maxZoom).put("source", a.source).put("placeId", a.placeId)
+        .put("sig", a.sig).put("createdMs", a.createdMs)
+
+    /** An area comes back as "tiles deleted": the place and size are remembered, the map files themselves are not in a backup. */
+    private fun mapArea(o: JSONObject) = MapAreaEntity(
+        id = o.getString("id"),
+        name = o.optString("name", ""),
+        styleId = o.optString("styleId", ""),
+        styleUrl = o.optString("styleUrl", ""),
+        west = o.getDouble("west"),
+        south = o.getDouble("south"),
+        east = o.getDouble("east"),
+        north = o.getDouble("north"),
+        minZoom = o.optInt("minZoom", OfflineRules.AUTO_MIN_ZOOM),
+        maxZoom = o.optInt("maxZoom", OfflineRules.AUTO_MAX_ZOOM),
+        source = o.optString("source", ""),
+        placeId = o.optString("placeId", ""),
+        sig = o.optString("sig", ""),
+        state = AreaState.REMOVED,
+        createdMs = o.optLong("createdMs", 0L),
+        doneMs = 0L,
+        tiles = 0L,
+        bytes = 0L,
+        totalTiles = 0L,
+        regionId = -1L,
+        note = "",
     )
 
     // Version 30 adds the place goals.

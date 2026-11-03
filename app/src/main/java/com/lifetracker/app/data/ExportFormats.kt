@@ -10,7 +10,18 @@ enum class ExportFormat(val id: String, val label: String, val extension: String
     GPX("gpx", "GPX", "gpx", "application/gpx+xml"),
     KML("kml", "KML", "kml", "application/vnd.google-earth.kml+xml"),
     GEOJSON("geojson", "GeoJSON", "geojson", "application/geo+json"),
-    CSV("csv", "CSV", "csv", "text/csv");
+    CSV("csv", "CSV", "csv", "text/csv"),
+    TIMELINE("timeline", "Google Timeline", "json", "application/json");
+
+    /** What the format is for, in a line a beginner can follow. */
+    val help: String
+        get() = when (this) {
+            GPX -> "The usual one for map apps: OsmAnd, GPSLogger, Strava, Garmin"
+            KML -> "For Google Earth and Google My Maps"
+            GEOJSON -> "For GIS tools, geojson.io and developers"
+            CSV -> "A table of time, latitude, longitude and more, for a spreadsheet"
+            TIMELINE -> "The same layout as the Timeline.json Google makes on a phone (semanticSegments with a path of points), so Google tools and this app can read it back"
+        }
 
     companion object {
         fun of(id: String): ExportFormat = entries.firstOrNull { it.id == id } ?: GPX
@@ -92,6 +103,7 @@ class ReadingsWriter(private val out: Appendable, private val format: ExportForm
             ExportFormat.KML -> out.append(KML_HEAD).append(esc(name)).append("</name>\n")
             ExportFormat.GEOJSON -> out.append("{\"type\":\"FeatureCollection\",\"name\":").append(quote(name)).append(",\"features\":[")
             ExportFormat.CSV -> out.append(Gpx.csvHeader())
+            ExportFormat.TIMELINE -> out.append("{\"semanticSegments\":[")
         }
     }
 
@@ -120,6 +132,10 @@ class ReadingsWriter(private val out: Appendable, private val format: ExportForm
                 flush()
                 out.append("]}\n")
             }
+            ExportFormat.TIMELINE -> {
+                flush()
+                out.append("],\"rawSignals\":[]}\n")
+            }
             ExportFormat.CSV -> Unit
         }
     }
@@ -127,7 +143,17 @@ class ReadingsWriter(private val out: Appendable, private val format: ExportForm
     private fun flush() {
         if (segment.isEmpty()) return
         segments++
-        if (format == ExportFormat.KML) {
+        if (format == ExportFormat.TIMELINE) {
+            if (segments > 1) out.append(',')
+            out.append("{\"startTime\":\"").append(Instant.ofEpochMilli(segment.first().ms).toString())
+            out.append("\",\"endTime\":\"").append(Instant.ofEpochMilli(segment.last().ms).toString()).append("\",\"timelinePath\":[")
+            segment.forEachIndexed { i, f ->
+                if (i > 0) out.append(',')
+                out.append("{\"point\":\"").append(num(f.lat)).append("°, ").append(num(f.lng)).append("°\",\"time\":\"")
+                    .append(Instant.ofEpochMilli(f.ms).toString()).append("\"}")
+            }
+            out.append("]}")
+        } else if (format == ExportFormat.KML) {
             out.append("<Placemark><name>").append(esc(name)).append(' ').append(segments.toString()).append("</name><gx:Track>\n")
             segment.forEach { out.append("<when>").append(Instant.ofEpochMilli(it.ms).toString()).append("</when>\n") }
             segment.forEach { out.append("<gx:coord>").append(num(it.lng)).append(' ').append(num(it.lat)).append("</gx:coord>\n") }
