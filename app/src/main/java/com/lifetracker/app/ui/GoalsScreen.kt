@@ -124,7 +124,7 @@ fun GoalStrip(onOpen: () -> Unit, vm: GoalsViewModel = viewModel()) {
 /** Goals from your places and trips: a list with a ring each, and a window to make or change one. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun GoalsScreen(onBack: () -> Unit, vm: GoalsViewModel = viewModel()) {
+fun GoalsScreen(onBack: () -> Unit, embedded: Boolean = false, vm: GoalsViewModel = viewModel()) {
     val p = LocalPaper.current
     val context = LocalContext.current
     val items by vm.items.collectAsState()
@@ -133,14 +133,14 @@ fun GoalsScreen(onBack: () -> Unit, vm: GoalsViewModel = viewModel()) {
     val featureOn = featureChanges >= 0 && Features.isOn(context, Feature.GOALS)
     var editing by remember { mutableStateOf<GoalEntity?>(null) }
     var creating by remember { mutableStateOf(false) }
-    BackHandler(onBack = onBack)
+    if (!embedded) BackHandler(onBack = onBack)
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = if (embedded) 4.dp else 16.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        item { SettingsTop("Place goals", "Targets and limits from where you go", onBack) }
+        if (!embedded) item { SettingsTop("Place goals", "Targets and limits from where you go", onBack) }
         item {
             Text(
                 "A goal counts something from your places and trips over a day, a week, a month or the last few days: hours at a place or kind of place, " +
