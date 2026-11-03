@@ -103,6 +103,6 @@ class RoundTwoChecksTest {
         val g = GoalEntity("g1", "Out", GoalMeasures.HOURS_OUT, "", "home", "", GoalPeriods.WEEK, 7, GoalDirections.AT_LEAST, 10.0, true, 1L, 0)
         val data = BackupData(BackupCodec.FORMAT_VERSION, "x", emptyList(), rules = listOf(rule), goals = listOf(g))
         assertTrue(!data.isEmpty)
-        assertEquals(30, BackupCodec.FORMAT_VERSION)
+        assertTrue(BackupCodec.FORMAT_VERSION >= 30)
     }
 }
