@@ -2,6 +2,16 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧩 Rules and goals on one page (G3)
+
+### ✨ New
+
+- **Rules and Place goals are now one page**, "Rules and goals", with a Rules | Goals switch under the title. It is one row in Settings now; the goal rings on the Timeline and Habits open it on Goals.
+- **New rule starts from a choice in plain words**: "Tell me when I get somewhere", "Remind me when I leave somewhere", "Tick a habit when I get somewhere", "Remind me at a time every day", "Do something when I plug in", "A button I tap myself", or start from nothing. Everything can still be changed.
+- **The rule window is three short steps** (1 When, 2 Only if, 3 Then) with Back and Next, instead of one long form. The triggers are sorted into six groups (A place, Time, The phone, Moving, My body, A habit) and each one has a line saying what it is for.
+- A mistake is shown on the step where it was made. The name, the "wait at least this many seconds" box and the notes about {place} and friends are tucked behind "More options".
+- "One of them is enough" only shows once two limits are on, and the long explanation at the top of Rules is shorter (the details moved to "Good to know" at the bottom).
+
 ## 🧭 Settings polish (G1, G2)
 
 ### ✨ New
