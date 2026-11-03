@@ -13,6 +13,24 @@ Every release page shows the sections below that were added since the last relea
 - Trips from older versions that began and ended at the same place and never left it are shown as a walk inside the stay.
 - Database version 31 and backup format 31 (a trip remembers when it was deleted). Your data is untouched.
 
+## 🧭 Timeline header: rewind button, goal rings off by default
+
+### ✨ Changed
+
+- **Replay this day is now a small rewind button** at the top right of the Timeline, beside the "left today" arc, instead of a wide button on the page. It works for any day.
+- **The goal rings are off by default.** Switch them on under Settings > Place goals ("Show goal rings on the Timeline and in Habits"). The goals themselves are unchanged.
+
+## 🧭 Places and trips round 2 is finished (E10)
+
+### ✨ In short
+
+Round 2 of Places and trips is done. Since the remake: stays that no longer split in two, better place names with suggestions, a live map that follows you, a replay of your day (with speeds, a zoom that follows your pace, and a GIF with the real map), journeys with a map and a much better guess of how you travelled, **Rules** (when something happens, do something), and **Place goals** with rings. Every part has its own switch under Settings > Features.
+
+### 🔧 Checked
+
+- The train day of 27 and 28 October runs through the rules and the goals in the tests: one stop at Prayagraj Junction (one arrival, one leave), two journeys of 343 km and 60 km, 405 km and 8.5 hours out of the house in all.
+- Please look at that day on your phone and tell me what is still wrong.
+
 ## 🧭 Places and trips round 2: place goals (E9)
 
 ### ✨ New
