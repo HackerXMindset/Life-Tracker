@@ -2,15 +2,6 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
-## 🧭 Settings polish (G1, G2)
-
-### ✨ New
-
-- **Permissions**: the ones that are **not allowed come first**, with the allowed ones below under their own heading. Each card now says **what it is used for** (Places, Timeline, Rules...) and **where it is in Android**.
-- **"Open its page"** goes to the exact Android page of that permission: the phone's own permission editor on Xiaomi, Redmi and POCO phones, the named permission page elsewhere, the usage access, notification, alarm and battery pages directly, and the app's general settings only as the last choice. When Android has refused a permission before and will not ask again, the card says so.
-- **Settings remembers where you were.** Going deep into Settings (for example Places and trips > Places) and pressing Back lands on the same part of the same page, scrolled to the same place, instead of a fresh Settings page. The same goes for every other screen you open on top of a tab.
-- **"What are you charging with?" banner is off by default.** Switch it on under Charging.
-
 ## 🧩 Rules and goals on one page (G3)
 
 ### ✨ New
@@ -20,6 +11,15 @@ Every release page shows the sections below that were added since the last relea
 - **The rule window is three short steps** (1 When, 2 Only if, 3 Then) with Back and Next, instead of one long form. The triggers are sorted into six groups (A place, Time, The phone, Moving, My body, A habit) and each one has a line saying what it is for.
 - A mistake is shown on the step where it was made. The name, the "wait at least this many seconds" box and the notes about {place} and friends are tucked behind "More options".
 - "One of them is enough" only shows once two limits are on, and the long explanation at the top of Rules is shorter (the details moved to "Good to know" at the bottom).
+
+## 🧭 Settings polish (G1, G2)
+
+### ✨ New
+
+- **Permissions**: the ones that are **not allowed come first**, with the allowed ones below under their own heading. Each card now says **what it is used for** (Places, Timeline, Rules...) and **where it is in Android**.
+- **"Open its page"** goes to the exact Android page of that permission: the phone's own permission editor on Xiaomi, Redmi and POCO phones, the named permission page elsewhere, the usage access, notification, alarm and battery pages directly, and the app's general settings only as the last choice. When Android has refused a permission before and will not ask again, the card says so.
+- **Settings remembers where you were.** Going deep into Settings (for example Places and trips > Places) and pressing Back lands on the same part of the same page, scrolled to the same place, instead of a fresh Settings page. The same goes for every other screen you open on top of a tab.
+- **"What are you charging with?" banner is off by default.** Switch it on under Charging.
 
 ## 🧭 Places list and drawn areas (F2)
 
