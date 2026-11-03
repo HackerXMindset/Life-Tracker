@@ -22,6 +22,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -133,75 +134,86 @@ fun LifeTrackerApp() {
             val trip = openTrip
             val place = openPlace
             val replay = replayRange?.split("|", limit = 3)?.takeIf { it.size == 3 }
-            if (replay != null) {
-                ReplayScreen(
-                    from = java.time.LocalDate.parse(replay[0]),
-                    to = java.time.LocalDate.parse(replay[1]),
-                    title = replay[2],
-                    onBack = { replayRange = null },
-                )
-            } else if (place != null) {
-                PlaceScreen(placeId = place, onBack = { openPlace = null })
-            } else if (trip != null) {
-                TripScreen(
-                    tripId = trip,
-                    onBack = { openTrip = null },
-                    onOpenTrip = { openTrip = it },
-                    onOpenPlace = { openPlace = it },
-                )
-            } else if (current != null) {
-                val back = { page = null }
-                when (current) {
-                    Page.Appearance -> AppearanceScreen(onBack = back)
-                    Page.Backup -> DataSourcesScreen(onBack = back)
-                    Page.Activities -> ActivitiesScreen(onBack = back)
-                    Page.Timeline -> TimelineSettingsScreen(onBack = back)
-                    Page.Apps -> AppsScreen(onBack = back)
-                    Page.PlaceCategories -> PlaceCategoriesScreen(onBack = { page = Page.Places })
-                    Page.Profiles -> ProfilesScreen(onBack = { page = Page.Places })
-                    Page.Live -> LiveScreen(onBack = back)
-                    Page.Features -> FeaturesScreen(onBack = back)
-                    Page.Rules -> RulesScreen(onBack = back)
-                    Page.Goals -> GoalsScreen(onBack = back)
-                    Page.Trips -> TripsScreen(onBack = back, onOpenTrip = { openTrip = it }, onOpenReplay = { from, to, title -> replayRange = "$from|$to|$title" })
-                    Page.Changes -> ChangesScreen(onBack = { page = Page.Places })
-                    Page.Maps -> MapsScreen(onBack = { page = Page.Places })
-                    Page.Permissions -> PermissionsScreen(onBack = back, onOpen = { page = it })
-                    Page.Logs -> LogsScreen(onBack = back)
-                    Page.Habits -> HabitsSettingsScreen(onBack = back)
-                    Page.Phone -> PhoneUsageScreen(onBack = back, part = part)
-                    Page.Calls -> CallsScreen(onBack = back, part = part)
-                    Page.Charging -> ChargingScreen(onBack = back, part = part)
-                    Page.Steps -> StepsSleepScreen(onBack = back, part = part)
-                    Page.Places -> PlacesScreen(onBack = back, onOpen = { page = it }, onOpenPlace = { openPlace = it })
-                    Page.Location -> LocationScreen(onBack = back, onOpenTrip = { openTrip = it }, onOpenPlace = { openPlace = it }, onOpenTrips = { page = Page.Trips })
-                }
-            } else {
-                when (tab) {
-                    Tab.Timeline -> TimelineScreen(
-                        onOpenCharging = { openPage(Page.Charging, Part.Data) },
-                        onOpenSteps = { openPage(Page.Steps, Part.Data) },
-                        onOpenPlaces = { openPage(Page.Location, Part.Data) },
+            // Each screen keeps what you had done in it (the part of Settings you were in, how far you had scrolled) while another one is shown on top, so Back lands exactly where you left.
+            val saver = rememberSaveableStateHolder()
+            val screenKey = when {
+                replay != null -> "replay"
+                place != null -> "place:$place"
+                trip != null -> "trip:$trip"
+                current != null -> "page:${current.name}"
+                else -> "tab:${tab.name}"
+            }
+            saver.SaveableStateProvider(screenKey) {
+                if (replay != null) {
+                    ReplayScreen(
+                        from = java.time.LocalDate.parse(replay[0]),
+                        to = java.time.LocalDate.parse(replay[1]),
+                        title = replay[2],
+                        onBack = { replayRange = null },
+                    )
+                } else if (place != null) {
+                    PlaceScreen(placeId = place, onBack = { openPlace = null })
+                } else if (trip != null) {
+                    TripScreen(
+                        tripId = trip,
+                        onBack = { openTrip = null },
                         onOpenTrip = { openTrip = it },
                         onOpenPlace = { openPlace = it },
-                        onOpenCalls = { openPage(Page.Calls, Part.Data) },
-                        onOpenFood = { tab = Tab.Food },
-                        onOpenLive = { openPage(Page.Live, Part.Data) },
-                        onOpenReplay = { replayRange = it + "|" + it + "|" + it },
-                        onOpenGoals = { openPage(Page.Goals, Part.Settings) },
                     )
-                    Tab.Habits -> HabitsScreen(onOpenGoals = { openPage(Page.Goals, Part.Settings) })
-                    Tab.Food -> FoodScreen()
-                    Tab.Money -> MoneyScreen()
-                    Tab.Stats -> StatsScreen(
-                        onOpenPhone = { openPage(Page.Phone, Part.Data) },
-                        onOpenSteps = { openPage(Page.Steps, Part.Data) },
-                        onOpenPlaces = { openPage(Page.Location, Part.Data) },
-                        onOpenTrips = { openPage(Page.Trips, Part.Data) },
-                        onOpenCalls = { openPage(Page.Calls, Part.Data) },
-                        onOpenCharging = { openPage(Page.Charging, Part.Data) },
-                    )
-                    Tab.Settings -> SettingsScreen(onOpen = { openPage(it, Part.Settings) })
+                } else if (current != null) {
+                    val back = { page = null }
+                    when (current) {
+                        Page.Appearance -> AppearanceScreen(onBack = back)
+                        Page.Backup -> DataSourcesScreen(onBack = back)
+                        Page.Activities -> ActivitiesScreen(onBack = back)
+                        Page.Timeline -> TimelineSettingsScreen(onBack = back)
+                        Page.Apps -> AppsScreen(onBack = back)
+                        Page.PlaceCategories -> PlaceCategoriesScreen(onBack = { page = Page.Places })
+                        Page.Profiles -> ProfilesScreen(onBack = { page = Page.Places })
+                        Page.Live -> LiveScreen(onBack = back)
+                        Page.Features -> FeaturesScreen(onBack = back)
+                        Page.Rules -> RulesScreen(onBack = back)
+                        Page.Goals -> GoalsScreen(onBack = back)
+                        Page.Trips -> TripsScreen(onBack = back, onOpenTrip = { openTrip = it }, onOpenReplay = { from, to, title -> replayRange = "$from|$to|$title" })
+                        Page.Changes -> ChangesScreen(onBack = { page = Page.Places })
+                        Page.Maps -> MapsScreen(onBack = { page = Page.Places })
+                        Page.Permissions -> PermissionsScreen(onBack = back, onOpen = { page = it })
+                        Page.Logs -> LogsScreen(onBack = back)
+                        Page.Habits -> HabitsSettingsScreen(onBack = back)
+                        Page.Phone -> PhoneUsageScreen(onBack = back, part = part)
+                        Page.Calls -> CallsScreen(onBack = back, part = part)
+                        Page.Charging -> ChargingScreen(onBack = back, part = part)
+                        Page.Steps -> StepsSleepScreen(onBack = back, part = part)
+                        Page.Places -> PlacesScreen(onBack = back, onOpen = { page = it }, onOpenPlace = { openPlace = it })
+                        Page.Location -> LocationScreen(onBack = back, onOpenTrip = { openTrip = it }, onOpenPlace = { openPlace = it }, onOpenTrips = { page = Page.Trips })
+                    }
+                } else {
+                    when (tab) {
+                        Tab.Timeline -> TimelineScreen(
+                            onOpenCharging = { openPage(Page.Charging, Part.Data) },
+                            onOpenSteps = { openPage(Page.Steps, Part.Data) },
+                            onOpenPlaces = { openPage(Page.Location, Part.Data) },
+                            onOpenTrip = { openTrip = it },
+                            onOpenPlace = { openPlace = it },
+                            onOpenCalls = { openPage(Page.Calls, Part.Data) },
+                            onOpenFood = { tab = Tab.Food },
+                            onOpenLive = { openPage(Page.Live, Part.Data) },
+                            onOpenReplay = { replayRange = it + "|" + it + "|" + it },
+                            onOpenGoals = { openPage(Page.Goals, Part.Settings) },
+                        )
+                        Tab.Habits -> HabitsScreen(onOpenGoals = { openPage(Page.Goals, Part.Settings) })
+                        Tab.Food -> FoodScreen()
+                        Tab.Money -> MoneyScreen()
+                        Tab.Stats -> StatsScreen(
+                            onOpenPhone = { openPage(Page.Phone, Part.Data) },
+                            onOpenSteps = { openPage(Page.Steps, Part.Data) },
+                            onOpenPlaces = { openPage(Page.Location, Part.Data) },
+                            onOpenTrips = { openPage(Page.Trips, Part.Data) },
+                            onOpenCalls = { openPage(Page.Calls, Part.Data) },
+                            onOpenCharging = { openPage(Page.Charging, Part.Data) },
+                        )
+                        Tab.Settings -> SettingsScreen(onOpen = { openPage(it, Part.Settings) })
+                    }
                 }
             }
         }

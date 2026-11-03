@@ -110,7 +110,14 @@ fun PermissionsScreen(onBack: () -> Unit, onOpen: (Page) -> Unit) {
         }
     }
 
-    val again = { tick++ }
+    // A permission Android would not ask for (it was refused before): only its settings page can switch it on now.
+    var asked by remember { mutableStateOf<Perm?>(null) }
+    var blocked by remember { mutableStateOf(emptySet<Perm>()) }
+    val again = {
+        val perm = asked
+        if (perm != null && quickPermissionStates(context)[perm] != true) blocked = blocked + perm
+        tick++
+    }
     val askLocation = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { again() }
     val askOne = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { again() }
     val askCalls = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { again() }
@@ -143,9 +150,15 @@ fun PermissionsScreen(onBack: () -> Unit, onOpen: (Page) -> Unit) {
             )
         }
 
-        items(PermissionGuide.all, key = { it.perm.name }) { text ->
-            val perm = text.perm
+        val order = PermissionGuide.ordered(::allowed)
+        val firstOff = order.firstOrNull { !allowed(it) }
+        val firstOn = order.firstOrNull { allowed(it) }
+        val offCount = order.count { !allowed(it) }
+        items(order, key = { it.name }) { perm ->
+            val text = PermissionGuide.text(perm)
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            if (perm == firstOff) PaperSection("Not allowed yet · $offCount", "switch these on")
+            if (perm == firstOn) PaperSection("Allowed · ${order.size - offCount}", "nothing to do")
             PermCard(text, allowed(perm), note = when (perm) {
                 Perm.HealthConnect -> when {
                     hcNeedsUpdate -> "Health Connect needs an update from the Play Store first."
@@ -154,11 +167,12 @@ fun PermissionsScreen(onBack: () -> Unit, onOpen: (Page) -> Unit) {
                 }
                 Perm.Folders -> "Backup folder: ${backupFolder ?: "not chosen"}\nStreak folder: ${streakFolder ?: "not chosen"}\nOpenNutriTracker folder: ${nutriFolder ?: "not chosen"}"
                 Perm.Background -> if (!states.getValue(Perm.Location)) "Allow Location first." else null
-                else -> null
+                else -> if (perm in blocked && !allowed(perm)) "Android will not ask again. Tap \"Open its page\" and switch it on there." else null
             }) {
                 when (perm) {
                     Perm.UsageAccess -> Button(onClick = { UsageCollector.openAccessSettings(context) }) { Text("Open usage access") }
                     Perm.Location -> if (!allowed(perm)) Button(onClick = {
+                        asked = perm
                         askLocation.launch(
                             arrayOf(
                                 android.Manifest.permission.ACCESS_FINE_LOCATION,
@@ -168,14 +182,16 @@ fun PermissionsScreen(onBack: () -> Unit, onOpen: (Page) -> Unit) {
                     }) { Text("Allow location") }
                     Perm.Background -> if (!allowed(perm)) Button(
                         onClick = {
+                            asked = perm
                             if (Build.VERSION.SDK_INT >= 29) askOne.launch(android.Manifest.permission.ACCESS_BACKGROUND_LOCATION)
                         },
                         enabled = states.getValue(Perm.Location),
                     ) { Text("Allow all the time") }
                     Perm.Activity -> if (!allowed(perm)) Button(onClick = {
+                        asked = perm
                         if (Build.VERSION.SDK_INT >= 29) askOne.launch(android.Manifest.permission.ACTIVITY_RECOGNITION)
                     }) { Text("Allow physical activity") }
-                    Perm.Calls -> if (!allowed(perm)) Button(onClick = { askCalls.launch(CallsCollector.PERMISSIONS) }) { Text("Allow") }
+                    Perm.Calls -> if (!allowed(perm)) Button(onClick = { asked = perm; askCalls.launch(CallsCollector.PERMISSIONS) }) { Text("Allow") }
                     Perm.Notifications -> if (!allowed(perm)) Button(onClick = {
                         if (Build.VERSION.SDK_INT >= 33) {
                             askOne.launch(android.Manifest.permission.POST_NOTIFICATIONS)
@@ -189,6 +205,7 @@ fun PermissionsScreen(onBack: () -> Unit, onOpen: (Page) -> Unit) {
                     }) { Text("Allow") }
                     Perm.ExactAlarms -> if (!allowed(perm)) Button(onClick = { HabitReminderScheduler.openExactAlarmSettings(context) }) { Text("Allow") }
                     Perm.Bluetooth -> if (!allowed(perm)) Button(onClick = {
+                        asked = perm
                         if (Build.VERSION.SDK_INT >= 31) askOne.launch(android.Manifest.permission.BLUETOOTH_CONNECT)
                     }) { Text("Allow") }
                     Perm.Battery -> if (!allowed(perm)) Button(onClick = {
@@ -211,8 +228,8 @@ fun PermissionsScreen(onBack: () -> Unit, onOpen: (Page) -> Unit) {
                     }
                     Perm.Folders -> Button(onClick = { onOpen(Page.Backup) }) { Text("Open Backups and imports") }
                 }
-                if (perm != Perm.Folders && perm != Perm.HealthConnect) {
-                    TextButton(onClick = { openAppSettings(context) }) { Text("Open this app's settings") }
+                if (perm != Perm.Folders) {
+                    TextButton(onClick = { if (!openPermissionPage(context, perm)) openAppSettings(context) }) { Text("Open its page") }
                 }
             }
             if (perm == Perm.UsageAccess) {
@@ -261,10 +278,18 @@ private fun PermCard(text: PermText, allowed: Boolean, note: String?, actions: @
                     color = if (allowed) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            if (text.usedBy.isNotEmpty()) {
+                MonoLabel("Used for")
+                Text(text.usedBy, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
+            }
             MonoLabel("Why")
             Text(text.why, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             MonoLabel("How to switch it on")
             Text(text.how, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (text.page.isNotEmpty()) {
+                MonoLabel("Where it is in Android")
+                Text(text.page, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
+            }
             if (note != null) Text(note, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface)
             actions()
         }

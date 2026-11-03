@@ -23,4 +23,33 @@ class PermissionGuideTest {
         assertEquals("3 still off", PermissionGuide.summary(7, 10))
         assertEquals("", PermissionGuide.summary(0, 0))
     }
+
+    @Test fun notAllowedComeFirstAndEachKeepsTheGuideOrder() {
+        val allowed = setOf(Perm.Location, Perm.Notifications, Perm.Folders)
+        val order = PermissionGuide.ordered { it in allowed }
+        assertEquals(Perm.values().size, order.size)
+        val firstOn = order.indexOfFirst { it in allowed }
+        assertTrue(order.take(firstOn).none { it in allowed })
+        assertTrue(order.drop(firstOn).all { it in allowed })
+        assertEquals(order.filter { it !in allowed }, Perm.values().filter { it !in allowed })
+        assertEquals(order.filter { it in allowed }, Perm.values().filter { it in allowed })
+    }
+
+    @Test fun everyCardSaysWhatItIsUsedForAndWhereItIs() {
+        PermissionGuide.all.forEach {
+            assertTrue(it.perm.name, it.usedBy.isNotBlank() && it.page.isNotBlank())
+        }
+    }
+
+    @Test fun runtimePermissionsTryThePhonesOwnEditorFirstOnXiaomiThenTheNamedPage() {
+        assertEquals(
+            listOf(PageStep.MiuiEditor, PageStep.AppPermission, PageStep.AppDetails),
+            PermissionPages.chain(Perm.Background, xiaomi = true),
+        )
+        assertEquals(listOf(PageStep.AppPermission, PageStep.AppDetails), PermissionPages.chain(Perm.Location, xiaomi = false))
+        assertEquals(listOf(PageStep.UsageAccess, PageStep.AppDetails), PermissionPages.chain(Perm.UsageAccess, xiaomi = true))
+        assertTrue(PermissionPages.chain(Perm.Folders, xiaomi = true).isEmpty())
+        assertTrue(PermissionPages.androidName(Perm.Background)!!.endsWith("ACCESS_BACKGROUND_LOCATION"))
+        assertTrue(PermissionPages.isXiaomi("Xiaomi") && PermissionPages.isXiaomi("POCO") && !PermissionPages.isXiaomi("samsung"))
+    }
 }

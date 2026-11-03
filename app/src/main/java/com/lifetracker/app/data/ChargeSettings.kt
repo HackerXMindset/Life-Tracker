@@ -13,9 +13,9 @@ class ChargeSettings(context: Context) {
         get() = prefs.getBoolean("track", true) && Features.isOn(appContext, Feature.CHARGING)
         set(value) = prefs.edit { putBoolean("track", value) }
 
-    /** Whether a banner pops up when you plug in. */
+    /** Whether a banner pops up when you plug in to ask "What are you charging with?". Off until you switch it on. */
     var showBanner: Boolean
-        get() = prefs.getBoolean("show_banner", true)
+        get() = prefs.getBoolean("show_banner", false)
         set(value) = prefs.edit { putBoolean("show_banner", value) }
 
     /** Whether charging sessions are drawn on the Timeline. */
