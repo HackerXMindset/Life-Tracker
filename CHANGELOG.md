@@ -2,6 +2,17 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧭 Places list and drawn areas (F2)
+
+### ✨ New
+
+- **Add a place** is now at the top of the Places page.
+- **Search** places by name or kind, and the list is **closest first** (from where the phone last was; by name when there is no position yet). It shows "350 m away" on each place, and goes **10 places a page** with Previous and Next.
+- **Delete a place**: a Delete button on each place (and in its Edit window). A bar with Undo shows for a few seconds, and "Deleted places" lists them to bring back or remove for good. A deleted place stops being watched, but your old visits there keep its name on the Timeline.
+- **Draw the area of a place on the map**, like cropping a picture: "Draw the area on the map" in the place window starts from your circle as a ring of corners. Drag a corner to move it, tap the map to add one, press and hold a corner to remove it. "Move the map" lets you pan and zoom without changing the shape; "Back to a circle" undoes it.
+- **Stays understand the drawn area**: you are at the place while you are inside the shape, and walking about inside it is still one stay (see F1). The place page shows the shape on its map.
+- Database version 32 and backup format 32 (a place can have an area and a deleted time). Your data is untouched.
+
 ## 🧭 Stays and trips fixes (F1)
 
 ### ✨ New

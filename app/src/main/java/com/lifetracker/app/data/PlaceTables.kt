@@ -48,6 +48,10 @@ data class PlaceEntity(
     val heartbeatMin: Int = 0,
     /** Pause zone: seconds to keep recording after arriving before pausing; -1 for automatic (3.5 times the interval). */
     val entryDelaySec: Int = -1,
+    /** A drawn area ("lat,lng;lat,lng;..."), or "" for a plain circle. Then [lat], [lng] and [radiusM] are the circle that holds it. Added in database version 32. */
+    @ColumnInfo(defaultValue = "") val polygon: String = "",
+    /** 0 for a place you keep; the time you deleted it (it is also not watched, and waits in the Deleted list); -1 once removed for good. Old visits keep its name. Added in database version 32. */
+    @ColumnInfo(defaultValue = "0") val deletedMs: Long = 0L,
 )
 
 @Entity(tableName = "place_visits", indices = [Index("startMs")])
@@ -77,6 +81,10 @@ interface PlaceDao {
 
     @Query("SELECT * FROM places WHERE id = :id")
     suspend fun place(id: String): PlaceEntity?
+
+    /** Deletes a place (it also stops being watched; old visits keep its name) or brings it back with 0. */
+    @Query("UPDATE places SET deletedMs = :deletedMs, archived = :archived WHERE id = :id")
+    suspend fun setDeleted(id: String, deletedMs: Long, archived: Boolean)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertPlace(place: PlaceEntity)

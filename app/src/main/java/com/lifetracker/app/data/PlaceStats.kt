@@ -85,8 +85,8 @@ object PlaceRules {
     fun placeAt(places: List<PlaceEntity>, lat: Double, lng: Double, slackM: Double = 0.0): PlaceEntity? =
         places
             .filter { !it.archived }
+            .filter { PlaceShape.within(it, lat, lng, slackM) }
             .map { it to distanceM(it.lat, it.lng, lat, lng) }
-            .filter { it.second <= it.first.radiusM + slackM }
             .minWithOrNull(compareBy<Pair<PlaceEntity, Double>>({ it.first.radiusM }, { it.second }))
             ?.first
 

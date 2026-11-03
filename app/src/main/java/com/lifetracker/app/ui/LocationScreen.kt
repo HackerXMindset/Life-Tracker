@@ -214,7 +214,7 @@ fun LocationScreen(
             suggestions = places.namesFor(cluster, suggestions).map { it.name },
             categories = categories,
             onFetchHere = places::fetchHere,
-            onSave = { name, kind, radius, lat, lng, pause -> places.addPlace(name, kind, radius, lat, lng, pause) },
+            onSave = { name, kind, radius, lat, lng, pause, polygon -> places.addPlace(name, kind, radius, lat, lng, pause, polygon) },
             onArchiveToggle = null,
             onDismiss = { naming = null },
         )
