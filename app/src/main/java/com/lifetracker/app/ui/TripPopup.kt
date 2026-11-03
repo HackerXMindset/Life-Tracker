@@ -130,7 +130,7 @@ fun TripPopup(
                             trip = trip,
                             fromName = p.fromName,
                             toName = p.toName,
-                            current = if (guess) "" else trip.mode,
+                            current = if (trip.modeSource != "you") "" else trip.mode,
                             onPick = { onMode(trip, it); choosing = false },
                             onDismiss = { choosing = false },
                         )
