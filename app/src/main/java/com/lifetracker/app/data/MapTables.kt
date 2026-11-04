@@ -90,12 +90,19 @@ interface MapDao {
     suspend fun upsertArea(area: MapAreaEntity)
 
     /** The areas that still have to be downloaded, oldest first. */
-    @Query("SELECT * FROM map_areas WHERE state = 'queued' OR state = 'downloading' ORDER BY createdMs")
+    @Query(
+        "SELECT * FROM map_areas WHERE state = 'queued' OR state = 'downloading' " +
+            "ORDER BY CASE source WHEN 'hand' THEN 0 WHEN 'place' THEN 1 ELSE 2 END, createdMs",
+    )
     suspend fun pending(): List<MapAreaEntity>
 
     /** Progress of a download. Only changes an area that is still downloading, so a late update cannot undo the final one. */
     @Query("UPDATE map_areas SET tiles = :tiles, bytes = :bytes, totalTiles = :total WHERE id = :id AND state = 'downloading'")
     suspend fun setProgress(id: String, tiles: Long, bytes: Long, total: Long)
+
+    /** Failed areas go back in the queue. */
+    @Query("UPDATE map_areas SET state = 'queued', note = '' WHERE id IN (:ids)")
+    suspend fun requeue(ids: List<String>)
 
     @Query("SELECT COUNT(*) FROM map_areas WHERE state = 'queued' OR state = 'downloading'")
     suspend fun pendingCount(): Int

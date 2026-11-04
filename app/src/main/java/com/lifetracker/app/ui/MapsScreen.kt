@@ -1,7 +1,13 @@
 package com.lifetracker.app.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -33,6 +39,7 @@ import kotlin.math.roundToInt
 import com.lifetracker.app.data.AreaSource
 import com.lifetracker.app.data.AreaState
 import com.lifetracker.app.data.MapAreaEntity
+import com.lifetracker.app.data.MapLimits
 import com.lifetracker.app.data.MapStyleEntity
 import com.lifetracker.app.data.OfflineRules
 import com.lifetracker.app.data.TileMath
@@ -41,8 +48,10 @@ import com.lifetracker.app.ui.theme.LocalPaper
 import com.lifetracker.app.ui.theme.PaperButton
 import com.lifetracker.app.ui.theme.PaperButtonStyle
 import com.lifetracker.app.ui.theme.PaperCard
+import com.lifetracker.app.ui.theme.PaperPill
 
 /** Settings > Places and trips > Maps: the style the maps use, your own styles, and where the map comes from. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MapsScreen(onBack: () -> Unit, vm: MapsViewModel = viewModel()) {
     val paper = LocalPaper.current
@@ -105,6 +114,68 @@ fun MapsScreen(onBack: () -> Unit, vm: MapsViewModel = viewModel()) {
         }
         item { PaperSection("Offline maps", "kept on the phone") }
         item {
+            val used = vm.usedBytes(areas)
+            val waiting = areas.count { it.state == AreaState.QUEUED }
+            val running = areas.count { it.state == AreaState.DOWNLOADING }
+            val failedCount = areas.count { it.state == AreaState.FAILED }
+            PaperCard(modifier = Modifier.fillMaxWidth(), shadow = false) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(MapLimits.usedText(used, prefs.limitBytes), fontSize = 15.sp, fontWeight = FontWeight.Bold, color = paper.ink)
+                    if (prefs.limitBytes > 0L) {
+                        val shape = RoundedCornerShape(4.dp)
+                        Box(modifier = Modifier.fillMaxWidth().height(8.dp).background(paper.line, shape)) {
+                            Box(modifier = Modifier.fillMaxWidth(MapLimits.fill(used, prefs.limitBytes)).height(8.dp).background(paper.ink, shape))
+                        }
+                    }
+                    Text(TileMath.sizeText(vm.freeBytes()) + " free on the phone", fontSize = 12.sp, color = paper.ink2)
+                    Text(
+                        when {
+                            prefs.paused -> "Downloads are paused" + if (waiting + running > 0) " · " + (waiting + running) + " waiting" else ""
+                            running + waiting == 0 -> "Nothing is waiting to download"
+                            else -> (if (running > 0) "$running downloading" else "") + (if (running > 0 && waiting > 0) " · " else "") +
+                                (if (waiting > 0) "$waiting waiting" else "")
+                        },
+                        fontSize = 13.sp,
+                        color = paper.ink,
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (prefs.paused) PaperButton("Resume downloads", vm::resume, small = true)
+                        else PaperButton("Pause downloads", vm::pause, style = PaperButtonStyle.Ghost, small = true, enabled = running + waiting > 0)
+                        if (failedCount > 0) PaperButton("Try $failedCount failed again", vm::retryFailed, style = PaperButtonStyle.Ghost, small = true)
+                    }
+                }
+            }
+        }
+        item { PaperSection("Space", "the most the maps may take") }
+        item {
+            PaperCard(modifier = Modifier.fillMaxWidth(), shadow = false) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        MapLimits.CHOICES.forEach { c -> PaperPill(MapLimits.label(c), prefs.limitBytes == c, { vm.setLimit(c) }) }
+                    }
+                    Text(
+                        "Together, downloaded maps stay under this size. Pick No limit to keep every map you download.",
+                        fontSize = 12.sp,
+                        color = paper.ink2,
+                    )
+                }
+            }
+        }
+        item {
+            SetCard {
+                ToggleRow(
+                    "Delete the least used maps by itself", prefs.autoDelete, vm::setAutoDelete, first = true,
+                    hint = "When the limit would be passed, maps of other styles and of places you no longer have go first, then the ones you have not been in for longest. " +
+                        "Areas you download by hand are never deleted by itself. Off: nothing is deleted, and a download that does not fit waits for you.",
+                )
+                ToggleRow(
+                    "No map for a place I never go to", prefs.skipUnusedPlaces, vm::setSkipUnusedPlaces,
+                    hint = "A place with no visit for ${MapLimits.UNUSED_DAYS} days is not downloaded (a place you just made always is)",
+                )
+            }
+        }
+        item { PaperSection("What gets downloaded") }
+        item {
             SetCard {
                 ToggleRow(
                     "A map for every place", prefs.autoPlaces, vm::setAutoPlaces, first = true,
@@ -126,32 +197,28 @@ fun MapsScreen(onBack: () -> Unit, vm: MapsViewModel = viewModel()) {
             val limit = styleLimit
             Text(
                 (if (limit != null) limit.termsNote + " (the provider's rule, not the app's). " else "Your own style has no limit from the app. ") +
-                    "The only refusal from the app is not enough free space. Automatic areas are never deleted automatically.",
+                    "Downloads go in this order: areas you chose, places, then where you went. One that stalls is tried again by itself a few hours later.",
                 fontSize = 12.sp,
                 color = paper.ink2,
             )
         }
         item { PaperButton("Download an area", { framing = true }, modifier = Modifier.fillMaxWidth()) }
-        item {
-            val used = areas.filter { it.state == AreaState.DONE }.sumOf { it.bytes }
-            Text(
-                "Maps on the phone: " + TileMath.sizeText(used) + " · " + TileMath.sizeText(vm.freeBytes()) + " free",
-                fontSize = 13.sp,
-                color = paper.ink,
-            )
-        }
         if (areas.isEmpty()) {
             item { Text("No areas yet.", fontSize = 13.sp, color = paper.ink2) }
         } else {
-            items(areas, key = { it.id }) { a -> AreaRow(a, styles, onAgain = { vm.downloadAgain(a) }, onDelete = { vm.deleteArea(a) }) }
+            items(areas, key = { it.id }) { a ->
+                AreaRow(a, styles, paused = prefs.paused, onAgain = { vm.downloadAgain(a) }, onDelete = { vm.deleteArea(a) })
+            }
         }
     }
 
     if (framing) {
         var start by remember { mutableStateOf<Pair<Double, Double>?>(null) }
         var ready by remember { mutableStateOf(false) }
+        var help by remember { mutableStateOf<MapsViewModel.FrameHelp?>(null) }
         LaunchedEffect(Unit) {
             start = vm.startPoint()
+            help = vm.frameHelp()
             ready = true
         }
         if (ready) {
@@ -160,6 +227,10 @@ fun MapsScreen(onBack: () -> Unit, vm: MapsViewModel = viewModel()) {
                 average = average,
                 freeBytes = vm.freeBytes(),
                 limit = styleLimit,
+                help = help,
+                limitBytes = prefs.limitBytes,
+                usedBytes = vm.usedBytes(areas),
+                autoDelete = prefs.autoDelete,
                 onDownload = { name, bounds, minZ, maxZ, done -> vm.addByHand(name, bounds, minZ, maxZ, done) },
                 onDismiss = { framing = false },
             )
@@ -189,13 +260,19 @@ private fun ReachSlider(label: String, km: Int, onChange: (Int) -> Unit) {
 }
 
 @Composable
-private fun AreaRow(a: MapAreaEntity, styles: List<MapStyleEntity>, onAgain: () -> Unit, onDelete: () -> Unit) {
+private fun AreaRow(a: MapAreaEntity, styles: List<MapStyleEntity>, paused: Boolean, onAgain: () -> Unit, onDelete: () -> Unit) {
     val paper = LocalPaper.current
     val styleName = MapStyles.builtInById(a.styleId)?.name ?: styles.firstOrNull { it.id == a.styleId }?.name ?: "a style that was removed"
     PaperCard(modifier = Modifier.fillMaxWidth(), shadow = false) {
         Text(a.name, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = paper.ink)
         Text(styleName + " · " + AreaSource.label(a.source) + " · zoom " + a.minZoom + " to " + a.maxZoom, fontSize = 12.sp, color = paper.ink2)
-        Text(OfflineRules.stateText(a.state, a.source, a.tiles, a.totalTiles, a.bytes, a.note), fontSize = 13.sp, color = if (a.state == AreaState.FAILED) paper.bad else paper.ink)
+        val waiting = a.state == AreaState.QUEUED || a.state == AreaState.DOWNLOADING
+        Text(
+            if (paused && waiting) "Paused" else OfflineRules.stateText(a.state, a.source, a.tiles, a.totalTiles, a.bytes, a.note),
+            fontSize = 13.sp,
+            color = if (a.state == AreaState.FAILED) paper.bad else paper.ink,
+        )
+        if (a.state == AreaState.DONE && a.source == AreaSource.HAND) Text("You chose this one: it is never deleted by itself", fontSize = 12.sp, color = paper.ink2)
         if (a.state == AreaState.DONE && a.doneMs > 0L) Text("Downloaded " + formatDateTime(a.doneMs), fontSize = 12.sp, color = paper.ink2)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             PaperButton("Download again", onAgain, style = PaperButtonStyle.Ghost, small = true)

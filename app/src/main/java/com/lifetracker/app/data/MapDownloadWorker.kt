@@ -16,12 +16,15 @@ import androidx.work.WorkerParameters
 class MapDownloadWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
         if (!Features.isOn(applicationContext, Feature.MAPS)) return Result.success()
+        if (MapSettings(applicationContext).paused) return Result.success()
         val db = AppDatabase.get(applicationContext)
         return try {
             MapAreas.reconcile(applicationContext, db)
             var done = MapDownloads.runQueue(applicationContext, db)
             // Places or readings may have changed while the queue ran.
             if (MapAreas.reconcile(applicationContext, db) > 0) done = MapDownloads.runQueue(applicationContext, db)
+            // Whatever came in is kept under the limit.
+            MapCleanup.enforce(applicationContext, db)
             if (done) Result.success() else Result.retry()
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
@@ -44,6 +47,7 @@ object MapScheduler {
         if (!Features.isOn(context, Feature.MAPS)) return
         val app = context.applicationContext
         val settings = MapSettings(app)
+        if (settings.paused) return
         val network = if (settings.mobileData) NetworkType.CONNECTED else NetworkType.UNMETERED
         val request = OneTimeWorkRequestBuilder<MapDownloadWorker>()
             .setConstraints(Constraints.Builder().setRequiredNetworkType(network).build())
@@ -53,5 +57,10 @@ object MapScheduler {
             if (replace) ExistingWorkPolicy.REPLACE else ExistingWorkPolicy.KEEP,
             request,
         )
+    }
+
+    /** Stops the job. What was downloading stays queued and carries on from where it was when the job runs again. */
+    fun cancel(context: Context) {
+        WorkManager.getInstance(context.applicationContext).cancelUniqueWork(NAME)
     }
 }

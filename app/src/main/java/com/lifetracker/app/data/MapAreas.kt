@@ -12,10 +12,29 @@ object MapAreas {
         val settings = MapSettings(context)
         val style = MapStyleStore.current(context, db)
         var changed = 0
-        if (settings.autoPlaces) changed += forPlaces(context, db, settings, style, nowMs)
-        if (settings.autoWanted) changed += forReadings(db, settings, style, nowMs)
+        trackUse(db, settings, style, nowMs)
+        // With the limit full and deleting switched off, no new map is asked for until there is room again.
+        if (!MapCleanup.full(context, db)) {
+            if (settings.autoPlaces) changed += forPlaces(context, db, settings, style, nowMs)
+            if (settings.autoWanted) changed += forReadings(db, settings, style, nowMs)
+        }
         if (changed > 0) AppLog.i("Map", "Offline areas: $changed added or queued again")
         return changed
+    }
+
+    /** Notes, for each area, when you were last inside it, so the maps used least can be told from the ones in use. */
+    private suspend fun trackUse(db: AppDatabase, settings: MapSettings, style: ResolvedStyle, nowMs: Long) {
+        val from = if (settings.usedUntilMs > 0L) settings.usedUntilMs else nowMs - MapLimits.UNUSED_DAYS * 86_400_000L
+        val fixes = db.rawDao().between(from, nowMs + 1)
+        if (fixes.isEmpty()) return
+        val squares = LinkedHashMap<Long, Triple<Double, Double, Long>>()
+        for (f in fixes) {
+            val key = Math.round(f.lat * 200.0) * 1_000_000L + Math.round(f.lng * 200.0)
+            val cur = squares[key]
+            if (cur == null || f.ms > cur.third) squares[key] = Triple(f.lat, f.lng, f.ms)
+        }
+        settings.markUsed(MapLimits.usage(squares.values.toList(), db.mapDao().areas(), style.id))
+        settings.usedUntilMs = fixes.last().ms + 1
     }
 
     private suspend fun forPlaces(context: Context, db: AppDatabase, settings: MapSettings, style: ResolvedStyle, nowMs: Long): Int {
@@ -24,12 +43,20 @@ object MapAreas {
         val maxZ = OfflineRules.AUTO_MAX_ZOOM
         val existing = dao.areas().filter { it.source == AreaSource.PLACE }
         var changed = 0
+        // The last visit to each place, read only when a place has no map yet and it matters.
+        var lastVisit: Map<String, Long>? = null
         for (place in db.placeDao().activePlaces()) {
             val bounds = OfflineRules.placeBounds(place.lat, place.lng, place.radiusM, settings.placeReachKm.toDouble())
             if (!bounds.valid()) continue
             val sig = OfflineRules.signature(bounds, style.id, minZ, maxZ)
             val row = existing.firstOrNull { it.placeId == place.id && it.styleId == style.id }
             if (row != null && row.sig == sig) continue
+            // A place nobody goes to does not need a map of its own (a place you just made does).
+            if (row == null && settings.skipUnusedPlaces) {
+                val visits = lastVisit ?: db.placeDao().allVisits().filter { it.placeId.isNotEmpty() }
+                    .groupBy { it.placeId }.mapValues { e -> e.value.maxOf { it.startMs } }.also { lastVisit = it }
+                if (!MapLimits.placeWanted(place.createdMs, visits[place.id], nowMs)) continue
+            }
             if (row != null && row.regionId >= 0L) MapDownloads.removeTiles(context, db, row)
             dao.upsertArea(
                 MapAreaEntity(

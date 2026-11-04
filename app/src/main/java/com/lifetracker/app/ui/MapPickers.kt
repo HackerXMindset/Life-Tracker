@@ -29,6 +29,7 @@ import com.lifetracker.app.ui.theme.LocalPaper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.maplibre.android.camera.CameraPosition
+import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 
@@ -108,12 +109,17 @@ fun MapPickDialog(
  * Frame an area to keep on the phone: move and zoom the map so the part you want fills the window, name it, choose the zoom
  * levels, and see how many tiles it is, about how big, and the free space before you download.
  */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun MapFrameDialog(
     start: Pair<Double, Double>?,
     average: Pair<Long, Boolean>,
     freeBytes: Long,
     limit: com.lifetracker.app.data.MapStyles.Limit?,
+    help: MapsViewModel.FrameHelp?,
+    limitBytes: Long,
+    usedBytes: Long,
+    autoDelete: Boolean,
     onDownload: (name: String, bounds: com.lifetracker.app.data.Bounds, minZ: Int, maxZ: Int, done: (String?) -> Unit) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -126,6 +132,7 @@ fun MapFrameDialog(
     var minText by remember { mutableStateOf(com.lifetracker.app.data.OfflineRules.AUTO_MIN_ZOOM.toString()) }
     var maxText by remember { mutableStateOf(com.lifetracker.app.data.OfflineRules.AUTO_MAX_ZOOM.toString()) }
     var refused by remember { mutableStateOf<String?>(null) }
+    var mapRef by remember { mutableStateOf<MapLibreMap?>(null) }
     LaunchedEffect(Unit) {
         styleUrl = withContext(Dispatchers.IO) { MapStyleStore.current(context, AppDatabase.get(context)).url }
     }
@@ -141,7 +148,12 @@ fun MapFrameDialog(
         !b.valid() -> "That part of the map cannot be downloaded. Zoom in a little."
         else -> com.lifetracker.app.data.OfflineRules.overLimit(tiles, if (average.second) estimate else 0L, limit)
             ?: com.lifetracker.app.data.OfflineRules.storageProblem(estimate, freeBytes)
+            ?: if (limitBytes > 0L && usedBytes + estimate > limitBytes && !autoDelete) {
+                "This passes your limit of " + com.lifetracker.app.data.MapLimits.label(limitBytes) +
+                    " (the maps take " + com.lifetracker.app.data.TileMath.sizeText(usedBytes) + " now). Raise the limit, switch on deleting the least used maps, or frame a smaller area."
+            } else null
     }
+    val makesRoom = problem == null && b != null && limitBytes > 0L && usedBytes + estimate > limitBytes && autoDelete
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Download an area") },
@@ -157,6 +169,7 @@ fun MapFrameDialog(
                             styleUrl = url,
                             modifier = Modifier.fillMaxWidth().height(260.dp),
                             onMap = { m ->
+                                mapRef = m
                                 m.addOnCameraIdleListener {
                                     val v = m.projection.visibleRegion.latLngBounds
                                     bounds = com.lifetracker.app.data.Bounds(
@@ -176,10 +189,37 @@ fun MapFrameDialog(
                 }
                 Text(
                     if (failed) "The map could not load, so an area cannot be framed now. Check the connection."
-                    else "The area is what you see in the window. Zoom in or out to change it.",
+                    else "The area is what you see in the window. Move and zoom the map, or use the buttons below.",
                     fontSize = 12.sp,
                     color = paper.ink2,
                 )
+                if (help != null && (help.me != null || help.places.isNotEmpty())) {
+                    Text("Jump to", fontSize = 12.sp, color = paper.ink2)
+                    androidx.compose.foundation.layout.FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        help.me?.let { me ->
+                            com.lifetracker.app.ui.theme.PaperPill("Where I am", false, {
+                                mapRef?.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(me.first, me.second), 12.0))
+                            })
+                        }
+                        help.places.take(8).forEach { (n, la, ln) ->
+                            com.lifetracker.app.ui.theme.PaperPill(n, false, {
+                                mapRef?.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(la, ln), 12.0))
+                            })
+                        }
+                    }
+                }
+                Text("How big", fontSize = 12.sp, color = paper.ink2)
+                androidx.compose.foundation.layout.FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    listOf("A neighbourhood" to 14.0, "A town" to 12.0, "A city" to 10.0, "A region" to 8.0).forEach { (label, z) ->
+                        com.lifetracker.app.ui.theme.PaperPill(label, false, { mapRef?.animateCamera(CameraUpdateFactory.zoomTo(z)) })
+                    }
+                }
                 androidx.compose.material3.OutlinedTextField(
                     value = name, onValueChange = { name = it }, label = { Text("Name (optional)") }, singleLine = true,
                 )
@@ -201,6 +241,9 @@ fun MapFrameDialog(
                         fontSize = 13.sp,
                         color = paper.ink,
                     )
+                }
+                if (makesRoom) {
+                    Text("This passes your limit, so your least used maps will be deleted to make room.", fontSize = 12.sp, color = paper.ink2)
                 }
                 (refused ?: problem)?.let { Text(it, fontSize = 12.sp, color = paper.bad) }
             }
