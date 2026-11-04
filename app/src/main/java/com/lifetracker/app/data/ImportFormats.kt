@@ -357,7 +357,7 @@ object ImportFormats {
 
     /**
      * The export Google Timeline makes on the phone: `semanticSegments` (each with a `timelinePath` of points and times) and
-     * `rawSignals` (positions with a time and accuracy). Visits and activity segments in it are not read.
+     * `rawSignals` (positions with a time and accuracy). The place of each visit and the start and end of each activity count as readings too.
      */
     private fun parseTimelineNew(reader: Reader): ImportParse {
         val out = ImportParse(ImportKind.TIMELINE_NEW, FixBuffer(), 0)
@@ -377,9 +377,16 @@ object ImportFormats {
     }
 
     private fun segment(j: JsonPull, out: ImportParse) {
+        var startTime: String? = null
+        var endTime: String? = null
+        var visitAt: String? = null
+        var activityFrom: String? = null
+        var activityTo: String? = null
         j.obj { key ->
-            if (key == "timelinePath") {
-                j.arr {
+            when (key) {
+                "startTime" -> startTime = j.str()
+                "endTime" -> endTime = j.str()
+                "timelinePath" -> j.arr {
                     var point: String? = null
                     var time: String? = null
                     j.obj { k ->
@@ -392,10 +399,30 @@ object ImportFormats {
                     val ll = parseLatLng(point)
                     add(out, parseTime(time), ll?.first ?: Double.NaN, ll?.second ?: Double.NaN, null, null)
                 }
-            } else {
-                j.skip()
+                // A visit is where you were between its start and end; an activity starts and ends at a place. Those places are readings too.
+                "visit" -> j.obj { k ->
+                    if (k == "topCandidate") j.obj { kk ->
+                        if (kk == "placeLocation") j.obj { k3 -> if (k3 == "latLng") visitAt = j.str() else j.skip() } else j.skip()
+                    } else j.skip()
+                }
+                "activity" -> j.obj { k ->
+                    when (k) {
+                        "start" -> j.obj { k2 -> if (k2 == "latLng") activityFrom = j.str() else j.skip() }
+                        "end" -> j.obj { k2 -> if (k2 == "latLng") activityTo = j.str() else j.skip() }
+                        else -> j.skip()
+                    }
+                }
+                else -> j.skip()
             }
         }
+        fun point(text: String?, time: String?) {
+            val ll = parseLatLng(text) ?: return
+            add(out, parseTime(time), ll.first, ll.second, null, null)
+        }
+        point(visitAt, startTime)
+        point(visitAt, endTime)
+        point(activityFrom, startTime)
+        point(activityTo, endTime)
     }
 
     private fun signal(j: JsonPull, out: ImportParse) {

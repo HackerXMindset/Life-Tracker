@@ -151,7 +151,7 @@ fun SettingsScreen(onOpen: (Page) -> Unit) {
             SettingsRow(R.drawable.ic_p_gear, "Appearance", "Theme, app name and home-screen icon") { onOpen(Page.Appearance) }
         }
         item {
-            SettingsRow(R.drawable.ic_p_cloud, "Backups and imports", "Back up, restore, or import tracker data") { onOpen(Page.Backup) }
+            SettingsRow(R.drawable.ic_p_cloud, "Backup, export and import", "One backup of everything, GPS files, other apps") { onOpen(Page.Backup) }
         }
         // One quiet line, no icon and no card: where the app's diary is.
         item {

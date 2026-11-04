@@ -111,9 +111,9 @@ object PermissionGuide {
         PermText(
             Perm.Folders, "Streak and OpenNutriTracker folders",
             "Folders you pick so the app can read your Streak and OpenNutriTracker backups and write its own backup. The app only touches the folders you choose.",
-            "Open Backups and imports and tap Choose folder next to each one.",
+            "Open Backup, export and import and tap Choose folder next to each one.",
             "Backups · Streak and OpenNutriTracker imports",
-            "Settings > Backups and imports",
+            "Settings > Backup, export and import",
         ),
     )
 

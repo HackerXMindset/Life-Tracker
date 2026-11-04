@@ -226,7 +226,7 @@ fun PermissionsScreen(onBack: () -> Unit, onOpen: (Page) -> Unit) {
                             TextButton(onClick = { openHealthConnect(context) }) { Text("Open Health Connect") }
                         }
                     }
-                    Perm.Folders -> Button(onClick = { onOpen(Page.Backup) }) { Text("Open Backups and imports") }
+                    Perm.Folders -> Button(onClick = { onOpen(Page.Backup) }) { Text("Open Backup, export and import") }
                 }
                 if (perm != Perm.Folders) {
                     TextButton(onClick = { if (!openPermissionPage(context, perm)) openAppSettings(context) }) { Text("Open its page") }

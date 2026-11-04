@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.lifetracker.app.data.BackupManager
+import com.lifetracker.app.data.BackupSummary
 import com.lifetracker.app.data.BackupManager.BackupFile
 import com.lifetracker.app.data.DataSources
 import com.lifetracker.app.data.DataSources.Slot
@@ -32,7 +33,14 @@ data class DataSourcesState(
     val nutriNewest: FoundFile? = null,
     val message: String? = null,
     val busy: Boolean = false,
+    /** A backup that was opened to be looked at, waiting for "Replace everything". */
+    val pending: PendingRestore? = null,
+    /** Set after a restore that put settings back: the app must restart to use them. */
+    val restartNeeded: Boolean = false,
 )
+
+/** A backup read and checked, shown to the person (what it holds) before it replaces anything. */
+class PendingRestore(val name: String, val uri: Uri, val isSafety: Boolean, val summary: String, val hasSettings: Boolean, val exportedAt: String)
 
 class DataSourcesViewModel(app: Application) : AndroidViewModel(app) {
     private val context = app.applicationContext
@@ -48,7 +56,7 @@ class DataSourcesViewModel(app: Application) : AndroidViewModel(app) {
     fun refresh() {
         viewModelScope.launch {
             val fresh = snapshot()
-            _state.update { fresh.copy(message = it.message, busy = it.busy) }
+            _state.update { fresh.copy(message = it.message, busy = it.busy, pending = it.pending, restartNeeded = it.restartNeeded) }
         }
     }
 
@@ -82,11 +90,59 @@ class DataSourcesViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun restore(file: BackupFile) {
+    /** Opens a backup from the list and shows what it holds. Nothing is changed until [confirmRestore]. */
+    fun preview(file: BackupFile) = preview(file.uri, file.name, file.isSafety)
+
+    /** Opens a backup file picked anywhere on the phone and shows what it holds. */
+    fun previewFile(uri: Uri) = preview(uri, uri.lastPathSegment ?: "that file", false)
+
+    private fun preview(uri: Uri, name: String, safety: Boolean) {
+        if (_state.value.busy) return
+        _state.update { it.copy(busy = true, message = null) }
+        viewModelScope.launch {
+            val result = runCatching { BackupManager.peek(context, uri) }
+            _state.update {
+                result.fold(
+                    onSuccess = { data ->
+                        it.copy(
+                            busy = false,
+                            pending = PendingRestore(name, uri, safety, BackupSummary.text(data), BackupSummary.hasSettings(data), data.exportedAt),
+                        )
+                    },
+                    onFailure = { e -> it.copy(busy = false, message = e.message ?: "That file could not be read.") },
+                )
+            }
+        }
+    }
+
+    fun cancelRestore() {
+        _state.update { it.copy(pending = null) }
+    }
+
+    fun confirmRestore() {
+        val pending = _state.value.pending ?: return
+        _state.update { it.copy(pending = null, busy = true, message = null) }
+        viewModelScope.launch {
+            val outcome = runCatching { BackupManager.restoreFromFile(context, pending.uri) }
+            val fresh = snapshot()
+            _state.value = outcome.fold(
+                onSuccess = { r ->
+                    fresh.copy(
+                        busy = false,
+                        restartNeeded = r.settings > 0,
+                        message = "Restored from ${pending.name}. Your previous data was saved as a safety copy first.",
+                    )
+                },
+                onFailure = { e -> fresh.copy(busy = false, message = e.message ?: "The restore did not work.") },
+            )
+        }
+    }
+
+    /** Saves the one backup file to a place the person picked. */
+    fun saveCopy(uri: Uri) {
         launchAction {
-            val folder = sources.folder(Slot.Backup) ?: error("Choose a backup folder first.")
-            BackupManager.restore(context, folder, file)
-            "Restored from ${file.name}. Your previous data was saved as a safety copy first."
+            val data = BackupManager.exportTo(context, uri)
+            "Saved one backup file with everything: " + BackupSummary.lines(data).size + " kinds of data and " + BackupSummary.settingCount(data) + " settings."
         }
     }
 
@@ -112,7 +168,7 @@ class DataSourcesViewModel(app: Application) : AndroidViewModel(app) {
         DataSourcesState(
             backupFolder = backup?.let(sources::folderName),
             lastBackup = sources.lastBackupText,
-            backups = backup?.let { runCatching { BackupManager.list(context, it) }.getOrNull() } ?: emptyList(),
+            backups = runCatching { BackupManager.list(context, backup) }.getOrNull() ?: emptyList(),
             streakFolder = streak?.let(sources::folderName),
             streakNewest = streak?.let { SourceScanner.newestStreak(context, it) },
             lastStreakImport = sources.lastStreakImportText?.let {

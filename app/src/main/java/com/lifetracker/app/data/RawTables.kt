@@ -83,6 +83,10 @@ interface RawFixDao {
     @Query("SELECT COUNT(*) FROM raw_fixes")
     suspend fun count(): Int
 
+    /** How many readings there are from [from] up to (not including) [to]. */
+    @Query("SELECT COUNT(*) FROM raw_fixes WHERE ms >= :from AND ms < :to")
+    suspend fun countBetween(from: Long, to: Long): Int
+
     @Query("SELECT MIN(ms) FROM raw_fixes")
     suspend fun firstMs(): Long?
 }

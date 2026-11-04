@@ -2,6 +2,16 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 💾 One backup for everything, export and import in order (G4)
+
+### ✨ New
+
+- **One backup file holds everything**: all your data (Timeline, habits, money, food, to-dos, notes, places and deleted places, trips, every GPS reading, phone usage, calls, charging, steps, sleep, focus, rules, goals) **and every setting of the app** (looked up on the phone, so a setting added later is kept too). There are no separate backups. The offline map files are not in it; the map areas are remembered and show as "Tiles deleted" to download again.
+- **Save to a file / Restore from a file**: the same one file can be saved anywhere (Drive, USB, another folder) and restored from there, for a new phone.
+- **Restore shows what is inside first** (how many habits, readings, settings...), says what will be replaced and what is only added to, and saves a safety copy first (in the backup folder, or inside the app when there is none). After a restore that put settings back, the app restarts to use them.
+- **Backup, export and import is three tabs now**: Backup | Export | Import, instead of one long page.
+- **Export GPS readings in three steps**: what (everything, a day, a range, with Today / 7 / 30 / 365 days buttons and the number of readings it will save), what kind of file (each one says what it is for, now with **Google Timeline**: the same layout as the Timeline.json from the phone) and where. The automatic export can use any of them too.
+- **Import your Google Timeline** has its own card with the steps to get the phone's Timeline.json. Only that file is taken. The place of each visit and the start and end of each activity count as readings too.
 ## 🧩 Rules and goals on one page (G3)
 
 ### ✨ New
