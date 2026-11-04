@@ -44,7 +44,11 @@ class MapLimitsTest {
         // 1200 used, limit 1000, 100 wanted: 300 must go, and the map of the other style goes though it was used more recently.
         val one = MapLimits.plan(cands, 1_200 * mb, 100 * mb, 1_000 * mb, true)
         assertTrue(one.ok)
-        assertEquals(listOf("otherStyle", "old"), one.delete)
+        assertEquals(listOf("otherStyle"), one.delete)
+        // With 400 wanted, 600 must go: the other style first, then the one used longest ago, and never the one that is yours.
+        val two = MapLimits.plan(cands, 1_200 * mb, 400 * mb, 1_000 * mb, true)
+        assertTrue(two.ok)
+        assertEquals(listOf("otherStyle", "old"), two.delete)
     }
 
     @Test fun yourOwnAreasAreNeverDeletedAndCanMakeItImpossible() {
