@@ -8,6 +8,7 @@ import com.lifetracker.app.data.AreaSource
 import com.lifetracker.app.data.AreaState
 import com.lifetracker.app.data.Bounds
 import com.lifetracker.app.data.MapAreaEntity
+import com.lifetracker.app.data.MapCleanup
 import com.lifetracker.app.data.MapDownloads
 import com.lifetracker.app.data.MapScheduler
 import com.lifetracker.app.data.MapSettings
@@ -78,9 +79,16 @@ class MapsViewModel(app: Application) : AndroidViewModel(app) {
         val autoWanted: Boolean,
         val wantedReachKm: Int,
         val mobileData: Boolean,
+        val limitBytes: Long,
+        val autoDelete: Boolean,
+        val skipUnusedPlaces: Boolean,
+        val paused: Boolean,
     )
 
-    private fun readPrefs() = Prefs(settings.autoPlaces, settings.placeReachKm, settings.autoWanted, settings.wantedReachKm, settings.mobileData)
+    private fun readPrefs() = Prefs(
+        settings.autoPlaces, settings.placeReachKm, settings.autoWanted, settings.wantedReachKm, settings.mobileData,
+        settings.limitBytes, settings.autoDelete, settings.skipUnusedPlaces, settings.paused,
+    )
 
     private val prefsFlow = MutableStateFlow(readPrefs())
     val prefs: StateFlow<Prefs> = prefsFlow
@@ -109,6 +117,66 @@ class MapsViewModel(app: Application) : AndroidViewModel(app) {
         settings.wantedReachKm = km
         prefsFlow.value = readPrefs()
     }
+
+    /** How much the maps may take together (0 is no limit). Maps over the new limit are cleaned up at once when deleting is on. */
+    fun setLimit(bytes: Long) {
+        settings.limitBytes = bytes
+        prefsFlow.value = readPrefs()
+        cleanUp()
+    }
+
+    fun setAutoDelete(on: Boolean) {
+        settings.autoDelete = on
+        prefsFlow.value = readPrefs()
+        cleanUp()
+        MapScheduler.kick(context)
+    }
+
+    fun setSkipUnusedPlaces(on: Boolean) {
+        settings.skipUnusedPlaces = on
+        changed()
+    }
+
+    private fun cleanUp() {
+        viewModelScope.launch { withContext(Dispatchers.IO) { runCatching { MapCleanup.enforce(context, db) } } }
+    }
+
+    /** Puts all downloads on hold. What is running stops and carries on from where it was after [resume]. */
+    fun pause() {
+        settings.paused = true
+        prefsFlow.value = readPrefs()
+        MapScheduler.cancel(context)
+    }
+
+    fun resume() {
+        settings.paused = false
+        prefsFlow.value = readPrefs()
+        MapScheduler.kick(context, replace = true)
+    }
+
+    /** Every area that did not finish goes back in the queue. */
+    fun retryFailed() {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                val failed = db.mapDao().areas().filter { it.state == AreaState.FAILED }.map { it.id }
+                if (failed.isNotEmpty()) db.mapDao().requeue(failed)
+            }
+            MapScheduler.kick(context, replace = true)
+        }
+    }
+
+    /** What the frame window offers to jump to: your places and where you are (your last reading). */
+    class FrameHelp(val places: List<Triple<String, Double, Double>>, val me: Pair<Double, Double>?)
+
+    suspend fun frameHelp(): FrameHelp = withContext(Dispatchers.IO) {
+        val places = db.placeDao().activePlaces().map { Triple(it.name.ifBlank { "A place" }, it.lat, it.lng) }
+        val now = System.currentTimeMillis()
+        val me = db.rawDao().between(now - 3 * 24 * 60 * 60_000L, now + 1).lastOrNull()?.let { it.lat to it.lng }
+        FrameHelp(places, me)
+    }
+
+    /** How much the maps on the phone take now. */
+    fun usedBytes(list: List<MapAreaEntity>): Long = list.filter { it.state == AreaState.DONE }.sumOf { it.bytes }
 
     fun setMobileData(on: Boolean) {
         settings.mobileData = on

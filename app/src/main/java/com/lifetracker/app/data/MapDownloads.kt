@@ -34,15 +34,31 @@ object MapDownloads {
 
     private class Outcome(val ok: Boolean, val tiles: Long, val bytes: Long, val regionId: Long, val note: String)
 
-    /** Works through the queue. True when nothing is left waiting. */
+    /** Works through the queue. True when nothing is left waiting (or downloads are paused). */
     suspend fun runQueue(context: Context, db: AppDatabase): Boolean {
+        val settings = MapSettings(context)
+        if (settings.paused) return true
         verify(context, db)
+        retryLuckless(db, settings)
         val dao = db.mapDao()
         while (true) {
+            if (MapSettings(context).paused) break
             val next = dao.pending().firstOrNull() ?: break
             download(context, db, next)
         }
-        return dao.pendingCount() == 0
+        return dao.pendingCount() == 0 || MapSettings(context).paused
+    }
+
+    /** Areas that failed only through bad luck (a stall, the library not starting) are asked for again, at most every few hours. */
+    private suspend fun retryLuckless(db: AppDatabase, settings: MapSettings) {
+        val now = System.currentTimeMillis()
+        if (now - settings.lastRetryMs < MapLimits.RETRY_EVERY_MS) return
+        val again = db.mapDao().areas().filter { it.state == AreaState.FAILED && MapLimits.isTransient(it.note) }.map { it.id }
+        settings.lastRetryMs = now
+        if (again.isNotEmpty()) {
+            db.mapDao().requeue(again)
+            AppLog.i("Map", "${again.size} failed download(s) asked for again")
+        }
     }
 
     /** The average tile size of your finished areas (or the guess), and whether it is a real average. */
@@ -57,8 +73,15 @@ object MapDownloads {
         val (average, real) = averageTileBytes(db)
         val total = TileMath.count(area.bounds, area.minZoom, area.maxZoom)
         val estimate = TileMath.estimateBytes(total, average)
-        val problem = OfflineRules.overLimit(total, if (real) estimate else 0L, MapStyles.limitFor(area.styleUrl))
+        var problem = OfflineRules.overLimit(total, if (real) estimate else 0L, MapStyles.limitFor(area.styleUrl))
             ?: OfflineRules.storageProblem(estimate, freeBytes(context))
+        if (problem == null) {
+            // Your own limit: make room by deleting the least used maps, or say why it cannot be done.
+            val settings = MapSettings(context)
+            val st = MapCleanup.state(context, db)
+            val plan = MapLimits.plan(st.candidates, st.usedBytes, estimate, settings.limitBytes, settings.autoDelete)
+            if (plan.ok) MapCleanup.delete(context, db, plan.delete) else problem = plan.problem
+        }
         if (problem != null) {
             dao.upsertArea(area.copy(state = AreaState.FAILED, totalTiles = total, note = problem))
             AppLog.w("Map", "Area ${area.name} not downloaded: $problem")

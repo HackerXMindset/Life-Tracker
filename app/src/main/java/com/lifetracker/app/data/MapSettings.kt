@@ -41,4 +41,44 @@ class MapSettings(context: Context) {
     var checkedUntilMs: Long
         get() = prefs.getLong("checked_until_ms", 0L)
         set(value) = prefs.edit { putLong("checked_until_ms", value) }
+
+    /** How much the downloaded maps may take together, in bytes. 0 is no limit. */
+    var limitBytes: Long
+        get() = prefs.getLong("limit_bytes", MapLimits.DEFAULT_BYTES)
+        set(value) = prefs.edit { putLong("limit_bytes", value.coerceAtLeast(0L)) }
+
+    /** When the limit would be passed, the least used maps are deleted to make room. Off keeps every map and refuses new downloads instead. */
+    var autoDelete: Boolean
+        get() = prefs.getBoolean("auto_delete", true)
+        set(value) = prefs.edit { putBoolean("auto_delete", value) }
+
+    /** A place nobody went to for a long time does not get a map of its own. */
+    var skipUnusedPlaces: Boolean
+        get() = prefs.getBoolean("skip_unused_places", true)
+        set(value) = prefs.edit { putBoolean("skip_unused_places", value) }
+
+    /** Downloads are on hold: nothing is started, what is running stops, and it carries on when you resume. */
+    var paused: Boolean
+        get() = prefs.getBoolean("paused", false)
+        set(value) = prefs.edit { putBoolean("paused", value) }
+
+    /** When failed downloads that were bad luck were last queued again by themselves. */
+    var lastRetryMs: Long
+        get() = prefs.getLong("last_retry_ms", 0L)
+        set(value) = prefs.edit { putLong("last_retry_ms", value) }
+
+    /** Readings up to this time have been counted as use of the areas they fall in. */
+    var usedUntilMs: Long
+        get() = prefs.getLong("used_until_ms", 0L)
+        set(value) = prefs.edit { putLong("used_until_ms", value) }
+
+    private val use = context.applicationContext.getSharedPreferences("map_use", Context.MODE_PRIVATE)
+
+    /** The last time a reading was inside the area [id], or 0. */
+    fun usedMs(id: String): Long = use.getLong(id, 0L)
+
+    fun markUsed(times: Map<String, Long>) {
+        if (times.isEmpty()) return
+        use.edit { times.forEach { (id, ms) -> if (ms > use.getLong(id, 0L)) putLong(id, ms) } }
+    }
 }

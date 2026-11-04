@@ -2,6 +2,16 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🗺️ Maps: a size limit, no maps nobody uses, a better picker (F3)
+
+### ✨ New
+
+- **A size limit for offline maps** (250 MB, 500 MB, 1 GB, 2 GB, 5 GB or no limit; 1 GB to start). The Maps page shows how much the maps take, of the limit, with a bar and the free space on the phone.
+- **The least used maps are deleted by itself** to stay under the limit (a switch, on to start). Maps of another style than yours and of places you no longer have go first, then the ones you have not been in for longest. Areas you download by hand are never deleted by itself. With the switch off nothing is deleted, and a download that does not fit waits and says why. "No limit" keeps everything.
+- **No map for a place you never go to**: a place with no visit for 90 days is not downloaded (a place you just made always is). While the limit is full and deleting is off, no new map is asked for.
+- **A better downloader**: Pause and Resume for all downloads, "Try the failed ones again", failed downloads that were only bad luck (a stall) are tried again by themselves every few hours, and the queue goes areas you chose first, then places, then where you went.
+- **The Download an area window** can jump to where you are and to your places, has size buttons (a neighbourhood, a town, a city, a region), and tells you when the area would pass your limit.
+
 ## 💾 One backup for everything, export and import in order (G4)
 
 ### ✨ New
