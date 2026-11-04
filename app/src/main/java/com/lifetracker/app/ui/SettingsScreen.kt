@@ -135,14 +135,12 @@ fun SettingsScreen(onOpen: (Page) -> Unit) {
             ) { onOpen(Page.Habits) }
         }
 
-        if (goalsFeature) item { PaperSection("Goals") }
-        if (goalsFeature) item {
-            SettingsRow(R.drawable.ic_p_stats, "Place goals", "Targets and limits from where you go") { onOpen(Page.Goals) }
-        }
-
-        if (rulesFeature) item { PaperSection("Automation") }
-        if (rulesFeature) item {
-            SettingsRow(R.drawable.ic_p_bolt, "Rules", "When something happens, do something") { onOpen(Page.Rules) }
+        if (rulesFeature || goalsFeature) item { PaperSection("Rules and goals") }
+        if (rulesFeature || goalsFeature) item {
+            SettingsRow(
+                R.drawable.ic_p_bolt, "Rules and goals",
+                "Do something when something happens · Targets and limits from where you go",
+            ) { onOpen(if (rulesFeature) Page.Rules else Page.Goals) }
         }
 
         item { PaperSection("This app") }
