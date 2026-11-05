@@ -2,6 +2,20 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 💰 Money: edit everything, Deduct it from, paper look (R6b, R6c)
+
+### ✨ New
+
+- **Tap an entry to change it**: name, amount, date, category, **Deduct it from** and note, in the full-screen edit window. **Delete** is at the bottom and asks once.
+- **Deduct it from** (expenses): *My allowance*, *Someone else paid* (with who) or *Not sure*. Each says what it does to "Left". It is in the add and edit windows of single expenses and of saved items, so a monthly rent paid by someone else never takes from what is left.
+- **Saved items edit the same way** (monthly or again and again), with start and end date, hide or stop, and delete. Deleting one keeps the entries it already made.
+- **Categories edit with a colour and an icon**, can be hidden, and can be deleted when nothing uses them.
+- **Sort the entries** by newest, oldest or biggest.
+
+### 🛠️ Changed
+
+- **The Money tab has the paper look**: a month card with In, Out and Left (and *Paid by others* and *To decide* lines when there is something), Earlier and Later buttons, quick-log chips with a category dot, entries as paper cards with the category icon, an **Add** button like the Timeline's, and the add questions in a paper sheet. The two questions (Expense or Income, then Every month, Again and again or Just once) are the same.
+
 ## 🥧 Apps in the pie (H2)
 
 ### ✨ New

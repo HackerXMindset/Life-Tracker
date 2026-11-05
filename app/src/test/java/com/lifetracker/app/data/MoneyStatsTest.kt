@@ -195,4 +195,27 @@ class MoneyStatsTest {
         assertTrue(plan.entries.isNotEmpty())
         assertTrue(plan.entries.all { it.source == SOURCE_OTHER && it.paidBy == "Papa" })
     }
+
+    @Test
+    fun amountsTypedInTheBox() {
+        assertEquals(1250.5, MoneyStats.parseAmount(" 1,250.50 ")!!, 0.0001)
+        assertEquals(null, MoneyStats.parseAmount("0"))
+        assertEquals(null, MoneyStats.parseAmount("-5"))
+        assertEquals(null, MoneyStats.parseAmount("abc"))
+        assertEquals(null, MoneyStats.parseAmount(""))
+    }
+
+    @Test
+    fun amountsShownInTheBox() {
+        assertEquals("120", MoneyStats.amountText(120.0))
+        assertEquals("12.5", MoneyStats.amountText(12.5))
+    }
+
+    @Test
+    fun deductItFromWords() {
+        assertEquals("My allowance", MoneyStats.sourceLabel(SOURCE_MINE))
+        assertEquals("Someone else paid", MoneyStats.sourceLabel(SOURCE_OTHER))
+        assertEquals("Not sure", MoneyStats.sourceLabel(SOURCE_UNSURE))
+        assertTrue(MoneyStats.sourceHelp(SOURCE_UNSURE).contains("To decide"))
+    }
 }
