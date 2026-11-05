@@ -41,11 +41,11 @@ Life Tracker is an Android app built for one person: its owner. It replaces a pi
 | --- | --- | --- |
 | Foundations: Timeline, backups, Food, Money, Phone use, Calls, Charging, Steps and sleep | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done |
 | Habits (H1 to H13) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done |
-| The paper look (Timeline, Habits, Settings, Food) | ▰▰▰▰▰▰▰▱▱▱ | 🟡 Money and Stats still to restyle |
+| The paper look (Timeline, Habits, Settings, Food, Money) | ▰▰▰▰▰▰▰▱▱▱ | 🟡 Stats still to restyle |
 | Places and trips remake (C1 to C9) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done, 11 pull requests |
 | Places and trips round 2 (E1 to E10) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done (stays and names, live map, replay and GIF, journeys and travel mode, Rules, place goals); needs your check on the phone, see the list below |
 | Places and trips round 3 (F1 to F3, G1 to G4, H1, H2) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done, 9 pull requests (stays inside a place, places list and drawn areas, maps with a size limit, one backup, rules and goals on one page, joining stays, apps in the pie); needs your check on the phone |
-| Money editing (R6b, R6c) | ▰▰▱▱▱▱▱▱▱▱ | ⏳ Data done, screens next |
+| Money editing (R6b, R6c) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Built, waiting for your test on the phone |
 | Life events, month and year views (Step 14) | ▱▱▱▱▱▱▱▱▱▱ | 💤 Later (the picture of it is done; it starts when you say "build it") |
 
 <sub>The full story of everything built is in [docs/ROADMAP-HISTORY.md](docs/ROADMAP-HISTORY.md); what each release changed is in [CHANGELOG.md](CHANGELOG.md).</sub>
@@ -290,7 +290,6 @@ Short stops on a long drive stay as they are now. You said no to daily recap not
 | Item | What | State |
 | --- | --- | --- |
 | **Step 14 Life events** | Moving city, starting exam prep... with month and year views | 💤 The picture is done; I build it when you say "build it" |
-| **R6b / R6c Money** | "Deduct it from", separate expense and income categories, edit anything, the paper look | ⏳ Data is ready |
 | **Paper P6** | The paper look for Stats | ⏳ |
 
 ### Later

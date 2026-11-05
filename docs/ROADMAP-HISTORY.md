@@ -164,10 +164,9 @@ Each step is small enough to build, install and try before the next begins. The 
   DONE         E8 Places and trips round 2: Triggers and actions (Rules: triggers, conditions, actions, buttons; no new habit kind, a rule that ticks a habit does the job)
   DONE         E9 Places and trips round 2: Place goals: hours at a place or kind, visits, hours out, distance, hours travelling; day, week, month or last N days; rings on Timeline and Habits
   DONE         E10 Places and trips round 2: Round 2 finish: docs, tests across the stages, the train day through rules and goals
-  NEXT ──►    R6b/R6c Money (see below)
-              R6b/R6c Money: editing and the paper look (after the habits): "Deduct it from", separate expense and income categories, edit anything, paper look (includes Paper P5)
+  DONE         R6b/R6c Money: editing, "Deduct it from", paper look (see below)
   DONE         Paper P4 New look: Food
-              Paper P5 New look: Money (built inside R6)
+  DONE         Paper P5 New look: Money (built inside R6)
               Paper P6 New look: Stats
               Step 14 Life events, month and year views
               Step 15 Stats
@@ -342,7 +341,7 @@ Not part of Polish 4, and not built: **Step 13e** (fixing trips and visits by ha
   - **P4a Top of the page.** The big title (Today, Yesterday, Tomorrow, or the weekday) with the full date under it, then a paper month calendar: ‹ month › arrows, weekday letters, a tile per day (today ringed in pen, the chosen day inked black, days after today faded, a small square mark on days with food logged). Tap a day to open it. A "Today" pill appears when you are on another day, and the small day-by-day ‹ › buttons stay next to the day's heading, so nothing the old Previous / Next buttons did is lost. The month grid is worked out in `FoodCalendar.kt` and tested.
   - **P4b The day card and water.** One paper card: the kcal eaten in big type, "left" in green or "over" in red against the goal, a coloured bar split by meal (breakfast amber, lunch green, dinner indigo, snack pink; each piece sized by its calories against the goal, or against what you ate if that is more), then Carbs, Fat and Protein with tally-stroke bars. Water is its own paper card with a tally bar, the same +250 ml / +500 ml / Undo buttons in paper style. The bar pieces are worked out in `FoodStats.fuelShares` and tested.
   - **P4c Meals, Add sheet, delete.** "What I ate" heading with the item count, one paper card per meal type with its coloured side bar, the kcal total and rows showing name, grams and C / F / P. The Add meal button is the paper one; the sheet uses `PaperSheet`, `PaperField`, pills for Eat again and the meal type; tapping a meal asks "Delete this meal?" in a paper pop-up. Add and delete work exactly as before.
-- **P5 Money. Planned.** The month card, sorting, the entry sheets.
+- **P5 Money. Done (built with R6b/R6c).** The month card, sorting, the entry sheets.
 - **P6 Stats. Planned.** The charts, the 20-week heatmap, and every tab.
 - **P7 Settings (done before Food, Money and Stats, your order). Planned, nothing built yet.** Same rule as Habits: only what exists in this app gets the paper skin; its layout and every switch, button and permission stay. The demo's Settings parts that this app does not have are NOT built (listed below).
   - **What stays out (demo only):** a Timeline settings page (gaps, grouping repeated opens, remember my category changes), the Food page (choose OpenNutriTracker or a built-in tracker), the Money page (shopping apps, "where did it come from"), the hidden-apps list as its own row, and the demo's invented numbers.

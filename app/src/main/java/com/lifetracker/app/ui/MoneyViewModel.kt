@@ -68,6 +68,9 @@ class MoneyViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { dao.upsertEntry(entry) }
     }
 
+    /** How many entries and saved items use a category (one that is used can be hidden but not deleted). */
+    suspend fun usesOf(category: MoneyCategoryEntity): Int = dao.usesOfCategory(category.id)
+
     fun deleteEntry(entry: MoneyEntryEntity) {
         viewModelScope.launch { dao.deleteEntry(entry) }
     }

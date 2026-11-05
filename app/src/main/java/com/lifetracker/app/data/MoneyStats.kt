@@ -49,6 +49,27 @@ object MoneyStats {
 
     fun newId(): String = UUID.randomUUID().toString()
 
+    /** The number typed in an amount box ("1,250.50"), or null when it is not an amount above zero. */
+    fun parseAmount(text: String): Double? =
+        text.replace(",", "").trim().toDoubleOrNull()?.takeIf { it > 0 && it < 1e12 }
+
+    /** An amount as text for an amount box: no ".0" on a whole amount. */
+    fun amountText(value: Double): String = if (value % 1.0 == 0.0) value.toLong().toString() else value.toString()
+
+    /** What "Deduct it from" says for a source, in a few words. */
+    fun sourceLabel(source: Int): String = when (source) {
+        SOURCE_OTHER -> "Someone else paid"
+        SOURCE_UNSURE -> "Not sure"
+        else -> "My allowance"
+    }
+
+    /** A line under the choice that says what it does to "Left". */
+    fun sourceHelp(source: Int): String = when (source) {
+        SOURCE_OTHER -> "It is kept, but it does not take anything from what is left. It adds up on its own line."
+        SOURCE_UNSURE -> "It waits on its own line (To decide) and takes nothing from what is left until you choose."
+        else -> "It comes out of what is left this month."
+    }
+
     /** The first day of [month] and of the month after it, as ISO dates, for a "between" lookup. */
     fun range(month: YearMonth): Pair<String, String> =
         month.atDay(1).toString() to month.plusMonths(1).atDay(1).toString()
