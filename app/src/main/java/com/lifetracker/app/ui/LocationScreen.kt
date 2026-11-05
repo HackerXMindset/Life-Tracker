@@ -132,10 +132,7 @@ fun LocationScreen(
                         fontSize = 13.sp,
                         color = paper.ink2,
                     )
-                    Row(
-                        modifier = Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
+                    ChipFlow() {
                         names.take(3).forEach { n ->
                             PaperButton("Use \"" + n.name + "\"", { places.addPlace(n.name, "other", PlaceRules.DEFAULT_RADIUS, cluster.lat, cluster.lng) }, small = true)
                         }
@@ -341,7 +338,7 @@ private fun JourneyRow(journey: PlaceTrail.Journey, onMode: (PlaceTrail.Journey,
                 fontSize = 12.sp,
                 color = paper.ink2,
             )
-            Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ChipFlow() {
                 QUICK_MODES.forEach { (label, mode) -> PaperPill(label, selected = false, onClick = { onMode(journey, mode) }) }
             }
         }

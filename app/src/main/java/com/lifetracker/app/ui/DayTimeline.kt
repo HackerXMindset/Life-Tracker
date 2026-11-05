@@ -1,6 +1,13 @@
 package com.lifetracker.app.ui
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.ui.zIndex
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.background
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
@@ -112,6 +119,8 @@ class DayActions(
     val onEditItem: (DayLayout.Item) -> Unit,
     val onEditPlace: (DayLayout.Place) -> Unit,
     val onEditTrip: (TripEntity) -> Unit,
+    /** You dragged the stay (first) onto the stay next to it (second): they are to be joined. Null when joining is off. */
+    val onJoinStays: ((DayLayout.Place, DayLayout.Place) -> Unit)? = null,
     /** Whether to show the quick buttons that ask how you travelled (Timeline settings). */
     val askHowTravelled: Boolean = true,
     /** The icon you gave an app, by its package name (apps without one are left out). */
@@ -185,6 +194,27 @@ private class WarpHolder {
     var cardWidth: Float = 0f
 }
 
+/** What is going on while a stay is being dragged onto its neighbour (see [DayCalendar]). */
+private class StayDrag {
+    val coordinates = HashMap<String, androidx.compose.ui.layout.LayoutCoordinates>()
+    var key by mutableStateOf<String?>(null)
+    var dy by mutableFloatStateOf(0f)
+    var startY = 0f
+
+    /** The neighbour the dragged stay is over right now. */
+    var over by mutableStateOf<String?>(null)
+
+    fun reset() {
+        key = null
+        dy = 0f
+        over = null
+    }
+
+    fun windowTop(k: String): Float? = coordinates[k]?.takeIf { it.isAttached }?.boundsInWindow()?.top
+    fun contains(k: String, y: Float): Boolean =
+        coordinates[k]?.takeIf { it.isAttached }?.boundsInWindow()?.let { y >= it.top && y <= it.bottom } == true
+}
+
 /**
  * The whole day as one list. Every place, journey, phone period, call and so on has a thick line and one small row beside it.
  * There is no hour ruler: rows stack one under the other, and a line runs from its own row down to the row where it ended.
@@ -196,6 +226,8 @@ fun DayCalendar(rows: List<DayLayout.Row>, a: DayActions, collapsed: Boolean = f
     val fixed = ArrayList<Slot>()
     val packed = ArrayList<Slot>()
     val frames = ArrayList<Frame>()
+    val stayDrag = remember { StayDrag() }
+    val placeByKey = rows.filterIsInstance<DayLayout.Place>().associateBy { it.key }
 
     @Composable
     fun thingSlot(item: DayLayout.Item): Slot {
@@ -224,7 +256,13 @@ fun DayCalendar(rows: List<DayLayout.Row>, a: DayActions, collapsed: Boolean = f
                     "p|" + row.key, row.startMs, row.endMs, Bar.PLACE,
                     chosen?.displayColor() ?: look?.let { argbColor(it.color) } ?: placeColorOf(row.name),
                     label = row.name,
-                    card = { PlaceCard(row, chosen, a, placeCharged, look) },
+                    card = {
+                        val near = if (a.onJoinStays == null) emptyList() else DayLayout.stayNeighbours(rows, row.key).toList().filterNotNull().map { it.key }
+                        PlaceCard(
+                            row, chosen, a, placeCharged, look, stayDrag, near,
+                            onJoin = { other -> placeByKey[other]?.let { a.onJoinStays?.invoke(row, it) } },
+                        )
+                    },
                 )
                 fixed += placeSlot
                 val inside = ArrayList<Slot>()
@@ -361,7 +399,11 @@ fun DayCalendar(rows: List<DayLayout.Row>, a: DayActions, collapsed: Boolean = f
                 }
             },
         content = {
-            slots.forEach { s -> key(s.key) { Box { s.card() } } }
+            slots.forEach { s ->
+                key(s.key) {
+                    Box(modifier = Modifier.zIndex(if (stayDrag.key != null && s.key == "p|" + stayDrag.key) 1f else 0f)) { s.card() }
+                }
+            }
         },
     ) { measurables, constraints ->
         val cardX = (RULER_WIDTH + PLACE_LANE + LANE_WIDTH * (laneCount - 1) + 8.dp + FRAME_PAD).roundToPx()
@@ -390,15 +432,52 @@ private fun Modifier.penOutline(shape: Shape, color: Color, width: Dp = 1.25.dp)
 }
 
 @Composable
-private fun PlaceCard(p: DayLayout.Place, chosen: ActivityTypeEntity?, a: DayActions, chargedMs: Long, look: com.lifetracker.app.data.PlaceLook?) {
+private fun PlaceCard(
+    p: DayLayout.Place,
+    chosen: ActivityTypeEntity?,
+    a: DayActions,
+    chargedMs: Long,
+    look: com.lifetracker.app.data.PlaceLook?,
+    drag: StayDrag,
+    /** The keys of the stays next to this one, the only ones it can be dragged onto. */
+    near: List<String>,
+    onJoin: (String) -> Unit,
+) {
     val paper = LocalPaper.current
     val shape = Wobble.Small
+    val dragged = drag.key == p.key
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .onGloballyPositioned { drag.coordinates[p.key] = it }
+            .graphicsLayer { translationY = if (dragged) drag.dy else 0f }
             // The box round the stay is drawn by the calendar, so this row is only its heading.
             .clip(shape)
+            .background(if (dragged) paper.surface.copy(alpha = 0.9f) else if (drag.over == p.key) paper.sun.copy(alpha = 0.35f) else Color.Transparent)
             .clickable { a.onEditPlace(p) }
+            .pointerInput(p.key, near) {
+                if (near.isEmpty()) return@pointerInput
+                detectDragGesturesAfterLongPress(
+                    onDragStart = { offset ->
+                        drag.key = p.key
+                        drag.dy = 0f
+                        drag.over = null
+                        drag.startY = (drag.windowTop(p.key) ?: 0f) + offset.y
+                    },
+                    onDrag = { change, amount ->
+                        change.consume()
+                        drag.dy += amount.y
+                        val y = drag.startY + drag.dy
+                        drag.over = near.firstOrNull { drag.contains(it, y) }
+                    },
+                    onDragEnd = {
+                        val target = drag.over
+                        drag.reset()
+                        if (target != null) onJoin(target)
+                    },
+                    onDragCancel = { drag.reset() },
+                )
+            }
             .padding(horizontal = 10.dp, vertical = 6.dp),
     ) {
         Row(
@@ -845,7 +924,7 @@ private fun TravelCard(t: DayLayout.Travel, a: DayActions) {
                             lineHeight = 15.sp,
                             color = paper.ink2,
                         )
-                        Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        ChipFlow() {
                             QUICK_MODES.forEach { (label, mode) ->
                                 PaperPill(label, false, {
                                     if (trip == null) a.onUnknownJourney(t, mode) else t.legs.ifEmpty { listOf(trip) }.forEach { leg -> a.onTripMode(leg, mode) }

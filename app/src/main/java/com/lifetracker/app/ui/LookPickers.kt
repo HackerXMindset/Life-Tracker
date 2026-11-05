@@ -229,7 +229,7 @@ fun IconPickerPanel(selected: String, tint: Color, onSelected: (String) -> Unit,
     val shown = sets[category.coerceIn(0, sets.size - 1)].second
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         PaperSegmented(listOf("Icons", "Emojis"), if (emojis) 1 else 0, { emojis = it == 1; category = 0 })
-        Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        ChipFlow() {
             sets.forEachIndexed { i, (name, _) -> PaperPill(name, i == category, { category = i }) }
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

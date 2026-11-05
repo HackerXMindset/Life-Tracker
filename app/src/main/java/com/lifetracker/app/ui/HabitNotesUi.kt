@@ -75,10 +75,7 @@ fun NoteDialog(
         ) {
             if (habits != null && draft.note == null) {
                 MonoLabel("Habit")
-                Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
+                ChipFlow() {
                     habits.forEach { (id, name) ->
                         PaperPill(name, habit == id, { habit = id })
                     }
@@ -193,10 +190,7 @@ fun HabitNotesPage(
         }
         if (ids.size > 1) {
             item(key = "filter") {
-                Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
+                ChipFlow() {
                     PaperPill("All", picked.isEmpty(), { filter = "" })
                     ids.forEach { id ->
                         PaperPill(names[id] ?: "Habit", picked == id, { filter = id })

@@ -21,6 +21,7 @@ import com.lifetracker.app.data.InsideWalk
 import com.lifetracker.app.data.StepDayEntity
 import com.lifetracker.app.data.TodoEntity
 import com.lifetracker.app.data.PlacesSettings
+import com.lifetracker.app.data.StayJoin
 import com.lifetracker.app.data.TripAdjust
 import com.lifetracker.app.data.TripEntity
 import com.lifetracker.app.data.PlaceLook
@@ -302,6 +303,16 @@ class TimelineViewModel(app: Application) : AndroidViewModel(app) {
     val deletedTrips: StateFlow<List<TripEntity>> = share(emptyList(), db.tripDao().observeDeleted())
 
     /** Deletes a trip: it leaves the Timeline, the totals and the goals, and waits in the Deleted list. */
+    /** Joins the stay [dropId] into [keepId]: one stay on the Timeline (see [StayJoin]). */
+    fun joinStays(keepId: String, dropId: String, keepTimes: Pair<Long, Long>, dropTimes: Pair<Long, Long>, trips: List<TripEntity>) {
+        viewModelScope.launch { StayJoin.join(db, keepId, dropId, keepTimes, dropTimes, trips) }
+    }
+
+    /** Takes a join apart again (Undo). */
+    fun separateStays(dropId: String) {
+        viewModelScope.launch { StayJoin.separate(db, dropId) }
+    }
+
     fun deleteTrip(id: String) {
         viewModelScope.launch { db.tripDao().setDeleted(id, System.currentTimeMillis()) }
     }

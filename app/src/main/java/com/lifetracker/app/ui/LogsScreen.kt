@@ -123,27 +123,18 @@ fun LogsScreen(onBack: () -> Unit) {
     ) {
         SettingsTop(title = "Live logs", sub = "What the app did in the background, as it happens", onBack = onBack)
 
-        Row(
-            modifier = Modifier.horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
+        ChipFlow() {
             days.forEach { d ->
                 PaperPill(dayName(d, today), day == d, { day = d; tag = null; follow = true })
             }
         }
-        Row(
-            modifier = Modifier.horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
+        ChipFlow() {
             PaperPill("All", level == LogLevel.Info, { level = LogLevel.Info })
             PaperPill("Warnings", level == LogLevel.Warn, { level = LogLevel.Warn })
             PaperPill("Errors", level == LogLevel.Error, { level = LogLevel.Error })
         }
         if (tags.size > 1) {
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
+            ChipFlow() {
                 PaperPill("Every part", picked == null, { tag = null })
                 tags.forEach { t -> PaperPill(t, picked == t, { tag = t }) }
             }
@@ -190,7 +181,7 @@ fun LogsScreen(onBack: () -> Unit) {
             color = paper.ink2,
         )
         savedNote?.let { Text(it, fontSize = 12.sp, color = paper.ink) }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
+        ChipFlow() {
             PaperButton(if (follow) "Following" else "Follow end", { follow = true }, small = true, style = if (follow) PaperButtonStyle.Dark else PaperButtonStyle.Ghost)
             PaperButton("Copy", { copyText(context, LogFormat.asText(shown)) }, small = true, style = PaperButtonStyle.Ghost, enabled = shown.isNotEmpty())
             PaperButton("Share", { shareText(context, LogFormat.asText(shown)) }, small = true, style = PaperButtonStyle.Ghost, enabled = shown.isNotEmpty())

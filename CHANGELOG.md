@@ -2,6 +2,18 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧱 Choices in one place, and joining two stays (H1)
+
+### ✨ New
+
+- **Join two stays by dragging.** On the Timeline, hold a stay and drag it onto the stay next to it. You are asked once, and if the two have different names you pick which name the joined stay keeps. The walk between them becomes part of the stay. A stay that is still going always keeps its name; an unnamed spot takes the name of the named one.
+- **Another way to join**: open a stay (tap it) and use "Join with the stay before" or "Join with the stay after".
+- **Nothing is lost**: a bar with Undo shows for a few seconds, and the Changes page lists every join with "Separate the stays again". Your own time and category changes on the stay come back too.
+
+### 🛠️ Changed
+
+- **No more rows that scroll sideways.** Every row of choices (what did you do, habit days and categories, range pickers, money, places, replay, logs, the Timeline totals and more) now wraps and shows everything in one block. When there is a lot, the rest waits behind "+N more", and "Show less" folds it up again.
+
 ## 🗺️ Maps: a size limit, no maps nobody uses, a better picker (F3)
 
 ### ✨ New

@@ -209,10 +209,7 @@ fun HabitDayDialog(
 
             if (rules.canMiss(date) && !relapse && !tracking) {
                 MonoLabel("Why was it missed?")
-                Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
+                ChipFlow() {
                     HabitEditor.reasonOptions(habit).forEach { option ->
                         PaperPill(option, reason == option, { onReason(if (reason == option) null else option) })
                     }

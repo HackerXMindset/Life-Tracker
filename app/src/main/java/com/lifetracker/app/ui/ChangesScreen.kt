@@ -78,4 +78,5 @@ private fun restoreLabel(item: ChangeItem) = when (item.kind) {
     ChangeItem.Kind.CUT -> "Put the trip back together"
     ChangeItem.Kind.HIDDEN_TRIP -> "Show the trip again"
     ChangeItem.Kind.HIDDEN_STAY -> "Show the stay again"
+    ChangeItem.Kind.STAYS_JOINED -> "Separate the stays again"
 }

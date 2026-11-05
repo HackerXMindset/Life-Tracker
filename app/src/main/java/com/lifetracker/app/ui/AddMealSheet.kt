@@ -105,10 +105,7 @@ fun AddMealSheet(
 
             if (recent.isNotEmpty()) {
                 MonoLabel("Eat again")
-                Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
+                ChipFlow() {
                     recent.forEach { meal ->
                         PaperPill(
                             text = meal.name,
@@ -128,10 +125,7 @@ fun AddMealSheet(
                 }
             }
 
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
+            ChipFlow() {
                 MEAL_TYPES.forEach { t ->
                     PaperPill(text = mealTypeLabel(t), selected = type == t, onClick = { type = t }, dot = mealColor(t))
                 }

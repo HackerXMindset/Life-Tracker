@@ -16,7 +16,7 @@ class ChangeItem(
     val canRestore: Boolean = true,
     val why: String = "",
 ) {
-    enum class Kind { JOIN, CUT, HIDDEN_TRIP, HIDDEN_STAY }
+    enum class Kind { JOIN, CUT, HIDDEN_TRIP, HIDDEN_STAY, STAYS_JOINED }
 }
 
 /** The Changes page: every trip you joined or cut and every trip or stay you hid, each with its way back. Nothing is ever deleted. */
@@ -66,7 +66,19 @@ object ChangesRules {
             }
         }
         for (t in timeline) {
-            if (!t.hidden || TripEditing.isJoinedAway(t)) continue
+            if (t.kind == TimelineEdits.VISIT && t.hidden && t.label.startsWith(StayJoin.STAYS_LABEL)) {
+                val dropped = visits.firstOrNull { it.id == t.refId }
+                val keeperVisit = StayJoin.keeperOf(t)?.let { id -> visits.firstOrNull { it.id == id } }
+                val a = dropped?.let { placeNames[it.placeId] }?.takeIf { it.isNotBlank() } ?: "an unnamed spot"
+                val b = keeperVisit?.let { placeNames[it.placeId] }?.takeIf { it.isNotBlank() } ?: "an unnamed spot"
+                out += ChangeItem(
+                    key = "joinedstay" + t.refId, kind = ChangeItem.Kind.STAYS_JOINED, title = "Stays joined",
+                    detail = if (a == b) a else "$a and $b",
+                    sortMs = t.updatedMs, visitId = t.refId,
+                )
+                continue
+            }
+            if (!t.hidden || TripEditing.isJoinedAway(t) || StayJoin.isJoined(t)) continue
             when (t.kind) {
                 TimelineEdits.TRIP -> {
                     val trip = trips.firstOrNull { it.id == t.refId }

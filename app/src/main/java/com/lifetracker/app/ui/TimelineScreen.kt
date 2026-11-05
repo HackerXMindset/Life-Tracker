@@ -86,6 +86,7 @@ import com.lifetracker.app.data.SleepStats
 import com.lifetracker.app.data.StepDayEntity
 import com.lifetracker.app.data.StepStats
 import com.lifetracker.app.data.TimelineEdits
+import com.lifetracker.app.data.StayJoin
 import com.lifetracker.app.data.TripEditing
 import com.lifetracker.app.data.TimelineSettings
 import com.lifetracker.app.data.TimelineEditEntity
@@ -242,6 +243,15 @@ fun TimelineScreen(
     // The trip just deleted (for the Undo bar) and the list of deleted trips to bring one back from.
     var justDeleted by remember { mutableStateOf<TripEntity?>(null) }
     var showDeleted by remember { mutableStateOf(false) }
+    // Two stays you dragged together (to ask which name to keep), and the stay just taken into another (for the Undo bar).
+    var joinAsk by remember { mutableStateOf<Pair<DayLayout.Place, DayLayout.Place>?>(null) }
+    var justJoined by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(justJoined) {
+        if (justJoined != null) {
+            kotlinx.coroutines.delay(8_000L)
+            justJoined = null
+        }
+    }
     val deletedTrips by vm.deletedTrips.collectAsState()
     LaunchedEffect(justDeleted) {
         if (justDeleted != null) {
@@ -352,13 +362,14 @@ fun TimelineScreen(
     fun target(
         kind: String, ref: String, title: String, startMs: Long, endMs: Long?,
         extraLabel: String? = null, onExtra: (() -> Unit)? = null, openLabel: String? = null, onOpen: (() -> Unit)? = null,
+        extra2Label: String? = null, onExtra2: (() -> Unit)? = null,
         details: List<String> = emptyList(), detailsTitle: String = "Inside",
         onDelete: (() -> Unit)? = null, deleteLabel: String = "Delete",
     ): EditTarget {
         val e = edits[TimelineEdits.key(kind, ref)]
         return EditTarget(
             kind, ref, title, startMs, endMs, TimelineEdits.category(e).orEmpty(), e != null && !e.hidden, dayStartOf(startMs),
-            extraLabel = extraLabel, onExtra = onExtra, openLabel = openLabel, onOpen = onOpen,
+            extraLabel = extraLabel, onExtra = onExtra, extra2Label = extra2Label, onExtra2 = onExtra2, openLabel = openLabel, onOpen = onOpen,
             details = details, detailsTitle = detailsTitle, onDelete = onDelete, deleteLabel = deleteLabel,
         )
     }
@@ -418,9 +429,15 @@ fun TimelineScreen(
                 else -> Unit
             }
         },
+        onJoinStays = { first, second -> joinAsk = first to second },
         onEditPlace = { p ->
+            val (before, after) = DayLayout.stayNeighbours(rows, p.key)
             editTarget = target(
                 TimelineEdits.VISIT, p.visit.id, p.name, p.visit.startMs, if (p.visit.ongoing) null else p.visit.endMs,
+                extraLabel = before?.let { "Join with the stay before (${it.name})" },
+                onExtra = before?.let { b -> { joinAsk = b to p } },
+                extra2Label = after?.let { "Join with the stay after (${it.name})" },
+                onExtra2 = after?.let { n -> { joinAsk = p to n } },
                 openLabel = if (p.named) "Open place" else "Name this spot",
                 onOpen = if (p.named) ({ onOpenPlace(p.visit.placeId) }) else onOpenPlaces,
             )
@@ -433,7 +450,7 @@ fun TimelineScreen(
             )
         },
     )
-    val hiddenToday = edits.values.filter { it.hidden && !TripEditing.isJoinedAway(it) && it.startMs in dayStartMs until dayEndMs }
+    val hiddenToday = edits.values.filter { it.hidden && !TripEditing.isJoinedAway(it) && !StayJoin.isJoined(it) && it.startMs in dayStartMs until dayEndMs }
     val anyTimeTodos = todos.filter { it.minutes == null }
     val anyTimeNotes = notes.filter { it.minutes == null }
     val plannedMinutes = todos.filter { !it.done }.sumOf { it.estimate ?: 0 }
@@ -494,6 +511,26 @@ fun TimelineScreen(
                             Text("Trip deleted", fontSize = 13.sp, color = LocalPaper.current.ink, modifier = Modifier.weight(1f))
                             PaperButton("Undo", { vm.restoreTrip(gone.id); justDeleted = null }, style = PaperButtonStyle.Ghost, small = true)
                         }
+                    }
+                }
+                justJoined?.let { dropId ->
+                    item(key = "undo-join") {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text("Stays joined", fontSize = 13.sp, color = LocalPaper.current.ink, modifier = Modifier.weight(1f))
+                            PaperButton("Undo", { vm.separateStays(dropId); justJoined = null }, style = PaperButtonStyle.Ghost, small = true)
+                        }
+                    }
+                }
+                if (rows.count { it is DayLayout.Place } >= 2) {
+                    item(key = "join-hint") {
+                        Text(
+                            "Two stays side by side? Hold one and drag it onto the other to join them.",
+                            fontSize = 11.5.sp, color = LocalPaper.current.ink2,
+                        )
                     }
                 }
                 if (rows.any { it is DayLayout.Place || it is DayLayout.Travel }) {
@@ -620,6 +657,18 @@ fun TimelineScreen(
         )
     }
 
+    joinAsk?.let { (first, second) ->
+        JoinStaysDialog(
+            first = first, second = second,
+            onJoin = { keep, drop ->
+                vm.joinStays(keep.id, drop.id, keep.startMs to keep.endMs, drop.startMs to drop.endMs, tripsEff)
+                justJoined = drop.id
+                joinAsk = null
+            },
+            onDismiss = { joinAsk = null },
+        )
+    }
+
     editTarget?.let { t ->
         val key = TimelineEdits.key(t.kind, t.refId)
         val now = System.currentTimeMillis()
@@ -678,7 +727,7 @@ fun TimelineScreen(
     }
 
     if (showHidden) {
-        val hidden = edits.values.filter { it.hidden && !TripEditing.isJoinedAway(it) && it.startMs in dayStartMs until dayEndMs }.sortedBy { it.startMs }
+        val hidden = edits.values.filter { it.hidden && !TripEditing.isJoinedAway(it) && !StayJoin.isJoined(it) && it.startMs in dayStartMs until dayEndMs }.sortedBy { it.startMs }
         PaperDialog(title = "Hidden by you", onDismiss = { showHidden = false }, dismissText = "Close") {
             if (hidden.isEmpty()) Text("Nothing is hidden on this day.", color = LocalPaper.current.ink2)
             hidden.forEach { e ->

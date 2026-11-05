@@ -7,6 +7,7 @@ import com.lifetracker.app.data.AppDatabase
 import com.lifetracker.app.data.ChangeItem
 import com.lifetracker.app.data.ChangesRules
 import com.lifetracker.app.data.PlacesSettings
+import com.lifetracker.app.data.StayJoin
 import com.lifetracker.app.data.TripEditor
 import com.lifetracker.app.data.UndoResult
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -52,6 +53,10 @@ class ChangesViewModel(app: Application) : AndroidViewModel(app) {
                 ChangeItem.Kind.HIDDEN_TRIP -> {
                     db.tripDao().trip(item.tripId.orEmpty())?.let { TripEditor.setHidden(db, it, false) }
                     messageFlow.value = "The trip is shown again."
+                }
+                ChangeItem.Kind.STAYS_JOINED -> {
+                    val ok = StayJoin.separate(db, item.visitId.orEmpty())
+                    messageFlow.value = if (ok) "The two stays are apart again." else "These stays can no longer be separated from here."
                 }
                 ChangeItem.Kind.HIDDEN_STAY -> {
                     TripEditor.showStay(db, item.visitId.orEmpty())

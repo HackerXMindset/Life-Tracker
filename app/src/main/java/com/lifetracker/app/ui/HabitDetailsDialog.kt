@@ -132,10 +132,7 @@ fun HabitDetailsPage(
                 small = true,
             )
             MonoLabel("Rest days (never count)", modifier = Modifier.padding(top = 10.dp))
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()).padding(top = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
+            ChipFlow(modifier = Modifier.padding(top = 4.dp)) {
                 HabitEditor.DAY_NAMES.forEachIndexed { i, label ->
                     val day = i + 1
                     PaperPill(label, day in rest, { onRestDays(if (day in rest) rest - day else rest + day) })

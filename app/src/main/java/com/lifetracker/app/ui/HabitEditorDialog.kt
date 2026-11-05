@@ -162,7 +162,7 @@ fun HabitEditorPage(
             ColorPickerPanel(selected = color, onSelected = { color = it })
 
             MonoLabel("Category")
-            Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            ChipFlow() {
                 PaperPill("None", category.isEmpty() && newCategory.isBlank(), { category = ""; newCategory = "" })
                 categories.forEach { c ->
                     PaperPill(c, category == c && newCategory.isBlank(), { category = c; newCategory = "" })
@@ -177,7 +177,7 @@ fun HabitEditorPage(
             )
 
             MonoLabel("Type")
-            Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            ChipFlow() {
                 PaperPill("Yes / no", kind == HabitStats.KIND_YES_NO, { kind = HabitStats.KIND_YES_NO })
                 PaperPill("Avoid", kind == HabitStats.KIND_RELAPSE, { kind = HabitStats.KIND_RELAPSE })
                 PaperPill("Counted", kind == HabitStats.KIND_COUNTED, { kind = HabitStats.KIND_COUNTED })
@@ -274,7 +274,7 @@ fun HabitEditorPage(
             }
 
             MonoLabel("How often")
-            Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            ChipFlow() {
                 listOf(
                     HabitPlan.DAILY to "Every day",
                     HabitPlan.WEEKDAYS to "Some days",
@@ -286,10 +286,7 @@ fun HabitEditorPage(
                 }
             }
             when (interval) {
-                HabitPlan.WEEKDAYS -> Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
+                HabitPlan.WEEKDAYS -> ChipFlow() {
                     HabitEditor.DAY_NAMES.forEachIndexed { i, label ->
                         val day = i + 1
                         PaperPill(
@@ -356,7 +353,7 @@ fun HabitEditorPage(
             }
 
             MonoLabel("Difficulty")
-            Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            ChipFlow() {
                 listOf(0 to "Not set", 1 to "Easy", 2 to "Medium", 3 to "Hard").forEach { (value, label) ->
                     PaperPill(label, difficulty == value, { difficulty = value })
                 }

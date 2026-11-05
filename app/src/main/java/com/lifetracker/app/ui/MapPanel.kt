@@ -366,11 +366,7 @@ private fun fit(map: MapLibreMap, path: List<Pair<Double, Double>>, circle: Path
 @Composable
 private fun SpeedLegend() {
     val paper = LocalPaper.current
-    Row(
-        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    ChipFlow(maxLines = 4, spacing = 10.dp) {
         PathSpeeds.bands.forEach { b ->
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                 Box(Modifier.size(10.dp).background(Color(0xFF000000.toInt() or b.rgb), CircleShape))

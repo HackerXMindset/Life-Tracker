@@ -280,6 +280,14 @@ object DayLayout {
         return joinGaps(if (showTrips) mergeJourneys(out) else out)
     }
 
+    /** The stay just before and the stay just after the stay [key] (two stays are neighbours when no other stay lies between them). */
+    fun stayNeighbours(rows: List<Row>, key: String): Pair<Place?, Place?> {
+        val stays = rows.filterIsInstance<Place>().sortedBy { it.startMs }
+        val i = stays.indexOfFirst { it.key == key }
+        if (i < 0) return null to null
+        return stays.getOrNull(i - 1) to stays.getOrNull(i + 1)
+    }
+
     /** A stop shorter than this, between two fast trips, is a station on the way and not a place you went to. */
     const val MAX_STOP_MS = 15 * 60_000L
 
