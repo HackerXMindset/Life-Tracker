@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.FlowRowOverflow
-import androidx.compose.foundation.layout.FlowRowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -26,7 +25,7 @@ fun ChipFlow(
     modifier: Modifier = Modifier,
     maxLines: Int = 3,
     spacing: Dp = 6.dp,
-    content: @Composable FlowRowScope.() -> Unit,
+    content: @Composable () -> Unit,
 ) {
     var expanded by rememberSaveable { mutableStateOf(false) }
     FlowRow(
@@ -39,6 +38,6 @@ fun ChipFlow(
             collapseIndicator = { PaperPill("Show less", false, { expanded = false }) },
             minRowsToShowCollapse = maxLines + 1,
         ),
-        content = content,
+        content = { content() },
     )
 }
