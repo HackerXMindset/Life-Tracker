@@ -17,7 +17,10 @@ import com.lifetracker.app.ui.theme.PaperPill
 
 /**
  * A row of choices that wraps onto more lines instead of scrolling sideways, so everything is in one place.
- * When there is more than [maxLines] lines of it, the rest hides behind "+N more" and "Show less" brings it back.
+ * When there is more than [maxLines] lines of it, the rest hides behind "More" and "Show less" brings it back.
+ *
+ * The button does not say how many are hidden on purpose: Compose only knows that after the row is measured, and reading it
+ * while the row is still being built crashes the app (the "noOfItemsShown" crash).
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -34,7 +37,7 @@ fun ChipFlow(
         verticalArrangement = Arrangement.spacedBy(spacing),
         maxLines = if (expanded) Int.MAX_VALUE else maxLines,
         overflow = FlowRowOverflow.expandOrCollapseIndicator(
-            expandIndicator = { PaperPill("+${totalItemCount - shownItemCount} more", false, { expanded = true }) },
+            expandIndicator = { PaperPill("More", false, { expanded = true }) },
             collapseIndicator = { PaperPill("Show less", false, { expanded = false }) },
             minRowsToShowCollapse = maxLines + 1,
         ),

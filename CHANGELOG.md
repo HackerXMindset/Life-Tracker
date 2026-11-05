@@ -20,7 +20,7 @@ Every release page shows the sections below that were added since the last relea
 
 ### 🛠️ Changed
 
-- **No more rows that scroll sideways.** Every row of choices (what did you do, habit days and categories, range pickers, money, places, replay, logs, the Timeline totals and more) now wraps and shows everything in one block. When there is a lot, the rest waits behind "+N more", and "Show less" folds it up again.
+- **No more rows that scroll sideways.** Every row of choices (what did you do, habit days and categories, range pickers, money, places, replay, logs, the Timeline totals and more) now wraps and shows everything in one block. When there is a lot, the rest waits behind "More", and "Show less" folds it up again.
 
 ## 🗺️ Maps: a size limit, no maps nobody uses, a better picker (F3)
 
