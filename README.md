@@ -9,7 +9,7 @@ What you did, what you ate, which habits you kept, where you went and where your
 <img alt="Downloads" src="https://img.shields.io/github/downloads/HackerXMindset/Life-Tracker/total?style=flat&logo=github&logoColor=white&label=Downloads&color=7C3AED" />
 ![Android](https://img.shields.io/badge/Android-15-3DDC84?logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-Compose-7F52FF?logo=kotlin&logoColor=white)
-![Database](https://img.shields.io/badge/database-v27-blue)
+![Database](https://img.shields.io/badge/database-v32-blue)
 ![Data](https://img.shields.io/badge/data-stays%20on%20your%20phone-success)
 
 [What it does](#what-it-does) · [Where it stands](#where-it-stands) · [Roadmap](#roadmap) · [Install](#install) · [Rules](#rules-the-project-lives-by) · [Docs](#docs)
@@ -24,14 +24,14 @@ Life Tracker is an Android app built for one person: its owner. It replaces a pi
 
 | Tab | What you get | Learns from |
 | --- | --- | --- |
-| **Timeline** | Your day in order: logged activities, app use, calls, charging, steps, sleep, places and trips, as a strip and a pie | LifeXP |
+| **Timeline** | Your day in order: logged activities, app use, calls, charging, steps, sleep, places and trips, as a strip and a pie (the pie can show each app too); drag two stays together to join them | LifeXP |
 | **Food** | Meals, calories, macros, water; automatic import | OpenNutriTracker |
 | **Habits** | Streaks, schedules, notes, reminders, focus timer; two-way sync with Streak | Streak |
 | **Money** | Income and spending, monthly items, quick-log buttons, your own categories | (new) |
 | **Stats** | Numbers on everything, by day or any range | Simkl |
-| **Settings** | Every switch, permission, backup and import in one place | |
+| **Settings** | Every switch, permission, rule and goal, and one backup that holds everything, in one place | |
 
-**Places and trips** (rebuilt in October 2026, ideas from Colota): record gently or with GPS all day, tracking profiles, pause zones, a map with offline areas, import and export (GPX, KML, GeoJSON, CSV, Google Timeline), and a page for every trip and place.
+**Places and trips** (rebuilt in October 2026, ideas from Colota): record gently or with GPS all day, tracking profiles, pause zones, a map with offline areas, import and export (GPX, KML, GeoJSON, CSV, Google Timeline), and a page for every trip and place. Since then: rules and goals on one page, stays that understand a drawn area, offline maps with a size limit, and one backup file for all your data and settings.
 
 ---
 
@@ -44,8 +44,9 @@ Life Tracker is an Android app built for one person: its owner. It replaces a pi
 | The paper look (Timeline, Habits, Settings, Food) | ▰▰▰▰▰▰▰▱▱▱ | 🟡 Money and Stats still to restyle |
 | Places and trips remake (C1 to C9) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done, 11 pull requests |
 | Places and trips round 2 (E1 to E10) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done (stays and names, live map, replay and GIF, journeys and travel mode, Rules, place goals); needs your check on the phone, see the list below |
+| Places and trips round 3 (F1 to F3, G1 to G4, H1, H2) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done, 9 pull requests (stays inside a place, places list and drawn areas, maps with a size limit, one backup, rules and goals on one page, joining stays, apps in the pie); needs your check on the phone |
 | Money editing (R6b, R6c) | ▰▰▱▱▱▱▱▱▱▱ | ⏳ Data done, screens next |
-| Life events, month and year views (Step 14) | ▱▱▱▱▱▱▱▱▱▱ | 💤 Later |
+| Life events, month and year views (Step 14) | ▱▱▱▱▱▱▱▱▱▱ | 💤 Later (the picture of it is done; it starts when you say "build it") |
 
 <sub>The full story of everything built is in [docs/ROADMAP-HISTORY.md](docs/ROADMAP-HISTORY.md); what each release changed is in [CHANGELOG.md](CHANGELOG.md).</sub>
 
@@ -53,7 +54,29 @@ Life Tracker is an Android app built for one person: its owner. It replaces a pi
 
 ## Roadmap
 
-### Now: Places and trips round 2
+### Now: nothing is being built
+
+Round 3 is finished and merged. The next thing starts when you pick it (see [Next](#next)). What is waiting for you is the phone check in "Things only you can do" at the bottom.
+
+### Round 3: fixes and polish (done)
+
+Asked for in small lists on 1 to 5 November. Each part is its own pull request.
+
+| Part | PR | What you got |
+| --- | --- | --- |
+| **F1** ✅ Stays and trips | #199 | Walking about inside a named place is still one stay; "Guess how I travelled" is off to start; delete a trip with Undo and a Deleted list; one button to collapse every place and trip |
+| **F2** ✅ Places list and drawn areas | #200 | Add place at the top, search, closest first, 10 a page; delete a place with Undo; draw the area of a place on the map like cropping a picture (database 32) |
+| **G1, G2** ✅ Settings polish | #201 | Permissions: the missing ones first, what each is for, and "Open its page" goes to the exact Android page; Settings and every screen remember where you were; the "What are you charging with?" banner is off to start |
+| **G3** ✅ Rules and goals | #202 | One page with a Rules, Goals switch; a new rule starts from a choice in plain words and is three short steps (When, Only if, Then) |
+| **G4** ✅ One backup | #203 | One file holds all your data and every setting; restore shows what is inside first; Backup, Export and Import are tabs; GPS export in three steps, with Google Timeline; Google Timeline import |
+| **F3** ✅ Maps | #204 | A size limit for offline maps, the least used are deleted by themselves, no map for a place you never go to, pause and retry, a better area picker |
+| **H1** ✅ One place, and joining stays | #205 | No row of choices scrolls sideways any more (it wraps, with More and Show less); drag one stay onto the next to join them, with Undo and a list on the Changes page |
+| **H2** ✅ Apps in the pie | #206 | The pie can show each app too, in a shade of its category's colour; a switch in Settings and a button above the pie |
+| Fix | #209 | The crash in wrapped rows (the More button no longer reads the hidden count) |
+
+Not changed on purpose: the day strip at the top of the Timeline, the habit heatmap and the goal cards still scroll sideways.
+
+### Round 2: Places and trips (done)
 
 Planned on 28 October from 20 questions to you. Each stage is its own pull request and **starts only when you say "continue"**. Every stage begins by looking for open-source apps that already do that thing, judging them (stars, recent activity, licence) and using their good ideas; the code is always written fresh.
 
@@ -266,15 +289,17 @@ Short stops on a long drive stay as they are now. You said no to daily recap not
 
 | Item | What | State |
 | --- | --- | --- |
-| **R6b / R6c Money** | "Deduct it from", separate expense and income categories, edit anything, the paper look | ⏳ Data is ready (database 22) |
+| **Step 14 Life events** | Moving city, starting exam prep... with month and year views | 💤 The picture is done; I build it when you say "build it" |
+| **R6b / R6c Money** | "Deduct it from", separate expense and income categories, edit anything, the paper look | ⏳ Data is ready |
 | **Paper P6** | The paper look for Stats | ⏳ |
 
 ### Later
 
-- **Step 14** Life events (moving city, starting exam prep) with month and year views
+- **Step 14** Life events, if you do not pick it first
 - **Step 15** Stats: Simkl-level numbers you shape yourself
 - **Step 16** Polish
-- More on [the milestones page](https://github.com/HackerXMindset/Life-Tracker/milestones): sync, connectors, automation
+- Two phones in sync (another assistant is planning it)
+- More on [the milestones page](https://github.com/HackerXMindset/Life-Tracker/milestones): connectors, automation
 
 <details>
 <summary><b>Done</b> (over 100 small steps; open for the groups)</summary>
@@ -286,6 +311,7 @@ Short stops on a long drive stay as they are now. You said no to daily recap not
 | Paper look | P1 to P3c, P7a to P7h-g | The new paper look for Timeline, Habits and every Settings page |
 | Habits | H1 to H13 | Streak-style habits: sync both ways, check times, checklists, rest days, reminders, focus timer |
 | Places and trips remake | C1 to C9 | All-day GPS, profiles, pause zones, new screens, maps, offline areas, import and export |
+| Places and trips rounds 2 and 3 | E1 to E10, F1 to F3, G1 to G4, H1, H2 | Undo and Changes, live map, replay and GIF, rules and goals, stays inside a place, drawn areas, map size limit, one backup, joining stays, apps in the pie |
 
 Everything, step by step, is in [docs/ROADMAP-HISTORY.md](docs/ROADMAP-HISTORY.md).
 
@@ -298,6 +324,8 @@ Everything, step by step, is in [docs/ROADMAP-HISTORY.md](docs/ROADMAP-HISTORY.m
 - [ ] Open the Timeline for the train day of 27 and 28 October and compare it with the list in "What your train day showed" (one stay at Prayagraj Junction, real place names, two journeys with a map, Sleep ending where the train begins, a sensible travel mode); tell me what is still wrong
 - [ ] Try one rule (for example "Charging starts" and a notification, or a Wi-Fi rule) and one goal (for example hours out of the house a week), and look at the log and the ring
 - [ ] Close the old pull requests #146, #147 and #148
+- [ ] Round 3 on the phone: drag one stay onto the next and then use Undo; turn on "Show apps in the pie"; open a habit editor, the Logs page and the Timeline totals (wrapped rows, the crash fix); draw the area of a place; set a map size limit
+- [ ] Make one backup, then restore it on a spare install or after clearing the app, and check that your settings come back
 - [ ] Back up, then try GPS all day (notification, Pause and Resume, the Timeline), a charging profile and a Bluetooth profile
 - [ ] A short focus-timer test with the screen off, and a reminders test
 - [ ] Compare the phone-usage totals with Digital Wellbeing

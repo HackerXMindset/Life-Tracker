@@ -209,3 +209,28 @@ life-tracker/
             ├── values/                Colours, text, light theme
             └── values-night/          Dark theme
 ```
+
+---
+
+## Added in rounds 2 and 3 (E to H)
+
+The tree above was drawn before the Colota-style remake and the rounds after it, so it does not list their files. The ones added in round 3 (F, G, H) are below; the older ones sit in the same two folders and follow the same rule (plain logic in `data/`, tested; screens in `ui/`).
+
+| File | What it is |
+| --- | --- |
+| `data/StayJoin.kt` | Joining two stays: the rules, saved as Timeline edits so nothing is deleted, and taking a join apart again |
+| `data/PieApps.kt` | Splitting a phone period between its apps for the pie, and the shades of a category's colour |
+| `data/MapLimits.kt`, `MapCleanup.kt`, `MapSettings.kt` | The offline map size limit: which maps to delete first, the cleaning, the settings |
+| `data/SettingsBackup.kt` | All the app's settings in the one backup file |
+| `data/RuleGuide.kt` | The plain-word start for a new rule: trigger groups, templates, the three steps |
+| `data/PlaceShape.kt` | The drawn area of a place (a polygon) and "inside it" |
+| `data/InsideWalk.kt` | Walking about inside a place: the walked time shown on a stay |
+| `ui/ChipFlow.kt` | A row of choices that wraps with More and Show less (used instead of rows that scroll sideways) |
+| `ui/JoinStaysDialog.kt` | The question when you drag one stay onto another |
+| `ui/OptionRow.kt` | One selectable choice with a title and a line under it |
+| `ui/RulesAndGoalsScreen.kt` | The one page with the Rules and Goals switch |
+| `ui/MapPickers.kt` | The "Download an area" window |
+| `ui/AppRestart.kt` | Restarts the app after a restore that put settings back |
+
+The database is at version 32 and the backup format at 33.
+
