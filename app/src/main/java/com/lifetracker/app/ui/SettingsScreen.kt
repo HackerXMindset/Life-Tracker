@@ -167,6 +167,16 @@ fun SettingsScreen(onOpen: (Page) -> Unit) {
                     .padding(vertical = 12.dp),
             )
         }
+        // The food list and its photos come from GymMane (GPL-3.0), which asks for this line wherever the app shows its notices.
+        item {
+            Text(
+                text = "Food list and photos: based on GymMane by InlitX",
+                fontSize = 12.sp,
+                color = paper.ink2.copy(alpha = 0.7f),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+            )
+        }
 
     }
 }

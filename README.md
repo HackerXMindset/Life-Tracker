@@ -383,4 +383,4 @@ No computer needed. Every push runs `build.yml` on GitHub: the tests run first, 
 
 ## Thanks
 
-Ideas came from [LifeXP](https://lifexp.app), [Streak](https://github.com/streaksapp), [OpenNutriTracker](https://github.com/simonoppowa/OpenNutriTracker), Simkl and [Colota](https://github.com/dietrichmax/colota). Colota is AGPL, so nothing of its code is used; the Places and trips features were written fresh from its documentation.
+The food list and its photos come from [GymMane](https://github.com/InlitX/GymMane) by InlitX (GPL-3.0; the app says "Based on GymMane by InlitX" in Settings). Ideas came from [LifeXP](https://lifexp.app), [Streak](https://github.com/streaksapp), [OpenNutriTracker](https://github.com/simonoppowa/OpenNutriTracker), Simkl and [Colota](https://github.com/dietrichmax/colota). Colota is AGPL, so nothing of its code is used; the Places and trips features were written fresh from its documentation.

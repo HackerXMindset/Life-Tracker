@@ -46,6 +46,9 @@ data class BackupData(
     val rules: List<RuleEntity> = emptyList(),
     val goals: List<GoalEntity> = emptyList(),
     val mapAreas: List<MapAreaEntity> = emptyList(),
+    val foods: List<FoodEntity> = emptyList(),
+    val foodFavourites: List<FoodFavouriteEntity> = emptyList(),
+    val savedMeals: List<SavedMealEntity> = emptyList(),
     /** Every setting of the app: file name, then key, then value. See [SettingsBackup]. */
     val settings: Map<String, Map<String, Any>> = emptyMap(),
 ) {
@@ -55,7 +58,7 @@ data class BackupData(
             moneyItems.isEmpty() && moneyEntries.isEmpty() && usageSessions.isEmpty() && calls.isEmpty() &&
             chargeSessions.isEmpty() && stepDays.isEmpty() && sleepNights.isEmpty() && places.isEmpty() && placeVisits.isEmpty() &&
             trips.isEmpty() && tripPoints.isEmpty() && rawFixes.isEmpty() && timelineEdits.isEmpty() && usageCombos.isEmpty() && usageStates.isEmpty() && focusSessions.isEmpty() &&
-            tripEdits.isEmpty() && pointNotes.isEmpty() && trackingProfiles.isEmpty() && mapStyles.isEmpty() && rules.isEmpty() && goals.isEmpty() && mapAreas.isEmpty() && settings.isEmpty()
+            tripEdits.isEmpty() && pointNotes.isEmpty() && trackingProfiles.isEmpty() && mapStyles.isEmpty() && rules.isEmpty() && goals.isEmpty() && foods.isEmpty() && foodFavourites.isEmpty() && savedMeals.isEmpty() && mapAreas.isEmpty() && settings.isEmpty()
 }
 
 /**
@@ -63,12 +66,12 @@ data class BackupData(
  *
  * `version` lets later steps add more data without breaking old backups.
  * Version 1 held only Timeline entries; version 2 adds habits, to-dos, notes
- * and the record of what was imported; version 3 adds meals, food goals and water; version 4 adds your own activities and their goals; version 5 adds money (categories, saved items and entries); version 6 adds phone usage (sessions are stored compactly as [app, start, end]); version 7 adds phone calls (each stored as [number, name, type, start, seconds]); version 8 adds charging sessions (each stored as [start, end, startLevel, endLevel, plug, source, samples, currentSamples, sumMa, sumMv, ongoing]); version 9 adds steps (each day stored as [date, steps, source]) and sleep (each night stored as [date, start, end, source]); version 10 adds places (the ones you named) and place visits (each stored as [id, place, start, end, lat, lng, source, ongoing, ignored]); version 11 adds trips (each stored as [id, start, end, from, to, distance, medianKmh, topKmh, activity, mode, modeSource]) and the position readings of each trip (each stored as [trip, time, lat, lng, accuracy]); version 12 adds every position reading, stored compactly one day at a time (see rawFixesJson); version 13 adds the speed the phone measured to each reading; version 14 adds how sure the app is of each visit (a tenth value in each visit list); version 15 adds what you changed on the Timeline (each stored as [kind, id, start, end, category, hidden, changedAt, label]); version 16 adds the app combinations you named (each stored as an object with id, name, pkgs, activityId and updatedMs); version 17 adds the stretches when the phone was off or its screen stayed off (each stored as [kind, start, end]); version 18 adds the step counter to each trip reading (a sixth value, -1 when not known); version 19 adds an icon to each activity and each app (an "icon" text, left out when there is none); version 21 adds the place categories (each stored as an object with id, name, color, icon, sortOrder and archived); version 22 adds "deduct it from" to money entries and saved items ("source" 0 mine, 1 someone else, 2 not sure, and "paidBy"; left out when it is mine) and an icon to money categories; version 23 adds "deletedAt" and "clearedAt" to habits and "deletedAt" to notes (each left out when 0); version 24 adds the check times of a habit day ("marks"); version 25 adds the ticked steps of a checklist day ("steps"); version 26 adds the focus sessions (each an object with id, habitId, targetMinutes, seconds, completed, startedAtMs, counted and label); version 27 adds the Places and trips remake: more values on each position reading (direction, altitude, battery, steps, source, profile; see rawFixesJson), pause-zone settings on places (left out when off), the edits of trips ("tripEdits"), notes on readings ("pointNotes") and tracking profiles ("trackingProfiles"). A file from a newer version of the app
+ * and the record of what was imported; version 3 adds meals, food goals and water; version 4 adds your own activities and their goals; version 5 adds money (categories, saved items and entries); version 6 adds phone usage (sessions are stored compactly as [app, start, end]); version 7 adds phone calls (each stored as [number, name, type, start, seconds]); version 8 adds charging sessions (each stored as [start, end, startLevel, endLevel, plug, source, samples, currentSamples, sumMa, sumMv, ongoing]); version 9 adds steps (each day stored as [date, steps, source]) and sleep (each night stored as [date, start, end, source]); version 10 adds places (the ones you named) and place visits (each stored as [id, place, start, end, lat, lng, source, ongoing, ignored]); version 11 adds trips (each stored as [id, start, end, from, to, distance, medianKmh, topKmh, activity, mode, modeSource]) and the position readings of each trip (each stored as [trip, time, lat, lng, accuracy]); version 12 adds every position reading, stored compactly one day at a time (see rawFixesJson); version 13 adds the speed the phone measured to each reading; version 14 adds how sure the app is of each visit (a tenth value in each visit list); version 15 adds what you changed on the Timeline (each stored as [kind, id, start, end, category, hidden, changedAt, label]); version 16 adds the app combinations you named (each stored as an object with id, name, pkgs, activityId and updatedMs); version 17 adds the stretches when the phone was off or its screen stayed off (each stored as [kind, start, end]); version 18 adds the step counter to each trip reading (a sixth value, -1 when not known); version 19 adds an icon to each activity and each app (an "icon" text, left out when there is none); version 21 adds the place categories (each stored as an object with id, name, color, icon, sortOrder and archived); version 22 adds "deduct it from" to money entries and saved items ("source" 0 mine, 1 someone else, 2 not sure, and "paidBy"; left out when it is mine) and an icon to money categories; version 23 adds "deletedAt" and "clearedAt" to habits and "deletedAt" to notes (each left out when 0); version 24 adds the check times of a habit day ("marks"); version 25 adds the ticked steps of a checklist day ("steps"); version 26 adds the focus sessions (each an object with id, habitId, targetMinutes, seconds, completed, startedAtMs, counted and label); version 27 adds the Places and trips remake: more values on each position reading (direction, altitude, battery, steps, source, profile; see rawFixesJson), pause-zone settings on places (left out when off), the edits of trips ("tripEdits"), notes on readings ("pointNotes") and tracking profiles ("trackingProfiles"). version 34 adds the food rebuild: your own foods ("foods"), starred foods ("foodFavourites"), saved meals ("savedMeals") and, on each meal, where it came from and its extra numbers (foodId, fiber100, sugar100, sodium100, sat100, mono100, poly100, animal100, amino; each left out when empty). A file from a newer version of the app
  * is refused rather than half-read.
  */
 object BackupCodec {
     const val APP_NAME = "life-tracker"
-    const val FORMAT_VERSION = 33
+    const val FORMAT_VERSION = 34
 
     fun encode(data: BackupData): String =
         JSONObject()
@@ -113,6 +116,9 @@ object BackupCodec {
             .put("rules", array(data.rules, ::ruleJson))
             .put("goals", array(data.goals, ::placeGoalJson))
             .put("mapAreas", array(data.mapAreas, ::mapAreaJson))
+            .put("foods", array(data.foods, ::foodJson))
+            .put("foodFavourites", array(data.foodFavourites, ::foodFavouriteJson))
+            .put("savedMeals", array(data.savedMeals, ::savedMealJson))
             .put("settings", SettingsCodec.toJson(data.settings))
             .toString(2)
 
@@ -166,6 +172,9 @@ object BackupCodec {
                 rules = list(root, "rules", required = false, ::rule),
                 goals = list(root, "goals", required = false, ::placeGoal),
                 mapAreas = list(root, "mapAreas", required = false, ::mapArea),
+                foods = list(root, "foods", required = false, ::food),
+                foodFavourites = list(root, "foodFavourites", required = false, ::foodFavourite),
+                savedMeals = list(root, "savedMeals", required = false, ::savedMeal),
                 settings = SettingsCodec.fromJson(root.optJSONObject("settings")),
             )
         } catch (e: JSONException) {
@@ -316,10 +325,23 @@ object BackupCodec {
         entryId = o.getLong("entryId"),
     )
 
-    private fun mealJson(m: MealEntity) = JSONObject()
-        .put("id", m.id).put("date", m.date).put("minuteOfDay", m.minuteOfDay).put("mealType", m.mealType)
-        .put("name", m.name).put("grams", m.grams).put("kcal100", m.kcal100).put("carbs100", m.carbs100)
-        .put("fat100", m.fat100).put("protein100", m.protein100).put("source", m.source).put("raw", m.raw)
+    private fun mealJson(m: MealEntity): JSONObject {
+        val o = JSONObject()
+            .put("id", m.id).put("date", m.date).put("minuteOfDay", m.minuteOfDay).put("mealType", m.mealType)
+            .put("name", m.name).put("grams", m.grams).put("kcal100", m.kcal100).put("carbs100", m.carbs100)
+            .put("fat100", m.fat100).put("protein100", m.protein100).put("source", m.source).put("raw", m.raw)
+        // Version 34: where the meal came from and its extra numbers; left out when empty.
+        if (m.foodId.isNotEmpty()) o.put("foodId", m.foodId)
+        if (m.fiber100 != 0.0) o.put("fiber100", m.fiber100)
+        if (m.sugar100 != 0.0) o.put("sugar100", m.sugar100)
+        if (m.sodium100 != 0.0) o.put("sodium100", m.sodium100)
+        if (m.sat100 != 0.0) o.put("sat100", m.sat100)
+        if (m.mono100 != 0.0) o.put("mono100", m.mono100)
+        if (m.poly100 != 0.0) o.put("poly100", m.poly100)
+        if (m.animal100 != 0.0) o.put("animal100", m.animal100)
+        if (m.amino.isNotEmpty()) o.put("amino", m.amino)
+        return o
+    }
 
     private fun meal(o: JSONObject) = MealEntity(
         id = o.getString("id"),
@@ -334,6 +356,60 @@ object BackupCodec {
         protein100 = o.getDouble("protein100"),
         source = o.getString("source"),
         raw = o.getString("raw"),
+        foodId = o.optString("foodId", ""),
+        fiber100 = o.optDouble("fiber100", 0.0),
+        sugar100 = o.optDouble("sugar100", 0.0),
+        sodium100 = o.optDouble("sodium100", 0.0),
+        sat100 = o.optDouble("sat100", 0.0),
+        mono100 = o.optDouble("mono100", 0.0),
+        poly100 = o.optDouble("poly100", 0.0),
+        animal100 = o.optDouble("animal100", 0.0),
+        amino = o.optString("amino", ""),
+    )
+
+    private fun foodJson(f: FoodEntity): JSONObject {
+        val o = JSONObject().put("id", f.id).put("name", f.name).put("kcal100", f.kcal100).put("protein100", f.protein100)
+            .put("carbs100", f.carbs100).put("fat100", f.fat100)
+        fun opt(key: String, v: Double) { if (v != 0.0) o.put(key, v) }
+        opt("fiber100", f.fiber100); opt("sugar100", f.sugar100); opt("sodium100", f.sodium100); opt("sat100", f.sat100)
+        opt("mono100", f.mono100); opt("poly100", f.poly100); opt("animal100", f.animal100)
+        if (f.amino.isNotEmpty()) o.put("amino", f.amino)
+        if (f.liquid) o.put("liquid", true)
+        if (f.portionKind.isNotEmpty()) o.put("portionKind", f.portionKind)
+        opt("portionGrams", f.portionGrams)
+        if (f.category.isNotEmpty()) o.put("category", f.category)
+        opt("cookedYield", f.cookedYield)
+        if (f.createdMs != 0L) o.put("createdMs", f.createdMs)
+        if (f.deletedMs != 0L) o.put("deletedMs", f.deletedMs)
+        return o
+    }
+
+    private fun food(o: JSONObject) = FoodEntity(
+        id = o.getString("id"), name = o.getString("name"), kcal100 = o.getDouble("kcal100"),
+        protein100 = o.getDouble("protein100"), carbs100 = o.getDouble("carbs100"), fat100 = o.getDouble("fat100"),
+        fiber100 = o.optDouble("fiber100", 0.0), sugar100 = o.optDouble("sugar100", 0.0),
+        sodium100 = o.optDouble("sodium100", 0.0), sat100 = o.optDouble("sat100", 0.0), mono100 = o.optDouble("mono100", 0.0),
+        poly100 = o.optDouble("poly100", 0.0), animal100 = o.optDouble("animal100", 0.0), amino = o.optString("amino", ""),
+        liquid = o.optBoolean("liquid", false), portionKind = o.optString("portionKind", ""),
+        portionGrams = o.optDouble("portionGrams", 0.0), category = o.optString("category", ""),
+        cookedYield = o.optDouble("cookedYield", 0.0), createdMs = o.optLong("createdMs", 0L), deletedMs = o.optLong("deletedMs", 0L),
+    )
+
+    private fun foodFavouriteJson(f: FoodFavouriteEntity) = JSONObject().put("foodId", f.foodId).put("addedMs", f.addedMs)
+
+    private fun foodFavourite(o: JSONObject) = FoodFavouriteEntity(foodId = o.getString("foodId"), addedMs = o.optLong("addedMs", 0L))
+
+    private fun savedMealJson(m: SavedMealEntity): JSONObject {
+        val o = JSONObject().put("id", m.id).put("name", m.name).put("items", m.items)
+        if (m.color != 0L) o.put("color", m.color)
+        if (m.createdMs != 0L) o.put("createdMs", m.createdMs)
+        if (m.deletedMs != 0L) o.put("deletedMs", m.deletedMs)
+        return o
+    }
+
+    private fun savedMeal(o: JSONObject) = SavedMealEntity(
+        id = o.getString("id"), name = o.getString("name"), items = o.getString("items"), color = o.optLong("color", 0L),
+        createdMs = o.optLong("createdMs", 0L), deletedMs = o.optLong("deletedMs", 0L),
     )
 
     private fun goalJson(g: FoodGoalEntity) = JSONObject()

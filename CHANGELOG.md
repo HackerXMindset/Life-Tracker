@@ -2,6 +2,15 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🍽️ Food rebuild, part 1: the food list (N1)
+
+### ✨ New
+
+- **561 foods with photos and 27 ready dishes** come with the app, with calories, protein, carbs, fat, fibre, sugar, sodium, the kinds of fat and the essential amino acids per 100 g, and a portion size for each (one banana is 120 g). The list is based on GymMane by InlitX (a line in Settings says so).
+- **Your own foods, stars and saved meals** now have places to live (database 33), and every meal you log remembers which food it came from and its extra numbers.
+- Backups carry all of it (backup format 34). Older backups still load.
+- Nothing on the Food tab looks different yet; the new Food screen comes next.
+
 ## 💰 Money: edit everything, Deduct it from, paper look (R6b, R6c)
 
 ### ✨ New
