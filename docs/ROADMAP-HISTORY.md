@@ -464,3 +464,24 @@ You asked for Places and Trips to work like Colota, with all of its features, **
 - (d) Deleting an offline area removes only those downloaded map tiles (they can be downloaded again). It is the one thing in this plan that really deletes, because tiles are a copy of public maps, not your data. Say so if you want even that to be "hidden".
 - (e) Colota's "calendar with activity dots" is built as dots for days with movement only (no walking / driving colours), because your trips already carry their own colours on the Timeline.
 - (f) Extra battery use of GPS all day is on you to judge; the app shows the last day's number of readings and the profile in force so you can compare.
+
+---
+
+### Places and trips round 3: fixes and polish (F, G, H), 1 to 5 November 2026
+
+Asked for as short lists. Each part was its own pull request; all are merged. Details of every change are in [CHANGELOG.md](../CHANGELOG.md).
+
+| Part | PR | Database | What was built |
+| --- | --- | --- | --- |
+| F1 Stays and trips | #199 | 31 | A walk inside a named place stays one stay ("Walked about 15 min"); a trip starts only when you leave the place's circle; "Guess how I travelled" off to start; delete a trip with Undo and a Deleted list; one button collapses every place and trip |
+| F2 Places list and drawn areas | #200 | 32 | Add a place at the top; search; closest first; 10 a page; delete a place with Undo and a Deleted list; draw the area of a place as a shape and use it for stays |
+| G1, G2 Settings polish | #201 | | Permissions sorted (missing first, what each is for, the exact Android page); Settings and other screens keep their place when you go back; the charging banner off to start |
+| G3 Rules and goals | #202 | | One page with a Rules, Goals switch; new rules start from plain-word templates and are three steps (When, Only if, Then) |
+| G4 One backup | #203 | backup 33 | One file for all data and every setting (found on the phone at run time, so later settings are kept); restore shows what is inside; Backup, Export, Import tabs; GPS export in three steps incl. Google Timeline; Google Timeline import |
+| F3 Maps | #204 | | A size limit (250 MB to 5 GB or none), automatic deleting of the least used maps, no map for a place not visited for 90 days, pause and retry, a better area picker |
+| H1 One place, and joining stays | #205 | | Every sideways-scrolling row of choices wraps (More, Show less); drag a stay onto the next to join them (saved as Timeline edits, reversible, listed on the Changes page) |
+| H2 Apps in the pie | #206 | | Apps in the pie in shades of their category's colour; a setting and a quick button |
+| Fix | #209 | | The More button no longer reads the hidden count (it crashed while the row was being built) |
+
+Known limits: a stay join is tied to the stay's id, so it does not carry over if the place engine ever rebuilds that stay with a new id; inside a phone period the app's share is by time on screen, because the phone does not record when each app was open.
+
