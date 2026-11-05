@@ -92,6 +92,9 @@ interface PlaceDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertPlaces(places: List<PlaceEntity>)
 
+    @Query("SELECT * FROM place_visits WHERE id = :id")
+    suspend fun visitById(id: String): PlaceVisitEntity?
+
     /** Visits that overlap [from, to), newest first. */
     @Query("SELECT * FROM place_visits WHERE (endMs >= :from OR ongoing = 1) AND startMs < :to ORDER BY startMs DESC")
     fun visitsBetween(from: Long, to: Long): Flow<List<PlaceVisitEntity>>

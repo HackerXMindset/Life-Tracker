@@ -10,6 +10,7 @@ import com.lifetracker.app.data.PlacesSettings
 import com.lifetracker.app.data.TimelineEditEntity
 import com.lifetracker.app.data.TimelineEdits
 import com.lifetracker.app.data.TripAdjust
+import com.lifetracker.app.data.StayJoin
 import com.lifetracker.app.data.TripEditing
 import com.lifetracker.app.data.TripEditor
 import com.lifetracker.app.data.TripEntity
@@ -96,7 +97,7 @@ class LocationViewModel(private val app: Application) : AndroidViewModel(app) {
                     summary = LocationDays.summary(dayTrips, shownVisits, from, to, now),
                     rows = PlaceTrail.build(shownVisits, dayTrips, places.associate { it.id to it.name }, now),
                     hiddenTrips = e.values.filter {
-                        it.kind == TimelineEdits.TRIP && it.hidden && !TripEditing.isJoinedAway(it) && it.startMs in from until to
+                        it.kind == TimelineEdits.TRIP && it.hidden && !TripEditing.isJoinedAway(it) && !StayJoin.isJoined(it) && it.startMs in from until to
                     }.sortedBy { it.startMs },
                 )
             }

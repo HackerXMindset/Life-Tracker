@@ -45,6 +45,9 @@ class EditTarget(
     /** An extra button for something only this kind of item has, such as the app's category on every day. */
     val extraLabel: String? = null,
     val onExtra: (() -> Unit)? = null,
+    /** A second extra button (a stay: join it with the stay on the other side). */
+    val extra2Label: String? = null,
+    val onExtra2: (() -> Unit)? = null,
     /** A button that opens the full screen for this kind of item. */
     val openLabel: String? = null,
     val onOpen: (() -> Unit)? = null,
@@ -132,6 +135,9 @@ fun EditItemWindow(
         )
         if (target.extraLabel != null && target.onExtra != null) {
             PaperButton(target.extraLabel, { target.onExtra.invoke(); onDismiss() }, style = PaperButtonStyle.Ghost, small = true)
+        }
+        if (target.extra2Label != null && target.onExtra2 != null) {
+            PaperButton(target.extra2Label, { target.onExtra2.invoke(); onDismiss() }, style = PaperButtonStyle.Ghost, small = true)
         }
         if (target.openLabel != null && target.onOpen != null) {
             PaperButton(target.openLabel, { target.onOpen.invoke(); onDismiss() }, style = PaperButtonStyle.Ghost, small = true)
