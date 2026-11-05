@@ -58,7 +58,7 @@ import kotlin.math.sqrt
 fun DayPieView(what: List<StripSeg>, where: List<StripSeg>, trips: List<TripEntity>) {
     val paper = LocalPaper.current
     // Trips all go into one "Travel" slice on the places ring.
-    val taskPieces = what.map { DayPieMath.Piece(it.label, it.color.toArgb(), it.startMs, it.endMs) }
+    val taskPieces = what.map { DayPieMath.Piece(it.label, it.color.toArgb(), it.startMs, it.endMs, it.family) }
     val placePieces = where.map { DayPieMath.Piece(if (it.hatch) "Travel" else it.label, it.color.toArgb(), it.startMs, it.endMs) }
     val tasks = DayPieMath.slices(taskPieces)
     val places = DayPieMath.slices(placePieces)

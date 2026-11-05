@@ -46,6 +46,7 @@ import com.lifetracker.app.ui.theme.PaperButton
 import com.lifetracker.app.ui.theme.PaperButtonStyle
 import com.lifetracker.app.ui.theme.PaperDialog
 import com.lifetracker.app.ui.theme.PaperFab
+import com.lifetracker.app.ui.theme.PaperPill
 import com.lifetracker.app.ui.theme.PaperSegmented
 import com.lifetracker.app.ui.theme.Wobble
 import androidx.compose.ui.Alignment
@@ -77,6 +78,7 @@ import com.lifetracker.app.data.ChargeStats
 import com.lifetracker.app.data.DayLayout
 import com.lifetracker.app.data.DaySegments
 import com.lifetracker.app.data.HealthSettings
+import com.lifetracker.app.data.PieApps
 import com.lifetracker.app.data.PlaceRules
 import com.lifetracker.app.data.PlaceVisitEntity
 import com.lifetracker.app.data.StayConfidence
@@ -304,7 +306,23 @@ fun TimelineScreen(
         val t = types.byId(it.category)
         DaySegments.Seg(at(it.startMinute), at(it.endMinute!!), t.displayColor().toArgb(), t.name, true)
     }
-    val collectedSegs = buildList {
+    // One stretch for each time an app was really on screen, so the pie and the totals count real use, not the whole block.
+    val blockSegs = if (!usageAccess) emptyList() else blocksEff.flatMap {
+        val t = it.activityId.takeIf { id -> id.isNotEmpty() }?.let { id -> types.byId(id) }
+        val argb = t?.displayColor()?.toArgb() ?: 0xFF738078.toInt()
+        val label = t?.name ?: "Phone"
+        it.spans.ifEmpty { listOf(it.startMs to it.endMs) }.map { (from, to) -> DaySegments.Seg(from, to, argb, label, false) }
+    }
+    // The same stretches split between the apps of each period (the Pie can show them, in shades of the category's colour).
+    var appsInPie by remember { mutableStateOf(timelineSettings.appsInPie) }
+    val appStretches = if (!usageAccess || !appsInPie) emptyList() else blocksEff.flatMap {
+        val t = it.activityId.takeIf { id -> id.isNotEmpty() }?.let { id -> types.byId(id) }
+        val argb = t?.displayColor()?.toArgb() ?: 0xFF738078.toInt()
+        val family = t?.name ?: "Phone"
+        PieApps.split(it.spans.ifEmpty { listOf(it.startMs to it.endMs) }, it.apps.map { a -> a.label to a.activeMs })
+            .map { (app, from, to) -> PieApps.Stretch(family, argb, app, from, to) }
+    }
+    val collectedOther = buildList {
         sleepShown?.let {
             val t = typeOf(TimelineEdits.SLEEP, it.date)
             // The same cut as the Sleep row: no sleep over a journey you were awake on.
@@ -315,13 +333,6 @@ fun TimelineScreen(
             val t = typeOf(TimelineEdits.MEAL, it.id)
             add(DaySegments.Seg(at(it.minuteOfDay), at(it.minuteOfDay) + 15 * 60_000L, t?.displayColor()?.toArgb() ?: foodArgb, t?.name ?: "Food", false))
         }
-        if (usageAccess) blocksEff.forEach {
-            val t = it.activityId.takeIf { id -> id.isNotEmpty() }?.let { id -> types.byId(id) }
-            // One stretch for each time the app was really on screen, so the pie and the totals count real use, not the whole block.
-            val argb = t?.displayColor()?.toArgb() ?: 0xFF738078.toInt()
-            val label = t?.name ?: "Phone"
-            it.spans.ifEmpty { listOf(it.startMs to it.endMs) }.forEach { (from, to) -> add(DaySegments.Seg(from, to, argb, label, false)) }
-        }
         if (showTrips) tripsEff.forEach {
             val t = typeOf(TimelineEdits.TRIP, it.id)
             add(DaySegments.Seg(it.startMs, it.endMs, t?.displayColor()?.toArgb() ?: 0xFF8E94E8.toInt(), t?.name ?: "Travel", false))
@@ -331,7 +342,13 @@ fun TimelineScreen(
             add(DaySegments.Seg(it.startMs, it.startMs + it.durationSec * 1000L, t?.displayColor()?.toArgb() ?: callArgb, t?.name ?: "Calls", false))
         }
     }
+    val collectedSegs = collectedOther + blockSegs
     val flatAll = DaySegments.flatten(loggedSegs + collectedSegs, dayStartMs, dayEndMs)
+    // For the pie: the apps in place of their category's stretches.
+    val flatPie = if (appStretches.isEmpty()) flatAll else DaySegments.flatten(
+        loggedSegs + collectedOther + PieApps.shaded(appStretches).map { (s, argb) -> DaySegments.Seg(s.fromMs, s.toMs, argb, s.app, false, s.family) },
+        dayStartMs, dayEndMs,
+    )
     val nowMarker = if (nowMs in dayStartMs until dayEndMs) nowMs else null
     var pie by rememberSaveable { mutableStateOf(false) }
     var collapsed by remember { mutableStateOf(timelineSettings.collapseAll) }
@@ -358,6 +375,7 @@ fun TimelineScreen(
         }
     }
     val whatSegs = flatAll.map { it.toStrip() }
+    val pieSegs = flatPie.map { it.toStrip() }
     fun dayStartOf(ms: Long) = Instant.ofEpochMilli(ms).atZone(zone).toLocalDate().atStartOfDay(zone).toInstant().toEpochMilli()
     fun target(
         kind: String, ref: String, title: String, startMs: Long, endMs: Long?,
@@ -482,7 +500,15 @@ fun TimelineScreen(
                 )
             }
             if (pie) {
-                item(key = "pie") { DayPieView(whatSegs, whereSegs, if (showTrips) tripsEff else emptyList()) }
+                if (usageAccess) {
+                    item(key = "pie-apps") {
+                        PaperPill(
+                            if (appsInPie) "Apps shown in the pie" else "Show apps in the pie", appsInPie,
+                            { appsInPie = !appsInPie; timelineSettings.appsInPie = appsInPie },
+                        )
+                    }
+                }
+                item(key = "pie") { DayPieView(pieSegs, whereSegs, if (showTrips) tripsEff else emptyList()) }
             } else {
                 item(key = "activity-pills") { ActivityPills(DaySegments.byLabel(flatAll)) }
                 if (rows.isNotEmpty()) item(key = "in-order-heading") { PaperSection("In order", "tap a row to open it") }

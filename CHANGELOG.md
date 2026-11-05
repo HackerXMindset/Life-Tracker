@@ -2,6 +2,14 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🥧 Apps in the pie (H2)
+
+### ✨ New
+
+- **The Pie can show the apps too**, not just the category. Each app you used becomes its own slice, in a shade of its category's colour: the app you used most keeps the category's colour and the others get lighter. The apps of a category sit side by side.
+- **A switch for it**: "Show apps in the pie" in Settings, Timeline, and a quick button above the pie on the Timeline. It starts off. The Timeline bar and the totals are unchanged.
+- The phone does not say when inside a period each app was open, so an app's share of a period is its time on screen; the totals per app are exact.
+
 ## 🧱 Choices in one place, and joining two stays (H1)
 
 ### ✨ New

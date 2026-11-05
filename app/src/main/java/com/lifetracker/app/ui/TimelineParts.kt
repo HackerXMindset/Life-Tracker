@@ -37,9 +37,11 @@ data class StripSeg(
     val label: String,
     val hatch: Boolean = false,
     val unknown: Boolean = false,
+    /** What it belongs to (an app belongs to its category); the label when it stands alone. */
+    val family: String = label,
 )
 
-fun DaySegments.Seg.toStrip(): StripSeg = StripSeg(startMs, endMs, Color(argb), label)
+fun DaySegments.Seg.toStrip(): StripSeg = StripSeg(startMs, endMs, Color(argb), label, family = family)
 
 /** A heading with the orange swipe on the left and a small quiet hint on the right . */
 @Composable
