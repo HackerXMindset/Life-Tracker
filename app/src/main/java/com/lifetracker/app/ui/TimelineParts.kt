@@ -75,10 +75,7 @@ fun PaperSection(title: String, hint: String? = null, modifier: Modifier = Modif
 fun ActivityPills(totals: List<Triple<String, Int, Long>>) {
     if (totals.isEmpty()) return
     val p = LocalPaper.current
-    Row(
-        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
+    ChipFlow() {
         totals.forEach { (label, argb, ms) ->
             Row(
                 modifier = Modifier

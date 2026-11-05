@@ -509,9 +509,9 @@ private fun ModeSwitch(mode: HabitMode, onChange: (HabitMode) -> Unit) {
 
 @Composable
 private fun CategoryChips(chips: List<String>, selected: String, onSelect: (String) -> Unit) {
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        item { PaperPill("All", selected.isEmpty(), { onSelect("") }) }
-        items(chips) { name -> PaperPill(name, name == selected, { onSelect(name) }) }
+    ChipFlow {
+        PaperPill("All", selected.isEmpty(), { onSelect("") })
+        chips.forEach { name -> PaperPill(name, name == selected, { onSelect(name) }) }
     }
 }
 

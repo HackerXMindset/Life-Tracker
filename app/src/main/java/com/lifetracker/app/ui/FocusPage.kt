@@ -130,7 +130,7 @@ private fun FocusSetup(habits: List<HabitEntity>, startHabitId: String, onBack: 
                 )
             }
             MonoLabel("Habit")
-            Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            ChipFlow() {
                 PaperPill("No habit", habitId.isEmpty(), { pick(null) })
                 habits.forEach { h -> PaperPill(h.name, habitId == h.id, { pick(h) }) }
             }
@@ -149,7 +149,7 @@ private fun FocusSetup(habits: List<HabitEntity>, startHabitId: String, onBack: 
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 )
-                Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                ChipFlow() {
                     listOf(15, 25, 45, 60, 90).forEach { m -> PaperPill("$m min", minutes == m.toString(), { minutes = m.toString(); error = null }) }
                 }
             } else {
@@ -179,7 +179,7 @@ private fun FocusSetup(habits: List<HabitEntity>, startHabitId: String, onBack: 
                 singleLine = true,
             )
             if (labels.isNotEmpty()) {
-                Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                ChipFlow() {
                     labels.forEach { l -> PaperPill(l, label == l, { label = l }) }
                 }
             }

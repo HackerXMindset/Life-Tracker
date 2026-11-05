@@ -544,14 +544,11 @@ internal fun PlaceDialog(
                 )
                 if (suggestions.size > 1) {
                     Text("Could be", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ChipFlow() {
                         suggestions.forEach { n -> FilterChip(selected = name == n, onClick = { name = n }, label = { Text(n) }) }
                     }
                 }
-                Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
+                ChipFlow() {
                     categories.filter { !it.archived || it.id == kind }.forEach { k ->
                         FilterChip(selected = kind == k.id, onClick = { kind = k.id }, label = { Text(k.name) })
                     }

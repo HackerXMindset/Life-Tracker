@@ -117,10 +117,7 @@ private fun CategoryPicker(
     onNew: () -> Unit,
 ) {
     MonoLabel("Category")
-    Row(
-        modifier = Modifier.horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
+    ChipFlow() {
         categories.filter { it.kind == kind && !it.archived }.forEach { c ->
             FilterChip(
                 selected = c.id == selectedId,

@@ -383,7 +383,7 @@ fun ReplayScreen(from: LocalDate, to: LocalDate, title: String, onBack: () -> Un
                     fontSize = 11.sp, color = paper.ink2, maxLines = 1,
                 )
                 ReplayStrip(d, clock, quiet) { playing = false; jump(it) }
-                Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                ChipFlow() {
                     MiniButton("\u2039 Card", false) { ReplayRules.stepTo(d.events, clock, false)?.let { playing = false; jump(it) } }
                     MiniButton(if (playing) "Pause" else "Play", true) { playing = !playing }
                     MiniButton("Card \u203a", false) { ReplayRules.stepTo(d.events, clock, true)?.let { playing = false; jump(it) } }
@@ -395,7 +395,7 @@ fun ReplayScreen(from: LocalDate, to: LocalDate, title: String, onBack: () -> Un
                     MiniButton("Whole day", false) { follow = false; fit++ }
                     MiniButton("Make a GIF", false) { gifResult = ""; showGif = true }
                 }
-                Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                ChipFlow() {
                     ReplayRules.SPEEDS.forEach { sp -> MiniButton(ReplayRules.speedLabel(sp), speed == sp) { speed = sp; settings.speed = sp } }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {

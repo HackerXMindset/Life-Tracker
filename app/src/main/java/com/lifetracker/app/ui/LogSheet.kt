@@ -133,10 +133,7 @@ fun LogSheet(
     // The fields are the same for adding (a bottom sheet) and for changing (a full-screen window).
     val fields: @Composable ColumnScope.() -> Unit = {
         Text("What did you do?", fontSize = 12.sp, color = paper.ink2)
-        Row(
-            modifier = Modifier.horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
+        ChipFlow(maxLines = 4) {
             choices.forEach { c ->
                 PaperPill(c.name, category?.id == c.id, { chosenId = c.id }, dot = c.displayColor())
             }

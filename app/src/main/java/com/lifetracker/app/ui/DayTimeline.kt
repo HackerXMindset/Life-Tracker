@@ -845,7 +845,7 @@ private fun TravelCard(t: DayLayout.Travel, a: DayActions) {
                             lineHeight = 15.sp,
                             color = paper.ink2,
                         )
-                        Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        ChipFlow() {
                             QUICK_MODES.forEach { (label, mode) ->
                                 PaperPill(label, false, {
                                     if (trip == null) a.onUnknownJourney(t, mode) else t.legs.ifEmpty { listOf(trip) }.forEach { leg -> a.onTripMode(leg, mode) }

@@ -179,7 +179,7 @@ private fun ReminderDialog(start: Reminder, followsHabit: Boolean, onDismiss: ()
                 }
             }
             if (hourly || (!byInterval && !followsHabit)) {
-                Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                ChipFlow() {
                     HabitEditor.DAY_NAMES.forEachIndexed { i, label ->
                         val day = i + 1
                         PaperPill(label, day in days, { days = if (day in days) days - day else days + day; error = null })

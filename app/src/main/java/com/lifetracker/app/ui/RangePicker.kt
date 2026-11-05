@@ -52,10 +52,7 @@ fun RangePicker(choice: RangeChoice, onChange: (RangeChoice) -> Unit) {
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(
-            modifier = Modifier.horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
+        ChipFlow() {
             RangePresets.list.forEach { p ->
                 FilterChip(
                     selected = choice.preset == p.id,

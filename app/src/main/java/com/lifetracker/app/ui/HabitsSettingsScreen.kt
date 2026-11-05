@@ -155,13 +155,13 @@ fun HabitsSettingsScreen(onBack: () -> Unit, vm: HabitsViewModel = androidx.life
         item {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 MonoLabel("Long break (every 4th break)")
-                Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                ChipFlow() {
                     listOf(0 to "None", 10 to "10 min", 15 to "15 min", 20 to "20 min", 30 to "30 min").forEach { (m, label) ->
                         PaperPill(label, longBreak == m, { longBreak = m; focus.longBreakMinutes = m })
                     }
                 }
                 MonoLabel("Minutes for a session with no habit")
-                Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                ChipFlow() {
                     listOf(15, 25, 45, 60, 90).forEach { m ->
                         PaperPill("$m min", focusMinutes == m, { focusMinutes = m; focus.minutes = m })
                     }

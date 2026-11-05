@@ -119,10 +119,7 @@ fun MoneyScreen(vm: MoneyViewModel = viewModel()) {
             if (often.isNotEmpty()) {
                 item { MonoLabel("Quick log") }
                 item {
-                    Row(
-                        modifier = Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
+                    ChipFlow() {
                         often.forEach { item ->
                             val category = categories.named(item.categoryId)
                             Surface(
@@ -503,10 +500,7 @@ private fun CategoryChips(
     onEdit: (MoneyCategoryEntity) -> Unit,
     onNew: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier.horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
+    ChipFlow() {
         categories.filter { it.kind == kind }.forEach { c ->
             FilterChip(
                 selected = false,
