@@ -46,6 +46,7 @@ import com.lifetracker.app.ui.theme.PaperButton
 import com.lifetracker.app.ui.theme.PaperButtonStyle
 import com.lifetracker.app.ui.theme.PaperDialog
 import com.lifetracker.app.ui.theme.PaperFab
+import com.lifetracker.app.ui.theme.PaperPill
 import com.lifetracker.app.ui.theme.PaperSegmented
 import com.lifetracker.app.ui.theme.Wobble
 import androidx.compose.ui.Alignment
