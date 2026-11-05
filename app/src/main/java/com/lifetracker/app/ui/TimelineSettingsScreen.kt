@@ -30,6 +30,7 @@ fun TimelineSettingsScreen(onBack: () -> Unit) {
     var group by remember { mutableStateOf(settings.groupRepeatedOpens) }
     var ask by remember { mutableStateOf(settings.askHowTravelled) }
     var keep by remember { mutableStateOf(settings.rememberCategoryChanges) }
+    var appsInPie by remember { mutableStateOf(settings.appsInPie) }
     val context = LocalContext.current
     var guess by remember { mutableStateOf(TripGuess.enabled) }
     BackHandler(onBack = onBack)
@@ -51,6 +52,10 @@ fun TimelineSettingsScreen(onBack: () -> Unit) {
                 ToggleRow(
                     "Group repeated opens", group, { group = it; settings.groupRepeatedOpens = it },
                     hint = "Apps used again within 5 minutes make one row",
+                )
+                ToggleRow(
+                    "Show apps in the pie", appsInPie, { appsInPie = it; settings.appsInPie = it },
+                    hint = "The Pie splits each category into the apps you used, in shades of the category's colour",
                 )
             }
         }

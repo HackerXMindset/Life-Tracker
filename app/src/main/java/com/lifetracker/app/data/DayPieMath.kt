@@ -9,19 +9,23 @@ import kotlin.math.min
  */
 object DayPieMath {
     /** One stretch of time with a name and a colour: a task, or a stay at a place. */
-    class Piece(val label: String, val argb: Int, val startMs: Long, val endMs: Long) {
+    class Piece(val label: String, val argb: Int, val startMs: Long, val endMs: Long, val family: String = label) {
         val lengthMs: Long get() = endMs - startMs
     }
 
     /** All the time under one name. */
-    class Slice(val label: String, val argb: Int, val ms: Long)
+    class Slice(val label: String, val argb: Int, val ms: Long, val family: String = label)
 
     /** Time per name, longest first, with the colour of the first stretch of that name. */
     fun slices(pieces: List<Piece>): List<Slice> =
         pieces.filter { it.lengthMs > 0 }
             .groupBy { it.label }
-            .map { (label, list) -> Slice(label, list.first().argb, list.sumOf { it.lengthMs }) }
-            .sortedByDescending { it.ms }
+            .map { (label, list) -> Slice(label, list.first().argb, list.sumOf { it.lengthMs }, list.first().family) }
+            .let { all ->
+                // Slices of one family (the apps of a category) sit side by side, the biggest family first.
+                val familyMs = all.groupBy { it.family }.mapValues { (_, v) -> v.sumOf { it.ms } }
+                all.sortedWith(compareByDescending<Slice> { familyMs.getValue(it.family) }.thenBy { it.family }.thenByDescending { it.ms })
+            }
 
     fun totalMs(slices: List<Slice>): Long = slices.sumOf { it.ms }
 

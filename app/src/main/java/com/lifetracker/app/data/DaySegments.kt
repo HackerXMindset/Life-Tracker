@@ -15,13 +15,15 @@ object DaySegments {
         val argb: Int,
         val label: String,
         val logged: Boolean,
+        /** What it belongs to, for the pie: an app belongs to its category. Equal to the label when it stands alone. */
+        val family: String = label,
     ) {
         val lengthMs: Long get() = endMs - startMs
     }
 
     /** Cuts every stretch to [dayStartMs, dayEndMs) and removes overlaps: logged beats collected, then the later start wins. */
     fun flatten(segs: List<Seg>, dayStartMs: Long, dayEndMs: Long): List<Seg> {
-        val clipped = segs.map { Seg(max(it.startMs, dayStartMs), min(it.endMs, dayEndMs), it.argb, it.label, it.logged) }
+        val clipped = segs.map { Seg(max(it.startMs, dayStartMs), min(it.endMs, dayEndMs), it.argb, it.label, it.logged, it.family) }
             .filter { it.endMs > it.startMs }
         val cuts = clipped.flatMap { listOf(it.startMs, it.endMs) }.distinct().sorted()
         val out = ArrayList<Seg>()
@@ -32,10 +34,10 @@ object DaySegments {
                 .filter { it.startMs <= a && it.endMs >= b }
                 .minWithOrNull(compareBy<Seg>({ !it.logged }, { -it.startMs })) ?: continue
             val last = out.lastOrNull()
-            if (last != null && last.endMs == a && last.label == pick.label && last.argb == pick.argb && last.logged == pick.logged) {
-                out[out.size - 1] = Seg(last.startMs, b, last.argb, last.label, last.logged)
+            if (last != null && last.endMs == a && last.label == pick.label && last.argb == pick.argb && last.logged == pick.logged && last.family == pick.family) {
+                out[out.size - 1] = Seg(last.startMs, b, last.argb, last.label, last.logged, last.family)
             } else {
-                out += Seg(a, b, pick.argb, pick.label, pick.logged)
+                out += Seg(a, b, pick.argb, pick.label, pick.logged, pick.family)
             }
         }
         return out

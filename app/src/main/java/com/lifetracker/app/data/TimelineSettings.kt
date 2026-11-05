@@ -27,6 +27,11 @@ class TimelineSettings(context: Context) {
         get() = prefs.getBoolean("remember_category_changes", true)
         set(value) = prefs.edit { putBoolean("remember_category_changes", value) }
 
+    /** The Pie shows each app too, in a shade of its category's colour, not just the category. */
+    var appsInPie: Boolean
+        get() = prefs.getBoolean("apps_in_pie", false)
+        set(value) = prefs.edit { putBoolean("apps_in_pie", value) }
+
     /** Every place and trip row is drawn small: only its name and time, without what happened inside it. */
     var collapseAll: Boolean
         get() = prefs.getBoolean("collapse_all", false)
