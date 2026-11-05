@@ -35,12 +35,79 @@ data class MealEntity(
     val protein100: Double,
     val source: String,
     val raw: String,
+    /** The food it came from ("a:banana", "m:<id>", see [FoodRef]), or "" for one typed in once (and for meals imported before this). */
+    val foodId: String = "",
+    val fiber100: Double = 0.0,
+    val sugar100: Double = 0.0,
+    /** Sodium in milligrams per 100 g. */
+    val sodium100: Double = 0.0,
+    val sat100: Double = 0.0,
+    val mono100: Double = 0.0,
+    val poly100: Double = 0.0,
+    /** Protein per 100 g that comes from animals. */
+    val animal100: Double = 0.0,
+    /** The nine essential amino acids in g per 100 g, separated by commas, or "" when not known. */
+    val amino: String = "",
 ) {
     val kcal: Double get() = kcal100 * grams / 100
     val carbs: Double get() = carbs100 * grams / 100
     val fat: Double get() = fat100 * grams / 100
     val protein: Double get() = protein100 * grams / 100
+    val fiber: Double get() = fiber100 * grams / 100
+    val sugar: Double get() = sugar100 * grams / 100
+    val sodiumMg: Double get() = sodium100 * grams / 100
 }
+
+/**
+ * A food you made yourself (database version 33). The built-in foods are not stored here; see [FoodLibrary].
+ * [id] starts with "m:". [portionKind] is a [PortionKind.key] or "", [category] a [FoodCat.key] or "".
+ * Deleting a food only sets [deletedMs]; meals you already logged keep their own copy of the numbers.
+ */
+@Entity(tableName = "foods")
+data class FoodEntity(
+    @PrimaryKey val id: String,
+    val name: String,
+    val kcal100: Double,
+    val protein100: Double,
+    val carbs100: Double,
+    val fat100: Double,
+    val fiber100: Double = 0.0,
+    val sugar100: Double = 0.0,
+    val sodium100: Double = 0.0,
+    val sat100: Double = 0.0,
+    val mono100: Double = 0.0,
+    val poly100: Double = 0.0,
+    val animal100: Double = 0.0,
+    val amino: String = "",
+    val liquid: Boolean = false,
+    val portionKind: String = "",
+    val portionGrams: Double = 0.0,
+    val category: String = "",
+    val cookedYield: Double = 0.0,
+    val createdMs: Long = 0,
+    val deletedMs: Long = 0,
+)
+
+/** A food (built-in "a:..." or your own "m:...") you marked with a star. */
+@Entity(tableName = "food_favourites")
+data class FoodFavouriteEntity(
+    @PrimaryKey val foodId: String,
+    val addedMs: Long = 0,
+)
+
+/**
+ * A meal you saved to use again ("Saved meals"). [items] is a list of foods with their amounts, written by [SavedMealItems];
+ * [color] is a colour for its card, or 0.
+ */
+@Entity(tableName = "saved_meals")
+data class SavedMealEntity(
+    @PrimaryKey val id: String,
+    val name: String,
+    val items: String,
+    val color: Long = 0,
+    val createdMs: Long = 0,
+    val deletedMs: Long = 0,
+)
 
 /** The daily targets that applied on [date]. A day without its own row uses the latest earlier one. */
 @Entity(tableName = "food_goals")
@@ -105,6 +172,63 @@ interface FoodDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun setWater(water: WaterEntity)
+
+    @Query("SELECT * FROM foods WHERE deletedMs = 0 ORDER BY name COLLATE NOCASE")
+    fun observeFoods(): Flow<List<FoodEntity>>
+
+    @Query("SELECT * FROM foods")
+    suspend fun allFoods(): List<FoodEntity>
+
+    @Query("SELECT * FROM foods WHERE id = :id")
+    suspend fun food(id: String): FoodEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertFood(food: FoodEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertFoods(foods: List<FoodEntity>)
+
+    @Query("UPDATE foods SET deletedMs = :now WHERE id = :id")
+    suspend fun deleteFood(id: String, now: Long)
+
+    @Query("DELETE FROM foods")
+    suspend fun deleteAllFoods()
+
+    @Query("SELECT * FROM food_favourites ORDER BY addedMs DESC")
+    fun observeFavourites(): Flow<List<FoodFavouriteEntity>>
+
+    @Query("SELECT * FROM food_favourites")
+    suspend fun allFavourites(): List<FoodFavouriteEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun addFavourite(favourite: FoodFavouriteEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertFavourites(favourites: List<FoodFavouriteEntity>)
+
+    @Query("DELETE FROM food_favourites WHERE foodId = :foodId")
+    suspend fun removeFavourite(foodId: String)
+
+    @Query("DELETE FROM food_favourites")
+    suspend fun deleteAllFavourites()
+
+    @Query("SELECT * FROM saved_meals WHERE deletedMs = 0 ORDER BY name COLLATE NOCASE")
+    fun observeSavedMeals(): Flow<List<SavedMealEntity>>
+
+    @Query("SELECT * FROM saved_meals")
+    suspend fun allSavedMeals(): List<SavedMealEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertSavedMeal(meal: SavedMealEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertSavedMeals(meals: List<SavedMealEntity>)
+
+    @Query("UPDATE saved_meals SET deletedMs = :now WHERE id = :id")
+    suspend fun deleteSavedMeal(id: String, now: Long)
+
+    @Query("DELETE FROM saved_meals")
+    suspend fun deleteAllSavedMeals()
 
     @Query("DELETE FROM meals")
     suspend fun deleteAllMeals()

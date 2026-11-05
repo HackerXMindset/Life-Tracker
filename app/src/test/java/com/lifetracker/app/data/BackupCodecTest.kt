@@ -34,6 +34,18 @@ class BackupCodecTest {
         imported = listOf(ImportedItemEntity("streak-focus", "abc", 7)),
         meals = listOf(
             MealEntity("m1", "2026-10-04", 752, "breakfast", "Chole kulche", 100.0, 650.0, 100.0, 18.0, 21.0, "ont", "{\"a\":1}"),
+            MealEntity(
+                "m2", "2026-10-05", 800, "lunch", "Banana", 120.0, 89.0, 22.8, 0.3, 1.1, "app", "", "a:banana", 2.6, 12.2, 1.0, 0.1, 0.0, 0.1,
+                0.0, "0.077,0.028,0.068,0.05,0.017,0.058,0.028,0.009,0.047",
+            ),
+        ),
+        foods = listOf(
+            FoodEntity("m:1", "Maa's dal", 120.0, 7.0, 18.0, 2.5, fiber100 = 4.0, sodium100 = 300.0, portionKind = "cup", portionGrams = 200.0, category = "legume", createdMs = 5L),
+            FoodEntity("m:2", "Old shake", 90.0, 18.0, 4.0, 1.0, liquid = true, deletedMs = 9L),
+        ),
+        foodFavourites = listOf(FoodFavouriteEntity("a:banana", 7L), FoodFavouriteEntity("m:1", 8L)),
+        savedMeals = listOf(
+            SavedMealEntity("s1", "Usual breakfast", SavedMealItems.encode(listOf(SavedMealItem("a:banana", "Banana", 120.0, 89.0, 1.1, 22.8, 0.3))), 0xFFC28410L, 3L),
         ),
         foodGoals = listOf(FoodGoalEntity("2026-10-04", 2672.88, 399.47, 73.97, 99.86)),
         water = listOf(WaterEntity("2026-10-07", 1250)),

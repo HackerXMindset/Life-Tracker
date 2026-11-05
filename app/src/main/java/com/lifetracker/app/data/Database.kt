@@ -98,8 +98,11 @@ interface EntryDao {
         RuleEntity::class,
         RuleLogEntity::class,
         GoalEntity::class,
+        FoodEntity::class,
+        FoodFavouriteEntity::class,
+        SavedMealEntity::class,
     ],
-    version = 32,
+    version = 33,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -139,7 +142,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "life-tracker.db",
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32, MIGRATION_32_33)
                     .addCallback(object : RoomDatabase.Callback() {
                         // A brand new database starts with the built-in activities and money categories.
                         override fun onCreate(db: SupportSQLiteDatabase) {
@@ -638,5 +641,34 @@ val MIGRATION_31_32: Migration = object : Migration(31, 32) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE `places` ADD COLUMN `polygon` TEXT NOT NULL DEFAULT ''")
         db.execSQL("ALTER TABLE `places` ADD COLUMN `deletedMs` INTEGER NOT NULL DEFAULT 0")
+    }
+}
+
+
+/**
+ * Version 33: the food rebuild (GymMane's food list). Meals get a link to the food they came from and the extra numbers
+ * (fibre, sugar, sodium, fats, animal protein, amino acids); your own foods, stars and saved meals get their tables.
+ * The SQL must match [MealEntity], [FoodEntity], [FoodFavouriteEntity] and [SavedMealEntity] exactly.
+ */
+val MIGRATION_32_33: Migration = object : Migration(32, 33) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `meals` ADD COLUMN `foodId` TEXT NOT NULL DEFAULT ''")
+        for (column in listOf("fiber100", "sugar100", "sodium100", "sat100", "mono100", "poly100", "animal100")) {
+            db.execSQL("ALTER TABLE `meals` ADD COLUMN `$column` REAL NOT NULL DEFAULT 0.0")
+        }
+        db.execSQL("ALTER TABLE `meals` ADD COLUMN `amino` TEXT NOT NULL DEFAULT ''")
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `foods` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `kcal100` REAL NOT NULL, " +
+                "`protein100` REAL NOT NULL, `carbs100` REAL NOT NULL, `fat100` REAL NOT NULL, `fiber100` REAL NOT NULL, " +
+                "`sugar100` REAL NOT NULL, `sodium100` REAL NOT NULL, `sat100` REAL NOT NULL, `mono100` REAL NOT NULL, " +
+                "`poly100` REAL NOT NULL, `animal100` REAL NOT NULL, `amino` TEXT NOT NULL, `liquid` INTEGER NOT NULL, " +
+                "`portionKind` TEXT NOT NULL, `portionGrams` REAL NOT NULL, `category` TEXT NOT NULL, " +
+                "`cookedYield` REAL NOT NULL, `createdMs` INTEGER NOT NULL, `deletedMs` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        )
+        db.execSQL("CREATE TABLE IF NOT EXISTS `food_favourites` (`foodId` TEXT NOT NULL, `addedMs` INTEGER NOT NULL, PRIMARY KEY(`foodId`))")
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `saved_meals` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `items` TEXT NOT NULL, " +
+                "`color` INTEGER NOT NULL, `createdMs` INTEGER NOT NULL, `deletedMs` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        )
     }
 }

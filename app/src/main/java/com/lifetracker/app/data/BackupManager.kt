@@ -197,6 +197,9 @@ object BackupManager {
         rules = db.ruleDao().all(),
         goals = db.goalDao().all(),
         mapAreas = db.mapDao().areas(),
+        foods = db.foodDao().allFoods(),
+        foodFavourites = db.foodDao().allFavourites(),
+        savedMeals = db.foodDao().allSavedMeals(),
         settings = context?.let { SettingsBackup.collect(it) } ?: emptyMap(),
     )
 
@@ -327,6 +330,15 @@ object BackupManager {
             if (data.version >= 33) {
                 // The offline areas are remembered (their tiles are not in a backup): one that is already here is left as it is.
                 data.mapAreas.forEach { if (db.mapDao().area(it.id) == null) db.mapDao().upsertArea(it) }
+            }
+            if (data.version >= 34) {
+                // Your own foods, stars and saved meals are replaced by the backup's, like meals.
+                db.foodDao().deleteAllFoods()
+                db.foodDao().deleteAllFavourites()
+                db.foodDao().deleteAllSavedMeals()
+                db.foodDao().upsertFoods(data.foods)
+                db.foodDao().upsertFavourites(data.foodFavourites)
+                db.foodDao().upsertSavedMeals(data.savedMeals)
             }
         }
     }
