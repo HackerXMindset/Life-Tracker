@@ -104,11 +104,19 @@ object FoodRef {
 }
 
 /** The whole built-in list, with search. Build it with [FoodLibrary.parse] (tests) or [FoodLibrary.get] (the app). */
-class FoodLibraryData(val foods: List<LibraryFood>, val dishes: List<ReadyDish>) {
+class FoodLibraryData(
+    val foods: List<LibraryFood>,
+    val dishes: List<ReadyDish>,
+    /** Vitamins and minerals per 100 g that come with the app: food id, then nutrient id, then amount. Empty for a food with none. */
+    val micro: Map<String, Map<String, Double>> = emptyMap(),
+) {
     private val byId = foods.associateBy { it.id }
     private val folded = foods.map { FoodLibrary.fold(it.name) }
 
     fun food(id: String): LibraryFood? = byId[id]
+
+    /** The vitamins and minerals per 100 g that come with the app for a food (before anything you typed). */
+    fun microOf(id: String): Map<String, Double> = micro[id] ?: emptyMap()
 
     /** The food a stored reference ("a:banana") points to. */
     fun byRef(ref: String): LibraryFood? = if (FoodRef.isLibrary(ref)) byId[ref.removePrefix(FoodRef.LIBRARY)] else null
@@ -147,6 +155,7 @@ class FoodLibraryData(val foods: List<LibraryFood>, val dishes: List<ReadyDish>)
 object FoodLibrary {
     private const val FOODS_FILE = "food/foods.tsv"
     private const val DISHES_FILE = "food/dishes.tsv"
+    private const val MICRO_FILE = "food/micro.tsv"
 
     @Volatile
     private var cached: FoodLibraryData? = null
@@ -157,7 +166,8 @@ object FoodLibrary {
             val assets = context.applicationContext.assets
             val foods = assets.open(FOODS_FILE).bufferedReader().use { it.readText() }
             val dishes = assets.open(DISHES_FILE).bufferedReader().use { it.readText() }
-            parse(foods, dishes).also { cached = it }
+            val micro = runCatching { assets.open(MICRO_FILE).bufferedReader().use { it.readText() } }.getOrDefault("")
+            parse(foods, dishes, micro).also { cached = it }
         }
     }
 
@@ -174,7 +184,7 @@ object FoodLibrary {
     }
 
     /** Reads the two files. A line that cannot be read is skipped. */
-    fun parse(foodsTsv: String, dishesTsv: String): FoodLibraryData {
+    fun parse(foodsTsv: String, dishesTsv: String, microTsv: String = ""): FoodLibraryData {
         val foods = ArrayList<LibraryFood>()
         val lines = foodsTsv.lines().filter { it.isNotBlank() }
         if (lines.isNotEmpty()) {
@@ -218,6 +228,25 @@ object FoodLibrary {
             }
             if (items.isNotEmpty()) dishes += ReadyDish(c[0], c[1], items)
         }
-        return FoodLibraryData(foods, dishes)
+        return FoodLibraryData(foods, dishes, parseMicro(microTsv))
+    }
+
+    /** The first column is the food id, the other columns are headed by a nutrient id and hold amounts per 100 g (empty = not known). */
+    fun parseMicro(tsv: String): Map<String, Map<String, Double>> {
+        val lines = tsv.lines().filter { it.isNotBlank() }
+        if (lines.size < 2) return emptyMap()
+        val head = lines.first().split('\t')
+        val out = LinkedHashMap<String, Map<String, Double>>()
+        for (line in lines.drop(1)) {
+            val c = line.split('\t')
+            if (c.isEmpty() || c[0].isEmpty()) continue
+            val values = LinkedHashMap<String, Double>()
+            for (i in 1 until minOf(head.size, c.size)) {
+                val v = c[i].toDoubleOrNull() ?: continue
+                if (v > 0) values[head[i]] = v
+            }
+            if (values.isNotEmpty()) out[c[0]] = values
+        }
+        return out
     }
 }

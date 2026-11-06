@@ -101,8 +101,10 @@ interface EntryDao {
         FoodEntity::class,
         FoodFavouriteEntity::class,
         SavedMealEntity::class,
+        NutrientEntity::class,
+        FoodNutrientEntity::class,
     ],
-    version = 33,
+    version = 34,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -142,13 +144,14 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "life-tracker.db",
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32, MIGRATION_32_33)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32, MIGRATION_32_33, MIGRATION_33_34)
                     .addCallback(object : RoomDatabase.Callback() {
                         // A brand new database starts with the built-in activities and money categories.
                         override fun onCreate(db: SupportSQLiteDatabase) {
                             DefaultActivities.seed(db)
                             DefaultMoneyCategories.seed(db)
                             DefaultPlaceCategories.seed(db)
+                            DefaultNutrients.seed(db)
                         }
                     })
                     .build()
@@ -670,5 +673,25 @@ val MIGRATION_32_33: Migration = object : Migration(32, 33) {
             "CREATE TABLE IF NOT EXISTS `saved_meals` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `items` TEXT NOT NULL, " +
                 "`color` INTEGER NOT NULL, `createdMs` INTEGER NOT NULL, `deletedMs` INTEGER NOT NULL, PRIMARY KEY(`id`))",
         )
+    }
+}
+
+/**
+ * Version 34: vitamins and minerals. The nutrient list (filled with the starters), what you typed for a food, and the
+ * vitamins a logged meal remembers. The SQL must match [NutrientEntity], [FoodNutrientEntity] and [MealEntity].
+ */
+val MIGRATION_33_34: Migration = object : Migration(33, 34) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `meals` ADD COLUMN `extra` TEXT NOT NULL DEFAULT ''")
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `nutrients` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `unit` TEXT NOT NULL, " +
+                "`group` TEXT NOT NULL, `target` REAL NOT NULL, `hidden` INTEGER NOT NULL, `builtIn` INTEGER NOT NULL, " +
+                "`sortOrder` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        )
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `food_nutrients` (`foodRef` TEXT NOT NULL, `nutrientId` TEXT NOT NULL, " +
+                "`amount100` REAL NOT NULL, PRIMARY KEY(`foodRef`, `nutrientId`))",
+        )
+        DefaultNutrients.seed(db)
     }
 }

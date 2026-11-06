@@ -200,6 +200,8 @@ object BackupManager {
         foods = db.foodDao().allFoods(),
         foodFavourites = db.foodDao().allFavourites(),
         savedMeals = db.foodDao().allSavedMeals(),
+        nutrients = db.foodDao().allNutrients(),
+        foodNutrients = db.foodDao().allFoodNutrients(),
         settings = context?.let { SettingsBackup.collect(it) } ?: emptyMap(),
     )
 
@@ -339,6 +341,13 @@ object BackupManager {
                 db.foodDao().upsertFoods(data.foods)
                 db.foodDao().upsertFavourites(data.foodFavourites)
                 db.foodDao().upsertSavedMeals(data.savedMeals)
+            }
+            if (data.version >= 35) {
+                // Your nutrient list and the numbers you typed replace this phone's, like your foods.
+                db.foodDao().deleteAllNutrients()
+                db.foodDao().deleteAllFoodNutrients()
+                db.foodDao().upsertNutrients(data.nutrients)
+                db.foodDao().upsertFoodNutrients(data.foodNutrients)
             }
         }
     }

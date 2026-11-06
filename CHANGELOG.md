@@ -2,6 +2,15 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🥦 Food rebuild, part 2: vitamins and minerals (N2)
+
+### ✨ New
+
+- **Vitamins and minerals you control.** Settings → Trackers → **Vitamins and minerals**: 24 starters (vitamins A, C, D, E, K, B1, B2, B3, B5, B6, B7, **B9**, B12, choline; calcium, iron, magnesium, phosphorus, potassium, zinc, copper, manganese, selenium, iodine), each with the daily amount printed on food labels.
+- **Add your own** (Omega 3, creatine, anything) with a name, a unit (mg, µg, g, IU or your own), a group and an optional target. **Hide** any of them, or **delete** one you added. A hidden or deleted nutrient never rewrites meals you already logged.
+- Every meal remembers the vitamins it had per 100 g; the numbers you type for a food are kept and win over the ones that come with the app (database 34, backup format 35).
+- The Food screen does not show them yet; that comes with the new Food screen.
+
 ## 🍽️ Food rebuild, part 1: the food list (N1)
 
 ### ✨ New

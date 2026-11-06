@@ -172,6 +172,7 @@ fun LifeTrackerApp() {
                         Page.Profiles -> ProfilesScreen(onBack = { page = Page.Places })
                         Page.Live -> LiveScreen(onBack = back)
                         Page.Features -> FeaturesScreen(onBack = back)
+                        Page.Nutrients -> NutrientsScreen(onBack = back)
                         Page.Rules -> RulesAndGoalsScreen(onBack = back)
                         Page.Goals -> RulesAndGoalsScreen(onBack = back, startOnGoals = true)
                         Page.Trips -> TripsScreen(onBack = back, onOpenTrip = { openTrip = it }, onOpenReplay = { from, to, title -> replayRange = "$from|$to|$title" })
