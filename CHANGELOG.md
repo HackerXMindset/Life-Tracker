@@ -2,6 +2,19 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🍎 Food rebuild, part 3: the new Food screen (N3)
+
+### ✨ New
+
+- **The Food tab is new**, in the paper look and laid out like GymMane: a week strip, a calorie ring ("left of your goal") with carb, protein and fat bars, a search bar, a shelf of foods you ate before, **Favourites** and **Saved meals** folders, and Breakfast / Lunch / Dinner / Snack tabs with a photo plate for each meal.
+- **Add food** is a full window: search, 15 food groups, **Ready dishes**, My foods and Favourites, with photos. Tap a food to set the amount (grams, portions, raw or cooked), see calories, macros, vitamins and what is left of today's goal, then add it.
+- **Quick add can also save the food.** Type a name, calories and macros; the "Also save it as one of my foods" switch (on by default) keeps it under My foods as one serving.
+- **Your own foods** are made and edited in a full window: group, drink or not, numbers per 100 g, fat types, one portion, cooked weight and **vitamins and minerals**. Built-in foods take typed vitamin numbers too.
+- **Meals**: tap an entry to change the amount, meal, time, copy it to another day, keep it as your own food or delete it. A meal's menu saves it as a **saved meal**, copies it to another day or clears it.
+- **Goals** (calories, protein, carbs, fat) are set from the day you are on.
+- The old "Add a meal" sheet is gone. Open Nutri Tracker import still works.
+- Details below the meals show fibre, sugar, sodium and your vitamins and minerals for the day. Water is a tile with +250 / +500.
+
 ## 🥦 Food rebuild, part 2: vitamins and minerals (N2)
 
 ### ✨ New

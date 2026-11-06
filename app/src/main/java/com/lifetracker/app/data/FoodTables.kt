@@ -268,6 +268,9 @@ interface FoodDao {
     @Query("DELETE FROM food_nutrients WHERE nutrientId = :nutrientId")
     suspend fun deleteFoodNutrientsOf(nutrientId: String)
 
+    @Query("DELETE FROM food_nutrients WHERE foodRef = :foodRef")
+    suspend fun deleteFoodNutrientsOfFood(foodRef: String)
+
     @Query("DELETE FROM food_nutrients")
     suspend fun deleteAllFoodNutrients()
 
