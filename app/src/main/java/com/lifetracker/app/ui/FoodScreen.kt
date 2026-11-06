@@ -93,6 +93,7 @@ private sealed interface Sheet {
     data object SavedMeals : Sheet
     data object Goals : Sheet
     data object Trackers : Sheet
+    data object Diary : Sheet
 }
 
 @Composable
@@ -111,8 +112,10 @@ fun FoodScreen(vm: FoodViewModel = viewModel(), x: FoodExtrasViewModel = viewMod
     val nutrients by vm.nutrients.collectAsState()
     val tick by FoodSettings.changes.collectAsState()
     val weights by x.weights.collectAsState()
+    val eventDays by x.eventDays.collectAsState()
     val shown = remember(tick) { FoodPart.entries.associateWith { FoodSettings.isOn(context, it) } }
     LaunchedEffect(date) { x.setDay(date) }
+    val tapped = if (shown[FoodPart.TRACKERS] == true) eventDays else emptySet()
 
     val today = LocalDate.now()
     var sheet by remember { mutableStateOf<Sheet?>(null) }
@@ -139,13 +142,14 @@ fun FoodScreen(vm: FoodViewModel = viewModel(), x: FoodExtrasViewModel = viewMod
                                     date.year, date.monthValue - 1, date.dayOfMonth,
                                 ).show()
                             })
+                            PaperIconButton(R.drawable.ic_p_timeline, "Diary", onClick = { sheet = Sheet.Diary })
                             PaperIconButton(R.drawable.ic_p_list, "What to show", onClick = { sheet = Sheet.Trackers })
                             PaperIconButton(R.drawable.ic_p_gear, "Goals", onClick = { sheet = Sheet.Goals })
                         }
                     },
                 )
             }
-            item { WeekStrip(date, today, loggedDays, onPick = vm::select, onShift = { vm.shift(it * 7L) }) }
+            item { WeekStrip(date, today, loggedDays, tapped, onPick = vm::select, onShift = { vm.shift(it * 7L) }) }
             item {
                 HeroCard(totals.kcal, totals.carbs, totals.protein, totals.fat, goal?.kcal, goal?.carbs, goal?.protein, goal?.fat)
             }
@@ -204,6 +208,7 @@ fun FoodScreen(vm: FoodViewModel = viewModel(), x: FoodExtrasViewModel = viewMod
             if (shown[FoodPart.WATER] == true) item { WaterTile(water, onAdd = vm::addWater) }
             if (shown[FoodPart.SHAKE] == true) item { ShakeCard(vm, openMeal) }
             if (shown[FoodPart.SUPPLEMENTS] == true) item { SupplementsCard(x, date) }
+            if (shown[FoodPart.TRACKERS] == true) item { TrackersCard(x, date) }
 
             item { HighlightedHeading(text = "Details") }
             if (shown[FoodPart.EXTRAS] == true) item { ExtrasCard(extras.fiber, extras.sugar, extras.sodiumMg) }
@@ -243,13 +248,14 @@ fun FoodScreen(vm: FoodViewModel = viewModel(), x: FoodExtrasViewModel = viewMod
         Sheet.SavedMeals -> SavedMealsSheet(vm = vm, mealType = openMeal, onDone = { sheet = null }, onDismiss = { sheet = null })
         Sheet.Goals -> GoalsSheet(vm = vm, onDismiss = { sheet = null })
         Sheet.Trackers -> TrackersSheet(onDismiss = { sheet = null })
+        Sheet.Diary -> FoodDiaryWindow(x, onPickDay = { vm.select(it) }, onClose = { sheet = null })
     }
 }
 
 // ---- the week ----
 
 @Composable
-private fun WeekStrip(date: LocalDate, today: LocalDate, logged: Set<String>, onPick: (LocalDate) -> Unit, onShift: (Int) -> Unit) {
+private fun WeekStrip(date: LocalDate, today: LocalDate, logged: Set<String>, tapped: Set<String>, onPick: (LocalDate) -> Unit, onShift: (Int) -> Unit) {
     val p = LocalPaper.current
     val week = FoodLogic.weekOf(date)
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -274,11 +280,14 @@ private fun WeekStrip(date: LocalDate, today: LocalDate, logged: Set<String>, on
                 ) {
                     Text(day.dayOfMonth.toString(), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = if (on) p.bg else p.ink)
                 }
-                Box(
-                    modifier = Modifier
-                        .size(5.dp)
-                        .background(if (day.toString() in logged) p.accent else Color.Transparent, CircleShape),
-                )
+                Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .size(5.dp)
+                            .background(if (day.toString() in logged) p.accent else Color.Transparent, CircleShape),
+                    )
+                    if (day.toString() in tapped) Box(modifier = Modifier.size(5.dp).background(p.sun, CircleShape))
+                }
             }
         }
         PaperIconButton(R.drawable.ic_p_chev, "Next week", onClick = { onShift(1) }, modifier = Modifier.size(32.dp))

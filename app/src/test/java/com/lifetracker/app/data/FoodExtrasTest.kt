@@ -136,4 +136,35 @@ class FoodExtrasTest {
         assertEquals(9, QualityMath.AMINO_NAMES.size)
         assertEquals(9, QualityMath.NEED_MG_PER_KG.size)
     }
+
+    @Test
+    fun tapsAreGroupedPerTrackerInTheOrderOfTheTrackers() {
+        val head = FoodTrackerEntity("a", "Headache", "", 1L)
+        val tea = FoodTrackerEntity("b", "Tea", "", 2L, sortOrder = 1)
+        val events = listOf(
+            TrackerEventEntity("1", "b", "2026-11-06", 600), TrackerEventEntity("2", "a", "2026-11-06", 900),
+            TrackerEventEntity("3", "a", "2026-11-06", 500), TrackerEventEntity("4", "gone", "2026-11-06", 100),
+        )
+        val chips = TrackerMath.chips(events, listOf(head, tea))
+        assertEquals(listOf("Headache ×2", "Tea"), chips.map { it.text })
+        assertEquals(listOf(500, 900), chips[0].minutes)
+        val days = (2..8).map { LocalDate.of(2026, 11, it) }
+        val counts = TrackerMath.counts(events, days, "a")
+        assertEquals(2, counts[4])
+        assertEquals(2, counts.sum())
+    }
+
+    @Test
+    fun theDiaryListsDaysNewestFirstAndSkipsEmptyOnes() {
+        fun meal(date: String, minute: Int, kcal: Double) = MealEntity("m$date$minute", date, minute, "lunch", "x", 100.0, kcal, 0.0, 0.0, 0.0, "app", "")
+        val meals = listOf(meal("2026-11-04", 800, 100.0), meal("2026-11-04", 600, 200.0), meal("2026-11-02", 700, 50.0))
+        val events = listOf(TrackerEventEntity("e", "a", "2026-11-05", 300), TrackerEventEntity("f", "a", "2026-11-04", 900))
+        val days = DiaryMath.days(meals, events)
+        assertEquals(listOf("2026-11-05", "2026-11-04", "2026-11-02"), days.map { it.date.toString() })
+        assertEquals(300.0, days[1].kcal, 1e-9)
+        assertEquals(listOf(600, 800), days[1].meals.map { it.minuteOfDay })
+        assertTrue(days[0].hasEvents)
+        assertFalse(days[2].hasEvents)
+        assertTrue(DiaryMath.days(emptyList(), emptyList()).isEmpty())
+    }
 }

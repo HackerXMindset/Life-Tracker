@@ -6,11 +6,16 @@ import androidx.lifecycle.viewModelScope
 import com.lifetracker.app.data.AppDatabase
 import com.lifetracker.app.data.BatchEntity
 import com.lifetracker.app.data.BatchMath
+import com.lifetracker.app.data.DiaryDay
+import com.lifetracker.app.data.DiaryMath
 import com.lifetracker.app.data.FastEntity
 import com.lifetracker.app.data.FoodLogic
 import com.lifetracker.app.data.FoodSettings
 import com.lifetracker.app.data.FoodGoalEntity
 import com.lifetracker.app.data.FoodStats
+import com.lifetracker.app.data.FoodTrackerEntity
+import com.lifetracker.app.data.TrackerEventEntity
+import com.lifetracker.app.data.TrackerMath
 import com.lifetracker.app.data.MealEntity
 import com.lifetracker.app.data.MealPlanEntity
 import com.lifetracker.app.data.PlanMath
@@ -26,6 +31,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -163,6 +169,71 @@ class FoodExtrasViewModel(app: Application) : AndroidViewModel(app) {
             if (add.isNotEmpty()) foodDao.upsertMeals(add)
             onDone(add.size)
         }
+    }
+
+    // ---- custom trackers ----
+
+    val trackers: StateFlow<List<FoodTrackerEntity>> = share(emptyList(), dao.observeTrackers())
+
+    /** Days that have at least one tap, for the dots on the week strip. */
+    val eventDays: StateFlow<Set<String>> = share(emptySet(), dao.observeEventDates().map { it.toSet() })
+
+    /** The taps of the week of the chosen day (Monday to Sunday). */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val weekEvents: StateFlow<List<TrackerEventEntity>> = share(
+        emptyList(),
+        day.flatMapLatest { d ->
+            val week = FoodLogic.weekOf(d)
+            dao.observeEventsBetween(week.first().toString(), week.last().toString())
+        },
+    )
+
+    /** Taps and meals of the last [days] days up to the chosen day, for the Diary timeline. */
+    private val diaryDays = MutableStateFlow(30)
+
+    fun showEarlier() {
+        diaryDays.value = diaryDays.value + 30
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val diary: StateFlow<List<DiaryDay>> = share(
+        emptyList(),
+        diaryDays.flatMapLatest { n ->
+            val to = LocalDate.now()
+            val from = to.minusDays(n.toLong())
+            combine(foodDao.observeMealsBetween(from.toString(), to.toString()), dao.observeEventsBetween(from.toString(), to.toString())) { meals, events ->
+                DiaryMath.days(meals, events)
+            }
+        },
+    )
+
+    val diarySpanDays: StateFlow<Int> = diaryDays
+
+    fun saveTracker(t: FoodTrackerEntity) {
+        viewModelScope.launch {
+            val placed = if (t.sortOrder < 0) t.copy(sortOrder = dao.maxTrackerOrder() + 1) else t
+            dao.upsertTracker(placed)
+        }
+    }
+
+    fun deleteTracker(t: FoodTrackerEntity) {
+        viewModelScope.launch {
+            dao.deleteEventsOf(t.id)
+            dao.deleteTracker(t.id)
+        }
+    }
+
+    /** One tap: records [minuteOfDay] on [date]. */
+    fun tap(t: FoodTrackerEntity, date: LocalDate, minuteOfDay: Int) {
+        viewModelScope.launch { dao.upsertEvent(TrackerEventEntity(TrackerMath.newEventId(), t.id, date.toString(), minuteOfDay)) }
+    }
+
+    fun saveEvent(e: TrackerEventEntity) {
+        viewModelScope.launch { dao.upsertEvent(e) }
+    }
+
+    fun deleteEvent(e: TrackerEventEntity) {
+        viewModelScope.launch { dao.deleteEvent(e.id) }
     }
 
     /** The goal in force on [date], for the week summary. */
