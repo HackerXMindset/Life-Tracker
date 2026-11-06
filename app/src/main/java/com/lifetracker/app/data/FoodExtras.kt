@@ -109,6 +109,29 @@ data class MealPlanEntity(
     val allItems: List<SavedMealItem> get() = FoodLogic.MEAL_TYPES.flatMap { itemsOf(it) }
 }
 
+/** Something you want to count by tapping: a headache, reflux, a cup of tea. It never touches calories. */
+@Entity(tableName = "food_trackers")
+data class FoodTrackerEntity(
+    @PrimaryKey val id: String,
+    val name: String,
+    /** An icon name or an emoji, as everywhere else in the app. */
+    val icon: String = "",
+    val color: Long = 0xFF5B5FC7L,
+    val sortOrder: Int = 0,
+    /** Hidden trackers are not offered for logging but keep their history. */
+    val archived: Boolean = false,
+)
+
+/** One time you tapped a tracker. */
+@Entity(tableName = "tracker_events")
+data class TrackerEventEntity(
+    @PrimaryKey val id: String,
+    val trackerId: String,
+    val date: String,
+    val minuteOfDay: Int,
+    val note: String = "",
+)
+
 @Dao
 interface FoodExtrasDao {
     // supplements
@@ -226,6 +249,51 @@ interface FoodExtrasDao {
 
     @Query("DELETE FROM meal_plans")
     suspend fun deleteAllPlans()
+    // custom trackers
+    @Query("SELECT * FROM food_trackers ORDER BY archived, sortOrder, name COLLATE NOCASE")
+    fun observeTrackers(): Flow<List<FoodTrackerEntity>>
+
+    @Query("SELECT * FROM food_trackers ORDER BY sortOrder, name COLLATE NOCASE")
+    suspend fun allTrackers(): List<FoodTrackerEntity>
+
+    @Query("SELECT COALESCE(MAX(sortOrder), -1) FROM food_trackers")
+    suspend fun maxTrackerOrder(): Int
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertTracker(t: FoodTrackerEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertTrackers(list: List<FoodTrackerEntity>)
+
+    @Query("DELETE FROM food_trackers WHERE id = :id")
+    suspend fun deleteTracker(id: String)
+
+    @Query("DELETE FROM food_trackers")
+    suspend fun deleteAllTrackers()
+
+    @Query("SELECT * FROM tracker_events WHERE date BETWEEN :from AND :to ORDER BY date, minuteOfDay, id")
+    fun observeEventsBetween(from: String, to: String): Flow<List<TrackerEventEntity>>
+
+    @Query("SELECT DISTINCT date FROM tracker_events")
+    fun observeEventDates(): Flow<List<String>>
+
+    @Query("SELECT * FROM tracker_events ORDER BY date, minuteOfDay, id")
+    suspend fun allEvents(): List<TrackerEventEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertEvent(e: TrackerEventEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertEvents(list: List<TrackerEventEntity>)
+
+    @Query("DELETE FROM tracker_events WHERE id = :id")
+    suspend fun deleteEvent(id: String)
+
+    @Query("DELETE FROM tracker_events WHERE trackerId = :trackerId")
+    suspend fun deleteEventsOf(trackerId: String)
+
+    @Query("DELETE FROM tracker_events")
+    suspend fun deleteAllEvents()
 }
 
 /** The parts of the Food tab you can switch on or off. */
@@ -242,6 +310,7 @@ enum class FoodPart(val id: String, val title: String, val hint: String, val onB
     QUALITY("quality", "Protein quality", "Animal and plant protein, and the essential amino acids", false),
     FATS("fats", "Types of fat", "Saturated, mono- and polyunsaturated fat", false),
     FASTING("fasting", "Fasting", "A timer for intermittent fasting", false),
+    TRACKERS("trackers", "Custom trackers", "Count anything with one tap, such as a headache or a cup of tea, and the Diary timeline", false),
 }
 
 /** Choices for the Food tab, kept on the phone and saved in the backup with every other setting. */
@@ -513,5 +582,50 @@ object QualityMath {
         val protein = meals.sumOf { it.protein }
         if (protein <= 0) return null
         return (meals.sumOf { it.animal100 * it.grams / 100 } / protein).coerceIn(0.0, 1.0)
+    }
+}
+
+object TrackerMath {
+    fun newId(): String = "t:" + UUID.randomUUID().toString().take(12)
+    fun newEventId(): String = "e:" + UUID.randomUUID().toString().take(12)
+
+    /** One tracker's taps on a day: how many, and when. */
+    data class Chip(val trackerId: String, val name: String, val icon: String, val color: Long, val minutes: List<Int>) {
+        val count: Int get() = minutes.size
+        val text: String get() = if (count <= 1) name else "$name ×$count"
+    }
+
+    /** The taps of a day grouped by tracker, in the order of the trackers. Taps of a tracker that no longer exists are left out. */
+    fun chips(events: List<TrackerEventEntity>, trackers: List<FoodTrackerEntity>): List<Chip> =
+        trackers.mapNotNull { t ->
+            val mine = events.filter { it.trackerId == t.id }.map { it.minuteOfDay }.sorted()
+            if (mine.isEmpty()) null else Chip(t.id, t.name, t.icon, t.color, mine)
+        }
+
+    /** How many times [trackerId] was tapped on each of [days]. */
+    fun counts(events: List<TrackerEventEntity>, days: List<LocalDate>, trackerId: String): List<Int> =
+        days.map { d -> events.count { it.trackerId == trackerId && it.date == d.toString() } }
+}
+
+/** One day of the Diary timeline. */
+data class DiaryDay(val date: LocalDate, val meals: List<MealEntity>, val events: List<TrackerEventEntity>) {
+    val kcal: Double get() = meals.sumOf { it.kcal }
+    val hasEvents: Boolean get() = events.isNotEmpty()
+}
+
+object DiaryMath {
+    /** The days from newest to oldest that have food or taps; days with neither are left out. */
+    fun days(meals: List<MealEntity>, events: List<TrackerEventEntity>): List<DiaryDay> {
+        val mealsBy = meals.groupBy { it.date }
+        val eventsBy = events.groupBy { it.date }
+        return (mealsBy.keys + eventsBy.keys).mapNotNull { key -> runCatching { LocalDate.parse(key) }.getOrNull() }
+            .distinct().sortedDescending()
+            .map { d ->
+                DiaryDay(
+                    date = d,
+                    meals = mealsBy[d.toString()].orEmpty().sortedBy { it.minuteOfDay },
+                    events = eventsBy[d.toString()].orEmpty().sortedBy { it.minuteOfDay },
+                )
+            }
     }
 }
