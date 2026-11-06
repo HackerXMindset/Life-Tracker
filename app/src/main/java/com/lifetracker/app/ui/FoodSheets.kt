@@ -76,23 +76,23 @@ import com.lifetracker.app.ui.theme.PaperToggle
 import java.time.LocalDate
 import java.time.LocalTime
 
-private fun kc(v: Double): String = Math.round(v).toString()
+internal fun kc(v: Double): String = Math.round(v).toString()
 
-private val CARB_COLOR = Color(0xFFE0A100)
-private val PROTEIN_COLOR = Color(0xFF5B5FC7)
-private val FAT_COLOR = Color(0xFFD6457F)
+internal val CARB_COLOR = Color(0xFFE0A100)
+internal val PROTEIN_COLOR = Color(0xFF5B5FC7)
+internal val FAT_COLOR = Color(0xFFD6457F)
 
-private fun pickDay(context: Context, start: LocalDate, onPick: (LocalDate) -> Unit) {
+internal fun pickDay(context: Context, start: LocalDate, onPick: (LocalDate) -> Unit) {
     DatePickerDialog(
         context, { _, y, m, d -> onPick(LocalDate.of(y, m + 1, d)) },
         start.year, start.monthValue - 1, start.dayOfMonth,
     ).show()
 }
 
-private fun minuteNow(): Int = LocalTime.now().let { it.hour * 60 + it.minute }
+internal fun minuteNow(): Int = LocalTime.now().let { it.hour * 60 + it.minute }
 
 @Composable
-private fun SheetBody(content: @Composable ColumnScope.() -> Unit) {
+internal fun SheetBody(content: @Composable ColumnScope.() -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -106,7 +106,7 @@ private fun SheetBody(content: @Composable ColumnScope.() -> Unit) {
 }
 
 @Composable
-private fun SheetTitle(text: String, sub: String? = null) {
+internal fun SheetTitle(text: String, sub: String? = null) {
     val p = LocalPaper.current
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(text, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = p.ink, maxLines = 2)
@@ -115,14 +115,14 @@ private fun SheetTitle(text: String, sub: String? = null) {
 }
 
 @Composable
-private fun MealPills(selected: String, onSelect: (String) -> Unit) {
+internal fun MealPills(selected: String, onSelect: (String) -> Unit) {
     ChipFlow {
         MEAL_TYPES.forEach { t -> PaperPill(mealTypeLabel(t), selected == t, { onSelect(t) }, dot = mealColor(t)) }
     }
 }
 
 @Composable
-private fun TimeButton(minute: Int, onChange: (Int) -> Unit, modifier: Modifier = Modifier) {
+internal fun TimeButton(minute: Int, onChange: (Int) -> Unit, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     PaperButton(
         text = formatMinute(minute),
@@ -134,7 +134,7 @@ private fun TimeButton(minute: Int, onChange: (Int) -> Unit, modifier: Modifier 
 }
 
 @Composable
-private fun MacroCell(label: String, grams: Double, color: Color, modifier: Modifier = Modifier) {
+internal fun MacroCell(label: String, grams: Double, color: Color, modifier: Modifier = Modifier) {
     val p = LocalPaper.current
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Text(kc(grams) + " g", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = p.ink)
