@@ -50,6 +50,7 @@ import com.lifetracker.app.data.Loggable
 import com.lifetracker.app.data.MealEntity
 import com.lifetracker.app.data.NutrientMath
 import com.lifetracker.app.data.SavedMealItems
+import com.lifetracker.app.ui.theme.HighlightedHeading
 import com.lifetracker.app.ui.theme.LocalPaper
 import com.lifetracker.app.ui.theme.PaperButton
 import com.lifetracker.app.ui.theme.PaperButtonStyle
