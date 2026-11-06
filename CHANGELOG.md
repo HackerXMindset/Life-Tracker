@@ -2,6 +2,34 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🥗 Food rebuild, part 4: shake, supplements, weight, fasting, meal prep, plans (N5)
+
+### ✨ New
+
+- **Protein shake**: pick your shake once, then one tap logs it.
+- **Supplements**: add what you take (dose, time, every day, some weekdays or every few days, from and until) and tick it off each day. Reminders come in a later step.
+- **Body weight**: weigh-ins, a goal weight ("2.4 kg to lose"), the pace per week and a small line chart.
+- **This week**: calories and protein a day, and how many days were on target (calories within 10% of the goal, at least 90% of the protein).
+- **Fasting**: a timer with a ring (12 to 23 hours), your last 7 days and how many fasts in a row reached their goal.
+- **Meal prep**: log a whole pot once with its cooked weight, then eat "25% / 50% / 1 portion of what is left"; it keeps track of what is left.
+- **Meal plans**: plan a day of meals (or copy the day you are looking at) and log only the empty meals with one tap.
+- **Protein quality** and **Types of fat** (off until you switch them on): animal against plant protein, the nine essential amino acids against what an adult needs, saturated, mono- and polyunsaturated fat.
+- **What to show** (the list icon at the top of the Food tab) switches each part on or off. Water now has its own goal and glass size (tap its name).
+- Backups carry all of it (backup format 36, database 35).
+
+## 🍎 Food rebuild, part 3: the new Food screen (N3)
+
+### ✨ New
+
+- **The Food tab is new**, in the paper look and laid out like GymMane: a week strip, a calorie ring ("left of your goal") with carb, protein and fat bars, a search bar, a shelf of foods you ate before, **Favourites** and **Saved meals** folders, and Breakfast / Lunch / Dinner / Snack tabs with a photo plate for each meal.
+- **Add food** is a full window: search, 15 food groups, **Ready dishes**, My foods and Favourites, with photos. Tap a food to set the amount (grams, portions, raw or cooked), see calories, macros, vitamins and what is left of today's goal, then add it.
+- **Quick add can also save the food.** Type a name, calories and macros; the "Also save it as one of my foods" switch (on by default) keeps it under My foods as one serving.
+- **Your own foods** are made and edited in a full window: group, drink or not, numbers per 100 g, fat types, one portion, cooked weight and **vitamins and minerals**. Built-in foods take typed vitamin numbers too.
+- **Meals**: tap an entry to change the amount, meal, time, copy it to another day, keep it as your own food or delete it. A meal's menu saves it as a **saved meal**, copies it to another day or clears it.
+- **Goals** (calories, protein, carbs, fat) are set from the day you are on.
+- The old "Add a meal" sheet is gone. Open Nutri Tracker import still works.
+- Details below the meals show fibre, sugar, sodium and your vitamins and minerals for the day. Water is a tile with +250 / +500.
+
 ## 🥦 Food rebuild, part 2: vitamins and minerals (N2)
 
 ### ✨ New

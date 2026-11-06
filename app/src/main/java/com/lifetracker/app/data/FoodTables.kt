@@ -133,6 +133,12 @@ interface FoodDao {
     @Query("SELECT * FROM meals WHERE date = :date ORDER BY minuteOfDay, id")
     fun mealsOn(date: String): Flow<List<MealEntity>>
 
+    @Query("SELECT * FROM meals WHERE date BETWEEN :from AND :to ORDER BY date, minuteOfDay, id")
+    fun observeMealsBetween(from: String, to: String): Flow<List<MealEntity>>
+
+    @Query("SELECT * FROM meals WHERE date = :date ORDER BY minuteOfDay, id")
+    suspend fun mealsOnceOn(date: String): List<MealEntity>
+
     @Query("SELECT DISTINCT date FROM meals")
     fun datesWithMeals(): Flow<List<String>>
 
@@ -267,6 +273,9 @@ interface FoodDao {
 
     @Query("DELETE FROM food_nutrients WHERE nutrientId = :nutrientId")
     suspend fun deleteFoodNutrientsOf(nutrientId: String)
+
+    @Query("DELETE FROM food_nutrients WHERE foodRef = :foodRef")
+    suspend fun deleteFoodNutrientsOfFood(foodRef: String)
 
     @Query("DELETE FROM food_nutrients")
     suspend fun deleteAllFoodNutrients()

@@ -103,8 +103,14 @@ interface EntryDao {
         SavedMealEntity::class,
         NutrientEntity::class,
         FoodNutrientEntity::class,
+        SupplementEntity::class,
+        SupplementTakenEntity::class,
+        WeightEntity::class,
+        FastEntity::class,
+        BatchEntity::class,
+        MealPlanEntity::class,
     ],
-    version = 34,
+    version = 35,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -113,6 +119,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun planDao(): PlanDao
     abstract fun importDao(): ImportDao
     abstract fun foodDao(): FoodDao
+    abstract fun foodExtrasDao(): FoodExtrasDao
     abstract fun activityDao(): ActivityDao
     abstract fun moneyDao(): MoneyDao
     abstract fun usageDao(): UsageDao
@@ -144,7 +151,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "life-tracker.db",
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32, MIGRATION_32_33, MIGRATION_33_34)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32, MIGRATION_32_33, MIGRATION_33_34, MIGRATION_34_35)
                     .addCallback(object : RoomDatabase.Callback() {
                         // A brand new database starts with the built-in activities and money categories.
                         override fun onCreate(db: SupportSQLiteDatabase) {
@@ -693,5 +700,38 @@ val MIGRATION_33_34: Migration = object : Migration(33, 34) {
                 "`amount100` REAL NOT NULL, PRIMARY KEY(`foodRef`, `nutrientId`))",
         )
         DefaultNutrients.seed(db)
+    }
+}
+
+/**
+ * Version 34 -> 35: the rest of the Food tab. Supplements and the days they were taken, body weight, fasts, meal prep batches
+ * and meal plans. Nothing that exists is changed.
+ */
+val MIGRATION_34_35: Migration = object : Migration(34, 35) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `supplements` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `dose` TEXT NOT NULL, " +
+                "`atMinute` INTEGER NOT NULL, `weekdays` INTEGER NOT NULL, `everyDays` INTEGER NOT NULL, `fromDate` TEXT NOT NULL, " +
+                "`untilDate` TEXT NOT NULL, `sortOrder` INTEGER NOT NULL, `archived` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        )
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `supplement_taken` (`supplementId` TEXT NOT NULL, `date` TEXT NOT NULL, " +
+                "`minuteOfDay` INTEGER NOT NULL, PRIMARY KEY(`supplementId`, `date`))",
+        )
+        db.execSQL("CREATE TABLE IF NOT EXISTS `weights` (`date` TEXT NOT NULL, `kg` REAL NOT NULL, PRIMARY KEY(`date`))")
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `fasts` (`id` TEXT NOT NULL, `startMs` INTEGER NOT NULL, `endMs` INTEGER NOT NULL, " +
+                "`goalHours` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        )
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `batches` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `items` TEXT NOT NULL, " +
+                "`createdMs` INTEGER NOT NULL, `cookedGrams` REAL NOT NULL, `leftGrams` REAL NOT NULL, `portions` INTEGER NOT NULL, " +
+                "`deletedMs` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        )
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `meal_plans` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `breakfast` TEXT NOT NULL, " +
+                "`lunch` TEXT NOT NULL, `dinner` TEXT NOT NULL, `snack` TEXT NOT NULL, `createdMs` INTEGER NOT NULL, " +
+                "`deletedMs` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        )
     }
 }
