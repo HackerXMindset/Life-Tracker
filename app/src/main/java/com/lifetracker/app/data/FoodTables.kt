@@ -48,6 +48,8 @@ data class MealEntity(
     val animal100: Double = 0.0,
     /** The nine essential amino acids in g per 100 g, separated by commas, or "" when not known. */
     val amino: String = "",
+    /** Vitamins, minerals and your own nutrients per 100 g, written by [NutrientValues]; "" when the food had none. */
+    val extra: String = "",
 ) {
     val kcal: Double get() = kcal100 * grams / 100
     val carbs: Double get() = carbs100 * grams / 100
@@ -229,6 +231,45 @@ interface FoodDao {
 
     @Query("DELETE FROM saved_meals")
     suspend fun deleteAllSavedMeals()
+
+    @Query("SELECT * FROM nutrients ORDER BY `group` = 'other', `group` = 'mineral', sortOrder, name COLLATE NOCASE")
+    fun observeNutrients(): Flow<List<NutrientEntity>>
+
+    @Query("SELECT * FROM nutrients ORDER BY sortOrder, name COLLATE NOCASE")
+    suspend fun allNutrients(): List<NutrientEntity>
+
+    @Query("SELECT COALESCE(MAX(sortOrder), -1) FROM nutrients")
+    suspend fun maxNutrientOrder(): Int
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertNutrient(nutrient: NutrientEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertNutrients(nutrients: List<NutrientEntity>)
+
+    @Query("DELETE FROM nutrients WHERE id = :id")
+    suspend fun deleteNutrient(id: String)
+
+    @Query("DELETE FROM nutrients")
+    suspend fun deleteAllNutrients()
+
+    @Query("SELECT * FROM food_nutrients")
+    suspend fun allFoodNutrients(): List<FoodNutrientEntity>
+
+    @Query("SELECT * FROM food_nutrients WHERE foodRef = :foodRef")
+    suspend fun foodNutrients(foodRef: String): List<FoodNutrientEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun setFoodNutrient(value: FoodNutrientEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertFoodNutrients(values: List<FoodNutrientEntity>)
+
+    @Query("DELETE FROM food_nutrients WHERE nutrientId = :nutrientId")
+    suspend fun deleteFoodNutrientsOf(nutrientId: String)
+
+    @Query("DELETE FROM food_nutrients")
+    suspend fun deleteAllFoodNutrients()
 
     @Query("DELETE FROM meals")
     suspend fun deleteAllMeals()
