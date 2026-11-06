@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -44,6 +45,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lifetracker.app.R
 import com.lifetracker.app.data.FoodLogic
+import com.lifetracker.app.data.FoodPart
+import com.lifetracker.app.data.FoodSettings
 import com.lifetracker.app.data.FoodRef
 import com.lifetracker.app.data.FoodStats
 import com.lifetracker.app.data.Loggable
@@ -89,10 +92,11 @@ private sealed interface Sheet {
     data object Favourites : Sheet
     data object SavedMeals : Sheet
     data object Goals : Sheet
+    data object Trackers : Sheet
 }
 
 @Composable
-fun FoodScreen(vm: FoodViewModel = viewModel()) {
+fun FoodScreen(vm: FoodViewModel = viewModel(), x: FoodExtrasViewModel = viewModel()) {
     val context = LocalContext.current
     val p = LocalPaper.current
     val date by vm.date.collectAsState()
@@ -105,6 +109,10 @@ fun FoodScreen(vm: FoodViewModel = viewModel()) {
     val favourites by vm.favourites.collectAsState()
     val savedMeals by vm.savedMeals.collectAsState()
     val nutrients by vm.nutrients.collectAsState()
+    val tick by FoodSettings.changes.collectAsState()
+    val weights by x.weights.collectAsState()
+    val shown = remember(tick) { FoodPart.entries.associateWith { FoodSettings.isOn(context, it) } }
+    LaunchedEffect(date) { x.setDay(date) }
 
     val today = LocalDate.now()
     var sheet by remember { mutableStateOf<Sheet?>(null) }
@@ -131,6 +139,7 @@ fun FoodScreen(vm: FoodViewModel = viewModel()) {
                                     date.year, date.monthValue - 1, date.dayOfMonth,
                                 ).show()
                             })
+                            PaperIconButton(R.drawable.ic_p_list, "What to show", onClick = { sheet = Sheet.Trackers })
                             PaperIconButton(R.drawable.ic_p_gear, "Goals", onClick = { sheet = Sheet.Goals })
                         }
                     },
@@ -192,11 +201,13 @@ fun FoodScreen(vm: FoodViewModel = viewModel()) {
                     onEntry = { sheet = Sheet.Entry(it) },
                 )
             }
-            item { WaterCard(water, onAdd = vm::addWater) }
+            if (shown[FoodPart.WATER] == true) item { WaterTile(water, onAdd = vm::addWater) }
+            if (shown[FoodPart.SHAKE] == true) item { ShakeCard(vm, openMeal) }
+            if (shown[FoodPart.SUPPLEMENTS] == true) item { SupplementsCard(x, date) }
 
             item { HighlightedHeading(text = "Details") }
-            item { ExtrasCard(extras.fiber, extras.sugar, extras.sodiumMg) }
-            item {
+            if (shown[FoodPart.EXTRAS] == true) item { ExtrasCard(extras.fiber, extras.sugar, extras.sodiumMg) }
+            if (shown[FoodPart.VITAMINS] == true) item {
                 val dayTotals = NutrientMath.dayTotals(meals)
                 VitaminsCard(
                     nutrients = nutrients.filter { !it.hidden },
@@ -205,6 +216,13 @@ fun FoodScreen(vm: FoodViewModel = viewModel()) {
                     anyMissing = meals.any { NutrientMath.isMissing(it) },
                 )
             }
+            if (shown[FoodPart.QUALITY] == true) item { QualityCard(meals, weights.lastOrNull()?.kg ?: 70.0) }
+            if (shown[FoodPart.FATS] == true) item { FatsCard(meals, goal) }
+            if (shown[FoodPart.WEIGHT] == true) item { WeightCard(x, date) }
+            if (shown[FoodPart.WEEK] == true) item { WeekCard(x, date) }
+            if (shown[FoodPart.PREP] == true) item { PrepCard(vm, x, openMeal) }
+            if (shown[FoodPart.PLANS] == true) item { PlansCard(vm, x, date, meals) }
+            if (shown[FoodPart.FASTING] == true) item { FastingCard(x) }
         }
     }
 
@@ -224,6 +242,7 @@ fun FoodScreen(vm: FoodViewModel = viewModel()) {
         )
         Sheet.SavedMeals -> SavedMealsSheet(vm = vm, mealType = openMeal, onDone = { sheet = null }, onDismiss = { sheet = null })
         Sheet.Goals -> GoalsSheet(vm = vm, onDismiss = { sheet = null })
+        Sheet.Trackers -> TrackersSheet(onDismiss = { sheet = null })
     }
 }
 
@@ -527,30 +546,6 @@ private fun EntryRow(meal: MealEntity, photo: String?, onClick: () -> Unit) {
             Text(n(meal.grams) + " g", fontSize = 12.sp, color = p.ink2)
         }
         Text(n(meal.kcal) + " kcal", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = p.ink)
-    }
-}
-
-// ---- water ----
-
-@Composable
-private fun WaterCard(ml: Int, onAdd: (Int) -> Unit) {
-    val p = LocalPaper.current
-    val goal = FoodStats.DEFAULT_WATER_GOAL_ML
-    PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            PaperIcon(R.drawable.ic_p_drop, size = 22.dp, tint = Color(0xFF2878B4))
-            Column(modifier = Modifier.weight(1f)) {
-                Text("Water", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = p.ink)
-                Text("$ml of $goal ml", fontSize = 12.sp, color = p.ink2)
-            }
-            PaperPill("-250", false, { onAdd(-250) })
-            PaperPill("+250", false, { onAdd(250) })
-            PaperPill("+500", false, { onAdd(500) })
-        }
-        Box(modifier = Modifier.fillMaxWidth().padding(top = 10.dp).height(7.dp).clip(RoundedCornerShape(4.dp)).background(p.surface2)) {
-            val f = (ml.toFloat() / goal).coerceIn(0f, 1f)
-            if (f > 0f) Box(modifier = Modifier.fillMaxWidth(f).height(7.dp).background(Color(0xFF2878B4)))
-        }
     }
 }
 

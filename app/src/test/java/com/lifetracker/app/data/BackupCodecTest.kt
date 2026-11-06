@@ -48,6 +48,15 @@ class BackupCodecTest {
             NutrientEntity("n-12ab34cd", "Omega \"3\"", "g", NutrientGroup.OTHER, 0.0, hidden = true, builtIn = false, sortOrder = 24),
         ),
         foodNutrients = listOf(FoodNutrientEntity("a:banana", "vit-b9", 20.0), FoodNutrientEntity("m:1", "n-12ab34cd", 0.5)),
+        supplements = listOf(
+            SupplementEntity("s1", "Vitamin D3", "1000 IU", 480, 0b0101010, 1, "2026-10-01", "", 1),
+            SupplementEntity("s2", "Iron \"gentle\"", "", -1, 0, 3, "2026-10-02", "2026-12-01", 0, true),
+        ),
+        supplementTaken = listOf(SupplementTakenEntity("s1", "2026-10-05", 485)),
+        weights = listOf(WeightEntity("2026-10-01", 71.4), WeightEntity("2026-10-08", 70.9)),
+        fasts = listOf(FastEntity("f1", 1_760_000_000_000L, 1_760_060_000_000L, 16)),
+        batches = listOf(BatchEntity("b:1", "Chicken \"and\" rice", SavedMealItems.encode(listOf(SavedMealItem("a:rice", "Rice", 300.0, 130.0, 2.7, 28.0, 0.3))), 5L, 900.0, 450.0, 3)),
+        mealPlans = listOf(MealPlanEntity("p:1", "Study day", breakfast = SavedMealItems.encode(listOf(SavedMealItem("a:banana", "Banana", 120.0, 89.0, 1.1, 22.8, 0.3))), createdMs = 6L)),
         foodFavourites = listOf(FoodFavouriteEntity("a:banana", 7L), FoodFavouriteEntity("m:1", 8L)),
         savedMeals = listOf(
             SavedMealEntity("s1", "Usual breakfast", SavedMealItems.encode(listOf(SavedMealItem("a:banana", "Banana", 120.0, 89.0, 1.1, 22.8, 0.3))), 0xFFC28410L, 3L),

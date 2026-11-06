@@ -2,6 +2,21 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🥗 Food rebuild, part 4: shake, supplements, weight, fasting, meal prep, plans (N5)
+
+### ✨ New
+
+- **Protein shake**: pick your shake once, then one tap logs it.
+- **Supplements**: add what you take (dose, time, every day, some weekdays or every few days, from and until) and tick it off each day. Reminders come in a later step.
+- **Body weight**: weigh-ins, a goal weight ("2.4 kg to lose"), the pace per week and a small line chart.
+- **This week**: calories and protein a day, and how many days were on target (calories within 10% of the goal, at least 90% of the protein).
+- **Fasting**: a timer with a ring (12 to 23 hours), your last 7 days and how many fasts in a row reached their goal.
+- **Meal prep**: log a whole pot once with its cooked weight, then eat "25% / 50% / 1 portion of what is left"; it keeps track of what is left.
+- **Meal plans**: plan a day of meals (or copy the day you are looking at) and log only the empty meals with one tap.
+- **Protein quality** and **Types of fat** (off until you switch them on): animal against plant protein, the nine essential amino acids against what an adult needs, saturated, mono- and polyunsaturated fat.
+- **What to show** (the list icon at the top of the Food tab) switches each part on or off. Water now has its own goal and glass size (tap its name).
+- Backups carry all of it (backup format 36, database 35).
+
 ## 🍎 Food rebuild, part 3: the new Food screen (N3)
 
 ### ✨ New

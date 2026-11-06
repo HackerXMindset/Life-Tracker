@@ -202,6 +202,12 @@ object BackupManager {
         savedMeals = db.foodDao().allSavedMeals(),
         nutrients = db.foodDao().allNutrients(),
         foodNutrients = db.foodDao().allFoodNutrients(),
+        supplements = db.foodExtrasDao().allSupplements(),
+        supplementTaken = db.foodExtrasDao().allTaken(),
+        weights = db.foodExtrasDao().allWeights(),
+        fasts = db.foodExtrasDao().allFasts(),
+        batches = db.foodExtrasDao().allBatches(),
+        mealPlans = db.foodExtrasDao().allPlans(),
         settings = context?.let { SettingsBackup.collect(it) } ?: emptyMap(),
     )
 
@@ -348,6 +354,22 @@ object BackupManager {
                 db.foodDao().deleteAllFoodNutrients()
                 db.foodDao().upsertNutrients(data.nutrients)
                 db.foodDao().upsertFoodNutrients(data.foodNutrients)
+            }
+            if (data.version >= 36) {
+                // Supplements, weigh-ins, fasts, batches and plans are replaced by the backup's, like your foods.
+                val extras = db.foodExtrasDao()
+                extras.deleteAllSupplements()
+                extras.deleteAllTaken()
+                extras.deleteAllWeights()
+                extras.deleteAllFasts()
+                extras.deleteAllBatches()
+                extras.deleteAllPlans()
+                extras.upsertSupplements(data.supplements)
+                extras.upsertTaken(data.supplementTaken)
+                extras.upsertWeights(data.weights)
+                extras.upsertFasts(data.fasts)
+                extras.upsertBatches(data.batches)
+                extras.upsertPlans(data.mealPlans)
             }
         }
     }
