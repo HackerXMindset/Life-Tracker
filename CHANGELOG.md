@@ -2,6 +2,17 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🍛 Food rebuild, part 8: Indian foods, sweets and snacks
+
+### ✨ New
+
+- **151 Indian foods**, mostly **by the piece**: 1 gulab jamun, 1 samosa, 1 roti, 1 idli, 1 laddu, 1 momo. Sweets (30), snacks (about 40), everyday dishes (about 55, curries and rice by the cup), drinks (lassi, chai, thandai, sugarcane juice) and raw staples (dals, atta, besan, rice, millets, ghee, paneer, jaggery). Three new groups on the food list: **Sweets**, **Snacks** and **Indian dishes**.
+- Search also finds common spellings, such as "jamoon".
+
+### ⚠️ Good to know
+
+- These numbers are **typical values per 100 g from my own knowledge of standard recipes and the Indian food tables, not copied from a table** (the tables could not be reached from here), so every one is marked **approximate** like the other estimated foods. Homemade and shop-bought versions differ a lot (ghee, sugar, size of a piece), so use "Save as my food" or edit the numbers when you know them. Fibre, sugar, sodium and vitamins are left empty rather than guessed. They have no photos yet.
+
 ## 🥦 Food rebuild, part 7: vitamins and minerals for the food list
 
 ### ✨ New
