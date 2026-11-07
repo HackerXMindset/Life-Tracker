@@ -52,6 +52,11 @@ class BackupCodecTest {
             SupplementEntity("s1", "Vitamin D3", "1000 IU", 480, 0b0101010, 1, "2026-10-01", "", 1),
             SupplementEntity("s2", "Iron \"gentle\"", "", -1, 0, 3, "2026-10-02", "2026-12-01", 0, true),
         ),
+        foodTrackers = listOf(
+            FoodTrackerEntity("t:1", "Head\"ache\"", "\uD83E\uDD15", 0xFFB83A3AL, 0),
+            FoodTrackerEntity("t:2", "Tea", "cup", 0xFFC28410L, 1, true),
+        ),
+        trackerEvents = listOf(TrackerEventEntity("e:1", "t:1", "2026-10-05", 845, "after \"lunch\""), TrackerEventEntity("e:2", "t:2", "2026-10-05", 600)),
         supplementTaken = listOf(SupplementTakenEntity("s1", "2026-10-05", 485)),
         weights = listOf(WeightEntity("2026-10-01", 71.4), WeightEntity("2026-10-08", 70.9)),
         fasts = listOf(FastEntity("f1", 1_760_000_000_000L, 1_760_060_000_000L, 16)),

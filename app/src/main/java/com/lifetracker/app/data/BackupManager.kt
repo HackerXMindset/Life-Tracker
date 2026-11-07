@@ -117,6 +117,7 @@ object BackupManager {
         DataSources(context).apply {
             streakSeenExportedAt = null
             ontSeenKey = null
+            gymSeenKey = null
         }
         RestoreResult(settings, data)
     }
@@ -208,6 +209,8 @@ object BackupManager {
         fasts = db.foodExtrasDao().allFasts(),
         batches = db.foodExtrasDao().allBatches(),
         mealPlans = db.foodExtrasDao().allPlans(),
+        foodTrackers = db.foodExtrasDao().allTrackers(),
+        trackerEvents = db.foodExtrasDao().allEvents(),
         settings = context?.let { SettingsBackup.collect(it) } ?: emptyMap(),
     )
 
@@ -370,6 +373,14 @@ object BackupManager {
                 extras.upsertFasts(data.fasts)
                 extras.upsertBatches(data.batches)
                 extras.upsertPlans(data.mealPlans)
+            }
+            if (data.version >= 37) {
+                // Your trackers and every tap replace this phone's.
+                val extras = db.foodExtrasDao()
+                extras.deleteAllTrackers()
+                extras.deleteAllEvents()
+                extras.upsertTrackers(data.foodTrackers)
+                extras.upsertEvents(data.trackerEvents)
             }
         }
     }

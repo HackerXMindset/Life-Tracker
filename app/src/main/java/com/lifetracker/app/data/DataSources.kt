@@ -18,6 +18,7 @@ class DataSources(context: Context) {
         Streak("streak_folder", writable = true),
         OpenNutriTracker("nutri_folder", writable = false),
         Export("export_folder", writable = true),
+        GymMane("gymmane_folder", writable = true),
     }
 
     fun folder(slot: Slot): Uri? = prefs.getString(slot.key, null)?.let(Uri::parse)
@@ -64,4 +65,27 @@ class DataSources(context: Context) {
     var lastOntImportText: String?
         get() = prefs.getString("last_ont_import", null)
         set(value) = prefs.edit().putString("last_ont_import", value).apply()
+
+    /** Name and modified time of the GymMane backup already imported. */
+    var gymSeenKey: String?
+        get() = prefs.getString("gym_seen_key", null)
+        set(value) = prefs.edit().putString("gym_seen_key", value).apply()
+
+    var lastGymImportText: String?
+        get() = prefs.getString("last_gym_import", null)
+        set(value) = prefs.edit().putString("last_gym_import", value).apply()
+
+    /** Whether Kairos also writes a copy of GymMane's backup with your food data added. Off until you switch it on. */
+    var gymSend: Boolean
+        get() = prefs.getBoolean("gym_send", false)
+        set(value) = prefs.edit().putBoolean("gym_send", value).apply()
+
+    /** A fingerprint of what was last sent, so nothing is written twice. */
+    var gymSentHash: Int
+        get() = prefs.getInt("gym_sent_hash", 0)
+        set(value) = prefs.edit().putInt("gym_sent_hash", value).apply()
+
+    var lastGymSendText: String?
+        get() = prefs.getString("last_gym_send", null)
+        set(value) = prefs.edit().putString("last_gym_send", value).apply()
 }

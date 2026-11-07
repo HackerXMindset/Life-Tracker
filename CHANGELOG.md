@@ -2,6 +2,37 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🥦 Food rebuild, part 7: vitamins and minerals for the food list
+
+### ✨ New
+
+- **Vitamin and mineral amounts for about 450 of the 561 foods**, taken from the USDA FoodData Central "SR Legacy" table (per 100 g): A, C, D, E, K, B1, B2, B3, B5, B6, B9 (folate), B12, choline, calcium, iron, magnesium, phosphorus, potassium, zinc, copper, manganese and selenium. Each food is matched to the same food in the same state (raw with raw, cooked with cooked); where only a close variety exists it uses that one. Foods with no real counterpart (dishes, mixes, rare items such as dragon fruit) are left empty rather than guessed, and you can still type values in by hand.
+- Not covered: **iodine** and **biotin (B7)**, because the USDA table has no values for them.
+
+## 🔄 Food rebuild, part 6: GymMane sync (N7)
+
+### ✨ New
+
+- **GymMane folder** (Settings → Data sources): choose the folder where GymMane saves its automatic backups. When you open the app, the newest backup is read and what is new is added once: **food log** (per-serving numbers turned into per 100 g, library foods keep their photo and vitamins), **water** (a day keeps the larger amount), **supplements** and what you ticked, **fasts** and **weigh-ins**. Nothing in GymMane's files is changed, and importing twice never doubles anything. If you delete something here, it does not come back.
+- **Send what is new here back** (off until you switch it on): writes `gymmane-kairos-….zip` into the same folder, a copy of GymMane's newest backup with your food, water, supplements, fasts and weights from Kairos added. GymMane's own files are never touched, nothing already in the copy is changed, and only the newest 3 copies are kept. Restoring stays manual inside GymMane, so nothing there can be lost by surprise. Things that came from GymMane are never sent back to it.
+- "Import now" and "Send now" buttons on the same card.
+
+### ⚠️ Good to know
+
+- Changes you make in GymMane to something already imported (an edited serving, say) are not copied again, and deletions do not travel either way.
+
+## 🩺 Food rebuild, part 5: custom trackers and the Diary timeline (N6)
+
+From OpenNutriTracker issue #1304.
+
+### ✨ New
+
+- **Custom trackers** (off until you switch on "Custom trackers" under the list icon on the Food tab): make a tracker with a name, colour and icon (the same picker as everywhere else), such as headache, reflux, tea or a medicine dose. **One tap logs it with the time**; on another day it asks for the time first. Tap a logged one to change its time, add a note or delete it.
+- Each tracker shows its **count today**, the **time of each tap**, and a **weekly bar chart**. Hidden trackers keep their history. Trackers never touch calories.
+- **Diary timeline** (the timeline icon at the top of the Food tab): days newest first, each with its calories, every food with its time, and the taps as chips such as "Headache ×2". A filled mark means the day has taps. Tap a day to open it. "Show 30 days earlier" goes further back.
+- The week strip shows a second dot on days with taps.
+- Backups carry trackers and every tap (backup format 37, database 36).
+
 ## 🥗 Food rebuild, part 4: shake, supplements, weight, fasting, meal prep, plans (N5)
 
 ### ✨ New
