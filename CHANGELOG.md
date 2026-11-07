@@ -2,6 +2,13 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🥦 Food rebuild, part 7: vitamins and minerals for the food list
+
+### ✨ New
+
+- **Vitamin and mineral amounts for about 450 of the 561 foods**, taken from the USDA FoodData Central "SR Legacy" table (per 100 g): A, C, D, E, K, B1, B2, B3, B5, B6, B9 (folate), B12, choline, calcium, iron, magnesium, phosphorus, potassium, zinc, copper, manganese and selenium. Each food is matched to the same food in the same state (raw with raw, cooked with cooked); where only a close variety exists it uses that one. Foods with no real counterpart (dishes, mixes, rare items such as dragon fruit) are left empty rather than guessed, and you can still type values in by hand.
+- Not covered: **iodine** and **biotin (B7)**, because the USDA table has no values for them.
+
 ## 🔄 Food rebuild, part 6: GymMane sync (N7)
 
 ### ✨ New
