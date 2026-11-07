@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lifetracker.app.data.BackupManager
 import com.lifetracker.app.ui.theme.PaperSegmented
+import com.lifetracker.app.ui.theme.PaperToggle
 import com.lifetracker.app.data.BackupManager.BackupFile
 import com.lifetracker.app.data.DataSources.Slot
 import com.lifetracker.app.data.FoundFile
@@ -69,6 +70,9 @@ fun DataSourcesScreen(onBack: () -> Unit, vm: DataSourcesViewModel = viewModel()
     }
     val pickNutri = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) vm.setFolder(Slot.OpenNutriTracker, uri)
+    }
+    val pickGym = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        if (uri != null) vm.setFolder(Slot.GymMane, uri)
     }
     val saveCopy = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri != null) vm.saveCopy(uri)
@@ -221,8 +225,46 @@ fun DataSourcesScreen(onBack: () -> Unit, vm: DataSourcesViewModel = viewModel()
                     }
                 }
                 item {
+                    SourceBlock(
+                        icon = R.drawable.ic_p_food,
+                        title = "GymMane",
+                        description = "Where GymMane saves its automatic backups. When you open the app, the newest one is imported: " +
+                            "food log, water, supplements, fasts and weight. Nothing in GymMane is changed, " +
+                            "and importing twice never doubles anything.",
+                        folderName = state.gymFolder,
+                        onChoose = { pickGym.launch(startHint("GymMane")) },
+                    ) {
+                        if (state.gymFolder != null) {
+                            NewestFile(state.gymNewest, "No GymMane backup found in this folder.")
+                            KvRow("Last import", state.lastGymImport ?: "not yet")
+                            ImportButton(enabled = !state.busy && state.gymNewest != null, onClick = vm::importGymMane)
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("Send what is new here back", fontWeight = FontWeight.SemiBold)
+                                    Text(
+                                        "Writes a copy of GymMane's newest backup with your food, water, supplements, fasts and weights from here added, " +
+                                            "as gymmane-kairos-….zip in the same folder. GymMane's own files are never touched. " +
+                                            "To use it, restore that file inside GymMane.",
+                                        fontSize = 12.sp,
+                                        color = LocalPaper.current.ink2,
+                                    )
+                                }
+                                PaperToggle(checked = state.gymSend, onChange = vm::setGymSend)
+                            }
+                            KvRow("Last sent", state.lastGymSend ?: "not yet")
+                            Row(modifier = Modifier.padding(top = 4.dp, bottom = 10.dp)) {
+                                PaperButtonBox(onClick = vm::sendGymMane, small = true, enabled = !state.busy && state.gymNewest != null) { Text("Send now") }
+                            }
+                        }
+                    }
+                }
+                item {
                     Text(
-                        text = "The app only reads the Streak and OpenNutriTracker folders. It never changes files in them.",
+                        text = "The app only reads the Streak, OpenNutriTracker and GymMane backups. It never changes them; the only thing it adds to the GymMane folder is its own gymmane-kairos copy, and only if you switch that on.",
                         fontSize = 12.sp,
                         color = LocalPaper.current.ink2,
                     )

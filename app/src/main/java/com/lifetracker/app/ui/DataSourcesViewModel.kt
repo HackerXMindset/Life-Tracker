@@ -11,6 +11,7 @@ import com.lifetracker.app.data.DataSources
 import com.lifetracker.app.data.DataSources.Slot
 import com.lifetracker.app.data.FoundFile
 import com.lifetracker.app.data.SourceScanner
+import com.lifetracker.app.data.gymmane.GymManSync
 import com.lifetracker.app.data.ont.OntImporter
 import com.lifetracker.app.data.streak.StreakImporter
 import kotlinx.coroutines.Dispatchers
@@ -31,6 +32,11 @@ data class DataSourcesState(
     val lastOntImport: String? = null,
     val nutriFolder: String? = null,
     val nutriNewest: FoundFile? = null,
+    val gymFolder: String? = null,
+    val gymNewest: FoundFile? = null,
+    val lastGymImport: String? = null,
+    val gymSend: Boolean = false,
+    val lastGymSend: String? = null,
     val message: String? = null,
     val busy: Boolean = false,
     /** A backup that was opened to be looked at, waiting for "Replace everything". */
@@ -87,6 +93,24 @@ class DataSourcesViewModel(app: Application) : AndroidViewModel(app) {
         launchAction {
             OntImporter.importIfNew(context, force = true)?.describe()
                 ?: "The OpenNutriTracker export has nothing in it to import."
+        }
+    }
+
+    fun importGymMane() {
+        launchAction {
+            GymManSync.importIfNew(context, force = true)?.describe() ?: "The GymMane backup has nothing in it to import."
+        }
+    }
+
+    fun setGymSend(on: Boolean) {
+        sources.gymSend = on
+        refresh()
+    }
+
+    fun sendGymMane() {
+        launchAction {
+            GymManSync.sendIfChanged(context, force = true)?.let { "Wrote $it next to GymMane's backups. Restore it inside GymMane to use it." }
+                ?: "There is nothing here to send yet."
         }
     }
 
@@ -165,7 +189,16 @@ class DataSourcesViewModel(app: Application) : AndroidViewModel(app) {
         val backup = sources.folder(Slot.Backup)
         val streak = sources.folder(Slot.Streak)
         val nutri = sources.folder(Slot.OpenNutriTracker)
+        val gym = sources.folder(Slot.GymMane)
+        fun stamp(text: String?) = text?.let {
+            runCatching { formatDateTime(java.time.LocalDateTime.parse(it).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()) }.getOrNull()
+        }
         DataSourcesState(
+            gymFolder = gym?.let(sources::folderName),
+            gymNewest = gym?.let { SourceScanner.newestGymMane(context, it) },
+            lastGymImport = stamp(sources.lastGymImportText),
+            gymSend = sources.gymSend,
+            lastGymSend = stamp(sources.lastGymSendText),
             backupFolder = backup?.let(sources::folderName),
             lastBackup = sources.lastBackupText,
             backups = runCatching { BackupManager.list(context, backup) }.getOrNull() ?: emptyList(),
