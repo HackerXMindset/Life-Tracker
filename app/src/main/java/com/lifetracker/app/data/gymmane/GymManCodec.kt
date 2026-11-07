@@ -258,13 +258,13 @@ object GymManCodec {
         // GymMane keeps the numbers for one serving; here one serving is the whole portion.
         val f = m.grams / 100.0
         val per = JSONObject()
-        fun put(key: String, per100: Double) {
+        fun add(key: String, per100: Double) {
             val v = per100 * f
             if (v > 0 && v.isFinite()) per.put(key, round(v))
         }
-        put("k", m.kcal100); put("p", m.protein100); put("c", m.carbs100); put("f", m.fat100)
-        put("fi", m.fiber100); put("su", m.sugar100); put("na", m.sodium100)
-        put("an", m.animal100); put("sa", m.sat100); put("mu", m.mono100); put("po", m.poly100)
+        add("k", m.kcal100); add("p", m.protein100); add("c", m.carbs100); add("f", m.fat100)
+        add("fi", m.fiber100); add("su", m.sugar100); add("na", m.sodium100)
+        add("an", m.animal100); add("sa", m.sat100); add("mu", m.mono100); add("po", m.poly100)
         val aa = m.amino.split(',').mapNotNull { it.trim().toDoubleOrNull() }
         if (aa.size == 9 && m.protein100 > 0) {
             per.put("ap", round(m.protein100 * f))
