@@ -94,6 +94,7 @@ object Features {
                 ChargeWorker.cancel(context)
             }
             Feature.HABITS -> if (on) HabitReminderScheduler.rearmAll(context)
+            Feature.FOOD -> SupplementReminderScheduler.rearmAll(context)
             Feature.RULES -> RulesWorker.refresh(context)
             else -> Unit
         }
