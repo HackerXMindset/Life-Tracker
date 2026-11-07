@@ -6,7 +6,7 @@ Every release page shows the sections below that were added since the last relea
 
 ### ✨ New
 
-- **153 Indian foods**, mostly **by the piece**: 1 gulab jamun, 1 samosa, 1 roti, 1 idli, 1 laddu, 1 momo. Sweets (30), snacks (about 40), everyday dishes (about 55, curries and rice by the cup), drinks (lassi, chai, thandai, sugarcane juice) and raw staples (dals, atta, besan, rice, millets, ghee, paneer, jaggery). Three new groups on the food list: **Sweets**, **Snacks** and **Indian dishes**.
+- **151 Indian foods**, mostly **by the piece**: 1 gulab jamun, 1 samosa, 1 roti, 1 idli, 1 laddu, 1 momo. Sweets (30), snacks (about 40), everyday dishes (about 55, curries and rice by the cup), drinks (lassi, chai, thandai, sugarcane juice) and raw staples (dals, atta, besan, rice, millets, ghee, paneer, jaggery). Three new groups on the food list: **Sweets**, **Snacks** and **Indian dishes**.
 - Search also finds common spellings, such as "jamoon".
 
 ### ⚠️ Good to know

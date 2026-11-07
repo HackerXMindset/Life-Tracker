@@ -73,7 +73,6 @@ roti	Roti (Chapati, Phulka)	252	9	46	3.5					unit	30						indian	1
 paratha	Paratha (Plain, with Ghee)	338	8	45	14					unit	60						indian	1	
 aloo-paratha	Aloo Paratha	275	6	38	11					unit	100						indian	1	
 poori	Poori	404	8	48	20					unit	25						indian	1	
-naan	Naan	289	9	52	5					unit	90						indian	1	
 butter-naan	Butter Naan	316	8.5	48	10					unit	100						indian	1	
 bhatura	Bhatura	359	8	48	15					unit	80						indian	1	
 bajra-roti	Bajra Roti	276	9	50	4.5					unit	50						indian	1	
@@ -146,7 +145,6 @@ ragi	Ragi (Finger Millet)	329	7.3	72	1.3					cup	200						grain	1
 sabudana	Sabudana (Tapioca Pearls)	355	0.2	88	0.2					cup	150						grain	1	
 dalia	Dalia (Broken Wheat)	350	12	72	1.5					cup	150						grain	1	
 murmura	Murmura (Puffed Rice)	360	7	82	0.5					cup	14						grain	1	
-ghee	Ghee	896	0	0	99.5					tbsp	13						oil	1	
 dahi	Dahi (Curd, Whole Milk)	66	3.1	4.3	4					cup	200	3.1					dairy	1	
 jaggery	Jaggery (Gur)	390	0.4	97	0.1					tbsp	20						pantry	1	
 mango-pickle	Mango Pickle (Achar)	200	1.5	8	18					tbsp	15						sauce	1	
