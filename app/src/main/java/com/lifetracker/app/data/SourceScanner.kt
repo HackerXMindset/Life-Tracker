@@ -49,6 +49,19 @@ object SourceScanner {
         }.getOrNull()
     }
 
+    /** GymMane's own backups (`gymmane-auto-…zip` or a manual one), never the copies Kairos wrote (`gymmane-kairos-…`). */
+    suspend fun newestGymMane(context: Context, folder: Uri): FoundFile? = withContext(Dispatchers.IO) {
+        runCatching {
+            files(context, folder)
+                .filter { it.name.startsWith("gymmane", ignoreCase = true) && it.name.endsWith(".zip", ignoreCase = true) && !it.name.startsWith("gymmane-kairos", ignoreCase = true) }
+                .maxByOrNull { it.modified }
+        }.getOrNull()
+    }
+
+    /** The copies Kairos wrote, newest first. */
+    fun kairosCopies(context: Context, folder: Uri): List<FoundFile> =
+        files(context, folder).filter { it.name.startsWith("gymmane-kairos", ignoreCase = true) }.sortedByDescending { it.modified }
+
     private fun files(context: Context, folder: Uri): List<FoundFile> {
         val dir = DocumentFile.fromTreeUri(context, folder)?.takeIf { it.exists() } ?: return emptyList()
         return dir.listFiles().mapNotNull { f ->

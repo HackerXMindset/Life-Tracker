@@ -117,6 +117,7 @@ object BackupManager {
         DataSources(context).apply {
             streakSeenExportedAt = null
             ontSeenKey = null
+            gymSeenKey = null
         }
         RestoreResult(settings, data)
     }

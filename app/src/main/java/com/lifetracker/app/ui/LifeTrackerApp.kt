@@ -50,6 +50,7 @@ import com.lifetracker.app.data.UsageCollector
 import com.lifetracker.app.data.UsageSyncWorker
 import com.lifetracker.app.data.HabitSyncState
 import com.lifetracker.app.data.StreakSendWorker
+import com.lifetracker.app.data.gymmane.GymManSync
 import com.lifetracker.app.data.ont.OntImporter
 import com.lifetracker.app.data.streak.StreakImporter
 
@@ -97,6 +98,12 @@ fun LifeTrackerApp() {
         }
         runCatching {
             if (DataSources(context).folder(DataSources.Slot.OpenNutriTracker) != null) OntImporter.importIfNew(context)
+        }
+        runCatching {
+            if (DataSources(context).folder(DataSources.Slot.GymMane) != null) {
+                GymManSync.importIfNew(context)
+                GymManSync.sendIfChanged(context)
+            }
         }
         // Then send anything changed here to Streak's folder, if that is switched on (after the import, so Streak's news comes first).
         runCatching { if (HabitSyncState(context).autoSend) StreakSendWorker.schedule(context, delaySeconds = 0) }

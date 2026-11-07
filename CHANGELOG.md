@@ -2,6 +2,18 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🔄 Food rebuild, part 6: GymMane sync (N7)
+
+### ✨ New
+
+- **GymMane folder** (Settings → Data sources): choose the folder where GymMane saves its automatic backups. When you open the app, the newest backup is read and what is new is added once: **food log** (per-serving numbers turned into per 100 g, library foods keep their photo and vitamins), **water** (a day keeps the larger amount), **supplements** and what you ticked, **fasts** and **weigh-ins**. Nothing in GymMane's files is changed, and importing twice never doubles anything. If you delete something here, it does not come back.
+- **Send what is new here back** (off until you switch it on): writes `gymmane-kairos-….zip` into the same folder, a copy of GymMane's newest backup with your food, water, supplements, fasts and weights from Kairos added. GymMane's own files are never touched, nothing already in the copy is changed, and only the newest 3 copies are kept. Restoring stays manual inside GymMane, so nothing there can be lost by surprise. Things that came from GymMane are never sent back to it.
+- "Import now" and "Send now" buttons on the same card.
+
+### ⚠️ Good to know
+
+- Changes you make in GymMane to something already imported (an edited serving, say) are not copied again, and deletions do not travel either way.
+
 ## 🩺 Food rebuild, part 5: custom trackers and the Diary timeline (N6)
 
 From OpenNutriTracker issue #1304.
