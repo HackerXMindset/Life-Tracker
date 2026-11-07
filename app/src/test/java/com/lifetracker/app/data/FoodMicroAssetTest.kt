@@ -9,7 +9,7 @@ import org.junit.Test
 class FoodMicroAssetTest {
     private val assets = File("src/main/assets/food")
     private val lib = FoodLibrary.parse(
-        File(assets, "foods.tsv").readText(),
+        FoodLibrary.join(File(assets, "foods.tsv").readText(), File(assets, "foods-india.tsv").readText()),
         File(assets, "dishes.tsv").readText(),
         File(assets, "micro.tsv").readText(),
     )

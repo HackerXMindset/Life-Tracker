@@ -44,7 +44,10 @@ enum class FoodCat(val key: String, val label: String) {
     Pantry("pantry", "Pantry"),
     Drink("drink", "Drinks"),
     Sauce("sauce", "Sauces"),
-    Spice("spice", "Spices");
+    Spice("spice", "Spices"),
+    Sweet("sweet", "Sweets"),
+    Snack("snack", "Snacks"),
+    Indian("indian", "Indian dishes");
 
     companion object {
         fun of(key: String): FoodCat? = entries.firstOrNull { it.key == key }
@@ -158,6 +161,7 @@ object FoodLibrary {
     private const val FOODS_FILE = "food/foods.tsv"
     private const val DISHES_FILE = "food/dishes.tsv"
     private const val MICRO_FILE = "food/micro.tsv"
+    private const val INDIA_FILE = "food/foods-india.tsv"
 
     @Volatile
     private var cached: FoodLibraryData? = null
@@ -166,11 +170,20 @@ object FoodLibrary {
     fun get(context: Context): FoodLibraryData = cached ?: synchronized(this) {
         cached ?: run {
             val assets = context.applicationContext.assets
-            val foods = assets.open(FOODS_FILE).bufferedReader().use { it.readText() }
+            val foods = join(
+                assets.open(FOODS_FILE).bufferedReader().use { it.readText() },
+                runCatching { assets.open(INDIA_FILE).bufferedReader().use { it.readText() } }.getOrDefault(""),
+            )
             val dishes = assets.open(DISHES_FILE).bufferedReader().use { it.readText() }
             val micro = runCatching { assets.open(MICRO_FILE).bufferedReader().use { it.readText() } }.getOrDefault("")
             parse(foods, dishes, micro).also { cached = it }
         }
+    }
+
+    /** The main list with the rows of another list (same columns, its own header line) added below it. */
+    fun join(base: String, extra: String): String {
+        val rows = extra.lines().drop(1).filter { it.isNotBlank() }
+        return if (rows.isEmpty()) base else base.trimEnd('\n') + "\n" + rows.joinToString("\n") + "\n"
     }
 
     /** Lower case, without accents, so "Café" is found by "cafe". */

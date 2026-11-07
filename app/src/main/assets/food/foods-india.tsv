@@ -1,0 +1,154 @@
+id	en	k	p	c	f	fi	su	na	ml	kind	g	an	sa	mu	po	aa	cat	ax	cy
+gulab-jamun	Gulab Jamun (Jamoon)	332	4	52	12					unit	40						sweet	1	
+jalebi	Jalebi	370	2	68	10					unit	30						sweet	1	
+rasgulla	Rasgulla (Rosogolla)	182	4	38	1.5					unit	50						sweet	1	
+rasmalai	Rasmalai	205	7	24	9					unit	60						sweet	1	
+besan-laddu	Besan Laddu	469	9	52	25					unit	40						sweet	1	
+motichoor-laddu	Motichoor Laddu	457	5	62	21					unit	40						sweet	1	
+coconut-laddu	Coconut Laddu (Nariyal)	422	4	52	22					unit	30						sweet	1	
+rava-laddu	Rava Laddu	432	5	58	20					unit	35						sweet	1	
+til-laddu	Til Laddu (Sesame)	442	9	52	22					unit	30						sweet	1	
+kaju-katli	Kaju Katli	481	9	55	25					unit	20						sweet	1	
+milk-barfi	Milk Barfi	420	10	50	20					unit	30						sweet	1	
+peda	Peda	390	11	55	14					unit	25						sweet	1	
+soan-papdi	Soan Papdi	462	6	60	22					unit	25						sweet	1	
+gajar-halwa	Gajar Halwa (Carrot Halwa)	236	4	28	12					cup	150						sweet	1	
+suji-halwa	Suji Halwa (Sheera)	302	4	40	14					cup	150						sweet	1	
+moong-dal-halwa	Moong Dal Halwa	382	8	38	22					cup	130						sweet	1	
+kheer	Kheer (Rice Pudding)	134	3.5	20	4.5					cup	200						sweet	1	
+payasam	Semiya Payasam	145	3	22	5					cup	200						sweet	1	
+shrikhand	Shrikhand	261	5	40	9					cup	150						sweet	1	
+rabri	Rabri	258	8	25	14					cup	100						sweet	1	
+kulfi	Kulfi	210	5	25	10					unit	80						sweet	1	
+mysore-pak	Mysore Pak	519	6	45	35					unit	30						sweet	1	
+imarti	Imarti	386	3	62	14					unit	40						sweet	1	
+balushahi	Balushahi	420	5	55	20					unit	40						sweet	1	
+sandesh	Sandesh	240	12	30	8					unit	25						sweet	1	
+peanut-chikki	Peanut Chikki	498	12	54	26					unit	20						sweet	1	
+til-gajak	Gajak (Sesame)	480	11	55	24					unit	25						sweet	1	
+modak	Modak (Steamed)	218	3	38	6					unit	40						sweet	1	
+puran-poli	Puran Poli	283	5	50	7					unit	80						sweet	1	
+malpua	Malpua	359	4	52	15					unit	50						sweet	1	
+kalakand	Kalakand	352	14	38	16					unit	30						sweet	1	
+gujiya	Gujiya	424	6	55	20					unit	50						sweet	1	
+samosa	Samosa (Potato)	277	5.5	30	15					unit	80						snack	1	
+dal-kachori	Dal Kachori	421	7	42	25					unit	60						snack	1	
+onion-pakora	Onion Pakora (Bhaji)	342	8	28	22					unit	20						snack	1	
+paneer-pakora	Paneer Pakora	345	12	18	25					unit	30	5					snack	1	
+mirchi-bajji	Mirchi Bajji	222	4	20	14					unit	50						snack	1	
+batata-vada	Batata Vada (Aloo Bonda)	249	5	28	13					unit	70						snack	1	
+vada-pav	Vada Pav	258	6	36	10					unit	130						snack	1	
+medu-vada	Medu Vada	271	9	25	15					unit	50						snack	1	
+dahi-vada	Dahi Vada	159	6	18	7					unit	70	2					snack	1	
+dhokla	Dhokla (Khaman)	159	7	26	3					unit	30						snack	1	
+khandvi	Khandvi	188	7	22	8					unit	20						snack	1	
+thepla	Thepla	310	9	46	10					unit	40						snack	1	
+khakhra	Khakhra	360	12	60	8					unit	18						snack	1	
+murukku	Murukku (Chakli)	497	8	60	25					unit	15						snack	1	
+mathri	Mathri	506	7	52	30					unit	15						snack	1	
+bhujia	Bhujia (Sev)	548	18	38	36					cup	40						snack	1	
+namkeen-mixture	Namkeen Mixture	516	12	45	32					cup	40						snack	1	
+poha-chivda	Poha Chivda	438	7	62	18					cup	30						snack	1	
+roasted-chana	Roasted Chana	357	20	58	5					cup	100						snack	1	
+roasted-makhana	Roasted Makhana (Fox Nuts)	374	10	70	6					cup	25						snack	1	
+papad-roasted	Papad (Roasted)	307	20	50	3					unit	12						snack	1	
+papad-fried	Papad (Fried)	477	18	45	25					unit	12						snack	1	
+bhel-puri	Bhel Puri	252	5	40	8					cup	100						snack	1	
+pani-puri	Pani Puri (1 puri with filling)	116	2	18	4					unit	25						snack	1	
+sev-puri	Sev Puri (1 puri)	218	4	28	10					unit	25						snack	1	
+papdi-chaat	Papdi Chaat	188	5	24	8					cup	150						snack	1	
+aloo-tikki	Aloo Tikki	189	3	24	9					unit	60						snack	1	
+dabeli	Dabeli	300	6	42	12					unit	100						snack	1	
+pav-bhaji	Pav Bhaji (bhaji only)	123	3	12	7					cup	200						snack	1	
+pav	Pav (Bread Roll)	268	8	50	4					unit	40						snack	1	
+veg-momo	Veg Momo (Steamed)	135	5	22	3					unit	25						snack	1	
+chicken-momo	Chicken Momo (Steamed)	156	10	20	4					unit	25	8					snack	1	
+instant-noodles	Instant Noodles (Cooked, Masala)	148	3.5	21	5.5					cup	250						snack	1	
+bread-pakora	Bread Pakora	313	7	33	17					unit	80						snack	1	
+masala-peanuts	Masala Peanuts	534	20	28	38					cup	40						snack	1	
+chana-jor-garam	Chana Jor Garam	329	16	55	5					cup	40						snack	1	
+sabudana-vada	Sabudana Vada	286	2	38	14					unit	50						snack	1	
+banana-chips	Banana Chips (Kerala)	525	2	55	33					cup	35						snack	1	
+roti	Roti (Chapati, Phulka)	252	9	46	3.5					unit	30						indian	1	
+paratha	Paratha (Plain, with Ghee)	338	8	45	14					unit	60						indian	1	
+aloo-paratha	Aloo Paratha	275	6	38	11					unit	100						indian	1	
+poori	Poori	404	8	48	20					unit	25						indian	1	
+naan	Naan	289	9	52	5					unit	90						indian	1	
+butter-naan	Butter Naan	316	8.5	48	10					unit	100						indian	1	
+bhatura	Bhatura	359	8	48	15					unit	80						indian	1	
+bajra-roti	Bajra Roti	276	9	50	4.5					unit	50						indian	1	
+jowar-roti	Jowar Roti	254	8	52	1.5					unit	45						indian	1	
+ragi-roti	Ragi Roti	262	7	55	1.5					unit	45						indian	1	
+plain-dosa	Plain Dosa	180	4	31	4.5					unit	100						indian	1	
+masala-dosa	Masala Dosa	191	4	28	7					unit	180						indian	1	
+idli	Idli	118	3.5	25	0.5					unit	40						indian	1	
+uttapam	Uttapam	165	4	26	5					unit	120						indian	1	
+upma	Upma	132	3	20	4.5					cup	200						indian	1	
+poha	Poha (Cooked)	151	2.8	26	4					cup	150						indian	1	
+ven-pongal	Ven Pongal	145	3	22	5					cup	200						indian	1	
+sambar	Sambar	50	2	7	1.5					cup	200						indian	1	
+rasam	Rasam	18	0.5	3	0.5					cup	200						indian	1	
+dal-tadka	Dal Tadka (Cooked)	100	5	12	3.5					cup	200						indian	1	
+dal-makhani	Dal Makhani	133	5.5	12	7					cup	200	2					indian	1	
+chana-masala	Chana Masala	139	6.5	17	5					cup	200						indian	1	
+rajma-masala	Rajma Masala	120	6	15	4					cup	200						indian	1	
+palak-paneer	Palak Paneer	147	7	5	11					cup	200	4					indian	1	
+paneer-butter-masala	Paneer Butter Masala	200	7	7	16					cup	200	5					indian	1	
+matar-paneer	Matar Paneer	159	7	8	11					cup	200	4					indian	1	
+paneer	Paneer	273	18	3	21					unit	20	18					dairy	1	
+aloo-gobi	Aloo Gobi	91	2.5	9	5					cup	150						indian	1	
+bhindi-masala	Bhindi Masala	94	2	8	6					cup	150						indian	1	
+baingan-bharta	Baingan Bharta	81	2	7	5					cup	150						indian	1	
+mixed-veg-curry	Mixed Vegetable Curry	78	2.5	8	4					cup	150						indian	1	
+aloo-jeera	Aloo Jeera	113	2	15	5					cup	150						indian	1	
+chicken-curry	Chicken Curry	153	14	4	9					cup	200	14					indian	1	
+butter-chicken	Butter Chicken	198	12	6	14					cup	200	12					indian	1	
+chicken-tikka	Chicken Tikka	162	24	3	6					unit	30	24					indian	1	
+tandoori-chicken	Tandoori Chicken	172	22	3	8					unit	100	22					indian	1	
+mutton-curry	Mutton Curry (Rogan Josh)	180	14	4	12					cup	200	14					indian	1	
+keema	Keema (Mutton Mince)	206	17	3	14					cup	150	17					indian	1	
+fish-curry	Fish Curry	114	12	3	6					cup	200	12					indian	1	
+egg-curry	Egg Curry	116	7	4	8					cup	200	7					indian	1	
+chicken-biryani	Chicken Biryani	191	8	24	7					cup	200	5					indian	1	
+veg-biryani	Veg Biryani	169	4	27	5					cup	200						indian	1	
+jeera-rice	Jeera Rice	156	3	28	3.5					cup	150						indian	1	
+veg-pulao	Veg Pulao	148	3	25	4					cup	150						indian	1	
+khichdi	Khichdi (Dal and Rice)	123	4	20	3					cup	200						indian	1	
+curd-rice	Curd Rice	107	3	17	3					cup	200	2					indian	1	
+lemon-rice	Lemon Rice	160	3	28	4					cup	150						indian	1	
+raita	Raita	59	3	5	3					cup	100	3					indian	1	
+sweet-lassi	Sweet Lassi	95	3	14	3				1	glass	250	3					drink	1	
+chaas	Chaas (Buttermilk, Salted)	27	1.5	3	1				1	glass	250	1.5					drink	1	
+masala-chai	Masala Chai (Milk, Sugar)	56	1.5	8	2				1	cup	150	1.5					drink	1	
+filter-coffee	Filter Coffee (Milk, Sugar)	56	1.5	8	2				1	cup	150	1.5					drink	1	
+thandai	Thandai	104	3	14	4				1	glass	200	2					drink	1	
+badam-milk	Badam Milk	98	3.5	12	4				1	glass	250	3					drink	1	
+sugarcane-juice	Sugarcane Juice	54	0.2	13	0.1				1	glass	250						drink	1	
+aam-panna	Aam Panna	57	0.3	14	0				1	glass	250						drink	1	
+jaljeera	Jaljeera	17	0.2	4	0				1	glass	250						drink	1	
+toor-dal-raw	Toor Dal (Raw)	335	22.3	57.6	1.7					cup	200						legume	1	
+moong-dal-raw	Moong Dal (Raw, Split)	343	24	59	1.2					cup	200						legume	1	
+masoor-dal-raw	Masoor Dal (Raw)	343	25	59	0.8					cup	200						legume	1	
+chana-dal-raw	Chana Dal (Raw)	370	22	58	5.5					cup	200						legume	1	
+urad-dal-raw	Urad Dal (Raw)	346	24	59	1.5					cup	200						legume	1	
+rajma-raw	Rajma (Raw)	344	22.5	60	1.5					cup	190						legume	1	
+kabuli-chana-raw	Kabuli Chana (Raw)	378	20	61	6					cup	200						legume	1	
+kala-chana-raw	Kala Chana (Raw)	365	20	60	5					cup	200						legume	1	
+besan	Besan (Gram Flour)	380	22	58	6.7					cup	100						grain	1	
+atta	Atta (Whole Wheat Flour)	347	12	71	1.7					cup	120						grain	1	
+maida	Maida (Refined Flour)	349	11	74	1					cup	125						grain	1	
+suji	Suji (Rava, Semolina)	349	12.5	73	0.8					cup	170						grain	1	
+basmati-rice-raw	Basmati Rice (Raw)	348	8	78	0.5					cup	185						grain	1	
+poha-raw	Poha (Flattened Rice, Raw)	345	6.6	77	1.2					cup	60						grain	1	
+bajra	Bajra (Pearl Millet)	361	11.6	67.5	5					cup	200						grain	1	
+jowar	Jowar (Sorghum)	349	10.4	72.6	1.9					cup	200						grain	1	
+ragi	Ragi (Finger Millet)	329	7.3	72	1.3					cup	200						grain	1	
+sabudana	Sabudana (Tapioca Pearls)	355	0.2	88	0.2					cup	150						grain	1	
+dalia	Dalia (Broken Wheat)	350	12	72	1.5					cup	150						grain	1	
+murmura	Murmura (Puffed Rice)	360	7	82	0.5					cup	14						grain	1	
+ghee	Ghee	896	0	0	99.5					tbsp	13						oil	1	
+dahi	Dahi (Curd, Whole Milk)	66	3.1	4.3	4					cup	200	3.1					dairy	1	
+jaggery	Jaggery (Gur)	390	0.4	97	0.1					tbsp	20						pantry	1	
+mango-pickle	Mango Pickle (Achar)	200	1.5	8	18					tbsp	15						sauce	1	
+tamarind-chutney	Tamarind Chutney (Imli)	228	1	55	0.5					tbsp	18						sauce	1	
+coconut-chutney	Coconut Chutney	158	2	6	14					tbsp	15						sauce	1	

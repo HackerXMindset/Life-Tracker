@@ -8,12 +8,12 @@ import org.junit.Test
 
 class FoodLibraryTest {
     private val assets = File("src/main/assets/food")
-    private val lib: FoodLibraryData by lazy { FoodLibrary.parse(File(assets, "foods.tsv").readText(), File(assets, "dishes.tsv").readText()) }
+    private val lib: FoodLibraryData by lazy { FoodLibrary.parse(FoodLibrary.join(File(assets, "foods.tsv").readText(), File(assets, "foods-india.tsv").readText()), File(assets, "dishes.tsv").readText()) }
 
     @Test
     fun theBundledListHasEveryFoodAndEachHasAPhoto() {
-        assertEquals(561, lib.foods.size)
-        assertEquals(561, lib.foods.map { it.id }.toSet().size)
+        assertEquals(561 + 153, lib.foods.size)
+        assertEquals(561 + 153, lib.foods.map { it.id }.toSet().size)
         for (f in lib.foods) assertTrue("no photo for ${f.id}", File(assets, f.photoAsset.removePrefix("food/")).isFile)
     }
 
@@ -76,5 +76,31 @@ class FoodLibraryTest {
         val data = FoodLibrary.parse("id\ten\tk\tp\n\tNoId\t1\t1\nok\tFine\t10\t2\n", "id\ten\titems\nbad\tBad\tnothing\n")
         assertEquals(listOf("ok"), data.foods.map { it.id })
         assertTrue(data.dishes.isEmpty())
+    }
+
+    @Test
+    fun indianFoodsAreByThePieceAndMarkedApproximate() {
+        val jamun = lib.foods.first { it.id == "gulab-jamun" }
+        assertEquals(PortionKind.Unit, jamun.portion)
+        assertEquals(FoodCat.Sweet, jamun.cat)
+        assertTrue(jamun.approx)
+        // kcal matches the macros it is built from: 4 protein, 4 carbs, 9 fat.
+        assertEquals(4 * 4.0 + 4 * 52 + 9 * 12, jamun.per100.kcal, 1.0)
+        val samosa = lib.foods.first { it.id == "samosa" }
+        assertEquals(80.0, samosa.portionGrams, 1e-9)
+        assertEquals(FoodCat.Snack, samosa.cat)
+        assertTrue(lib.foods.filter { it.cat in listOf(FoodCat.Sweet, FoodCat.Snack, FoodCat.Indian) }.size > 100)
+    }
+
+    @Test
+    fun everyIndianRowAddsUpAndHasAPortion() {
+        val mine = File(assets, "foods-india.tsv").readLines().drop(1).filter { it.isNotBlank() }.map { it.substringBefore('\t') }.toSet()
+        assertEquals(153, mine.size)
+        for (f in lib.foods.filter { it.id in mine }) {
+            assertTrue(f.id, f.approx)
+            val fromMacros = 4 * f.per100.protein + 4 * f.per100.carbs + 9 * f.per100.fat
+            assertEquals(f.id, fromMacros, f.per100.kcal, 1.5)
+            assertTrue(f.id, f.portion != null && f.portionGrams > 0)
+        }
     }
 }
