@@ -25,7 +25,7 @@ Life Tracker is an Android app built for one person: its owner. It replaces a pi
 | Tab | What you get | Learns from |
 | --- | --- | --- |
 | **Timeline** | Your day in order: logged activities, app use, calls, charging, steps, sleep, places and trips, as a strip and a pie (the pie can show each app too); drag two stays together to join them | LifeXP |
-| **Food** | Meals, calories, macros, water; automatic import | OpenNutriTracker |
+| **Food** | 561 foods with photos, dishes, vitamins and minerals, water, supplements, fasting, weight, meal prep and plans, your own trackers with a diary; automatic import from GymMane and OpenNutriTracker | GymMane, OpenNutriTracker |
 | **Habits** | Streaks, schedules, notes, reminders, focus timer; two-way sync with Streak | Streak |
 | **Money** | Income and spending, monthly items, quick-log buttons, your own categories | (new) |
 | **Stats** | Numbers on everything, by day or any range | Simkl |
@@ -355,7 +355,7 @@ No computer needed. Every push runs `build.yml` on GitHub: the tests run first, 
 ## How your data is stored and protected
 
 - **On the phone only.** A private database no other app can read.
-- **Imports read, never change** your Streak and OpenNutriTracker folders, and repeat safely.
+- **Imports read, never change** your Streak, OpenNutriTracker and GymMane folders, and repeat safely. The only file Kairos adds to the GymMane folder is its own `gymmane-kairos-….zip` copy, and only if you switch that on.
 - **Backups are plain JSON files** you can copy and keep. Restore checks the file first and saves a safety copy of your current data.
 - A backup on the phone cannot help if the phone is lost; copy the backup folder somewhere else now and then.
 - The only things that go online are the ones you switch on: map pictures and place-name suggestions (see the help text in Settings).
@@ -383,4 +383,4 @@ No computer needed. Every push runs `build.yml` on GitHub: the tests run first, 
 
 ## Thanks
 
-The food list and its photos come from [GymMane](https://github.com/InlitX/GymMane) by InlitX (GPL-3.0; the app says "Based on GymMane by InlitX" in Settings). Ideas came from [LifeXP](https://lifexp.app), [Streak](https://github.com/streaksapp), [OpenNutriTracker](https://github.com/simonoppowa/OpenNutriTracker), Simkl and [Colota](https://github.com/dietrichmax/colota). Colota is AGPL, so nothing of its code is used; the Places and trips features were written fresh from its documentation.
+The food list and its photos come from [GymMane](https://github.com/InlitX/GymMane) by InlitX (GPL-3.0; the app says "Based on GymMane by InlitX" in Settings). Vitamin and mineral amounts come from the USDA FoodData Central SR Legacy table (public domain). Ideas came from [LifeXP](https://lifexp.app), [Streak](https://github.com/streaksapp), [OpenNutriTracker](https://github.com/simonoppowa/OpenNutriTracker), Simkl and [Colota](https://github.com/dietrichmax/colota). Colota is AGPL, so nothing of its code is used; the Places and trips features were written fresh from its documentation.
