@@ -161,7 +161,7 @@ object FoodLibrary {
     private const val FOODS_FILE = "food/foods.tsv"
     private const val DISHES_FILE = "food/dishes.tsv"
     private const val MICRO_FILE = "food/micro.tsv"
-    private const val INDIA_FILE = "food/foods-india.tsv"
+    private val EXTRA_FILES = listOf("food/foods-india.tsv", "food/foods-ifct.tsv")
 
     @Volatile
     private var cached: FoodLibraryData? = null
@@ -172,7 +172,7 @@ object FoodLibrary {
             val assets = context.applicationContext.assets
             val foods = join(
                 assets.open(FOODS_FILE).bufferedReader().use { it.readText() },
-                runCatching { assets.open(INDIA_FILE).bufferedReader().use { it.readText() } }.getOrDefault(""),
+                *EXTRA_FILES.map { f -> runCatching { assets.open(f).bufferedReader().use { it.readText() } }.getOrDefault("") }.toTypedArray(),
             )
             val dishes = assets.open(DISHES_FILE).bufferedReader().use { it.readText() }
             val micro = runCatching { assets.open(MICRO_FILE).bufferedReader().use { it.readText() } }.getOrDefault("")
@@ -181,8 +181,8 @@ object FoodLibrary {
     }
 
     /** The main list with the rows of another list (same columns, its own header line) added below it. */
-    fun join(base: String, extra: String): String {
-        val rows = extra.lines().drop(1).filter { it.isNotBlank() }
+    fun join(base: String, vararg extras: String): String {
+        val rows = extras.flatMap { it.lines().drop(1).filter { line -> line.isNotBlank() } }
         return if (rows.isEmpty()) base else base.trimEnd('\n') + "\n" + rows.joinToString("\n") + "\n"
     }
 

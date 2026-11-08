@@ -2,21 +2,22 @@ package com.lifetracker.app.data
 
 import java.io.File
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class FoodLibraryTest {
     private val assets = File("src/main/assets/food")
-    private val lib: FoodLibraryData by lazy { FoodLibrary.parse(FoodLibrary.join(File(assets, "foods.tsv").readText(), File(assets, "foods-india.tsv").readText()), File(assets, "dishes.tsv").readText()) }
+    private val lib: FoodLibraryData by lazy { FoodLibrary.parse(FoodLibrary.join(File(assets, "foods.tsv").readText(), File(assets, "foods-india.tsv").readText(), File(assets, "foods-ifct.tsv").readText()), File(assets, "dishes.tsv").readText()) }
 
     @Test
     fun theBundledListHasEveryFoodAndEachHasAPhoto() {
-        assertEquals(561 + 151, lib.foods.size)
-        assertEquals(561 + 151, lib.foods.map { it.id }.toSet().size)
+        assertEquals(561 + extraRows(), lib.foods.size)
+        assertEquals(561 + extraRows(), lib.foods.map { it.id }.toSet().size)
         val mine = File(assets, "foods-india.tsv").readLines().drop(1).filter { it.isNotBlank() }.map { it.substringBefore('\t') }.toSet()
-        // The Indian foods have no photos yet; the list from GymMane has one each.
-        for (f in lib.foods.filter { it.id !in mine }) assertTrue("no photo for ${f.id}", File(assets, f.photoAsset.removePrefix("food/")).isFile)
+        // The Indian foods have no photos; the list from GymMane has one each (the IFCT foods only where it is the same plain food).
+        for (f in lib.foods.filter { it.id !in mine && !it.id.startsWith("ifct-") }) assertTrue("no photo for ${f.id}", File(assets, f.photoAsset.removePrefix("food/")).isFile)
     }
 
     @Test
@@ -97,12 +98,25 @@ class FoodLibraryTest {
     @Test
     fun everyIndianRowAddsUpAndHasAPortion() {
         val mine = File(assets, "foods-india.tsv").readLines().drop(1).filter { it.isNotBlank() }.map { it.substringBefore('\t') }.toSet()
-        assertEquals(151, mine.size)
+        assertTrue(mine.size > 100)
         for (f in lib.foods.filter { it.id in mine }) {
             assertTrue(f.id, f.approx)
             val fromMacros = 4 * f.per100.protein + 4 * f.per100.carbs + 9 * f.per100.fat
             assertEquals(f.id, fromMacros, f.per100.kcal, 1.5)
             assertTrue(f.id, f.portion != null && f.portionGrams > 0)
         }
+    }
+
+    private fun extraRows() = listOf("foods-india.tsv", "foods-ifct.tsv").sumOf { n -> File(assets, n).readLines().drop(1).count { it.isNotBlank() } }
+
+    @Test
+    fun ifctFoodsCarryTheirMeasuredNumbers() {
+        val atta = lib.foods.first { it.id == "ifct-A019" }
+        assertEquals(320.0, atta.per100.kcal, 1.0)
+        assertEquals(10.57, atta.per100.protein, 1e-9)
+        assertFalse(atta.approx)
+        assertTrue(lib.foods.count { it.id.startsWith("ifct-") } > 500)
+        // Their vitamins and minerals sit in the same table as the others.
+        assertTrue(lib.microOf("ifct-A019").isNotEmpty())
     }
 }

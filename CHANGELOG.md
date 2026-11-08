@@ -2,6 +2,21 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧪 Food rebuild, part 9: the Indian Food Composition Tables (IFCT 2017)
+
+### ✨ New
+
+- **527 foods from the IFCT 2017 tables** (the National Institute of Nutrition's measured values, per 100 g, for raw Indian foods): cereals and millets, dals and pulses, leafy and other vegetables, fruits, roots, spices, nuts and seeds, sugars, mushrooms, milk and paneer, eggs, poultry, meat, fish and shellfish, oils. They carry **real numbers**, not estimates: calories (from the tables' kJ), protein, fat, carbs (available carbs plus fibre), fibre, sugars, sodium, saturated / mono / poly fats, and **vitamins and minerals** (A, C, D, E, K, B1, B2, B3, B5, B6, B7 (biotin), B9, calcium, iron, magnesium, phosphorus, potassium, zinc, copper, manganese, selenium). Hindi names are in brackets, so "gajar", "palak", "chana" and "sev" find them.
+- **Biotin (B7)** now has values; the IFCT tables are the first source that does. (B12 and iodine are not in the tables.)
+- **69 of them have a photo**, borrowed from the same plain food in the main list (apple, carrot, tomato, banana, spinach and so on). The rest have the category icon.
+- The 16 raw staples I had estimated by hand (toor dal, atta, bajra, jaggery, paneer and so on) are removed, because the real ones replace them.
+
+### ⚠️ Good to know
+
+- IFCT values are for the food **raw or as sold**; log cooked dal or rice with the cooked dishes (dal tadka, khichdi) instead.
+- Where a food has several varieties (mangoes, grapes, bananas), each variety is its own entry.
+- Source: Longvah T, Ananthan R, Bhaskarachary K, Venkaiah K. *Indian Food Composition Tables 2017*, National Institute of Nutrition, Hyderabad, via github.com/ifct2017 (AGPL-3.0). If the app is ever shared, the combined work must stay under a licence compatible with that (GPL-3.0 already applies because of GymMane).
+
 ## 🍛 Food rebuild, part 8: Indian foods, sweets and snacks
 
 ### ✨ New
