@@ -68,7 +68,7 @@ object HabitReminderScheduler {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
-    private fun setAlarm(context: Context, at: LocalDateTime, pending: PendingIntent) {
+    internal fun setAlarm(context: Context, at: LocalDateTime, pending: PendingIntent) {
         val alarms = context.getSystemService(AlarmManager::class.java)
         val millis = at.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
         try {
@@ -348,13 +348,18 @@ class HabitReminderReceiver : BroadcastReceiver() {
 /** After a restart, an app update, or a change of clock, time zone or alarm permission: set every alarm again. */
 class HabitReminderBootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (!Features.isOn(context, Feature.HABITS)) return
+        val habits = Features.isOn(context, Feature.HABITS)
+        val food = Features.isOn(context, Feature.FOOD)
+        if (!habits && !food) return
         val app = context.applicationContext
         val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                HabitReminderScheduler.rearmAll(app)
-                FocusEngine.restore(app)
+                if (habits) {
+                    HabitReminderScheduler.rearmAll(app)
+                    FocusEngine.restore(app)
+                }
+                if (food) SupplementReminderScheduler.rearmAll(app)
             } catch (e: Exception) {
                 AppLog.e("Habits", "Could not set reminders again: ${e.message}")
             } finally {

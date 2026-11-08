@@ -22,6 +22,8 @@ class LifeTrackerApplication : Application() {
         com.lifetracker.app.data.TripGuess.load(this)
         // Habit reminders follow every change to the habits while the app's process is alive (Habits H12).
         HabitReminderScheduler.watch(this, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        // Supplement reminders follow the supplements and the switch in Food.
+        com.lifetracker.app.data.SupplementReminderScheduler.watch(this, CoroutineScope(SupervisorJob() + Dispatchers.IO))
         // A focus session that was running comes back with its alarm and banner (Habits H13).
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch { runCatching { FocusEngine.restore(this@LifeTrackerApplication) } }
         if (ChargeSettings(this).track) {

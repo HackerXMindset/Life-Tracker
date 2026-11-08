@@ -350,6 +350,14 @@ object FoodSettings {
         changed()
     }
 
+    /** Whether a supplement with a time rings a reminder at that time (off until you switch it on). */
+    fun suppReminders(context: Context): Boolean = prefs(context).getBoolean("supp_reminders", false)
+
+    fun setSuppReminders(context: Context, on: Boolean) {
+        prefs(context).edit { putBoolean("supp_reminders", on) }
+        changed()
+    }
+
     /** The foods you marked as shakes ([FoodRef] texts), and the one the shaker button logs. */
     fun shakeRefs(context: Context): Set<String> = prefs(context).getStringSet("shake_refs", emptySet()) ?: emptySet()
     fun shakeRef(context: Context): String = prefs(context).getString("shake_ref", "") ?: ""

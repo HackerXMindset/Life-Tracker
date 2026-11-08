@@ -33,6 +33,12 @@ Based on GymMane by InlitX (GPL-3.0); the bottle pictures come from GymMane.
 - Where a food has several varieties (mangoes, grapes, bananas), each variety is its own entry.
 - Source: Longvah T, Ananthan R, Bhaskarachary K, Venkaiah K. *Indian Food Composition Tables 2017*, National Institute of Nutrition, Hyderabad, via github.com/ifct2017 (AGPL-3.0). If the app is ever shared, the combined work must stay under a licence compatible with that (GPL-3.0 already applies because of GymMane).
 
+## ⏰ Supplement reminders
+
+### ✨ New
+
+- **Remind me** (Food > Supplements): a notification at each supplement's time, on the days it is due, with **Taken** and **Snooze 10 min** buttons. Taken is the same as ticking it in the app. It stays quiet if you already ticked it today, and supplements set to "Any time" do not ring. Off until you switch it on. Alarms are set again after a restart, an app update or a change of clock or time zone. Notifications and "Alarms and reminders" must be allowed in Settings > Permissions (the same ones the habit reminders use).
+
 ## 🍛 Food rebuild, part 8: Indian foods, sweets and snacks
 
 ### ✨ New

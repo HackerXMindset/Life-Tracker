@@ -361,7 +361,23 @@ private fun SupplementsWindow(x: FoodExtrasViewModel, all: List<SupplementEntity
     val p = LocalPaper.current
     var editing by remember { mutableStateOf<SupplementEntity?>(null) }
     var creating by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    var remind by remember { mutableStateOf(FoodSettings.suppReminders(context)) }
     EditWindow(title = "Supplements", sub = "Tap one to change it", onClose = onClose) {
+        PaperCard(modifier = Modifier.fillMaxWidth(), padding = 12.dp, shadow = false) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Remind me", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = p.ink)
+                    Text(
+                        "A notification at each supplement's time, on the days it is due, with Taken and Snooze buttons. " +
+                            "It stays quiet if you already ticked it. Supplements set to \"Any time\" do not ring. " +
+                            "Notifications and \"Alarms and reminders\" must be allowed in Settings > Permissions.",
+                        fontSize = 12.sp, color = p.ink2,
+                    )
+                }
+                PaperToggle(remind, { remind = it; FoodSettings.setSuppReminders(context, it) })
+            }
+        }
         all.forEach { s ->
             PaperCard(modifier = Modifier.fillMaxWidth(), padding = 12.dp, shadow = false, onClick = { editing = s }) {
                 Text(s.name, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = p.ink)

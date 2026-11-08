@@ -138,6 +138,10 @@
         <receiver
             android:name=".data.HabitReminderReceiver"
             android:exported="false" />
+        <!-- Supplement reminders (Food): the alarm and the Taken and Snooze buttons. They are set again by the boot receiver below. -->
+        <receiver
+            android:name=".data.SupplementReminderReceiver"
+            android:exported="false" />
         <receiver
             android:name=".data.HabitReminderBootReceiver"
             android:exported="true">
