@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">Kairos</string>
+    <string name="widget_snap">Snap a meal</string>
+    <string name="widget_description">Opens the camera, reads the meal and lets you check it before it is added</string>
+    <string name="tile_snap">Snap a meal</string>
+    <string name="shortcut_snap_short">Snap meal</string>
+    <string name="shortcut_snap_long">Snap a meal</string>
 </resources>

@@ -2,6 +2,15 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📷 Snap a meal from your home screen
+
+### ✨ New
+
+- **Snap a meal** home-screen widget: long-press the home screen, choose Widgets, find Kairos and drag **Snap a meal** out. One tap opens the camera, Gemini reads the photo, and you land on a **Check this meal** page.
+- The **check page** asks "Is this what you ate?" before anything is added. You can rename it, slide the portion to match your plate, fix the calories, protein, carbs or fat, pick breakfast, lunch, dinner or snack (chosen for the time of day), and press **Yes, add this**. If it looks wrong, ask again with a hint such as "2 rotis, 1 katori dal", ask the bigger model, or take another photo.
+- The same button is also on the **app icon** (long-press it) and as a **quick-settings tile** (pull the shade down, then edit tiles).
+- The key and privacy dialogs of Fill from a photo are now shared with the widget, so the first tap asks for your free Gemini key if it is missing.
+
 ## 📷 Fill from a photo: fix
 
 ### 🐛 Fixed
