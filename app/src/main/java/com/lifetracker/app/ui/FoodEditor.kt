@@ -129,6 +129,28 @@ fun FoodEditor(
             }
         },
     ) {
+        if (initial == null) {
+            PhotoFill(
+                onFilled = { food ->
+                    val h = food.per100()
+                    name = food.name
+                    liquid = food.drink
+                    kcal = foodNum(h.kcal)
+                    protein = foodNum(h.protein)
+                    carbs = foodNum(h.carbs)
+                    fat = foodNum(h.fat)
+                    fiber = foodNum(h.fiber)
+                    sugar = foodNum(h.sugar)
+                    sodium = foodNum(h.sodiumMg)
+                    sat = foodNum(h.sat)
+                    mono = foodNum(h.mono)
+                    poly = foodNum(h.poly)
+                    kind = PortionKind.Serving
+                    portionGrams = foodNum(food.servingGrams)
+                    error = null
+                },
+            )
+        }
         PaperField(name, { name = it; error = null }, "Name", placeholder = "e.g. Paneer tikka", singleLine = true)
 
         MonoLabel("Group (optional)")

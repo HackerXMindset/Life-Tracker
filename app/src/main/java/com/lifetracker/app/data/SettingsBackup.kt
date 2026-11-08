@@ -15,7 +15,7 @@ import org.json.JSONObject
  */
 object SettingsBackup {
     /** Files that stay on this phone. */
-    val LEFT_OUT: Set<String> = setOf("data_sources", "applog", "focus-state", "habit_sync")
+    val LEFT_OUT: Set<String> = setOf("data_sources", "applog", "focus-state", "habit_sync", "food_ai")
 
     /** Whether the settings file called [name] goes into a backup. */
     fun included(name: String): Boolean =
