@@ -2,6 +2,18 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📷 Fill a food from a photo
+
+### ✨ New
+
+- **Fill from a photo** at the top of **New food**: take or choose a photo of a meal, and Google's Gemini reads it and fills in the name, calories, protein, carbs, fat, fibre, sugar, sodium and fat types, plus how much was on the plate. You check the numbers and press Save. Add a note such as "2 rotis, 1 katori dal" to improve the guess.
+- **Think harder** asks a bigger model about the same photo, for a dish the quick one got wrong.
+- Needs your own **free Gemini key** (aistudio.google.com/apikey), asked for once under **AI settings**. The key stays on this phone and is left out of backups. The model names can be changed there when Google retires one.
+- A one-time notice says that the photo goes to Google, and that on the free plan Google may use it to improve its products.
+- Food photos only for now; labels and barcodes are not read.
+
+The method follows the open-source calorie apps Fud AI (MIT) and CalorieMate (MIT): a small JPEG sent with a prompt that asks for JSON only, low thinking for speed, and a form you review before saving.
+
 ## 📤 Export for GymMane
 
 ### ✨ New
