@@ -9,7 +9,7 @@ import org.junit.Test
 class FoodMicroAssetTest {
     private val assets = File("src/main/assets/food")
     private val lib = FoodLibrary.parse(
-        FoodLibrary.join(File(assets, "foods.tsv").readText(), File(assets, "foods-india.tsv").readText()),
+        FoodLibrary.join(File(assets, "foods.tsv").readText(), File(assets, "foods-india.tsv").readText(), File(assets, "foods-ifct.tsv").readText()),
         File(assets, "dishes.tsv").readText(),
         File(assets, "micro.tsv").readText(),
     )
@@ -35,5 +35,13 @@ class FoodMicroAssetTest {
         // Per 100 g, values taken from the USDA table.
         assertEquals(8.7, lib.microOf("banana")["vit-c"]!!, 1e-9)
         assertEquals(5.0, lib.microOf("banana")["calcium"]!!, 1e-9)
+    }
+
+    @Test
+    fun ifctFoodsHaveTheirVitaminsAndMinerals() {
+        val atta = lib.microOf("ifct-A019")
+        assertTrue(atta.isNotEmpty())
+        assertEquals(30.94, atta["calcium"]!!, 1e-9)
+        assertTrue(lib.micro.keys.count { it.startsWith("ifct-") } > 400)
     }
 }
