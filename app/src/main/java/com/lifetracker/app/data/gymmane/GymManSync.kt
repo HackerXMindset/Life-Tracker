@@ -139,16 +139,7 @@ object GymManSync {
         val base = SourceScanner.newestGymMane(context, folder)
             ?: throw IOException("No GymMane backup found in that folder to build on.")
 
-        val db = AppDatabase.get(context)
-        val extras = db.foodExtrasDao()
-        val out = GymManOutgoing(
-            meals = db.foodDao().allMeals().filter { it.source != GymManCodec.SOURCE },
-            water = db.foodDao().allWater().filter { it.ml > 0 }.associate { it.date to it.ml },
-            supplements = extras.allSupplements().filter { !it.archived },
-            taken = extras.allTaken(),
-            fasts = extras.allFasts(),
-            weights = extras.allWeights(),
-        )
+        val out = outgoing(context)
         if (!GymManCodec.hasAnything(out)) return@withContext null
         val hash = listOf(out.meals, out.water.toList(), out.supplements, out.taken, out.fasts, out.weights).hashCode()
         if (!force && sources.gymSentHash == hash) return@withContext null
@@ -159,25 +150,8 @@ object GymManSync {
         val target = dir.createFile("application/zip", name) ?: throw IOException("Could not create $name.")
         var wroteJson = false
         try {
-            val input = context.contentResolver.openInputStream(base.uri) ?: throw IOException("Could not open ${base.name}.")
             val output = context.contentResolver.openOutputStream(target.uri) ?: throw IOException("Could not write $name.")
-            ZipInputStream(input.buffered()).use { zin ->
-                ZipOutputStream(output.buffered()).use { zout ->
-                    while (true) {
-                        val e = zin.nextEntry ?: break
-                        val copy = ZipEntry(e.name)
-                        zout.putNextEntry(copy)
-                        if (!e.isDirectory && e.name.substringAfterLast('/') == GymManCodec.JSON_ENTRY && '/' !in e.name) {
-                            val merged = GymManCodec.merge(zin.readBytes().toString(Charsets.UTF_8), out)
-                            zout.write(merged.toByteArray(Charsets.UTF_8))
-                            wroteJson = true
-                        } else if (!e.isDirectory) {
-                            zin.copyTo(zout)
-                        }
-                        zout.closeEntry()
-                    }
-                }
-            }
+            wroteJson = copyMerged(context, base.uri, output, out)
             if (!wroteJson) throw IOException("${base.name} does not look like a GymMane backup.")
         } catch (e: Exception) {
             runCatching { target.delete() }
@@ -191,6 +165,67 @@ object GymManSync {
     }
 
     private val STAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmmss")
+
+
+    /** Everything in Kairos that GymMane can hold, without what came from GymMane in the first place. */
+    suspend fun outgoing(context: Context): GymManOutgoing {
+        val db = AppDatabase.get(context)
+        val extras = db.foodExtrasDao()
+        return GymManOutgoing(
+            meals = db.foodDao().allMeals().filter { it.source != GymManCodec.SOURCE },
+            water = db.foodDao().allWater().filter { it.ml > 0 }.associate { it.date to it.ml },
+            supplements = extras.allSupplements().filter { !it.archived },
+            taken = extras.allTaken(),
+            fasts = extras.allFasts(),
+            weights = extras.allWeights(),
+        )
+    }
+
+    /** Copies the zip at [base] into [output] with the Kairos data merged into its gymmane.json. True if that file was found. */
+    private fun copyMerged(context: Context, base: android.net.Uri, output: java.io.OutputStream, out: GymManOutgoing): Boolean {
+        var wroteJson = false
+        val input = context.contentResolver.openInputStream(base) ?: throw IOException("Could not open the GymMane backup.")
+        ZipInputStream(input.buffered()).use { zin ->
+            ZipOutputStream(output.buffered()).use { zout ->
+                while (true) {
+                    val e = zin.nextEntry ?: break
+                    zout.putNextEntry(ZipEntry(e.name))
+                    if (!e.isDirectory && e.name.substringAfterLast('/') == GymManCodec.JSON_ENTRY && '/' !in e.name) {
+                        zout.write(GymManCodec.merge(zin.readBytes().toString(Charsets.UTF_8), out).toByteArray(Charsets.UTF_8))
+                        wroteJson = true
+                    } else if (!e.isDirectory) {
+                        zin.copyTo(zout)
+                    }
+                    zout.closeEntry()
+                }
+            }
+        }
+        return wroteJson
+    }
+
+    /**
+     * The Export tab's file for GymMane, written to [target]. With a [base] (a GymMane backup) it is a copy of that with
+     * Kairos' data added. Without one it holds only Kairos' data, and restoring it in GymMane replaces everything there.
+     * Returns a line saying what was written.
+     */
+    suspend fun exportTo(context: Context, target: android.net.Uri, base: android.net.Uri?): String = withContext(Dispatchers.IO) {
+        val out = outgoing(context)
+        if (!GymManCodec.hasAnything(out)) throw IOException("There is no food, water, supplement, fast or weight data to export yet.")
+        val output = context.contentResolver.openOutputStream(target) ?: throw IOException("Could not write the file.")
+        if (base != null) {
+            if (!copyMerged(context, base, output, out)) throw IOException("That file does not look like a GymMane backup.")
+            "Saved your GymMane backup with Kairos' data added."
+        } else {
+            ZipOutputStream(output.buffered()).use { zout ->
+                zout.putNextEntry(ZipEntry(GymManCodec.JSON_ENTRY))
+                zout.write(GymManCodec.standalone(out).toByteArray(Charsets.UTF_8))
+                zout.closeEntry()
+            }
+            "Saved a file with only Kairos' data."
+        }
+    }
+
+    fun exportFileName(): String = "gymmane-kairos-" + LocalDateTime.now().format(STAMP) + ".zip"
 
     private fun readJson(context: Context, uri: android.net.Uri, name: String): String {
         val input = context.contentResolver.openInputStream(uri) ?: throw IOException("Could not open $name.")

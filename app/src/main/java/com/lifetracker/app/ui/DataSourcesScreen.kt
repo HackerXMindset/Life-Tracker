@@ -178,6 +178,7 @@ fun DataSourcesScreen(onBack: () -> Unit, vm: DataSourcesViewModel = viewModel()
 
             1 -> {
                 item { ExportCard() }
+                item { GymManExportCard() }
                 item { PaperSection("Trips") }
                 item {
                     TripsExportRow()
