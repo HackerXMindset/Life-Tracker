@@ -14,6 +14,14 @@ Every release page shows the sections below that were added since the last relea
 
 The method follows the open-source calorie apps Fud AI (MIT) and CalorieMate (MIT): a small JPEG sent with a prompt that asks for JSON only, low thinking for speed, and a form you review before saving.
 
+## 📤 Export for GymMane
+
+### ✨ New
+
+- **Export > "For GymMane"**: saves a file GymMane can restore, with your food, water, supplements, fasts and weights from Kairos.
+  - **Save with my GymMane backup**: a copy of your GymMane backup (the newest one in the GymMane folder, or one you choose) with what only exists in Kairos added. Nothing in GymMane is lost or changed.
+  - **Save Kairos data only**: a file with just Kairos' data. GymMane replaces everything when it restores a file, so use it only on a GymMane with nothing in it.
+
 ## 🧪 Food rebuild, part 10: the Food screen looks like GymMane's
 
 ### ✨ New

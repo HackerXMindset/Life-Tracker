@@ -246,6 +246,9 @@ object GymManCodec {
         return root.toString(2)
     }
 
+    /** A GymMane file holding only Kairos' data (nothing of GymMane's own in it). */
+    fun standalone(out: GymManOutgoing): String = merge("{}", out)
+
     /** Whether [out] holds anything at all, so an empty send can be skipped. */
     fun hasAnything(out: GymManOutgoing) =
         out.meals.isNotEmpty() || out.water.isNotEmpty() || out.supplements.isNotEmpty() ||
