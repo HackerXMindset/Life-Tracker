@@ -80,7 +80,39 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Long-press the app icon: Snap a meal. -->
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity>
+        <!-- Snap a meal: the camera, then the check page. Started by the home-screen button, the icon shortcut and the quick-settings tile. -->
+        <activity
+            android:name=".QuickPhotoActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:taskAffinity=""
+            android:windowSoftInputMode="adjustResize" />
+        <receiver
+            android:name=".data.CameraWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_snap">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/camera_widget_info" />
+        </receiver>
+        <service
+            android:name=".data.CameraTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_p_camera"
+            android:label="@string/tile_snap"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
         <!-- Health Connect asks the app to explain what it does with your data. -->
         <activity
             android:name=".PermissionsRationaleActivity"

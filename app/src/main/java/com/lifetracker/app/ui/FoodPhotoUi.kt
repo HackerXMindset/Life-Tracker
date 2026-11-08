@@ -47,7 +47,6 @@ fun PhotoFill(onFilled: (PhotoFood) -> Unit) {
     val context = LocalContext.current
     val p = LocalPaper.current
     val scope = rememberCoroutineScope()
-    val uriHandler = LocalUriHandler.current
 
     var note by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
@@ -144,56 +143,83 @@ fun PhotoFill(onFilled: (PhotoFood) -> Unit) {
     }
 
     if (showKey) {
-        var key by remember { mutableStateOf(FoodAiSettings.key(context)) }
-        var model by remember { mutableStateOf(FoodAiSettings.model(context)) }
-        var strong by remember { mutableStateOf(FoodAiSettings.strongModel(context)) }
-        PaperDialog(
-            title = "Gemini key",
-            onDismiss = { showKey = false; pending = null },
-            confirmText = "Save",
-            onConfirm = {
-                if (key.isNotBlank()) {
-                    FoodAiSettings.save(context, key, model, strong)
-                    showKey = false
-                    val action = pending
-                    if (action != null && !FoodAiSettings.noticeSeen(context)) showNotice = true
-                    else { pending = null; action?.invoke() }
-                }
+        GeminiKeyDialog(
+            onSaved = {
+                showKey = false
+                val action = pending
+                if (action != null && !FoodAiSettings.noticeSeen(context)) showNotice = true
+                else { pending = null; action?.invoke() }
             },
-        ) {
-            Text(
-                "A free key from Google lets Kairos read food photos. Open Google AI Studio, sign in, choose Create API key, and paste it here. " +
-                    "The key stays on this phone and is not put in backups.",
-                fontSize = 13.sp, color = p.ink2,
-            )
-            PaperButton("Open Google AI Studio", { uriHandler.openUri("https://aistudio.google.com/apikey") }, Modifier.padding(top = 8.dp), style = PaperButtonStyle.Ghost, small = true)
-            PaperField(key, { key = it }, "Key", Modifier.padding(top = 8.dp), singleLine = true)
-            PaperField(model, { model = it }, "Model (quick)", Modifier.padding(top = 8.dp), singleLine = true)
-            PaperField(strong, { strong = it }, "Model (think harder)", Modifier.padding(top = 8.dp), singleLine = true)
-            Text(
-                "Google changes the free models from time to time. If a model stops working, type a newer name from the AI Studio list.",
-                fontSize = 12.sp, color = p.ink2, modifier = Modifier.padding(top = 8.dp),
-            )
-        }
+            onDismiss = { showKey = false; pending = null },
+        )
     }
     if (showNotice) {
-        PaperDialog(
-            title = "Your photo goes to Google",
-            onDismiss = { showNotice = false; pending = null },
-            confirmText = "Continue",
-            onConfirm = {
-                FoodAiSettings.markNoticeSeen(context)
+        PhotoNoticeDialog(
+            onContinue = {
                 showNotice = false
                 val action = pending
                 pending = null
                 action?.invoke()
             },
-        ) {
-            Text(
-                "The photo and your note are sent to Google's Gemini to be read. On Google's free plan they may be used to improve Google's products and be seen by reviewers. " +
-                    "Do not photograph anything private. Nothing else from Kairos is sent.",
-                fontSize = 13.sp, color = p.ink2,
-            )
-        }
+            onDismiss = { showNotice = false; pending = null },
+        )
+    }
+}
+
+/** Asks for the free Gemini key (and the two model names) and keeps them on this phone. [onSaved] runs once a key is saved. */
+@Composable
+fun GeminiKeyDialog(onSaved: () -> Unit, onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val p = LocalPaper.current
+    val uriHandler = LocalUriHandler.current
+    var key by remember { mutableStateOf(FoodAiSettings.key(context)) }
+    var model by remember { mutableStateOf(FoodAiSettings.model(context)) }
+    var strong by remember { mutableStateOf(FoodAiSettings.strongModel(context)) }
+    PaperDialog(
+        title = "Gemini key",
+        onDismiss = onDismiss,
+        confirmText = "Save",
+        onConfirm = {
+            if (key.isNotBlank()) {
+                FoodAiSettings.save(context, key, model, strong)
+                onSaved()
+            }
+        },
+    ) {
+        Text(
+            "A free key from Google lets Kairos read food photos. Open Google AI Studio, sign in, choose Create API key, and paste it here. " +
+                "The key stays on this phone and is not put in backups.",
+            fontSize = 13.sp, color = p.ink2,
+        )
+        PaperButton("Open Google AI Studio", { uriHandler.openUri("https://aistudio.google.com/apikey") }, Modifier.padding(top = 8.dp), style = PaperButtonStyle.Ghost, small = true)
+        PaperField(key, { key = it }, "Key", Modifier.padding(top = 8.dp), singleLine = true)
+        PaperField(model, { model = it }, "Model (quick)", Modifier.padding(top = 8.dp), singleLine = true)
+        PaperField(strong, { strong = it }, "Model (think harder)", Modifier.padding(top = 8.dp), singleLine = true)
+        Text(
+            "Google changes the free models from time to time. If a model stops working, type a newer name from the AI Studio list.",
+            fontSize = 12.sp, color = p.ink2, modifier = Modifier.padding(top = 8.dp),
+        )
+    }
+}
+
+/** The one-time notice that a photo goes to Google. [onContinue] runs after it is accepted, and the notice is not shown again. */
+@Composable
+fun PhotoNoticeDialog(onContinue: () -> Unit, onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val p = LocalPaper.current
+    PaperDialog(
+        title = "Your photo goes to Google",
+        onDismiss = onDismiss,
+        confirmText = "Continue",
+        onConfirm = {
+            FoodAiSettings.markNoticeSeen(context)
+            onContinue()
+        },
+    ) {
+        Text(
+            "The photo and your note are sent to Google's Gemini to be read. On Google's free plan they may be used to improve Google's products and be seen by reviewers. " +
+                "Do not photograph anything private. Nothing else from Kairos is sent.",
+            fontSize = 13.sp, color = p.ink2,
+        )
     }
 }
