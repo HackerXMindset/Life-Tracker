@@ -2,6 +2,12 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## ⏰ Supplement reminders
+
+### ✨ New
+
+- **Remind me** (Food > Supplements): a notification at each supplement's time, on the days it is due, with **Taken** and **Snooze 10 min** buttons. Taken is the same as ticking it in the app. It stays quiet if you already ticked it today, and supplements set to "Any time" do not ring. Off until you switch it on. Alarms are set again after a restart, an app update or a change of clock or time zone. Notifications and "Alarms and reminders" must be allowed in Settings > Permissions (the same ones the habit reminders use).
+
 ## 🍛 Food rebuild, part 8: Indian foods, sweets and snacks
 
 ### ✨ New
