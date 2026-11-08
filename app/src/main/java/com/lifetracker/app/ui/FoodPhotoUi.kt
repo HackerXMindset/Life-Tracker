@@ -127,8 +127,8 @@ fun PhotoFill(onFilled: (PhotoFood) -> Unit) {
             Kicker("Fill from a photo")
             PaperField(note, { note = it }, "What is it? (optional)", placeholder = "e.g. 2 rotis, 1 katori dal", singleLine = true)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                PaperButton("Take a photo", { guarded { startTake() } }, Modifier.weight(1f), enabled = !busy)
-                PaperButton("Choose a photo", { guarded { startPick() } }, Modifier.weight(1f), style = PaperButtonStyle.Ghost, enabled = !busy)
+                PaperButton("Camera", { guarded { startTake() } }, Modifier.weight(1f), enabled = !busy)
+                PaperButton("Gallery", { guarded { startPick() } }, Modifier.weight(1f), style = PaperButtonStyle.Ghost, enabled = !busy)
             }
             if (message.isNotEmpty()) Text(message, fontSize = 12.5.sp, color = if (failed) p.bad else p.ink2)
             Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {

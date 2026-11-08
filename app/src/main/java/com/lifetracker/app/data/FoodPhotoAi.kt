@@ -197,7 +197,10 @@ object FoodPhotoAi {
     suspend fun prepare(context: Context, uri: Uri): ByteArray = withContext(Dispatchers.IO) {
         val resolver = context.contentResolver
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) } ?: throw PhotoAiException("Could not open the photo.")
+        // With inJustDecodeBounds the decoder returns no bitmap, only the size in [bounds], so a null result is normal here.
+        val opened = resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds); true } ?: false
+        if (!opened) throw PhotoAiException("Could not open the photo.")
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) throw PhotoAiException("That file is not a photo Kairos can read.")
         var sample = 1
         while (maxOf(bounds.outWidth, bounds.outHeight) / (sample * 2) >= MAX_SIDE) sample *= 2
         val opts = BitmapFactory.Options().apply { inSampleSize = sample }

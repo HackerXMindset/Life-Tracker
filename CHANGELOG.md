@@ -2,6 +2,13 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📷 Fill from a photo: fix
+
+### 🐛 Fixed
+
+- **Fill from a photo** always said "Could not open the photo", from the camera and from the gallery. Photos now open and are sent to Gemini.
+- The two buttons are now **Camera** and **Gallery**, so their names are no longer cut off.
+
 ## 📷 Fill a food from a photo
 
 ### ✨ New
