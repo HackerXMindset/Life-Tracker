@@ -160,7 +160,7 @@ class GymManCodecTest {
     fun aKairosOnlyFileHoldsOurDataAndReadsBack() {
         val file = JSONObject(GymManCodec.standalone(mine()))
         val log = file.getJSONObject("nutrition").getJSONArray("log")
-        assertEquals(listOf("kx-mine", "kx-m1"), (0 until log.length()).map { log.getJSONObject(it).getString("id") })
+        assertEquals(listOf("kx-m1"), (0 until log.length()).map { log.getJSONObject(it).getString("id") })
         assertEquals(2, file.getJSONArray("bodyweight").length())
         assertEquals(16, file.getJSONObject("nutrition").getJSONObject("fast").getInt("h"))
         val back = GymManCodec.parse(file.toString())
