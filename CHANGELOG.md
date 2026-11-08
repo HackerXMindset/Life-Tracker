@@ -2,6 +2,20 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧪 Food rebuild, part 10: the Food screen looks like GymMane's
+
+### ✨ New
+
+- **Week strip**: each day is a ring that fills with that day's calories (green near the goal, red well over). Swipe sideways to change week.
+- **Big ring** now has **Eaten** and **Burned** on its sides, with small pictures. Tap Burned to type what you burned that day; it is added to the day's calories.
+- **Water and Protein tiles side by side**, each with GymMane's bottle or shaker picture that fills as you go. Tap the glass to add a glass, hold it to type an amount; tap the shaker to log your shake, hold it to pick another. The "…" button has the settings.
+- **Supplements** card with suggestion chips (Creatine, Vitamin D, Omega-3 and so on), a count, and "Add supplement" at the bottom.
+- **Meal prep** and **Meal plans** are headings with a "+ New" button, then a card for each batch or plan.
+- **Details**: Animal protein, Fibre, Sugar and Sodium as four ring cards (goals 30 g, 50 g, 2.3 g), then vitamins, protein quality, fat types.
+- **This week** and **Body weight** are cards with a line chart and a goal line. Tap Body weight to weigh in or set a goal.
+
+Based on GymMane by InlitX (GPL-3.0); the bottle pictures come from GymMane.
+
 ## 🧪 Food rebuild, part 9: the Indian Food Composition Tables (IFCT 2017)
 
 ### ✨ New
