@@ -107,29 +107,32 @@ fun TrackersSheet(onDismiss: () -> Unit) {
 // ---- water ----
 
 @Composable
-fun WaterTile(ml: Int, onAdd: (Int) -> Unit) {
+fun WaterTile(ml: Int, onAdd: (Int) -> Unit, modifier: Modifier = Modifier) {
     val p = LocalPaper.current
     val context = LocalContext.current
     val tick by FoodSettings.changes.collectAsState()
     val goal = remember(tick) { FoodSettings.waterGoalMl(context) }
     val glass = remember(tick) { FoodSettings.glassMl(context) }
     var editing by remember { mutableStateOf(false) }
-    PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            PaperIcon(R.drawable.ic_p_drop, size = 22.dp, tint = WATER_COLOR)
-            Column(
-                modifier = Modifier.weight(1f).clip(RoundedCornerShape(8.dp)).clickable { editing = true },
-            ) {
-                Text("Water", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = p.ink)
-                Text("$ml of $goal ml", fontSize = 12.sp, color = p.ink2)
-            }
-            PaperPill("-$glass", false, { onAdd(-glass) })
-            PaperPill("+$glass", false, { onAdd(glass) })
-        }
-        Box(modifier = Modifier.fillMaxWidth().padding(top = 10.dp).height(7.dp).clip(RoundedCornerShape(4.dp)).background(p.surface2)) {
-            val f = (ml.toFloat() / goal).coerceIn(0f, 1f)
-            if (f > 0f) Box(modifier = Modifier.fillMaxWidth(f).height(7.dp).background(WATER_COLOR))
-        }
+    var custom by remember { mutableStateOf(false) }
+    val done = ml >= goal
+    VesselTile(
+        title = "Water",
+        onMenu = { editing = true },
+        onTap = { onAdd(glass) },
+        onHold = { custom = true },
+        value = ml.toString(),
+        unit = "/ $goal ml",
+        hint = if (done) "Goal reached" else "Tap the glass: +$glass ml",
+        hintColor = if (done) p.accent else WATER_COLOR,
+        glow = WATER_COLOR,
+        modifier = modifier,
+    ) {
+        PhotoVessel(
+            asset = "food/vessel/vessel-water.webp", mask = "food/vessel/vessel-water-mask.webp", ratio = 202f / 640f,
+            level = if (goal <= 0) 0f else ml / goal.toFloat(), height = 158.dp,
+            top = 0.269f, bottom = 0.989f, curve = 0.08f, liquid = Color(0xFF4FB4F2),
+        )
     }
     if (editing) {
         var goalText by remember { mutableStateOf(goal.toString()) }
@@ -143,6 +146,16 @@ fun WaterTile(ml: Int, onAdd: (Int) -> Unit) {
         ) {
             PaperField(goalText, { goalText = it }, "Daily goal (ml)", singleLine = true, keyboardOptions = DecimalKeys)
             PaperField(glassText, { glassText = it }, "One glass (ml)", Modifier.padding(top = 8.dp), singleLine = true, keyboardOptions = DecimalKeys)
+            PaperButton("Take off one glass", { onAdd(-glass); editing = false }, Modifier.padding(top = 8.dp), style = PaperButtonStyle.Ghost, small = true)
+        }
+    }
+    if (custom) {
+        var amount by remember { mutableStateOf("") }
+        PaperDialog(
+            title = "Add water", onDismiss = { custom = false }, confirmText = "Add",
+            onConfirm = { amount.toIntOrNull()?.takeIf { it > 0 }?.let { onAdd(it) }; custom = false },
+        ) {
+            PaperField(amount, { amount = it }, "Amount (ml)", singleLine = true, keyboardOptions = DecimalKeys)
         }
     }
 }
@@ -196,7 +209,7 @@ fun FoodPickerSheet(vm: FoodViewModel, title: String, onPick: (Loggable) -> Unit
 // ---- protein shake ----
 
 @Composable
-fun ShakeCard(vm: FoodViewModel, mealType: String) {
+fun ShakeCard(vm: FoodViewModel, mealType: String, protein: Double, proteinGoal: Double?, modifier: Modifier = Modifier) {
     val p = LocalPaper.current
     val context = LocalContext.current
     val tick by FoodSettings.changes.collectAsState()
@@ -205,39 +218,55 @@ fun ShakeCard(vm: FoodViewModel, mealType: String) {
     val date by vm.date.collectAsState()
     val scope = rememberCoroutineScope()
     var picking by remember { mutableStateOf(false) }
+    var menu by remember { mutableStateOf(false) }
 
     val refs = remember(tick) { FoodSettings.shakeRefs(context).toList() }
     val current = remember(tick) { FoodSettings.shakeRef(context) }
     val food = if (library != null && own.size >= 0) vm.loggable(current) else null
+    val goal = proteinGoal ?: 0.0
 
-    PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (food != null) FoodPhoto(food.photoAsset, food.name, 44.dp) else PaperIcon(R.drawable.ic_p_bolt, size = 24.dp, tint = PROTEIN_COLOR)
-            Column(modifier = Modifier.weight(1f)) {
-                Text("Protein shake", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = p.ink)
-                Text(
-                    if (food == null) "Pick the shake you drink, then one tap logs it." else food.name + ", " + kc(food.per100.protein * food.startAmount / 100) + " g protein",
-                    fontSize = 12.sp, color = p.ink2, maxLines = 2,
-                )
-            }
-            if (food != null) {
-                PaperButton("Log it", {
-                    scope.launch {
-                        val full = vm.withYourNumbers(food)
-                        vm.logFood(full, full.startAmount, mealType, date, FoodLogic.minuteFor(mealType, date == LocalDate.now(), minuteNow()))
+    fun logIt() {
+        val f = food
+        if (f == null) { picking = true; return }
+        scope.launch {
+            val full = vm.withYourNumbers(f)
+            vm.logFood(full, full.startAmount, mealType, date, FoodLogic.minuteFor(mealType, date == LocalDate.now(), minuteNow()))
+        }
+    }
+
+    VesselTile(
+        title = "Protein",
+        onMenu = { menu = true },
+        onTap = { logIt() },
+        onHold = { picking = true },
+        value = kc(protein),
+        unit = if (goal > 0) "/ ${kc(goal)} g" else "g",
+        hint = if (food == null) "Tap the shaker to pick your shake" else "Tap the shaker: ${food.name}",
+        hintColor = PROTEIN_COLOR,
+        glow = PROTEIN_COLOR,
+        modifier = modifier,
+    ) {
+        PhotoVessel(
+            asset = "food/vessel/vessel-shake.webp", mask = "food/vessel/vessel-shake-mask.webp", ratio = 241f / 640f,
+            level = if (goal <= 0) 0f else (protein / goal).toFloat(), height = 158.dp,
+            top = 0.407f, bottom = 0.975f, curve = 0.066f, liquid = shakeLiquid(food?.name),
+            texture = "food/vessel/shake-texture.webp",
+        )
+    }
+    if (menu) {
+        PaperDialog(title = "Protein shake", onDismiss = { menu = false }, dismissText = "Close") {
+            Text(
+                if (food == null) "Pick the shake you drink, then one tap on the shaker logs it." else food.name + ", " + kc(food.per100.protein * food.startAmount / 100) + " g protein",
+                fontSize = 13.sp, color = p.ink2,
+            )
+            PaperButton(if (food == null) "Pick your shake" else "Change", { menu = false; picking = true }, Modifier.padding(top = 8.dp), style = PaperButtonStyle.Ghost, small = true)
+            if (food != null) PaperButton("Not a shake", { FoodSettings.removeShake(context, current); menu = false }, Modifier.padding(top = 6.dp), style = PaperButtonStyle.Ghost, small = true)
+            if (refs.size > 1) {
+                ChipFlow(modifier = Modifier.padding(top = 8.dp)) {
+                    refs.forEach { r ->
+                        val f = vm.loggable(r)
+                        if (f != null) PaperPill(f.name, r == current, { FoodSettings.setShake(context, r) })
                     }
-                }, small = true, icon = R.drawable.ic_p_plus)
-            }
-        }
-        Row(modifier = Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PaperPill(if (food == null) "Pick your shake" else "Change", false, { picking = true })
-            if (food != null) PaperPill("Not a shake", false, { FoodSettings.removeShake(context, current) })
-        }
-        if (refs.size > 1) {
-            ChipFlow(modifier = Modifier.padding(top = 8.dp)) {
-                refs.forEach { r ->
-                    val f = vm.loggable(r)
-                    if (f != null) PaperPill(f.name, r == current, { FoodSettings.setShake(context, r) })
                 }
             }
         }
@@ -255,23 +284,26 @@ fun SupplementsCard(x: FoodExtrasViewModel, date: LocalDate) {
     val all by x.supplements.collectAsState()
     val taken by x.taken.collectAsState()
     var managing by remember { mutableStateOf(false) }
+    var preset by remember { mutableStateOf<String?>(null) }
     val due = all.filter { SupplementRules.dueOn(it, date) }
     val doneIds = taken.map { it.supplementId }.toSet()
 
     PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text("Supplements", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = p.ink)
-                Text(
-                    when {
-                        all.isEmpty() -> "Add what you take, then tick it off each day."
-                        due.isEmpty() -> "Nothing due this day."
-                        else -> "${due.count { it.id in doneIds }} of ${due.size} taken"
-                    },
-                    fontSize = 12.sp, color = p.ink2,
-                )
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PeekImage("peek-protein", 22.dp)
+            Kicker("Supplements", Modifier.weight(1f))
+            if (due.isNotEmpty()) {
+                val done = due.count { it.id in doneIds }
+                Text("$done/${due.size}", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = if (done == due.size) p.accent else p.ink2)
             }
-            PaperPill(if (all.isEmpty()) "Add" else "Manage", false, { managing = true })
+        }
+        if (all.isEmpty()) {
+            ChipFlow(modifier = Modifier.padding(top = 10.dp)) {
+                SUGGESTED_SUPPLEMENTS.forEach { PaperPill("+ $it", false, { preset = it }) }
+            }
+            Text("Add what you take, then tick it off each day.", fontSize = 11.5.sp, color = p.ink2, modifier = Modifier.padding(top = 10.dp))
+        } else if (due.isEmpty()) {
+            Text("Nothing due this day.", fontSize = 12.5.sp, color = p.ink2, modifier = Modifier.padding(top = 8.dp))
         }
         if (due.isNotEmpty()) {
             Column(modifier = Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -304,9 +336,25 @@ fun SupplementsCard(x: FoodExtrasViewModel, date: LocalDate) {
                 }
             }
         }
+        Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "+ Add supplement", fontSize = 12.5.sp, fontWeight = FontWeight.ExtraBold, color = p.accent,
+                modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable(role = Role.Button) { preset = "" }.padding(vertical = 6.dp, horizontal = 2.dp),
+            )
+            Spacer(Modifier.weight(1f))
+            if (all.isNotEmpty()) {
+                Text(
+                    "Manage", fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = p.ink2,
+                    modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable(role = Role.Button) { managing = true }.padding(vertical = 6.dp, horizontal = 2.dp),
+                )
+            }
+        }
     }
     if (managing) SupplementsWindow(x, all, onClose = { managing = false })
+    preset?.let { SupplementEditor(x, null, onDismiss = { preset = null }, preset = it) }
 }
+
+private val SUGGESTED_SUPPLEMENTS = listOf("Creatine", "Vitamin D", "Omega-3", "Magnesium", "Multivitamin", "Caffeine")
 
 @Composable
 private fun SupplementsWindow(x: FoodExtrasViewModel, all: List<SupplementEntity>, onClose: () -> Unit) {
@@ -330,10 +378,10 @@ private fun SupplementsWindow(x: FoodExtrasViewModel, all: List<SupplementEntity
 }
 
 @Composable
-private fun SupplementEditor(x: FoodExtrasViewModel, initial: SupplementEntity?, onDismiss: () -> Unit) {
+private fun SupplementEditor(x: FoodExtrasViewModel, initial: SupplementEntity?, onDismiss: () -> Unit, preset: String = "") {
     val p = LocalPaper.current
     val context = LocalContext.current
-    var name by remember { mutableStateOf(initial?.name.orEmpty()) }
+    var name by remember { mutableStateOf(initial?.name ?: preset) }
     var dose by remember { mutableStateOf(initial?.dose.orEmpty()) }
     var at by remember { mutableStateOf(initial?.atMinute ?: -1) }
     var weekdays by remember { mutableStateOf(initial?.weekdays ?: 0) }
@@ -436,42 +484,38 @@ fun WeightCard(x: FoodExtrasViewModel, date: LocalDate) {
     var logging by remember { mutableStateOf(false) }
     val latest = weights.lastOrNull()
     val pace = WeightMath.kgPerWeek(weights, LocalDate.now())
+    val recent = weights.takeLast(7)
 
-    PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text("Body weight", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = p.ink)
-                Text(
-                    if (latest == null) "No weigh-in yet." else foodNum(latest.kg) + " kg on " + latest.date,
-                    fontSize = 12.sp, color = p.ink2,
-                )
-            }
-            PaperPill("Weigh in", false, { logging = true })
-        }
-        if (latest != null) {
-            val lines = listOfNotNull(
-                if (goal > 0) WeightMath.toGoal(latest.kg, goal)?.let { "Goal " + foodNum(goal) + " kg: " + it } else null,
+    ChartCard(
+        icon = R.drawable.ic_p_scale,
+        color = WATER_COLOR,
+        title = "Body weight",
+        value = if (latest == null) "-" else foodNum(latest.kg),
+        unit = if (latest == null) "" else "kg",
+        lines = if (latest == null) {
+            listOf("No weigh-in yet.", "Tap to weigh in")
+        } else {
+            listOfNotNull(
+                if (goal > 0) "Goal " + foodNum(goal) + " kg" else "No goal set",
+                if (goal > 0) WeightMath.toGoal(latest.kg, goal) else null,
                 pace?.let { (if (it > 0) "+" else "") + (Math.round(it * 100) / 100.0) + " kg a week lately" },
             )
-            lines.forEach { Text(it, fontSize = 12.sp, color = p.ink2, modifier = Modifier.padding(top = 4.dp)) }
-            val recent = weights.takeLast(30)
-            if (recent.size >= 2) {
-                val min = recent.minOf { it.kg }
-                val max = recent.maxOf { it.kg }
-                val line = p.ink
-                Canvas(modifier = Modifier.fillMaxWidth().padding(top = 10.dp).height(56.dp)) {
-                    val span = (max - min).coerceAtLeast(0.5)
-                    val path = Path()
-                    recent.forEachIndexed { i, w ->
-                        val px = size.width * i / (recent.size - 1)
-                        val py = size.height - ((w.kg - min) / span * (size.height - 8.dp.toPx())).toFloat() - 4.dp.toPx()
-                        if (i == 0) path.moveTo(px, py) else path.lineTo(px, py)
-                    }
-                    drawPath(path, line, style = Stroke(2.dp.toPx(), cap = StrokeCap.Round))
-                }
+        },
+        onClick = { logging = true },
+        chart = if (recent.size < 2) null else {
+            {
+                ValueLineChart(
+                    values = recent.map { it.kg },
+                    labels = recent.map { w -> runCatching { LocalDate.parse(w.date).let { "${it.dayOfMonth}/${it.monthValue}" } }.getOrDefault("") },
+                    color = WATER_COLOR,
+                    goal = if (goal > 0) goal else null,
+                    highlight = recent.size - 1,
+                    fromZero = false,
+                    height = 130.dp,
+                )
             }
-        }
-    }
+        },
+    )
     if (logging) {
         val onDay = weights.firstOrNull { it.date == date.toString() }?.kg ?: latest?.kg ?: 0.0
         var kg by remember { mutableStateOf(foodNum(onDay)) }
@@ -501,24 +545,32 @@ fun WeekCard(x: FoodExtrasViewModel, date: LocalDate) {
     val meals by x.weekMeals.collectAsState()
     val goals by x.goals.collectAsState()
     val week = FoodLogic.weekOf(date)
+    val today = LocalDate.now()
     val summary = WeekMath.summary(meals) { day -> FoodStats.goalFor(goals, LocalDate.parse(day)) }
-    PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
-        Text("This week", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = p.ink)
-        Text("${week.first().dayOfMonth}/${week.first().monthValue} to ${week.last().dayOfMonth}/${week.last().monthValue}", fontSize = 12.sp, color = p.ink2)
-        if (summary.loggedDays == 0) {
-            Text("Nothing logged yet.", fontSize = 13.sp, color = p.ink2, modifier = Modifier.padding(top = 8.dp))
-        } else {
-            Row(modifier = Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                WeekStat("Calories a day", kc(summary.avgKcal), Modifier.weight(1f))
-                WeekStat("Protein a day", kc(summary.avgProtein) + " g", Modifier.weight(1f))
-                WeekStat("On target", "${summary.daysOnTarget} of ${summary.loggedDays}", Modifier.weight(1f))
+    val byDay = meals.groupBy { it.date }
+    val goalKcal = FoodStats.goalFor(goals, date)?.kcal?.takeIf { it > 0 }
+    val none = summary.loggedDays == 0
+    ChartCard(
+        icon = R.drawable.ic_p_chart,
+        color = p.accent,
+        title = "This week",
+        value = if (none) "-" else kc(summary.avgKcal),
+        unit = if (none) "" else "kcal a day",
+        lines = if (none) listOf("Nothing logged yet.") else listOf("${kc(summary.avgProtein)} g protein a day", "${summary.daysOnTarget} of ${summary.loggedDays} days on target"),
+        chart = if (none) null else {
+            {
+                ValueLineChart(
+                    values = week.map { d -> if (d.isAfter(today)) null else byDay[d.toString()]?.sumOf { it.kcal } },
+                    labels = week.map { it.dayOfWeek.getDisplayName(java.time.format.TextStyle.NARROW, java.util.Locale.getDefault()) },
+                    color = p.accent,
+                    goal = goalKcal,
+                    highlight = week.indexOf(date),
+                    height = 130.dp,
+                    tone = { v -> if (goalKcal == null) p.accent else if (v > goalKcal * 1.1) p.bad else if (v >= goalKcal * 0.9) p.accent else p.sun },
+                )
             }
-            Text(
-                "On target: calories within 10% of the goal and at least 90% of the protein. Counted over days with food.",
-                fontSize = 11.5.sp, color = p.ink2, modifier = Modifier.padding(top = 8.dp),
-            )
-        }
-    }
+        },
+    )
 }
 
 @Composable
@@ -645,23 +697,16 @@ fun PrepCard(vm: FoodViewModel, x: FoodExtrasViewModel, mealType: String) {
     val batches by x.batches.collectAsState()
     var creating by remember { mutableStateOf(false) }
     var opened by remember { mutableStateOf<BatchEntity?>(null) }
-    PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text("Meal prep", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = p.ink)
-                Text(
-                    if (batches.isEmpty()) "Cooked a big pot? Log it once, then say how much you ate." else "Tap a pot to eat from it",
-                    fontSize = 12.sp, color = p.ink2,
-                )
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SectionHeading("Meal prep", action = "New batch", onAction = { creating = true })
+        if (batches.isEmpty()) {
+            PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
+                Text("Cooked a big pot? Log it once, then say how much you ate.", fontSize = 12.5.sp, color = p.ink2)
             }
-            PaperPill("New batch", false, { creating = true })
         }
         batches.forEach { b ->
             val share = BatchMath.leftShare(b)
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(top = 10.dp).clip(RoundedCornerShape(10.dp)).clickable(role = Role.Button) { opened = b },
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
+            PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false, onClick = { opened = b }) {
                 Row {
                     Text(b.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = p.ink, modifier = Modifier.weight(1f), maxLines = 1)
                     Text(
@@ -669,7 +714,7 @@ fun PrepCard(vm: FoodViewModel, x: FoodExtrasViewModel, mealType: String) {
                         fontSize = 12.sp, color = p.ink2,
                     )
                 }
-                Box(modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(p.surface2)) {
+                Box(modifier = Modifier.fillMaxWidth().padding(top = 6.dp).height(6.dp).clip(RoundedCornerShape(3.dp)).background(p.surface2)) {
                     if (share > 0) Box(modifier = Modifier.fillMaxWidth(share.toFloat()).height(6.dp).background(p.accent))
                 }
             }
@@ -798,24 +843,19 @@ fun PlansCard(vm: FoodViewModel, x: FoodExtrasViewModel, date: LocalDate, dayMea
     val plans by x.plans.collectAsState()
     var creating by remember { mutableStateOf(false) }
     var opened by remember { mutableStateOf<MealPlanEntity?>(null) }
-    PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text("Meal plans", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = p.ink)
-                Text(
-                    if (plans.isEmpty()) "Plan a day of meals, then log it with one tap." else "Tap a plan to log it on this day",
-                    fontSize = 12.sp, color = p.ink2,
-                )
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SectionHeading("Meal plans", action = "New plan", onAction = { creating = true })
+        if (plans.isEmpty()) {
+            PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
+                Text("Plan a day of meals, then log it with one tap.", fontSize = 12.5.sp, color = p.ink2)
             }
-            PaperPill("New plan", false, { creating = true })
         }
         plans.forEach { plan ->
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp).clip(RoundedCornerShape(10.dp)).clickable(role = Role.Button) { opened = plan },
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(plan.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = p.ink, modifier = Modifier.weight(1f), maxLines = 1)
-                Text(kc(PlanMath.kcal(plan)) + " kcal", fontSize = 12.sp, color = p.ink2)
+            PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false, onClick = { opened = plan }) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(plan.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = p.ink, modifier = Modifier.weight(1f), maxLines = 1)
+                    Text(kc(PlanMath.kcal(plan)) + " kcal", fontSize = 12.sp, color = p.ink2)
+                }
             }
         }
     }
