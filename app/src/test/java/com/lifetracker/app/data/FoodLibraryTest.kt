@@ -116,7 +116,5 @@ class FoodLibraryTest {
         assertEquals(10.57, atta.per100.protein, 1e-9)
         assertFalse(atta.approx)
         assertTrue(lib.foods.count { it.id.startsWith("ifct-") } > 500)
-        // Their vitamins and minerals sit in the same table as the others.
-        assertTrue(lib.microOf("ifct-A019").isNotEmpty())
     }
 }

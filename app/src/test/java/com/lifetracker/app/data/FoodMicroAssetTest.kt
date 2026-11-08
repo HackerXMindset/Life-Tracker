@@ -36,4 +36,12 @@ class FoodMicroAssetTest {
         assertEquals(8.7, lib.microOf("banana")["vit-c"]!!, 1e-9)
         assertEquals(5.0, lib.microOf("banana")["calcium"]!!, 1e-9)
     }
+
+    @Test
+    fun ifctFoodsHaveTheirVitaminsAndMinerals() {
+        val atta = lib.microOf("ifct-A019")
+        assertTrue(atta.isNotEmpty())
+        assertEquals(30.94, atta["calcium"]!!, 1e-9)
+        assertTrue(lib.micro.keys.count { it.startsWith("ifct-") } > 400)
+    }
 }
