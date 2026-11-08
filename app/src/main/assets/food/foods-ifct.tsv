@@ -1,0 +1,528 @@
+id	en	k	p	c	f	fi	su	na	ml	kind	g	an	sa	mu	po	aa	cat	ax	cy
+ifct-A001	Amaranth seed, black (Ramdana)	356	14.59	67	5.74	7.02	0.88	2.7					1.28	1.03	2.28		grain		
+ifct-A002	Amaranth seed, pale brown (Ramdana)	356	13.27	68.93	5.56	7.47	0.8	2.8					1.14	1.04	2.27		grain		
+ifct-A003	Bajra	348	10.96	73.27	5.43	11.49	0.81	4.1					0.88	1.05	1.98		grain		
+ifct-A004	Barley (Jau)	316	10.94	76.93	1.3	15.64	0.06	7.6					0.23	0.09	0.57		grain		
+ifct-A005	Jowar	334	9.97	77.9	1.73	10.22	1.27	5.4					0.16	0.31	0.52		grain		
+ifct-A006	Maize, dry (Makka)	334	8.8	77.01	3.77	12.24	1.66	4.4					0.41	0.71	1.61		grain		
+ifct-A007	Maize, tender, local (Makka)	120	3.57	26.36	1.4	3.67	1.47	2.2					0.11	0.15	0.35		grain		
+ifct-A008	Maize, tender, sweet (Makka)	97	4.16	19.72	1.35	3.3	4.67	2.2					0.12	0.18	0.3		grain		
+ifct-A009	Quinoa (Kinwa)	328	13.11	68.31	5.5	14.66	1.41	4.5					0.57	1.42	2.41		grain		
+ifct-A010	Ragi	321	7.16	78	1.92	11.18	0.34	4.8					0.32	0.58	0.43		grain		
+ifct-A011	Rice, flakes (Poha)	354	7.44	80.21	1.14	3.46	0.34	2.6					0.28	0.42	0.58		grain		
+ifct-A012	Rice, puffed (Muramure)	362	7.47	80.24	1.62	2.56	0.64	3.7					0.05	0.04	0.04		grain		
+ifct-A013	Rice, raw, brown (Chawal)	354	9.16	79.23	1.24	4.43	0.69	3.6					0.35	0.2	0.51		grain		
+ifct-A014	Rice, parboiled, milled (Usna chawal)	352	7.81	80.9	0.55	3.74	0.67	3.2					0.15	0.09	0.22		grain		
+ifct-A015	Rice, raw, milled (Chawal)	356	7.94	81.05	0.52	2.81	0.69	2.3					0.18	0.12	0.25		grain		
+ifct-A016	Samai (Shavan)	346	10.13	73.27	3.89	7.72	0.37	4.8					0.59	0.87	1.28		grain		
+ifct-A017	Varagu	332	8.92	72.58	2.55	6.39	1.29	3.4					0.25	0.3	0.6		grain		
+ifct-A018	Wheat flour, refined (Maida)	352	10.36	77.03	0.76	2.76	1.79	1.5					0.1	0.05	0.34		grain		
+ifct-A019	Wheat flour, atta	320	10.57	75.53	1.53	11.36	1.8	2					0.21	0.15	0.74		grain		
+ifct-A020	Wheat, whole (Gehun)	322	10.59	75.95	1.47	11.23	1.77	2.5					0.19	0.14	0.65		grain		
+ifct-A021	Wheat, bulgur (Dalia)	342	10.84	77.87	1.45	8.81	1.2	2.1					0.2	0.15	0.7		grain		
+ifct-A022	Wheat, semolina (Gehun suji)	334	11.38	78.15	0.74	9.72	1.65	2.3					0.09	0.07	0.33		grain		
+ifct-A023	Wheat, vermicelli (Siwain)	333	9.7	79.67	0.45	9.28	1.68	2.7					0.06	0.04	0.22		grain		
+ifct-A024	Wheat, vermicelli, roasted (Siwain)	340	10.37	80.97	0.49	9.55	2.14	3.4					0.05	0.03	0.17		grain		
+ifct-B001	Bengal gram, dal (Chan-ki-dal)	329	21.55	61.87	5.31	15.15	1.03	20.8									legume		
+ifct-B002	Bengal gram, whole (Chana)	287	18.77	64.78	5.11	25.22	0.99	26.6					0.45	0.89	2.34		legume		
+ifct-B003	Black gram, dal (Urad dal)	324	23.06	62.93	1.69	11.93	0.84	18.9					0.28	0.19	0.74		legume		
+ifct-B004	Black gram, whole (Chhilke wali urad dal)	291	21.97	64.4	1.58	20.41	0.45	26.8					0.26	0.16	0.72		legume		
+ifct-B005	Cowpea, brown (Lobia)	320	20.36	66.16	1.15	11.54	1.6	13.7					0.28	0.06	0.55		legume		
+ifct-B006	Cowpea, white (Lobia)	320	21.25	65.47	1.14	11.7	1.18	12.5					0.28	0.07	0.56		legume		
+ifct-B007	Field bean, black (Sem)	276	19.93	66.86	0.92	23.4	1.15	1.4					0.19	0.08	0.47		legume		
+ifct-B008	Field bean, brown (Sem)	283	19.9	67.64	0.98	22.4	1.17	1.4					0.2	0.13	0.46		legume		
+ifct-B009	Field bean, white (Sem)	280	19.84	67.52	0.94	22.99	1.07	1.7					0.19	0.06	0.5		legume		
+ifct-B010	Green gram, dal (Mug dal)	326	23.88	61.96	1.35	9.37	0.95	10.1					0.25	0.04	0.53		legume		
+ifct-B011	Green gram, whole (Mung)	294	22.53	63.17	1.14	17.04	0.54	12.5					0.27	0.03	0.61		legume		
+ifct-B012	Horse gram, whole (Kulthi)	330	21.73	65.12	0.62	7.88	0.35	12.1					0.14	0.07	0.26		legume		
+ifct-B013	Lentil, dal (Masoor dal)	322	24.35	62.96	0.75	10.43	1.95	10.3					0.09	0.11	0.34		legume		
+ifct-B014	Lentil, whole, brown (Masur dal)	299	22.49	65.29	0.64	16.82	1.63	11.2					0.08	0.1	0.28		legume		
+ifct-B015	Lentil, whole, yellowish (Masur dal)	298	22.87	64.57	0.61	16.66	1.5	10.9					0.08	0.09	0.27		legume		
+ifct-B016	Moth bean (Motha)	309	19.75	67.21	1.76	15.12	1.36	26.3					0.43	0.07	0.85		legume		
+ifct-B017	Peas, dry (Sukhi Matar)	303	20.43	65.94	1.89	17.01	2.03	23.4					0.24	0.4	0.87		legume		
+ifct-B018	Rajmah, black	298	19.01	67.33	1.62	17.74	2.02	9.4					0.24	0.1	0.93		legume		
+ifct-B019	Rajmah, brown	298	19.5	65.78	1.68	16.95	2.27	10.5					0.24	0.09	0.9		legume		
+ifct-B020	Rajmah, red	299	19.91	65.18	1.77	16.57	1.52	10.4					0.26	0.09	0.93		legume		
+ifct-B021	Red gram, dal	331	21.7	64.29	1.56	9.06	2.08	18					0.26	0.09	0.65		legume		
+ifct-B022	Red gram, whole (Arhar sabud)	274	20.47	65.32	1.38	22.84	1.3	19					0.28	0.08	0.64		legume		
+ifct-B023	Ricebean (Meth)	302	19.97	64.63	0.74	13.37	1.33	10.6					0.17	0.36	0.06		legume		
+ifct-B024	Soya bean, brown (Bhatmas)	381	35.58	34.34	19.82	21.55	2.51	2.1					3.09	4.56	11.28		legume		
+ifct-B025	Soya bean, white (Bhatmas)	377	37.8	32.79	19.42	22.63	2.2	2.8					3	4.82	11.07		legume		
+ifct-C001	Agathi leaves (Agasthi)	71	8.01	13.81	1.35	8.6	0.23	18.1					0.49	0.06	0.53		veg		
+ifct-C002	Amaranth leaves, green (Chaulai)	31	3.29	6.69	0.65	4.41	0.32	16.1					0.19	0.05	0.36		veg		
+ifct-C003	Amaranth leaves, red (Chaulai)	33	3.93	7.28	0.63	4.91	0.28	14.6					0.21	0.05	0.33		veg		
+ifct-C004	Amaranth leaves, red and green (Chaulai)	32	3.09	7.47	0.53	4.6	0.15	17.6					0.2	0.05	0.33		veg		
+ifct-C005	Amaranth, spinous, leaves, green (Kantewali-notya)	26	3.54	6.71	0.36	5.1	0.14	15.7					0.09	0.02	0.19		veg		
+ifct-C006	Amaranth, spinous, leaves, red and green (Kantewali-notya)	24	2.8	7.02	0.34	5.57	0.13	16.3					0.09	0.02	0.17		veg		
+ifct-C007	Basella leaves (Palak)	20	1.57	4.22	0.45	2.21	0.02	18.7					0.1	0.05	0.2		veg		
+ifct-C008	Bathua leaves (Bathua sagu)	28	2.5	6.57	0.44	4.01	0.52	10.8					0.12	0.01	0.22		veg		
+ifct-C009	Beetroot leaves (Chukandhar sag)	35	2.38	7.5	0.75	3.64	0.13	111					0.19	0.08	0.31		veg		
+ifct-C010	Betel leaves, big (kolkata) (Pan ka patha)	48	2.51	9.49	0.75	2.12	0.37	16.8					0.25	0.09	0.26		veg		
+ifct-C011	Betel leaves, small (Pan ka patha)	44	2.62	8.13	0.75	1.97	0.4	14					0.24	0.08	0.28		veg		
+ifct-C012	Brussels sprouts (Choote gobi)	44	4.26	9.38	0.5	4.29	0.17	18.5					0.23	0.09	0.08		veg		
+ifct-C013	Cabbage, Chinese	18	1.58	4.37	0.13	2.01	0.42	20.3					0.03	0.02	0.06		veg		
+ifct-C014	Cabbage, collard greens	30	3.63	5.77	0.27	2.98	0.76	23					0.06	0.04	0.12		veg		
+ifct-C015	Cabbage, green (Bandh gobi)	22	1.36	6.01	0.12	2.76	1	15					0.05	0.03	0.09		veg		
+ifct-C016	Cabbage, violet (Bandh gobi)	23	1.39	5.75	0.21	2.21	0.8	24					0.06	0.04	0.11		veg		
+ifct-C017	Cauliflower leaves (Phul gobi patta)	35	3.9	6.82	0.42	3.43	0.61	24.3					0.12	0.02	0.22		veg		
+ifct-C018	Colocasia leaves, green (Arvi ka sag)	43	3.42	9.29	1.38	5.6	0.63	12.1					0.43	0.05	0.69		veg		
+ifct-C019	Drumstick leaves (Saijan patta)	67	6.41	13.83	1.64	8.21	0.02	9.3					0.56	0.1	0.67		veg		
+ifct-C020	Fenugreek leaves (Methi sag)	34	3.68	7.07	0.83	4.9	0.88	47					0.2	0.02	0.45		veg		
+ifct-C021	Garden cress (Halim ka patta)	50	5.62	7.08	0.8	2.6	0.92	25.4					0.03	0.01	0.06		veg		
+ifct-C022	Gogu leaves, green stem (Pitwa)	36	1.86	8.65	1.09	4.59	0.01	12.3					0.24	0.04	0.58		veg		
+ifct-C023	Gogu leaves, red stem (Pitwa)	37	1.85	8.13	1.07	3.89	0.01	14.1					0.24	0.05	0.57		veg		
+ifct-C024	Knol-Khol, leaves (Ganth gobi ka sag)	43	3.12	8.92	0.35	2.76	0.1	26.8					0.11	0.02	0.15		veg		
+ifct-C025	Lettuce (Salad ka patta)	22	1.54	4.8	0.27	1.79	0.22	17.5					0.12	0.02	0.21		veg		
+ifct-C026	Mustard leaves (Sarson ka sag)	30	3.52	6.33	0.51	3.92	0.04	19.1					0.14	0.03	0.32		veg		
+ifct-C027	Pak Choi leaves	16	1.41	3.69	0.25	1.91	0.52	33.7					0.04	0.02	0.14		veg		
+ifct-C028	Parsley	73	5.55	13.3	1.14	3.87	0.69	53.1					0.34	0.03	0.48		veg		
+ifct-C029	Ponnaganni (Saranthi sag)	51	5.29	11.91	0.71	6.74	0.44	39.4					0.2	0.03	0.25		veg		
+ifct-C030	Pumpkin leaves, tender (Kumhra sag)	44	4.21	7	0.74	2.25	0.1	12.2					0.27	0.02	0.31		veg		
+ifct-C031	Radish leaves (Muli ka sag)	26	2.22	4.59	0.51	1.82	0.29	17.4					0.15	0.03	0.25		veg		
+ifct-C032	Rumex leaves	20	1.62	3.6	0.33	1.27	0.45	19.9					0.06	0.02	0.19		veg		
+ifct-C033	Spinach (Palak)	24	2.14	4.43	0.64	2.38	0.24	42.5					0.18	0.04	0.29		veg		
+ifct-C034	Tamarind leaves, tender	71	5.84	20.74	0.49	10.7	0.17	13.4					0.18	0.04	0.31		veg		
+ifct-D001	Ash gourd (Petha)	17	0.79	6.21	0.14	3.37											veg		
+ifct-D002	Bamboo shoot, tender (Baans)	16	1.33	3.22	0.35	1.55	0.09	1.1					0.04	0.01	0.05		veg		
+ifct-D003	Bean scarlet, tender (Sem)	43	2.86	9.66	0.99	4.5	1.03	1.5					0.27	0.05	0.43		veg		
+ifct-D004	Bitter gourd, jagged, teeth ridges, elongate (Karela)	21	1.44	6.6	0.24	3.78	0.04	13.1					0.14	0.01	0.04		veg		
+ifct-D005	Bitter gourd, jagged, teeth ridges, short (Karela)	19	1.34	6.02	0.24	3.49	0.06	12.6					0.14	0.01	0.06		veg		
+ifct-D006	Bitter gourd, jagged, smooth ridges, elongate (Karela)	19	1.61	6.01	0.26	3.72	0.08	11.2					0.14	0.01	0.06		veg		
+ifct-D007	Bottle gourd, elongate, pale green (Lowki)	11	0.53	3.8	0.13	2.12	0.36	1.5					0.04	0	0.06		veg		
+ifct-D008	Bottle gourd, round, pale green (Lowki)	14	0.42	4.63	0.12	2.1	0.34	1.5					0.04	0	0.06		veg		
+ifct-D009	Bottle gourd, elongate, dark green (Lowki)	13	0.49	4.36	0.13	2.11	0.39	1.4					0.04	0.01	0.05		veg		
+ifct-D010	Brinjal 1 (Baingan)	27	1.77	7.06	0.39	3.57	0.88	3.1					0.09	0.03	0.21		veg		
+ifct-D011	Brinjal 2 (Baingan)	24	1.82	6.72	0.34	4.01	0.98	3.9					0.09	0.02	0.17		veg		
+ifct-D012	Brinjal 3 (Baingan)	24	1.36	7.64	0.33	4.26	0.93	3.1					0.07	0.02	0.17		veg		
+ifct-D013	Brinjal 4 (Baingan)	24	1.51	7.23	0.31	4.04	0.86	3.3					0.07	0.03	0.16		veg		
+ifct-D014	Brinjal 5 (Baingan)	27	1.38	8.15	0.29	4.13	0.99	4					0.07	0.02	0.15		veg		
+ifct-D015	Brinjal 6 (Baingan)	23	1.46	6.97	0.29	3.68	1	3.8					0.07	0.02	0.14		veg		
+ifct-D016	Brinjal 7 (Baingan)	23	1.4	6.42	0.37	3.32	1.38	3.5					0.07	0.02	0.15		veg		
+ifct-D017	Brinjal 8 (Baingan)	28	1.82	7.76	0.33	4.01	0.79	4.7					0.07	0.03	0.16		veg		
+ifct-D018	Brinjal 9 (Baingan)	25	1.47	7.52	0.35	4	0.91	3.1					0.08	0.03	0.17		veg		
+ifct-D019	Brinjal 10 (Baingan)	28	1.68	7.98	0.25	3.9	0.86	4.3					0.07	0.02	0.13		veg		
+ifct-D020	Brinjal 11 (Baingan)	25	1.43	7.65	0.31	4.12	1.05	3.5					0.07	0.02	0.14		veg		
+ifct-D021	Brinjal 12 (Baingan)	22	1.6	6.62	0.27	3.89	1.22	3.9					0.07	0.02	0.13		veg		
+ifct-D022	Brinjal 13 (Baingan)	30	1.49	8.43	0.31	3.92	1.15	3					0.08	0.02	0.15		veg		
+ifct-D023	Brinjal 14 (Baingan)	25	1.56	7.14	0.35	3.87	0.88	3.7					0.06	0.02	0.12		veg		
+ifct-D024	Brinjal 15 (Baingan)	27	1.58	7.95	0.29	3.99	0.82	3.3					0.07	0.02	0.15		veg		
+ifct-D025	Brinjal 16 (Baingan)	25	1.26	7.2	0.34	3.74	0.99	3.2					0.08	0.02	0.17		veg		
+ifct-D026	Brinjal 17 (Baingan)	22	1.18	6.83	0.36	3.94	0.85	3.1					0.08	0.03	0.18		veg		
+ifct-D027	Brinjal 18 (Baingan)	28	1.47	8.48	0.33	4.38	1.44	3.6					0.07	0.02	0.13		veg		
+ifct-D028	Brinjal 19 (Baingan)	24	1.26	7.36	0.31	3.97	0.96	3.1					0.06	0.02	0.12		veg		
+ifct-D029	Brinjal 20 (Baingan)	24	1.44	6.88	0.34	3.73	0.76	3.6					0.08	0.02	0.17		veg		
+ifct-D030	Brinjal 21 (Baingan)	27	1.36	7.78	0.35	3.85	0.93	3.1					0.09	0.03	0.17		veg		
+ifct-D031	Brinjal - all varieties (Baingan)	25	1.48	7.5	0.32	3.98	0.97	3.5					0.07	0.02	0.15		veg		
+ifct-D032	Broad beans (Bakla)	29	3.85	10.74	0.15	8.63	1.22	20.7					0.04	0.01	0.06		veg		
+ifct-D033	Capsicum, green (Shimla mirch)	16	1.11	3.9	0.34	2.06	0.86	1.8					0.08	0.01	0.17		veg		
+ifct-D034	Capsicum, red (Shimla mirch)	20	1.47	4.33	0.47	2.19	0.93	1.7					0.09	0.05	0.22		veg		
+ifct-D035	Capsicum, yellow (Shimla mirch)	19	1.35	4.14	0.41	2.19	0.97	1.6					0.1	0.06	0.2		veg		
+ifct-D036	Cauliflower (Phul gobi)	23	2.15	5.74	0.44	3.71	0.47	30.7					0.12	0.02	0.22		veg		
+ifct-D037	Celery stalk (Ajmud)	16	0.98	4.42	0.24	2.09	0.75	10.7					0.06	0.01	0.13		veg		
+ifct-D038	Cho-cho-marrow	19	0.66	5.02	0.15	1.55	0.76	1.3					0.08	0.01	0.02		veg		
+ifct-D039	Cluster beans (Gaur-ki-phalli)	40	3.55	9.74	0.37	4.83	0.12	4					0.11	0.03	0.15		veg		
+ifct-D040	Colocasia, stem, black (Arwi-ki-dandi)	24	0.76	6.84	0.34	3.01	0.53	0.5					0.1	0.01	0.15		veg		
+ifct-D041	Colocasia, stem, green (Arwi-ki-dandi)	19	0.91	5.19	0.22	2.33	0.25	0.6					0.07	0.01	0.11		veg		
+ifct-D042	Corn, baby	73	2.69	17.75	1.33	6.09	0.49	1.4					0.21	0.39	0.46		veg		
+ifct-D043	Cucumber, green, elongate (Kheera)	20	0.71	5.62	0.16	2.14	0.27	6.3					0.06	0.01	0.07		veg		
+ifct-D044	Cucumber, green, short (Kheera)	17	0.83	4.95	0.18	2.13	0.21	6.1					0.07	0.01	0.05		veg		
+ifct-D045	Cucumber, orange, round (Kakadi)	20	0.98	5.47	0.24	2.46	0.22	8.2					0.07	0.01	0.07		veg		
+ifct-D046	Drumstick (Saijan-ki-phalli)	29	2.62	10.59	0.12	6.83	1.47	22.4					0.03	0.05	0.03		veg		
+ifct-D047	Field beans, tender, broad (Sem)	31	3.06	8.39	0.64	5.64	0.95	14.1					0.18	0.03	0.3		veg		
+ifct-D048	Field beans, tender, lean (Sem)	33	3.71	9.04	0.6	6.19	0.76	12.8					0.17	0.03	0.28		veg		
+ifct-D049	French beans, country (Bakla)	24	2.49	7.06	0.26	4.38	1.06	8.8					0.07	0.01	0.13		veg		
+ifct-D050	French beans, hybrid (Bakla)	22	2.12	6.81	0.19	4.18	1	9.2					0.07	0.01	0.14		veg		
+ifct-D051	Jack fruit, raw (Kathal)	26	1.98	11.17	0.35	7.69	2.02	3.5					0.05	0.12	0.11		veg		
+ifct-D052	Jack fruit, seeds, mature (Kathal)	77	5.79	20.44	0.44	8.63	2.23	4					0.15	0.02	0.18		veg		
+ifct-D053	Knol - Khol (Kohl-rabi)	16	1.58	4.14	0.35	2.75	0.43	27.5					0.1	0.03	0.13		veg		
+ifct-D054	Kovai, big (Konduri)	17	1.39	5.01	0.24	3	0.98	1.5					0.07	0	0.1		veg		
+ifct-D055	Kovai, small (Konduri)	19	1.22	5.66	0.24	3.25	1.07	2.2					0.08	0	0.11		veg		
+ifct-D056	Ladies finger (Bhindi)	27	2.08	7.7	0.22	4.08	0.48	7.4					0.07	0.01	0.11		veg		
+ifct-D057	Mango, green, raw (Katcha Aam)	49	0.69	13.6	0.08	3.01	2.42	33.1					0.03	0.01	0.03		veg		
+ifct-D058	Onion, stalk (Pyaz)	26	2.07	8.2	0.26	5.21	0.41	15.5					0.09	0.01	0.1		veg		
+ifct-D059	Papaya, raw (Katcha pepita)	24	0.5	6.68	0.23	2.28	3.63	7.5					0.07	0.04	0.08		veg		
+ifct-D060	Parwar (Parwal)	24	1.4	6.15	0.3	2.61	0.37	2.3					0.1	0.01	0.11		veg		
+ifct-D061	Peas, fresh (Matar)	81	7.25	18.2	0.13	6.32	0.97	3.7					0.02	0.03	0.06		veg		
+ifct-D062	Plantain, flower (Kele-ka phool)	21	1.47	7.4	0.63	5.25	0.17	7.5					0.27	0.03	0.2		veg		
+ifct-D063	Plantain, green (Kele)	80	1.18	21.18	0.23	3.6	0.86	18.6					0.06	0.02	0.11		veg		
+ifct-D064	Plantain, stem (Kele-ka-tana)	39	0.35	10.76	0.16	2.12	0.65	23.2					0.03	0	0.03		veg		
+ifct-D065	Pumpkin, green, cylindrical (Kaddu)	25	0.87	6.75	0.18	2.53	2.9	5.2					0.05	0.03	0.07		veg		
+ifct-D066	Pumpkin, orange, round (Kaddu)	23	0.84	6.56	0.16	2.56	2.97	8.8					0.04	0.02	0.06		veg		
+ifct-D067	Red gram, tender, fresh (Arhar ki fali)	124	8.09	25.36	0.92	5.9	0.55	2.5					0.21	0.05	0.47		veg		
+ifct-D068	Ridge gourd (Torai)	13	0.91	3.53	0.14	1.81	0.62	4.7					0.05	0	0.06		veg		
+ifct-D069	Ridge gourd, smooth skin (Torai)	15	0.98	4.09	0.13	1.85	0.41	6.3					0.04	0	0.06		veg		
+ifct-D070	Snake gourd, long, pale green (Chachinda)	12	0.98	3.54	0.25	2.27	0.42	7.1					0.09	0	0.1		veg		
+ifct-D071	Snake gourd, long, dark green (Chachinda)	12	0.89	3.5	0.25	2.27	0.45	5					0.1	0	0.1		veg		
+ifct-D072	Snake gourd, short (Chachinda)	15	0.54	4.44	0.26	2.29	0.46	2.5					0.1	0	0.1		veg		
+ifct-D073	Tinda, tender	14	1.02	3.9	0.17	2	0.44	20.6					0.05	0.01	0.08		veg		
+ifct-D074	Tomato, green (Tamator)	21	1.12	4.8	0.27	1.62	0.83	13.1					0.05	0.04	0.11		veg		
+ifct-D075	Tomato, ripe, hybrid (Tamator)	19	0.76	4.78	0.25	1.58	1.82	11.9					0.05	0.03	0.12		veg		
+ifct-D076	Tomato, ripe, local (Tamator)	20	0.9	4.48	0.47	1.77	1.34	9.7					0.08	0.06	0.21		veg		
+ifct-D077	Zucchini, green (Sabed kaddu)	20	1.1	4.63	0.51	2.3	0.14	0.4					0.12	0.04	0.25		veg		
+ifct-D078	Zucchini, yellow (Sabed kaddu)	19	1.31	4.04	0.44	1.84	0.29	0.4					0.06	0.02	0.11		veg		
+ifct-E001	Apple, big (Sev)	62	0.29	15.7	0.64	2.59	9.53										fruit		
+ifct-E002	Apple, green (Sev)	51	0.46	13.19	0.5	2.54	8.39	1.5					0.12	0.04	0.22		fruit		
+ifct-E003	Apple, small (Sev)	64	0.31	16.01	0.53	2.06	9.8	1.4					0.15	0.05	0.22		fruit		
+ifct-E004	Apple, small, Kashmir (Sev)	64	0.27	16.06	0.6	2.07	9.15	1.2					0.18	0.05	0.25		fruit		
+ifct-E005	Apricot, dried (Khoomani)	316	3.17	75.95	0.74	3.32	25.72	3.9					0.2	0.12	0.29		fruit		
+ifct-E006	Apricot, processed (Khoomani)	56	1.47	11.52	0.64	0.59	4.36	1.6					0.18	0.02	0.32		fruit		
+ifct-E007	Avocado fruit (Makhanphal)	144	2.95	8.44	13.86	6.69	1.65	2.8					1.24	8.71	1.14		fruit		
+ifct-E008	Bael fruit (Bel)	136	2.63	34.52	0.57	6.31	16.35	1.6					0.19	0.11	0.15		fruit		
+ifct-E009	Banana, ripe, montham (Kela)	111	1.25	27.16	0.32	2.21	14.9	1.2					0.11	0.01	0.13		fruit		
+ifct-E010	Banana, ripe, poovam (Kela)	106	1.49	25.74	0.35	2.33	12.54	1					0.11	0.03	0.14		fruit		
+ifct-E011	Banana, ripe, red (Kela)	112	1.29	27.19	0.29	1.98	14.57	1.1					0.11	0.02	0.11		fruit		
+ifct-E012	Banana, ripe, robusta (Kela)	105	1.23	25.57	0.33	1.94	13.65	0.8					0.11	0.02	0.13		fruit		
+ifct-E013	Black berry (Kala Jamun)	54	0.92	14.99	0.63	4.35	7.61	1.2					0.2	0.09	0.23		fruit		
+ifct-E014	Cherries, red (Gilas)	60	1.49	13.99	0.46	2.12	10.72	1.6					0.12	0.1	0.19		fruit		
+ifct-E015	Currants, black (Munakka)	54	1.51	14	0.53	4.07	6.33	1.4					0.08	0.3	0.04		fruit		
+ifct-E016	Custard apple (Sharifa)	99	1.62	25.48	0.67	5.1	13.35	3.1					0.14	0.04	0.13		fruit		
+ifct-E017	Dates, dry, pale brown (Chuhara)	320	2.45	83.86	0.35	8.95	66.63	3.3					0.1	0.03	0.16		fruit		
+ifct-E018	Dates, dry, dark brown (Khajur)	311	2.38	81.77	0.35	9.1	68.84	3.1					0.11	0.02	0.14		fruit		
+ifct-E019	Dates, processed (Khajur)	286	1.18	74.47	0.41	6.52	56.96	1.6					0.15	0.05	0.14		fruit		
+ifct-E020	Fig (Anjeer)	82	2.03	20.92	0.37	4.64	8.64	2.4					0.09	0.04	0.1		fruit		
+ifct-E021	Goosberry (Amla)	24	0.34	12.14	0.16	7.75	3.39	1.4					0.04	0.02	0.08		fruit		
+ifct-E022	Grapes, seeded, round, black (Angoor)	61	0.76	14.58	0.32	1.35	10.02	1.9					0.11	0.01	0.14		fruit		
+ifct-E023	Grapes, seeded, round, green (Angoor)	56	0.77	13.44	0.29	1.25	9.59	1.9					0.09	0.01	0.12		fruit		
+ifct-E024	Grapes, seeded, round, red (Angoor)	58	0.95	13.83	0.29	1.28	10.47	1.6					0.09	0.01	0.12		fruit		
+ifct-E025	Grapes, seedless, oval, black (Angoor)	94	1.41	22.12	0.46	1.64	9.19	1.8					0.05	0.03	0.18		fruit		
+ifct-E026	Grapes, seedless, round, green (Angoor)	54	0.62	13.09	0.26	1.28	9.6	1.8					0.09	0.01	0.11		fruit		
+ifct-E027	Grapes, seedless, round, black (Angoor)	89	1.24	21.01	0.35	1.15	10.88	1.9					0.13	0.01	0.16		fruit		
+ifct-E028	Guava, white flesh (Amrud)	32	1.44	13.72	0.32	8.59	4.1	2.9					0.05	0.04	0.18		fruit		
+ifct-E029	Guava, pink flesh (Amrud)	47	1.19	16.53	0.25	7.39	7.79	1.9					0.03	0.01	0.09		fruit		
+ifct-E030	Jack fruit, ripe (Kathal)	72	2.74	17.63	0.15	3.62	12.21	1.6					0.04	0.04	0.04		fruit		
+ifct-E031	Jambu fruit, ripe (Jamun)	56	0.82	15.37	0.17	3.07	6.84	2.6					0.07	0.02	0.05		fruit		
+ifct-E032	Karonda fruit (Balalak)	34	1.15	10.12	1.67	7.25	1.75	2.5					0.07	0.02	0.05		fruit		
+ifct-E034	Lime, sweet, pulp (Mosambi)	27	0.76	7.25	0.2	2.07	3.42	1.2					0.08	0.04	0.08		fruit		
+ifct-E035	Litchi (Lichi)	54	0.99	12.75	0.26	1.34	9.3	0.5					0.09	0.05	0.08		fruit		
+ifct-E036	Mango, ripe, banganapalli (Aam)	42	0.54	10.06	0.55	1.88	7.77	1.3					0.17	0.13	0.13		fruit		
+ifct-E037	Mango, ripe, gulabkhas (Aam)	50	0.52	11.99	0.53	1.67	8.13	1.4					0.18	0.14	0.1		fruit		
+ifct-E038	Mango, ripe, himsagar (Aam)	45	0.46	10.58	0.54	1.55	8.06	1.3					0.17	0.13	0.13		fruit		
+ifct-E039	Mango, ripe, kesar (Aam)	55	0.54	13.38	0.57	2.02	9	1.4					0.17	0.17	0.12		fruit		
+ifct-E040	Mango, ripe, neelam (Aam)	43	0.68	9.98	0.55	1.77	7.94	1.2					0.18	0.15	0.12		fruit		
+ifct-E041	Mango, ripe, paheri (Aam)	45	0.68	10.64	0.58	1.97	8.48	1.6					0.19	0.19	0.09		fruit		
+ifct-E042	Mango, ripe, totapari (Aam)	59	0.41	14.48	0.49	1.73	9.24	1.3					0.17	0.17	0.09		fruit		
+ifct-E043	Mangosteen (Mangustan)	52	0.63	13.28	0.24	1.87	8.91	3.8					0.18	0.17	0.09		fruit		
+ifct-E044	Manila tamarind	82	3.56	17.94	1.14	4.4	12.13	1.4					0.03	0.03	0.02		fruit		
+ifct-E045	Musk melon, orange flesh (Kharbooja)	23	0.42	5.75	0.35	1.51	2.99	14.9					0.09	0.03	0.16		fruit		
+ifct-E046	Musk melon, yellow flesh (Kharbooja)	28	0.53	6.89	0.26	1.49	2.36	15.8					0.08	0.02	0.11		fruit		
+ifct-E047	Orange, pulp (Santra)	37	0.7	9.21	0.13	1.29	6.86	1.5					0.04	0.02	0.05		fruit		
+ifct-E048	Palm fruit, tender (Tar)	24	0.5	7.32	0.12	2.4	0.19	1.2					0.03	0.04	0.08		fruit		
+ifct-E049	Papaya, ripe (Papita)	24	0.42	7.44	0.16	2.83	4.09	6.7					0.06	0.03	0.05		fruit		
+ifct-E050	Peach (Aroo)	40	0.86	9.95	0.37	2.13	6.95	1.1					0.02	0.21	0.06		fruit		
+ifct-E051	Pear (Nashpati)	38	0.36	12.57	0.27	4.48	7.39	1.6					0.08	0.02	0.1		fruit		
+ifct-E052	Phalsa (Falsa)	71	1.66	19.63	0.14	4.54	13	2					0.16	0.17	0.38		fruit		
+ifct-E053	Pineapple (Ananas)	43	0.52	12.88	0.16	3.46	8.56	1.4					0.05	0.03	0.05		fruit		
+ifct-E054	Plum (Alubokhara)	57	0.64	14.17	0.4	2.07	10.13	1.6					0.02	0.17	0.06		fruit		
+ifct-E055	Pomegranate, maroon seeds (Anar)	55	1.33	14.41	0.15	2.83	10.87	2.1					0.04	0.04	0.04		fruit		
+ifct-E056	Pummelo (Chakotra)	50	0.68	11.44	0.42	0.8	4.38	1.1					0.12	0.04	0.19		fruit		
+ifct-E057	Raisins, dried, black (Kishmish)	306	2.57	75.21	0.34	3.92	61.51	11					0.06	0.05	0.16		fruit		
+ifct-E058	Raisins, dried, golden (Kishmish)	297	2.76	73.35	0.35	4.56	57.12	10.2					0.12	0.03	0.12		fruit		
+ifct-E059	Rambutan (Rambutan.)	73	0.68	17.86	0.16	1.02	15.8	1.8					0.14	0.16	0.36		fruit		
+ifct-E060	Sapota (Chiku)	73	0.92	23.5	1.26	9.6	12.3	4.6					0.39	0.26	0.36		fruit		
+ifct-E061	Soursop (Shul-ram fal)	62	0.74	16.89	0.94	4.95	9.83	6.8					0.14	0.04	0.13		fruit		
+ifct-E062	Star fruit (Kazmal/Kamrakh)	26	0.79	7.32	0.39	2.81	3.95	1.6					0.02	0.03	0.19		fruit		
+ifct-E063	Strawberry	25	0.97	5.9	0.56	2.5	3.56	1.2					0.07	0.08	0.29		fruit		
+ifct-E064	Tamarind, pulp (Imli)	288	2.92	72.66	0.15	5.31	52.88	24.9					0.03	0.03	0.02		fruit		
+ifct-E065	Water melon, dark green (sugar baby) (Tarbuj)	20	0.6	4.56	0.16	0.7	3.66	1.9					0.04	0.02	0.07		fruit		
+ifct-E066	Water melon, pale green (Tarbuj)	17	0.59	3.8	0.16	0.78	3	1.6					0.05	0.01	0.07		fruit		
+ifct-E067	Wood apple (Kaith)	78	3.14	12.73	3.62	5.21	3.81	1.5					0.88	0.59	1.44		fruit		
+ifct-E068	Zizyphus (Ber)	49	1.34	13.13	0.35	3.73	8.29	1.5					0.12	0.13	0.04		fruit		
+ifct-F001	Beetroot (Chukandar)	36	1.95	9.49	0.14	3.31	4.35										veg		
+ifct-F002	Carrot, orange (Gajar)	33	0.95	9.73	0.47	4.18	3.23	52.3					0.09	0.02	0.27		veg		
+ifct-F003	Carrot, red (Gajar)	38	1.04	11.2	0.47	4.49	3.96	60.7					0.09	0.02	0.27		veg		
+ifct-F004	Colocasia (Arwi)	89	3.31	21.07	0.17	3.22	0.9	4.5					0.04	0.02	0.08		veg		
+ifct-F005	Lotus root (Kamal gatta)	79	1.94	19.37	0.93	4.7	0.24	20.6					0.25	0.08	0.41		veg		
+ifct-F006	Potato, brown skin, big (Alu)	70	1.54	16.6	0.23	1.71	0.32	4.1					0.04	0.01	0.13		veg		
+ifct-F007	Potato, brown skin, small (Alu)	61	1.35	14.59	0.22	1.69	0.44	4					0.04	0.01	0.13		veg		
+ifct-F008	Potato, red skin (Alu)	73	1.83	17.11	0.22	1.68	0.38	4.4					0.04	0.01	0.12		veg		
+ifct-F009	Radish, elongate, red skin (Muli)	32	0.67	9.17	0.13	2.46	1.15	24.7					0.04	0.01	0.06		veg		
+ifct-F010	Radish, elongate, white skin (Muli)	32	0.77	9.21	0.15	2.65	0.95	28.2					0.04	0.01	0.05		veg		
+ifct-F011	Radish, round, red skin (Muli)	31	0.89	8.36	0.16	2.29	0.86	32.3					0.05	0.01	0.08		veg		
+ifct-F012	Radish, round, white skin (Muli)	31	0.8	8.5	0.14	2.37	1.16	24.1					0.04	0.01	0.06		veg		
+ifct-F013	Sweet potato, brown skin (Shakarkand)	109	1.33	28.24	0.26	3.99	3.63	29.6					0.07	0	0.12		veg		
+ifct-F014	Sweet potato, pink skin (Shakarkand)	108	1.27	27.87	0.33	3.94	4.03	29					0.1	0.01	0.18		veg		
+ifct-F015	Tapioca (Simla alu)	80	1.03	22.42	0.2	4.61	2.14	10.9					0.06	0.01	0.09		veg		
+ifct-F016	Water Chestnut	96	0.86	24.48	0.37	3.02	1.95	13.1					0.09	0.1	0.1		veg		
+ifct-F017	Yam, elephant (Zimikandha)	84	2.56	21.63	0.14	4.17	1.58	14.3					0.04	0.01	0.07		veg		
+ifct-F018	Yam, ordinary (Sooran)	83	2.18	21.73	0.17	4.08	1.15	15.3					0.04	0.01	0.07		veg		
+ifct-F019	Yam, wild (Suaralu)	103	3.07	25.52	0.3	4.57	1.54	12.8					0.08	0.02	0.14		veg		
+ifct-G001	Chillies, green-1 (Hara Mirchi)	46	2.62	11.18	0.73	4.86	0.71	3.3					0.13	0.04	0.43		spice		
+ifct-G002	Chillies, green-2 (Hara Mirchi)	40	2.28	10.4	0.75	5.13	1.05	2.5					0.13	0.03	0.43		spice		
+ifct-G003	Chillies, green-3 (Hara Mirchi)	40	2.38	10.33	0.75	5.1	0.54	2.6					0.13	0.03	0.42		spice		
+ifct-G004	Chillies, green-4 (Hara Mirchi)	45	2.33	10.78	0.74	4.15	0.62	1.9					0.15	0.03	0.41		spice		
+ifct-G005	Chillies, green-5 (Hara Mirchi)	43	2.01	10.59	0.65	3.95	0.46	2.2					0.11	0.03	0.38		spice		
+ifct-G006	Chillies, green-6 (Hara Mirchi)	42	3.01	10.46	0.64	5.15	0.59	2.4					0.12	0.03	0.36		spice		
+ifct-G007	Chillies, green-7 (Hara Mirchi)	39	2.12	10.56	0.6	4.95	0.73	2					0.1	0.03	0.33		spice		
+ifct-G008	Chillies, green - all varieties (Hara Mirchi)	42	2.36	10.63	0.72	4.77	0.67	2.5					0.13	0.03	0.41		spice		
+ifct-G009	Coriander leaves (Hara dhania)	31	3.52	6.59	0.7	4.66	0.17	37					0.23	0.01	0.32		spice		
+ifct-G010	Curry leaves (Gandhela)	64	7.41	21.34	1.06	16.83	0.6	18.7					0.27	0.04	0.57		spice		
+ifct-G011	Garlic, big cloves (Lehsan)	124	6.92	27.15	0.16	5.22	5.97	9.4					0.03	0.01	0.07		spice		
+ifct-G012	Garlic, small cloves (Lehsan)	123	6.75	27.31	0.14	5.47	4.84	10.6					0.03	0.01	0.06		spice		
+ifct-G013	Garlic, single clove, Kashmir (Lehsan)	125	6.12	27.47	0.16	4.01	3.73	8.9					0.03	0.01	0.08		spice		
+ifct-G014	Ginger, fresh (Adrak)	55	2.22	14.33	0.85	5.36	1.31	10					0.23	0.07	0.38		spice		
+ifct-G015	Mango ginger (Aam adhrak)	42	1.45	11.72	0.7	4.74	2.42	5.5					0.18	0.05	0.33		spice		
+ifct-G016	Mint leaves (Pudina)	37	4.66	8.28	0.65	5.89	0.08	16.9					0.12	0.01	0.35		spice		
+ifct-G017	Onion, big (Pyaz)	48	1.5	12.01	0.24	2.45	5.88	5.5					0.06	0.04	0.11		spice		
+ifct-G018	Onion, small (Pyaaz Kali)	57	1.82	12.74	0.16	1.16	5.62	4.1					0.04	0.02	0.07		spice		
+ifct-G019	Asafoetida (Hing)	332	6.34	77.08	1.26	5.13	0.93	16					0.24	0.25	0.51		spice		
+ifct-G020	Cardamom, green (Elaychi)	255	8.1	70.86	2.6	23.1	4.28	15.5					0.62	0.89	0.58		spice		
+ifct-G021	Cardamom, black (Badi elaychi)	271	6.69	75.99	2.8	23.46	2.3	16.2					0.49	1.08	0.52		spice		
+ifct-G022	Chillies, red (Mirchi)	237	12.69	60.61	6.4	31.15	4.7	19.4					1.14	0.72	3.26		spice		
+ifct-G023	Cloves (Lavang)	187	5.86	53.25	8.41	34.52	2.1	183					2.68	0.6	3.43		spice		
+ifct-G024	Coriander seeds (Dhania)	269	10.66	57.79	17.47	44.81	2.38	34.4					0.95	10.77	2.25		spice		
+ifct-G025	Cumin seeds (Jira)	304	13.91	52.97	16.64	30.35	1.38	125					0.62	8.38	4.31		spice		
+ifct-G026	Fenugreek seeds (Methi)	235	25.41	58.12	5.72	47.55	0.55	40.2					0.77	0.68	3.13		spice		
+ifct-G027	Mace (Avithri)	356	6.24	46.82	24.41	20.31	0.85	27.2					9.3	9.3	4.73		spice		
+ifct-G028	Nutmeg (Jaiphal)	464	6.3	39.63	36.52	11.99	1.08	14.3					3.36	1.64	0.38		spice		
+ifct-G029	Omum (Ajwan)	357	15.89	45.11	21.11	20.58	2.76	28.6					1.11	13.88	5.19		spice		
+ifct-G030	Pippali (Pipli)	217	10.53	69.84	2.27	34.14	2.75	16.3					0.6	0.33	0.89		spice		
+ifct-G031	Pepper, black (Kalimirchi)	217	10.12	69.38	2.74	33.16	0.32	24.1					0.65	0.46	1.08		spice		
+ifct-G032	Poppy seeds (Postdana)	423	20.31	39.05	30.38	26.68	1.85	25.4					2.07	2.35	13.85		spice		
+ifct-G033	Turmeric powder (Haldi)	281	7.66	70.6	5.03	21.38	1.23	24.4					1.63	0.45	1.94		spice		
+ifct-H001	Almond (Badam)	609	18.41	16.1	58.49	13.06	2.23	1.5					4.36	38.34	13.21		nut		
+ifct-H002	Arecanut, dried, brown (Supari)	351	5.78	81.86	4.35	11.44	1.76	12.1					2.6	0.47	0.4		nut		
+ifct-H003	Arecanut, dried, red color (Supari)	353	6.46	81.38	4.46	11.11	1.79	17.1					1.67	0.99	0.92		nut		
+ifct-H004	Arecanut, fresh (Supari)	245	2.73	52.63	5.51	7.63	4.72	5.5					3.39	0.6	0.52		nut		
+ifct-H005	Cashew nut (Kaju)	583	18.78	29.32	45.2	3.86	3.11	9					7.82	27.91	7.48		nut		
+ifct-H006	Coconut, kernel, dry (Nariyal)	624	7.27	23.89	63.26	15.88	6.93	16.7					43.14	3.71	0.93		nut		
+ifct-H007	Coconut, kernel, fresh (Nariyal)	409	3.84	16.72	41.38	10.42	6.2	8.1					28.05	2.45	0.64		nut		
+ifct-H008	Garden cress, seeds (Halim)	445	23.36	41.93	23.74	8.27	0.91	21.8					4.1	8.13	10.46		nut		
+ifct-H009	Gingelly seeds, black (Til)	508	19.17	27.45	43.1	17.16	0.99	15.9					6.32	15.61	19.26		nut		
+ifct-H010	Gingelly seeds, brown (Til)	516	21.61	26.97	43.22	17.21	1.39	11.9					6.25	15.99	19.08		nut		
+ifct-H011	Gingelly seeds, white (Til)	520	21.7	27.82	43.05	16.99	0.67	15.4					6.43	16.12	18.6		nut		
+ifct-H012	Ground nut (Moog phali)	520	23.65	27.65	39.63	10.38	4.42	12.2					8.14	18.34	11.58		nut		
+ifct-H013	Mustard seeds (Rai)	510	19.51	30.9	40.19	14.1	5.07	4					2.11	21.03	8.91		nut		
+ifct-H014	Linseeds (Alsi)	444	18.55	37.16	35.67	26.17	0.6	32.9					2.97	5.11	16.15		nut		
+ifct-H015	Niger seeds, black (Kala til)	512	18.92	33.91	38.61	10.93	1.75	10.7					5.95	9.03	21.93		nut		
+ifct-H016	Niger seeds, grey (Kala til)	509	18.34	31.55	39.53	10.96	0.41	8.1					9.74	4.45	23.56		nut		
+ifct-H017	Pine seeds (Chilgoza)	594	12.55	30.56	48.79	3.79	4.67	1.3					3.8	18.62	24.2		nut		
+ifct-H018	Pistachio nuts	539	23.35	26.46	42.49	10.64	7.9	6.9					4.04	18.92	11.95		nut		
+ifct-H019	Safflower seeds (Kardi)	473	17.66	43.67	30.87	13.49	2.67	3					2.55	3.59	18.78		nut		
+ifct-H020	Sunflower seeds (Surya mukhi)	586	23.53	17.65	51.85	10.8	2.81	1.9					6.16	17.8	25.58		nut		
+ifct-H021	Walnut (Akhrot)	671	14.92	15.53	64.27	5.39	3.22	1.3					5.21	11.32	44.91		nut		
+ifct-I001	Jaggery, cane (Gud)	354	1.85	84.87	0.16		84.32	25.4					0.07	0.02	0.03		pantry		
+ifct-I002	Sugarcane, juice (Ganne-ka-ras)	58	0.16	13.67	0.4	0.56	12.85	1.2					0.14	0.03	0.17		pantry		
+ifct-J001	Button mushroom, fresh	27	3.68	5.09	0.42	3.11							0.06	0.01	0.26		veg		
+ifct-J002	Chicken mushroom, fresh	21	1.84	4.75	0.25	1.99	0.1	10.2					0.06	0	0.14		veg		
+ifct-J003	Shiitake mushroom, fresh	58	3.19	12	0.76	3.02	0.2	9.3					0.12	0.01	0.48		veg		
+ifct-J004	Oyster mushroom, dried	244	19.04	72.19	2.86	39.12	0.68	8.7					0.42	0.07	1.79		veg		
+ifct-K001	Toddy (Tarai)	24	0.18	5.72	0.03								0.03	0.03	0.07		pantry		
+ifct-K002	Coconut water (Nariyal ka pani)	15	0.26	3.16	0.16		3.06	28.1					0.09	0.02	0		pantry		
+ifct-L001	Milk, whole, Buffalo (Bhains ka dhood)	107	3.68	8.39	6.58			30.1	1	glass	250	3.68	4.63	1.92	0.2		dairy		
+ifct-L002	Milk, whole, Cow (Gai ka doodh)	73	3.26	4.94	4.48		4.89	25.5	1	glass	250	3.26	2.71	1.21	0.14		dairy		
+ifct-L003	Paneer (Chhena)	258	18.86	12.41	14.78		11.57	18				18.86	8.85	4.3	0.44		dairy		
+ifct-L004	Khoa	316	16.34	16.53	20.62		16.14	48.1				16.34	12.94	5.66	0.79		dairy		
+ifct-M001	Egg, poultry, whole, raw (Anda)	135	13.28	0	9.15			123				13.28	2.96	3.48	1.15		egg		
+ifct-M002	Egg, poultry, white, raw (Ande ki Safedi)	45	10.84	0	0.06			166				10.84					egg		
+ifct-M003	Egg, poultry, yolk, raw (Ande ki Zardi)	297	15.74	0	26.34			46.3				15.74	8.58	10.07	3.24		egg		
+ifct-M004	Egg, poultry, whole, boiled (Ubla Anda)	148	13.43	0	10.54			121				13.43	3.46	3.99	1.29		egg		
+ifct-M005	Egg, poultry, white, boiled (Ubla Safedi)	53	12.37	0	0.26			144				12.37					egg		
+ifct-M006	Egg, poultry, yolk, boiled (Ubla Zardi)	308	16.13	0	27.46			44.8				16.13	8.82	10.64	3.33		egg		
+ifct-M007	Egg, poultry, omlet (Aamlet)	170	16.53	0	11.6			169				16.53	3.18	4.62	3.17		egg		
+ifct-M008	Egg, country hen, whole, raw (Desi Murgi ka Anda)	168	13.14	0	13			157				13.14	3.79	5.06	1.94		egg		
+ifct-M009	Egg, country hen, whole, boiled (Ubla Desi Murgi ka Anda)	183	14.43	0	14.1			149				14.43	4.07	5.75	1.88		egg		
+ifct-M010	Egg, country hen, omlet (Desi Aamlet)	204	14.8	0	16.3			157				14.8	4.89	6.42	2.32		egg		
+ifct-M011	Egg, duck, whole, boiled (Ubla Batakh ka Anda)	176	13.8	0	13.61			110				13.8	3.6	6.1	1.75		egg		
+ifct-M012	Egg, duck, whole, raw (Batakh ka Anda)	182	14.6	0	13.83			113				14.6	3.37	6.06	1.68		egg		
+ifct-M013	Egg, duck, whole, omlet (Batakh Aamlet)	192	15.1	0	14.8			175				15.1	3.87	6.48	1.89		egg		
+ifct-M014	Egg, quial, whole, raw (Bater ka Anda)	152	12.39	0	11.46			132				12.39	2.79	4.21	2.4		egg		
+ifct-M015	Egg, quial, whole, boiled (Ubla Bater ka Anda)	155	13.03	0	11.5			130				13.03	2.73	4.39	2.4		egg		
+ifct-N001	Chicken, poultry, leg, skinless	384	19.44	0	12.64			65.1				19.44	1.16	1.56	0.66		meat		
+ifct-N002	Chicken, poultry, thigh, skinless (Murge ki Raan/Jangh)	200	18.18	0	14.23			64.6				18.18	1.07	1.46	0.52		meat		
+ifct-N003	Chicken, poultry, breast, skinless (Murge ka Seena)	168	21.81	0	9			36.7				21.81	0.82	0.99	0.37		meat		
+ifct-N004	Chicken, poultry, wing, skinless (Murge ka Par/Pankh)	193	17.42	0	13.81			72.8				17.42	1.24	1.78	0.66		meat		
+ifct-N005	Poultry, chicken, liver (Murge ki Kaleji)	124	21.57	0	4.08			61.6				21.57	1.33	0.68	1.01		meat		
+ifct-N006	Poultry, chicken, gizzard	92	18.22	0	2.07			50.6				18.22	0.77	0.72	0.46		meat		
+ifct-N007	Country hen, leg, with skin (Desi Murge ki Tang/Raan)	173	17.01	0	11.73			50.5				17.01	0.53	0.68	0.4		meat		
+ifct-N008	Country hen, thigh, with skin	188	18.29	0	12.82			51.1				18.29	0.61	0.75	0.36		meat		
+ifct-N009	Country hen, breast, with skin (Desi Murge ka Seena)	180	22.08	0	10.2			23.1				22.08	0.42	0.45	0.26		meat		
+ifct-N010	Country hen, wing, with skin (Desi Murge ka Par/Pankh)	183	18.65	0	12.09			54.1				18.65	0.69	0.84	0.45		meat		
+ifct-N011	Duck, meat, with skin (Batakh ka Gosht)	131	19.07	0	6.03			82.2				19.07	0.34	2.21	0.3		meat		
+ifct-N012	Emu, meat, skinless (Emu Gosht)	133	22.65	0	4.62			48.5				22.65	0.2	0.24	0.14		meat		
+ifct-N013	Guinea fowl, meat, with skin (Guinea Murga Gosht)	112	20.52	0	3.24			57.6				20.52	1.14	0.93	0.99		meat		
+ifct-N014	Pigeon, meat, with skin (Kabutar ka Gosht)	126	17.94	0	6.03			56.1				17.94	1.83	2.59	1.28		meat		
+ifct-N015	Quail, meat, skinless (Bater ka Gosht)	138	20.92	0	5.95			56.2				20.92	2.02	2.79	0.81		meat		
+ifct-N016	Turkey, leg, with skin (Turkey ki Tang/Raan)	155	20.3	0	8.15			66.5				20.3	0.98	0.94	1.06		meat		
+ifct-N017	Turkey, thigh, with skin (Turkey ki Raan/Jangh)	139	20.46	0	6.31			50				20.46	1.01	0.93	1.03		meat		
+ifct-N018	Turkey, breast, with skin (Turkey ka Seena)	160	21.96	0	8.04			40.5				21.96	0.93	0.88	1.05		meat		
+ifct-N019	Turkey, wing, with skin (Turkey ka Par/Pankh)	184	21.91	0	10.77			57				21.91	0.9	0.83	0.91		meat		
+ifct-O001	Goat, shoulder, meat (Bakre ka Kandha/Dast)	188	20.33	0	11.94			47.3				20.33	5.44	4.9	0.64		meat		
+ifct-O002	Goat, chops (Bakre ki Champ)	136	20.39	0	5.98			45.7				20.39	2.88	2.35	0.26		meat		
+ifct-O003	Goat, legs (Bakre ki Tangein)	160	22.07	0	7.94			42.8				22.07	3.67	3.04	0.57		meat		
+ifct-O004	Goat, brain (Bakre ka Bheja/Maghaz)	127	13.82	0	8.06			132				13.82	2.14	1.45	0.94		meat		
+ifct-O005	Goat, tongue (Bakre ki Zabaan/Jeebh)	189	16.63	0	13.68			118				16.63	5.03	4.92	0.76		meat		
+ifct-O006	Goat, lungs (Bakre ke Phephde)	96	16.86	0	3.09			85.7				16.86	1.56	0.89	0.37		meat		
+ifct-O007	Goat, heart (Bakre ka Dil)	118	19.38	0	4.4			73.2				19.38	1.94	1.02	0.43		meat		
+ifct-O008	Goat, liver (Bakre ki Kaleji)	126	20.32	0	4.88			55.4				20.32	1.77	0.92	0.92		meat		
+ifct-O009	Goat, tripe (Bakre ki Ojri/Boti)	92	15.36	0	3.36			22.4				15.36	1.68	1.15	0.25		meat		
+ifct-O010	Goat, spleen (Bakre ki Tilli)	96	18.45	0	2.37			52.4				18.45	1.2	0.62	0.35		meat		
+ifct-O011	Goat, kidneys (Bakre ke Gurde)	89	15.6	0	2.93			184				15.6	1.14	0.57	0.48		meat		
+ifct-O012	Goat, tube (small intestine) (Bakre ki Aant)	125	12.92	0	8.26			7.5				12.92	4.45	2.5	0.62		meat		
+ifct-O013	Goat, testis (Bakre ke Kapure)	71	12.32	0	2.39			92.6				12.32	1.22	0.59	0.38		meat		
+ifct-O014	Sheep, shoulder (Bhed ka Kandha/Dast)	201	18.24	0	14.31			45.6				18.24	6.92	5.1	1.1		meat		
+ifct-O015	Sheep, chops (Bhed ki Champ)	119	18	0	5.15			45.3				18	2.77	1.92	0.31		meat		
+ifct-O016	Sheep, leg (Bhed ki Tangein)	164	21.42	0	8.69			49.3				21.42	3.75	2.6	0.67		meat		
+ifct-O017	Sheep, brain (Bhed ka Bheja/Maghaz)	118	13.05	0	7.29			122				13.05	2.04	1.18	0.87		meat		
+ifct-O018	Sheep, tongue (Bhed ki Zabaan/Jeebh)	187	16.61	0	13.53			185				16.61	5.58	5.88	0.94		meat		
+ifct-O019	Sheep, lungs (Bhed ke Phephde)	87	16.12	0	2.41			109				16.12	1.14	0.77	0.3		meat		
+ifct-O020	Sheep, heart (Bhed ka Dil)	106	18.19	0	3.66			72.6				18.19	1.68	0.87	0.33		meat		
+ifct-O021	Sheep, liver (Bhed ki Kaleji)	134	22.26	0	4.87			55.8				22.26	1.82	0.77	1.01		meat		
+ifct-O022	Sheep, tripe (Bhed ki Ojri/Boti)	104	16.76	0	4.05			18.4				16.76	1.96	1.53	0.21		meat		
+ifct-O023	Sheep, spleen (Bhed ki Tilli)	92	16.02	0	3.02			50.6				16.02	1.53	0.76	0.47		meat		
+ifct-O024	Sheep, kidneys (Bhed ke Gurde)	92	16.22	0	2.92			163				16.22	1.13	0.59	0.46		meat		
+ifct-O025	Beef, shoulder (Gaay ka Kandha/Dast)	212	20.56	0	14.59			45.6				20.56	7.05	6.23	1.01		meat		
+ifct-O026	Beef, chops (Gaay ki Champ)	140	19.82	0	6.71			32.5				19.82	3.03	2.68	0.44		meat		
+ifct-O027	Beef, round (leg) (Gaay ki Raan)	157	22.64	0	7.38			39				22.64	3	3.28	0.48		meat		
+ifct-O028	Beef, brain (Gaay ka Bheja/Maghaz)	125	10.55	0	9.28			127				10.55	2.49	1.87	0.85		meat		
+ifct-O029	Beef, tongue (Gaay ki Zabaan/Jeebh)	175	15.63	0	12.57			89.9				15.63	6.29	4.74	0.48		meat		
+ifct-O030	Beef, lungs (Gaay ke Phephde)	84	15.66	0	2.28			109				15.66	1.2	0.65	0.24		meat		
+ifct-O031	Beef, heart (Gaay ka Dil)	103	17.68	0	3.57			70.5				17.68	1.48	0.85	0.49		meat		
+ifct-O032	Beef, liver (Gaay ki Kaleji)	119	20.73	0	3.96			50.1				20.73	1.54	0.83	0.57		meat		
+ifct-O033	Beef, tripe (Gaay ki Ojri/Boti)	76	13.1	0	2.51			41				13.1	1.37	0.83	0.1		meat		
+ifct-O034	Beef, spleen (Gaay ki Tilli)	90	17.42	0	2.22			58.9				17.42	1.16	0.48	0.39		meat		
+ifct-O035	Beef, kidneys (Gaay ke Gurde)	105	17.09	0	4.01			160				17.09	1.74	0.83	0.29		meat		
+ifct-O036	Calf, shoulder (Bachhde ka Kandha/Dast)	151	20.98	0	7.47			77				20.98	3.51	2.65	0.69		meat		
+ifct-O037	Calf, chops (Bachhde ki Champ)	125	22.47	0	3.85			64.9				22.47	1.97	1.03	0.45		meat		
+ifct-O038	Calf, round (leg) (Bachhde ki Raan)	147	21.1	0	6.92			67				21.1	2.26	2.43	0.5		meat		
+ifct-O039	Calf, brain (Bachhde ka Bheja/Maghaz)	107	9.84	0	7.6			115				9.84	2.2	1.46	0.6		meat		
+ifct-O040	Calf, tongue (Bachhde ki Zabaan/Jeebh)	176	17.78	0	11.76			91.6				17.78	5.63	4.41	0.74		meat		
+ifct-O041	Calf, heart (Bachhde ka Dil)	110	18.84	0	3.75			58				18.84	1.49	0.7	0.77		meat		
+ifct-O042	Calf, liver (Bachhde ki Kaleji)	120	21.02	0	3.95			55				21.02	1.62	0.67	0.64		meat		
+ifct-O043	Calf, spleen (Bachhde ki Tilli)	91	17.71	0	2.12			67.9				17.71	1.03	0.51	0.4		meat		
+ifct-O044	Calf, kidneys (Bachhde ke Gurde)	92	15.16	0	3.5			174				15.16	1.46	0.66	0.49		meat		
+ifct-O045	Mithun, shoulder (Mithun ka Kandha)	176	19.05	0	11.14			32.9				19.05	4.44	2.16	3.61		meat		
+ifct-O046	Mithun, chops (Mithun ki Champ)	128	18.19	0	6.12			42.2				18.19	2.74	1.28	1.6		meat		
+ifct-O047	Mithun, round (leg) (Mithun ki Raan)	116	19.61	0	4.1			28.4				19.61	1.44	1.92	1.7		meat		
+ifct-O048	Pork, shoulder (Suar ka Kandha)	237	17.41	0	18.83			54.5				17.41	6.89	8.11	2.13		meat		
+ifct-O049	Pork, chops (Suar ki Champ)	179	19.41	0	11.3			43.7				19.41	4.8	4.97	0.66		meat		
+ifct-O050	Pork, ham (Suar ki Raan)	240	18.83	0	18.55			40.4				18.83	6.94	8.06	1.88		meat		
+ifct-O051	Pork, lungs (Suar ke Phephde)	86	15.13	0	2.74			61.4				15.13	1.25	0.87	0.47		meat		
+ifct-O052	Pork, heart (Suar ka Dil)	109	16.31	0	4.87			70.5				16.31	1.57	1.25	1.02		meat		
+ifct-O053	Pork, liver (Suar ki Kaleji)	116	19.89	0	3.94			64.9				19.89	1.32	0.7	0.9		meat		
+ifct-O054	Pork, stomach (Suar ka Pet)	131	15.36	0	7.81			109				15.36	3.33	2.69	1.09		meat		
+ifct-O055	Pork, spleen (Suar ki Tilli)	85	15.13	0	2.71			49.1				15.13	1.25	0.82	0.4		meat		
+ifct-O056	Pork, kidneys (Suar ke Gurde)	91	14.35	0	3.65			138				14.35	1.17	0.85	0.71		meat		
+ifct-O057	Pork, tube (small intestine) (Suar ki Aant)	140	14.96	0	8.98			60.2				14.96	4.11	3.17	0.89		meat		
+ifct-O058	Hare, shoulder (Khargosh ka Kandha)	144	21.13	0	6.58			55				21.13	2.7	1.61	1.72		meat		
+ifct-O059	Hare, chops (Khargosh ki Champ)	106	20.62	0	2.55			48.6				20.62	1.03	0.61	0.69		meat		
+ifct-O060	Hare, leg (Khargosh ki Tang)	120	20.52	0	4.16			42.5				20.52	0.91	0.51	0.56		meat		
+ifct-O061	Rabbit, shoulder (Khargosh ka Kandha)	152	20.01	0	7.96			61.4				20.01	3.14	2.33	1.81		meat		
+ifct-O062	Rabbit, chops (Khargosh ki Champ)	135	22.61	0	4.88			47.8				22.61	1.91	1.48	1.08		meat		
+ifct-O063	Rabbit, leg (Khargosh ki Tang)	140	21.31	0	5.99			46				21.31	1.57	1.2	0.88		meat		
+ifct-P001	Allathi	97	21.77	0	0.98			32.7				21.77	0.35	0.17	0.26		fish		
+ifct-P002	Aluva	104	21.63	0	1.8			44.9				21.63	0.76	0.29	0.49		fish		
+ifct-P003	Anchovy	88	19.88	0	0.78			212				19.88	0.25	0.05	0.29		fish		
+ifct-P004	Ari fish	99	22.01	0	1.11			37.4				22.01	0.41	0.17	0.32		fish		
+ifct-P005	Betki	68	15.28	0	0.29			63.7				15.28	0.09	0.05	0.06		fish		
+ifct-P006	Black snapper	90	19.5	0	1.24			41.2				19.5	0.47	0.25	0.29		fish		
+ifct-P007	Bombay duck	69	13.53	0	1.03			223				13.53	0.4	0.17	0.25		fish		
+ifct-P008	Bommuralu	116	22.3	0	2.87			61.9				22.3	1.24	0.7	0.59		fish		
+ifct-P009	Cat fish	109	22.18	0	2.13			35.8				22.18	0.79	0.43	0.62		fish		
+ifct-P010	Chakla	97	20.21	0	1.68			51.4				20.21	0.65	0.35	0.42		fish		
+ifct-P011	Chappal	76	17.17	0	0.67			38.1				17.17	0.2	0.07	0.21		fish		
+ifct-P012	Chelu	87	20.02	0	0.7			37.6				20.02	0.23	0.1	0.18		fish		
+ifct-P013	Chembali	97	20.06	0	1.77			39				20.06	0.7	0.37	0.44		fish		
+ifct-P014	Eri meen	109	22.3	0	2.02			41.2				22.3	0.74	0.34	0.67		fish		
+ifct-P015	Gobro	87	19.37	0	0.88			52.7				19.37	0.29	0.14	0.25		fish		
+ifct-P016	Guitar fish	96	22.56	0	0.44			70.8				22.56	0.11	0.04	0.14		fish		
+ifct-P017	Hilsa	259	21.8	0	18.49			80.9				21.8	9.29	6.02	1.8		fish		
+ifct-P018	Jallal	100	21.55	0	1.46			74.3				21.55	0.52	0.31	0.39		fish		
+ifct-P019	Jathi vela meen	108	22.45	0	1.92			30.5				22.45	0.84	0.52	0.29		fish		
+ifct-P020	Kadal bral	88	18.72	0	1.34			53.7				18.72	0.48	0.19	0.44		fish		
+ifct-P021	Kadali	127	22.07	0	4.2			36.1				22.07	1.61	0.82	1.34		fish		
+ifct-P022	Kalamaara	125	20.89	0	4.54			29.3				20.89	2.11	1.08	0.91		fish		
+ifct-P023	Kalava	89	19.38	0	1.2			40.1				19.38	0.46	0.25	0.28		fish		
+ifct-P024	Kanamayya	88	20.19	0	0.65			50.5				20.19	0.21	0.11	0.17		fish		
+ifct-P025	Kannadi paarai	101	22.09	0	1.27			59.6				22.09	0.48	0.23	0.33		fish		
+ifct-P026	Karimeen	92	19.68	0	1.38			23.7				19.68	0.58	0.29	0.27		fish		
+ifct-P027	Karnagawala	87	19.52	0	0.84			63.3				19.52	0.26	0.09	0.3		fish		
+ifct-P028	Kayrai	109	20.15	0	3			25.1				20.15	1.1	0.58	0.98		fish		
+ifct-P029	Kiriyan	133	22.49	0	4.7			35.9				22.49	2.1	1.07	1.07		fish		
+ifct-P030	Kite fish	99	23.07	0	0.56			59				23.07	0.17	0.07	0.14		fish		
+ifct-P031	Korka	126	23.72	0	3.36			43.3				23.72	1.41	0.69	0.9		fish		
+ifct-P032	Kulam paarai	120	21.62	0	3.6			49.2				21.62	1.43	0.68	1.11		fish		
+ifct-P033	Maagaa	87	20.11	0	0.67			52.3				20.11	0.2	0.1	0.15		fish		
+ifct-P034	Mackerel	101	21.51	0	1.53			83				21.51	0.6	0.22	0.47		fish		
+ifct-P035	Manda clathi	95	21.27	0	1			58.5				21.27	0.34	0.17	0.28		fish		
+ifct-P036	Matha	93	21.17	0	0.79			62.6				21.17	0.3	0.11	0.19		fish		
+ifct-P037	Milk fish	106	23.66	0	1.09			43				23.66	0.37	0.19	0.32		fish		
+ifct-P038	Moon fish	126	20.74	0	4.69			65.2				20.74	2.93	0.93	0.37		fish		
+ifct-P039	Mullet	94	20.23	0	1.32			66.1				20.23	0.49	0.22	0.38		fish		
+ifct-P040	Mural	82	19.04	0	0.58			110				19.04	0.35	0.08	0.35		fish		
+ifct-P041	Myil meen	98	22.89	0	0.56			62				22.89	0.15	0.06	0.18		fish		
+ifct-P042	Nalla bontha	87	19.82	0	0.72			57.9				19.82	0.24	0.13	0.17		fish		
+ifct-P043	Narba	103	21.95	0	1.6			49.5				21.95	0.6	0.26	0.49		fish		
+ifct-P044	Paarai	104	21.58	0	1.84			45.2				21.58	0.72	0.28	0.58		fish		
+ifct-P045	Padayappa	86	19.7	0	0.69			33.9				19.7	0.17	0.08	0.25		fish		
+ifct-P046	Pali kora	94	19.25	0	1.81			54.9				19.25	0.76	0.35	0.43		fish		
+ifct-P047	Pambada	128	21.95	0	4.44			82.7				21.95	1.96	0.86	1.19		fish		
+ifct-P048	Pandukopa	86	19.73	0	0.65			49.1				19.73	0.2	0.09	0.18		fish		
+ifct-P049	Parava	112	21.5	0	2.74			84.1				21.5	1.18	0.62	0.61		fish		
+ifct-P050	Parcus	86	19.87	0	0.62			64.4				19.87	0.17	0.07	0.2		fish		
+ifct-P051	Parrot fish	90	20.82	0	0.57			51.8				20.82	0.17	0.14	0.08		fish		
+ifct-P052	Perinkilichai	92	20.89	0	0.87			34.2				20.89	0.29	0.1	0.28		fish		
+ifct-P053	Phopat	101	22.05	0	1.33			36.2				22.05	0.44	0.2	0.46		fish		
+ifct-P054	Piranha	131	20.46	0	5.43			39				20.46	1.97	2.36	0.59		fish		
+ifct-P055	Pomfret, black	123	18.91	0	4.83			69.1				18.91	2.23	0.97	1.16		fish		
+ifct-P056	Pomfret, snub nose	90	21.05	0	0.46			36.1				21.05	0.14	0.07	0.13		fish		
+ifct-P057	Pomfret, white	123	19.02	0	5.12			46.1				19.02	2.67	1.05	0.92		fish		
+ifct-P058	Pranel	97	19.69	0	1.89			52.4				19.69	0.83	0.37	0.42		fish		
+ifct-P059	Pulli paarai	95	20.06	0	1.55			58.6				20.06	0.59	0.21	0.51		fish		
+ifct-P060	Queen fish	96	20.97	0	1.17			48.9				20.97	0.69	0.33	0.54		fish		
+ifct-P061	Raai fish	103	21.61	0	1.69			47.6				21.61	0.65	0.31	0.47		fish		
+ifct-P062	Raai vanthu	98	19.39	0	2.17			50.8				19.39	0.86	0.42	0.6		fish		
+ifct-P063	Rani	90	18.83	0	1.49			63.2				18.83	2.93	1.88	1.11		fish		
+ifct-P064	Ray fish, bow head, spotted	83	19.03	0	0.7			105				19.03	0.19	0.1	0.22		fish		
+ifct-P065	Red snapper	104	22.79	0	1.34			59.9				22.79	0.48	0.3	0.33		fish		
+ifct-P066	Red snapper, small	108	21.5	0	2.3			39				21.5	0.86	0.41	0.73		fish		
+ifct-P067	Sadaya	110	20.68	0	2.97			49.4				20.68	1.06	0.44	1.13		fish		
+ifct-P068	Salmon	172	20.97	0	9.86			20.2				20.97	4.3	2.45	2.3		fish		
+ifct-P069	Sangada	106	20.26	0	2.67			77.8				20.26	1.13	0.51	0.71		fish		
+ifct-P070	Sankata parai	104	21.87	0	1.68			22.3				21.87	3.32	1.88	1.75		fish		
+ifct-P071	Sardine	152	17.91	0	8.99			38.5				17.91	1.25	0.63	0.77		fish		
+ifct-P072	Shark	95	21.6	0	0.83			63.6				21.6	0.28	0.13	0.23		fish		
+ifct-P073	Shark, hammer head	103	23.4	0	0.8			53.5				23.4	0.26	0.1	0.23		fish		
+ifct-P074	Shark, spotted	92	20.95	0	0.75			131				20.95	0.25	0.14	0.17		fish		
+ifct-P075	Shelavu	107	22.46	0	1.74			38.7				22.46	0.68	0.37	0.43		fish		
+ifct-P076	Silan	151	22.72	0	6.68			29.4				22.72	3.62	3.2	1.14		fish		
+ifct-P077	Silk fish	98	20.65	0	1.53			41.6				20.65	0.5	0.28	0.51		fish		
+ifct-P078	Silver carp	133	21.71	0	5.17			19.6				21.71	1.83	1.96	0.89		fish		
+ifct-P079	Sole fish	88	19.05	0	1.18			74.6				19.05	0.42	0.17	0.37		fish		
+ifct-P080	Stingray	98	23.98	0	0.68			64.1				23.98	0.29	0.17	0.17		fish		
+ifct-P081	Tarlava	99	21.72	0	1.2			67.4				21.72	0.5	0.21	0.27		fish		
+ifct-P082	Tholam	103	20.78	0	2.13			28				20.78	0.86	0.51	0.48		fish		
+ifct-P083	Tilapia	83	18.48	0	1.08			52.5				18.48	0.41	0.25	0.2		fish		
+ifct-P084	Tuna	112	24.5	0	1.44			52.9				24.5	0.66	0.3	0.57		fish		
+ifct-P085	Tuna, striped	96	21.28	0	1.12			22.6				21.28	0.42	0.17	0.31		fish		
+ifct-P086	Valava	98	21.8	0	1.06			91.9				21.8	0.4	0.11	0.34		fish		
+ifct-P087	Vanjaram	136	22.28	0	5.18			34.9				22.28	2.23	1.08	1.38		fish		
+ifct-P088	Vela meen	128	22.16	0	4.34			38.1				22.16	1.86	0.85	1.2		fish		
+ifct-P089	Vora	101	20.14	0	2.14			43.7				20.14	1.21	0.47	0.65		fish		
+ifct-P090	Whale shark	96	21.83	0	0.82			116				21.83	0.27	0.14	0.22		fish		
+ifct-P091	Xiphinis	88	19.82	0	0.88			66.2				19.82	0.36	0.18	0.13		fish		
+ifct-P092	Eggs, cat fish (Pabda ande)	143	24.68	0	5.28			54.8				24.68	1.82	1.12	1.44		fish		
+ifct-Q001	Crab (Kekda)	82	10.23	0	1.41							10.23					fish		
+ifct-Q002	Crab, sea (Kekda)	68	15.36	0	0.6			313				15.36	0.13	0.06	0.15		fish		
+ifct-Q003	Lobster, brown (Chappal jhinga)	70	15.96	0	0.56			140				15.96	0.11	0.07	0.12		fish		
+ifct-Q004	Lobster, king size (Chappal jhinga)	90	18.54	0	0.78			191				18.54	0.17	0.13	0.21		fish		
+ifct-Q005	Mud crab (Chikad kekda)	45	10	0	0.55			305				10	0.1	0.07	0.13		fish		
+ifct-Q006	Oyster	60	9.51	0	2.44			41				9.51	1.09	0.3	0.65		fish		
+ifct-Q007	Tiger prawns, brown (Jhinga)	65	14.85	0	0.56			188				14.85	0.12	0.08	0.1		fish		
+ifct-Q008	Tiger Prawns, orange (Bagda jhinga)	65	14.25	0	0.74			61				14.25	0.18	0.09	0.2		fish		
+ifct-R001	Clam, green shell	58	12.14	0	0.98			322				12.14	0.28	0.09	0.26		fish		
+ifct-R002	Clam, white shell, ribbed (Sippi)	60	11.82	0	1.34			404				11.82	0.44	0.13	0.42		fish		
+ifct-R003	Octopus (Ashtabahu)	80	14.71	0	1.12			230				14.71	0.33	0.07	0.38		fish		
+ifct-R004	Squid, black (Kala squid)	80	16.1	0	1.07			179				16.1	0.29	0.06	0.39		fish		
+ifct-R005	Squid, hard shell (Samudra pheni)	76	16.82	0	0.93			99.1				16.82	0.23	0.06	0.3		fish		
+ifct-R006	Squid, red (Lal squid)	79	16.25	0	1.44			121				16.25	0.45	0.08	0.55		fish		
+ifct-R007	Squid, white, small (Safed squid)	84	17.41	0	1.15			154				17.41	0.3	0.06	0.44		fish		
+ifct-S001	Cat fish (Singee)	124	15.86	0	6.24			28.3				15.86	2.18	2.06	0.98		fish		
+ifct-S002	Catla	94	17.94	0	2.15			36.6				17.94	1.67	1.24	0.81		fish		
+ifct-S003	Fresh water Eel (Baam machli)	108	20.41	0	2.63			88.7				20.41	0.98	0.73	0.6		fish		
+ifct-S004	Gold fish (Sunahri machli)	95	16.91	0	2.94			27.5				16.91	1.08	0.62	0		fish		
+ifct-S005	Pangas (Pangas machli)	204	17.12	0	16.77			37.4				17.12	0.86	0.71	0.51		fish		
+ifct-S006	Rohu (Bhobhari)	102	19.71	0	2.39			35.6				19.71	2.05	2.62	0.75		fish		
+ifct-S007	Crab (Kekda)	78	13.23	0	0.89			280				13.23	0.21	0.14	0.26		fish		
+ifct-S008	Prawns, big (Bada jhinga)	91	19.24	0	0.52			849				19.24	0.09	0.06	0.09		fish		
+ifct-S009	Prawns, small (Chhota jhinga)	71	13.07	0	0.78			77.7				13.07	0.2	0.15	0.17		fish		
+ifct-S010	Tiger prawns (Jhinga)	68	14.24	0	0.66			80.8				14.24	0.13	0.12	0.14		fish		

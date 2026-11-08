@@ -4,12 +4,14 @@ import android.app.DatePickerDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -36,6 +38,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -52,12 +55,14 @@ import com.lifetracker.app.data.FoodStats
 import com.lifetracker.app.data.Loggable
 import com.lifetracker.app.data.MealEntity
 import com.lifetracker.app.data.NutrientMath
+import com.lifetracker.app.data.QualityMath
 import com.lifetracker.app.data.SavedMealItems
-import com.lifetracker.app.ui.theme.HighlightedHeading
 import com.lifetracker.app.ui.theme.LocalPaper
 import com.lifetracker.app.ui.theme.PaperButton
 import com.lifetracker.app.ui.theme.PaperButtonStyle
 import com.lifetracker.app.ui.theme.PaperCard
+import com.lifetracker.app.ui.theme.PaperDialog
+import com.lifetracker.app.ui.theme.PaperField
 import com.lifetracker.app.ui.theme.PaperIconButton
 import com.lifetracker.app.ui.theme.PaperPill
 import java.time.LocalDate
@@ -105,7 +110,6 @@ fun FoodScreen(vm: FoodViewModel = viewModel(), x: FoodExtrasViewModel = viewMod
     val goal by vm.goal.collectAsState()
     val water by vm.waterMl.collectAsState()
     val recent by vm.recent.collectAsState()
-    val loggedDays by vm.datesWithMeals.collectAsState()
     val library by vm.library.collectAsState()
     val favourites by vm.favourites.collectAsState()
     val savedMeals by vm.savedMeals.collectAsState()
@@ -113,6 +117,8 @@ fun FoodScreen(vm: FoodViewModel = viewModel(), x: FoodExtrasViewModel = viewMod
     val tick by FoodSettings.changes.collectAsState()
     val weights by x.weights.collectAsState()
     val eventDays by x.eventDays.collectAsState()
+    val weekMeals by x.weekMeals.collectAsState()
+    val allGoals by x.goals.collectAsState()
     val shown = remember(tick) { FoodPart.entries.associateWith { FoodSettings.isOn(context, it) } }
     LaunchedEffect(date) { x.setDay(date) }
     val tapped = if (shown[FoodPart.TRACKERS] == true) eventDays else emptySet()
@@ -122,6 +128,15 @@ fun FoodScreen(vm: FoodViewModel = viewModel(), x: FoodExtrasViewModel = viewMod
     var openMeal by remember { mutableStateOf(FoodLogic.mealTypeFor(java.time.LocalTime.now().let { it.hour * 60 + it.minute })) }
     val totals = FoodStats.totals(meals)
     val extras = FoodLogic.extras(meals)
+    val burned = remember(tick, date) { FoodSettings.burnedKcal(context, date.toString()) }
+    var askBurned by remember { mutableStateOf(false) }
+    val ringPct: (LocalDate) -> Float = remember(weekMeals, allGoals, tick) {
+        val byDay = weekMeals.groupBy { it.date };
+        { d: LocalDate ->
+            val budget = (FoodStats.goalFor(allGoals, d)?.kcal ?: 0.0) + FoodSettings.burnedKcal(context, d.toString())
+            if (budget <= 0) 0f else ((byDay[d.toString()]?.sumOf { it.kcal } ?: 0.0) / budget).toFloat()
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
@@ -149,9 +164,9 @@ fun FoodScreen(vm: FoodViewModel = viewModel(), x: FoodExtrasViewModel = viewMod
                     },
                 )
             }
-            item { WeekStrip(date, today, loggedDays, tapped, onPick = vm::select, onShift = { vm.shift(it * 7L) }) }
+            item { WeekStrip(date, today, ringPct, tapped, onPick = vm::select, onShift = { vm.shift(it * 7L) }) }
             item {
-                HeroCard(totals.kcal, totals.carbs, totals.protein, totals.fat, goal?.kcal, goal?.carbs, goal?.protein, goal?.fat)
+                HeroCard(totals.kcal, totals.carbs, totals.protein, totals.fat, goal?.kcal, goal?.carbs, goal?.protein, goal?.fat, burned, onBurned = { askBurned = true })
             }
             item {
                 SearchRow(
@@ -205,13 +220,21 @@ fun FoodScreen(vm: FoodViewModel = viewModel(), x: FoodExtrasViewModel = viewMod
                     onEntry = { sheet = Sheet.Entry(it) },
                 )
             }
-            if (shown[FoodPart.WATER] == true) item { WaterTile(water, onAdd = vm::addWater) }
-            if (shown[FoodPart.SHAKE] == true) item { ShakeCard(vm, openMeal) }
+            if (shown[FoodPart.FASTING] == true) item { FastingCard(x) }
+            if (shown[FoodPart.WATER] == true || shown[FoodPart.SHAKE] == true) item {
+                val waterTile: (@Composable (Modifier) -> Unit)? =
+                    if (shown[FoodPart.WATER] == true) { m -> WaterTile(water, onAdd = vm::addWater, modifier = m) } else null
+                val shakeTile: (@Composable (Modifier) -> Unit)? =
+                    if (shown[FoodPart.SHAKE] == true) { m -> ShakeCard(vm, openMeal, totals.protein, goal?.protein, modifier = m) } else null
+                TilePair(waterTile, shakeTile)
+            }
             if (shown[FoodPart.SUPPLEMENTS] == true) item { SupplementsCard(x, date) }
             if (shown[FoodPart.TRACKERS] == true) item { TrackersCard(x, date) }
+            if (shown[FoodPart.PREP] == true) item { Spacer(Modifier.height(6.dp)); PrepCard(vm, x, openMeal) }
+            if (shown[FoodPart.PLANS] == true) item { Spacer(Modifier.height(6.dp)); PlansCard(vm, x, date, meals) }
 
-            item { HighlightedHeading(text = "Details") }
-            if (shown[FoodPart.EXTRAS] == true) item { ExtrasCard(extras.fiber, extras.sugar, extras.sodiumMg) }
+            item { Spacer(Modifier.height(6.dp)); SectionHeading("Details") }
+            if (shown[FoodPart.EXTRAS] == true) item { DetailGrid(totals.protein, QualityMath.animalShare(meals), extras.fiber, extras.sugar, extras.sodiumMg) }
             if (shown[FoodPart.VITAMINS] == true) item {
                 val dayTotals = NutrientMath.dayTotals(meals)
                 VitaminsCard(
@@ -223,11 +246,21 @@ fun FoodScreen(vm: FoodViewModel = viewModel(), x: FoodExtrasViewModel = viewMod
             }
             if (shown[FoodPart.QUALITY] == true) item { QualityCard(meals, weights.lastOrNull()?.kg ?: 70.0) }
             if (shown[FoodPart.FATS] == true) item { FatsCard(meals, goal) }
-            if (shown[FoodPart.WEIGHT] == true) item { WeightCard(x, date) }
             if (shown[FoodPart.WEEK] == true) item { WeekCard(x, date) }
-            if (shown[FoodPart.PREP] == true) item { PrepCard(vm, x, openMeal) }
-            if (shown[FoodPart.PLANS] == true) item { PlansCard(vm, x, date, meals) }
-            if (shown[FoodPart.FASTING] == true) item { FastingCard(x) }
+            if (shown[FoodPart.WEIGHT] == true) item { WeightCard(x, date) }
+        }
+    }
+
+    if (askBurned) {
+        var text by remember { mutableStateOf(if (burned > 0) burned.toString() else "") }
+        PaperDialog(
+            title = "Calories burned",
+            onDismiss = { askBurned = false },
+            confirmText = "Save",
+            onConfirm = { FoodSettings.setBurnedKcal(context, date.toString(), text.toIntOrNull() ?: 0); askBurned = false },
+        ) {
+            Text("Type what you burned on this day (a watch or an app tells you). It is added to that day's calories.", fontSize = 13.sp, color = LocalPaper.current.ink2)
+            PaperField(text, { text = it }, "Calories burned (kcal)", Modifier.padding(top = 8.dp), singleLine = true, keyboardOptions = DecimalKeys)
         }
     }
 
@@ -255,13 +288,20 @@ fun FoodScreen(vm: FoodViewModel = viewModel(), x: FoodExtrasViewModel = viewMod
 // ---- the week ----
 
 @Composable
-private fun WeekStrip(date: LocalDate, today: LocalDate, logged: Set<String>, tapped: Set<String>, onPick: (LocalDate) -> Unit, onShift: (Int) -> Unit) {
+private fun WeekStrip(date: LocalDate, today: LocalDate, ringPct: (LocalDate) -> Float, tapped: Set<String>, onPick: (LocalDate) -> Unit, onShift: (Int) -> Unit) {
     val p = LocalPaper.current
     val week = FoodLogic.weekOf(date)
-    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        PaperIconButton(R.drawable.ic_p_back, "Last week", onClick = { onShift(-1) }, modifier = Modifier.size(32.dp))
+    Row(
+        modifier = Modifier.fillMaxWidth().pointerInput(Unit) {
+            var total = 0f
+            detectHorizontalDragGestures(
+                onDragStart = { total = 0f },
+                onDragEnd = { if (total > 120f) onShift(-1) else if (total < -120f) onShift(1) },
+            ) { _, delta -> total += delta }
+        },
+    ) {
         week.forEach { day ->
-            val on = day == date
+            val isToday = day == today
             Column(
                 modifier = Modifier
                     .weight(1f)
@@ -269,28 +309,19 @@ private fun WeekStrip(date: LocalDate, today: LocalDate, logged: Set<String>, ta
                     .clickable(role = Role.Button) { onPick(day) }
                     .padding(vertical = 4.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                Text(day.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()).take(2), fontSize = 11.sp, color = p.ink2)
-                Box(
-                    modifier = Modifier
-                        .size(34.dp)
-                        .then(if (on) Modifier.background(p.ink, CircleShape) else if (day == today) Modifier.border(1.5.dp, p.ink, CircleShape) else Modifier),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(day.dayOfMonth.toString(), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = if (on) p.bg else p.ink)
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Box(
-                        modifier = Modifier
-                            .size(5.dp)
-                            .background(if (day.toString() in logged) p.accent else Color.Transparent, CircleShape),
-                    )
-                    if (day.toString() in tapped) Box(modifier = Modifier.size(5.dp).background(p.sun, CircleShape))
-                }
+                Text(
+                    if (isToday) "Today" else day.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()).take(1).uppercase(),
+                    fontSize = if (isToday) 12.5.sp else 10.5.sp,
+                    fontWeight = if (isToday) FontWeight.ExtraBold else FontWeight.Bold,
+                    color = if (isToday) p.ink else p.ink2,
+                    maxLines = 1,
+                )
+                DayRing(day.dayOfMonth, ringPct(day), selected = day == date, future = day.isAfter(today))
+                Box(modifier = Modifier.size(5.dp).background(if (day.toString() in tapped) p.sun else Color.Transparent, CircleShape))
             }
         }
-        PaperIconButton(R.drawable.ic_p_chev, "Next week", onClick = { onShift(1) }, modifier = Modifier.size(32.dp))
     }
 }
 
@@ -300,13 +331,15 @@ private fun WeekStrip(date: LocalDate, today: LocalDate, logged: Set<String>, ta
 private fun HeroCard(
     kcal: Double, carbs: Double, protein: Double, fat: Double,
     goalKcal: Double?, goalCarbs: Double?, goalProtein: Double?, goalFat: Double?,
+    burned: Int, onBurned: () -> Unit,
 ) {
     val p = LocalPaper.current
     val hasGoal = goalKcal != null && goalKcal > 0
-    val left = (goalKcal ?: 0.0) - kcal
+    val budget = (goalKcal ?: 0.0) + burned
+    val left = budget - kcal
     PaperCard(modifier = Modifier.fillMaxWidth(), padding = 16.dp) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            SideStat("Eaten", n(kcal), "kcal", Modifier.weight(1f))
+            SideStat(R.drawable.ic_p_fork, p.accent, n(kcal), "Eaten", Modifier.weight(1f))
             Box(modifier = Modifier.size(150.dp), contentAlignment = Alignment.Center) {
                 val track = p.surface2
                 val ink = if (hasGoal && left < 0) p.bad else p.accent
@@ -316,26 +349,26 @@ private fun HeroCard(
                     val arcSize = Size(size.width - stroke, size.height - stroke)
                     drawArc(track, 0f, 360f, false, Offset(inset, inset), arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
                     if (hasGoal && kcal > 0) {
-                        val sweep = (360f * (kcal / goalKcal!!).toFloat()).coerceIn(2f, 360f)
+                        val sweep = (360f * (kcal / budget).toFloat()).coerceIn(2f, 360f)
                         drawArc(ink, -90f, sweep, false, Offset(inset, inset), arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
                     }
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     if (hasGoal) {
-                        Text(if (left >= 0) "left" else "over", fontSize = 12.sp, color = if (left >= 0) p.ink2 else p.bad)
-                        Text(n(Math.abs(left)), fontSize = 32.sp, fontWeight = FontWeight.ExtraBold, color = p.ink)
-                        Text("of ${n(goalKcal!!)} kcal", fontSize = 11.sp, color = p.ink2)
+                        Text(if (left >= 0) "Remaining" else "Over", fontSize = 12.sp, color = if (left >= 0) p.ink2 else p.bad)
+                        Text(n(Math.abs(left)), fontSize = 34.sp, fontWeight = FontWeight.ExtraBold, color = p.ink)
+                        Text("of ${n(budget)} kcal", fontSize = 11.5.sp, color = p.ink2)
                     } else {
-                        Text(n(kcal), fontSize = 32.sp, fontWeight = FontWeight.ExtraBold, color = p.ink)
-                        Text("kcal eaten", fontSize = 11.sp, color = p.ink2)
+                        Text(n(kcal), fontSize = 34.sp, fontWeight = FontWeight.ExtraBold, color = p.ink)
+                        Text("kcal eaten", fontSize = 11.5.sp, color = p.ink2)
                         Text("No goal yet", fontSize = 11.sp, color = p.ink2)
                     }
                 }
             }
-            SideStat("Goal", if (hasGoal) n(goalKcal!!) else "-", "kcal", Modifier.weight(1f))
+            SideStat(R.drawable.ic_p_fire, p.sun, n(burned.toDouble()), "Burned", Modifier.weight(1f), onClick = onBurned)
         }
         Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+            modifier = Modifier.fillMaxWidth().padding(top = 18.dp),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             MacroBar("Carbs", carbs, goalCarbs, CARB, Modifier.weight(1f))
@@ -346,12 +379,18 @@ private fun HeroCard(
 }
 
 @Composable
-private fun SideStat(label: String, value: String, unit: String, modifier: Modifier) {
+private fun SideStat(icon: Int, tint: Color, value: String, label: String, modifier: Modifier, onClick: (() -> Unit)? = null) {
     val p = LocalPaper.current
-    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = p.ink, maxLines = 1)
-        Text(unit, fontSize = 11.sp, color = p.ink2)
-        Text(label, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = p.ink2)
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
+            .padding(vertical = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        PaperIcon(icon, size = 16.dp, tint = tint)
+        Text(value, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = p.ink, maxLines = 1, modifier = Modifier.padding(top = 6.dp))
+        Text(label, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = p.ink2, modifier = Modifier.padding(top = 2.dp))
     }
 }
 
@@ -561,29 +600,29 @@ private fun EntryRow(meal: MealEntity, photo: String?, onClick: () -> Unit) {
 // ---- details ----
 
 @Composable
-private fun ExtrasCard(fiber: Double, sugar: Double, sodiumMg: Double) {
+private fun DetailGrid(protein: Double, animalShare: Double?, fiber: Double, sugar: Double, sodiumMg: Double) {
     val p = LocalPaper.current
-    PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ExtraStat("Fibre", n(fiber), "g", Modifier.weight(1f))
-            ExtraStat("Sugar", n(sugar), "g", Modifier.weight(1f))
-            ExtraStat("Sodium", n(sodiumMg), "mg", Modifier.weight(1f))
-        }
-        Text("From the foods you logged. Foods without these numbers add nothing.", fontSize = 11.5.sp, color = p.ink2, modifier = Modifier.padding(top = 8.dp))
-    }
+    val animal = (animalShare ?: 0.0) * protein
+    val cards = listOf<@Composable (Modifier) -> Unit>(
+        { m ->
+            RingCard(
+                R.drawable.ic_p_bolt, p.sun, "Animal protein", n(animal), "g",
+                if (protein <= 0) "g" else n(animal / protein * 100) + " %", if (protein <= 0) 0f else (animal / protein).toFloat(), m,
+            )
+        },
+        { m -> RingCard(R.drawable.ic_p_leaf, p.accent, "Fibre", n(fiber), "g", "/ 30 g", (fiber / 30).toFloat(), m) },
+        { m -> RingCard(R.drawable.ic_p_cube, if (sugar > 50) p.bad else CARB, "Sugar", n(sugar), "g", "/ 50 g", (sugar / 50).toFloat(), m) },
+        { m ->
+            RingCard(
+                R.drawable.ic_p_grain, if (sodiumMg > 2300) p.bad else Color(0xFF2878B4), "Sodium",
+                (Math.round(sodiumMg / 100) / 10.0).toString(), "g", "/ 2.3 g", (sodiumMg / 2300).toFloat(), m,
+            )
+        },
+    )
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) { RingGrid(cards) }
 }
 
-@Composable
-private fun ExtraStat(label: String, value: String, unit: String, modifier: Modifier) {
-    val p = LocalPaper.current
-    Column(modifier = modifier) {
-        MonoLabel(label)
-        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text(value, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = p.ink)
-            Text(unit, fontSize = 12.sp, color = p.ink2, modifier = Modifier.padding(bottom = 2.dp))
-        }
-    }
-}
+
 
 @Composable
 private fun VitaminsCard(

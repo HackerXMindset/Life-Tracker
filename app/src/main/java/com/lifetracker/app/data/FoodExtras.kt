@@ -334,6 +334,14 @@ object FoodSettings {
         changed()
     }
 
+    /** Calories burned on a day, typed in by hand; they are added to that day's budget. */
+    fun burnedKcal(context: Context, date: String): Int = prefs(context).getInt("burned_$date", 0)
+
+    fun setBurnedKcal(context: Context, date: String, kcal: Int) {
+        prefs(context).edit { if (kcal <= 0) remove("burned_$date") else putInt("burned_$date", kcal.coerceAtMost(20_000)) }
+        changed()
+    }
+
     fun waterGoalMl(context: Context): Int = prefs(context).getInt("water_goal", FoodStats.DEFAULT_WATER_GOAL_ML)
     fun glassMl(context: Context): Int = prefs(context).getInt("glass_ml", 250)
 

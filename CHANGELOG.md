@@ -2,6 +2,37 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧪 Food rebuild, part 10: the Food screen looks like GymMane's
+
+### ✨ New
+
+- **Week strip**: each day is a ring that fills with that day's calories (green near the goal, red well over). Swipe sideways to change week.
+- **Big ring** now has **Eaten** and **Burned** on its sides, with small pictures. Tap Burned to type what you burned that day; it is added to the day's calories.
+- **Water and Protein tiles side by side**, each with GymMane's bottle or shaker picture that fills as you go. Tap the glass to add a glass, hold it to type an amount; tap the shaker to log your shake, hold it to pick another. The "…" button has the settings.
+- **Supplements** card with suggestion chips (Creatine, Vitamin D, Omega-3 and so on), a count, and "Add supplement" at the bottom.
+- **Meal prep** and **Meal plans** are headings with a "+ New" button, then a card for each batch or plan.
+- **Details**: Animal protein, Fibre, Sugar and Sodium as four ring cards (goals 30 g, 50 g, 2.3 g), then vitamins, protein quality, fat types.
+- **This week** and **Body weight** are cards with a line chart and a goal line. Tap Body weight to weigh in or set a goal.
+
+Based on GymMane by InlitX (GPL-3.0); the bottle pictures come from GymMane.
+
+## 🧪 Food rebuild, part 9: the Indian Food Composition Tables (IFCT 2017)
+
+### ✨ New
+
+- **527 foods from the IFCT 2017 tables** (the National Institute of Nutrition's measured values, per 100 g, for raw Indian foods): cereals and millets, dals and pulses, leafy and other vegetables, fruits, roots, spices, nuts and seeds, sugars, mushrooms, milk and paneer, eggs, poultry, meat, fish and shellfish, oils. They carry **real numbers**, not estimates: calories (from the tables' kJ), protein, fat, carbs (available carbs plus fibre), fibre, sugars, sodium, saturated / mono / poly fats, and **vitamins and minerals** (A, C, D, E, K, B1, B2, B3, B5, B6, B7 (biotin), B9, calcium, iron, magnesium, phosphorus, potassium, zinc, copper, manganese, selenium). Hindi names are in brackets, so "gajar", "palak", "chana" and "sev" find them.
+- **Biotin (B7)** now has values; the IFCT tables are the first source that does. (B12 and iodine are not in the tables.)
+- **69 of them have a photo**, borrowed from the same plain food in the main list (apple, carrot, tomato, banana, spinach and so on). The rest have the category icon.
+- **Fibre and vitamins for the hand-estimated dishes** (about 130, gulab jamun to dal tadka): worked out from what goes into each dish using the IFCT values, scaled to the dish's calories. Cooking loses vitamin C and folate, so those two are left empty for dishes. Treat the numbers as rough.
+- The 16 raw staples I had estimated by hand (toor dal, atta, bajra, jaggery, paneer and so on) are removed, because the real ones replace them.
+
+### ⚠️ Good to know
+
+- IFCT values are for the food **raw or as sold**; log cooked dal or rice with the cooked dishes (dal tadka, khichdi) instead.
+- **Vitamin D is left out for plant foods.** The tables list ergocalciferol (D2) at 2 to 100 µg per 100 g for cereals and vegetables, which would make a plate of roti look like a vitamin D source; USDA shows none. Mushrooms (real D2), milk, eggs, meat and fish keep theirs.
+- Where a food has several varieties (mangoes, grapes, bananas), each variety is its own entry.
+- Source: Longvah T, Ananthan R, Bhaskarachary K, Venkaiah K. *Indian Food Composition Tables 2017*, National Institute of Nutrition, Hyderabad, via github.com/ifct2017 (AGPL-3.0). If the app is ever shared, the combined work must stay under a licence compatible with that (GPL-3.0 already applies because of GymMane).
+
 ## ⏰ Supplement reminders
 
 ### ✨ New
