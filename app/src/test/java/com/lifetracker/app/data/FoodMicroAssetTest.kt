@@ -44,4 +44,15 @@ class FoodMicroAssetTest {
         assertEquals(30.94, atta["calcium"]!!, 1e-9)
         assertTrue(lib.micro.keys.count { it.startsWith("ifct-") } > 400)
     }
+
+    @Test
+    fun cookedDishesGetWorkedOutVitaminsWithoutTheHeatSensitiveOnes() {
+        val dal = lib.microOf("dal-tadka")
+        assertTrue(dal["iron"]!! > 0)
+        assertTrue("vit-c" !in dal && "vit-b9" !in dal)
+        assertTrue(lib.foods.first { it.id == "dal-tadka" }.per100.fiber > 0)
+        // Plant foods carry no vitamin D from the tables (their D2 figures are not trusted); a mushroom does.
+        assertTrue("vit-d" !in lib.microOf("ifct-A019"))
+        assertTrue(lib.microOf("ifct-J001")["vit-d"]!! > 0)
+    }
 }
