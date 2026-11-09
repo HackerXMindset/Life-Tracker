@@ -14,6 +14,9 @@ import com.lifetracker.app.R
 
 /** How the home-screen button, the long-press shortcut and the quick-settings tile all start the same thing: the camera. */
 object QuickPhoto {
+    /** Extra that opens the check page for a photo that was taken without internet. */
+    const val EXTRA_QUEUED = "queued"
+
     fun intent(context: Context): Intent =
         Intent(context, QuickPhotoActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
 

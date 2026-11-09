@@ -2,6 +2,14 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📶 Photos without internet, a second model, and learning from your fixes
+
+### ✨ New
+
+- **Read it when I am online**: if a meal or label photo cannot be read because there is no internet, the check page offers to keep the photo. When the phone is online again a notification says so; tapping it opens the check page for that photo. Nothing is added without you looking at it, and photos not read within a week are dropped.
+- **Second model as a back-up**: when the free allowance of the model you chose is used up (the quick one allows many more a day than the "think harder" one), Kairos tries your other model at once instead of failing.
+- **It learns from your fixes**: when you rename what the reader called a meal ("dal" to "rajma"), the last 20 such fixes are sent along in the next prompts as a hint to take care with similar foods. They are kept in their own settings file and are backed up; they contain only food names.
+
 ## 📦 Scan a barcode, read a label, say what you ate
 
 ### ✨ New

@@ -51,7 +51,11 @@ import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import com.lifetracker.app.data.AppDatabase
 import com.lifetracker.app.data.FoodEntity
 import com.lifetracker.app.data.FoodNutrientEntity
+import com.lifetracker.app.data.FoodAiMemory
 import com.lifetracker.app.data.OpenFoodFacts
+import com.lifetracker.app.data.PhotoQueue
+import com.lifetracker.app.data.PhotoQueueNotifier
+import com.lifetracker.app.data.QueuedPhoto
 import com.lifetracker.app.data.PortionKind
 import com.lifetracker.app.data.FoodAiSettings
 import com.lifetracker.app.data.FoodLogic
@@ -74,7 +78,9 @@ import com.lifetracker.app.ui.theme.PaperToggle
 import java.io.File
 import java.time.LocalDate
 import java.time.LocalTime
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** Where the food on the check page comes from. */
 sealed interface CheckSource {
@@ -105,6 +111,8 @@ fun QuickPhotoScreen(
     onAdded: () -> Unit = {},
     /** What to read: a photo of the plate unless told otherwise. */
     initialSource: CheckSource = CheckSource.Meal,
+    /** A photo that was taken without internet and is being read now. */
+    queued: QueuedPhoto? = null,
 ) {
     val context = LocalContext.current
     val p = LocalPaper.current
@@ -122,13 +130,14 @@ fun QuickPhotoScreen(
     var message by remember { mutableStateOf("") }
     var failed by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf("") }
-    var note by remember { mutableStateOf("") }
+    var note by remember { mutableStateOf(queued?.note.orEmpty()) }
     var scale by remember { mutableFloatStateOf(1f) }
     var edits by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var editing by remember { mutableStateOf(false) }
     val minute = remember {
         val now = LocalTime.now().let { it.hour * 60 + it.minute }
-        if (startMeal == null) now else FoodLogic.minuteFor(startMeal, date == LocalDate.now(), now)
+        if (queued != null) queued.minute
+        else if (startMeal == null) now else FoodLogic.minuteFor(startMeal, date == LocalDate.now(), now)
     }
     var mealType by remember { mutableStateOf(startMeal ?: FoodLogic.mealTypeFor(minute)) }
     var ticked by remember { mutableStateOf<Set<Int>>(emptySet()) }
@@ -136,6 +145,8 @@ fun QuickPhotoScreen(
     var source by remember { mutableStateOf(initialSource) }
     var code by remember { mutableStateOf("") }
     var keep by remember { mutableStateOf(false) }
+    var offlineFail by remember { mutableStateOf(false) }
+    var fromQueue by remember { mutableStateOf(queued != null) }
 
     fun photoUri(): Uri {
         val dir = File(context.cacheDir, "food-photos").apply { mkdirs() }
@@ -145,6 +156,7 @@ fun QuickPhotoScreen(
     fun read(strong: Boolean) {
         busy = true
         failed = false
+        offlineFail = false
         message = when (source) {
             CheckSource.Barcode -> "Looking the barcode up…"
             is CheckSource.Text -> if (strong) "Asking the stronger model…" else "Reading what you wrote…"
@@ -174,6 +186,7 @@ fun QuickPhotoScreen(
             } catch (e: PhotoAiException) {
                 message = e.message.orEmpty()
                 failed = true
+                offlineFail = e.offline
             } catch (e: Exception) {
                 message = "Something went wrong: " + (e.message ?: e.javaClass.simpleName)
                 failed = true
@@ -212,6 +225,7 @@ fun QuickPhotoScreen(
             FoodAiSettings.key(context).isEmpty() -> showKey = true
             !FoodAiSettings.noticeSeen(context) -> showNotice = true
             source is CheckSource.Text -> read(false)
+            fromQueue && jpeg != null -> { fromQueue = false; read(false) }
             else -> take.launch(photoUri())
         }
     }
@@ -219,6 +233,16 @@ fun QuickPhotoScreen(
     LaunchedEffect(Unit) {
         if (!started) {
             started = true
+            if (queued != null) {
+                jpeg = withContext(Dispatchers.IO) { PhotoQueue.jpeg(context, queued.id) }
+                if (jpeg == null) {
+                    message = "The saved photo is gone. Take the photo again."
+                    failed = true
+                    PhotoQueue.remove(context, queued.id)
+                    PhotoQueueNotifier.refresh(context)
+                    return@LaunchedEffect
+                }
+            }
             proceed()
         }
     }
@@ -287,7 +311,29 @@ fun QuickPhotoScreen(
                         }
                         is CheckSource.Text -> PaperButton("Try again", { read(false) }, Modifier.fillMaxWidth())
                         else -> {
-                            PaperButton("Try again", { read(false) }, Modifier.fillMaxWidth(), enabled = shot > 0)
+                            PaperButton("Try again", { read(false) }, Modifier.fillMaxWidth(), enabled = jpeg != null)
+                            if (offlineFail && jpeg != null) {
+                                PaperButton(
+                                    "Read it when I am online",
+                                    {
+                                        val bytes = jpeg
+                                        scope.launch {
+                                            if (bytes != null && queued == null) {
+                                                withContext(Dispatchers.IO) {
+                                                    PhotoQueue.add(
+                                                        context, bytes,
+                                                        QueuedPhoto(QueuedPhoto.newId(), source == CheckSource.Label, mealType, date.toString(), minute, note),
+                                                    )
+                                                }
+                                            }
+                                            PhotoQueue.schedule(context)
+                                            Toast.makeText(context, "Saved. A notification will say when it can be read.", Toast.LENGTH_LONG).show()
+                                            onClose()
+                                        }
+                                    },
+                                    Modifier.fillMaxWidth(), style = PaperButtonStyle.Ghost,
+                                )
+                            }
                             PaperButton("Take another photo", { proceed() }, Modifier.fillMaxWidth(), style = PaperButtonStyle.Ghost)
                         }
                     }
@@ -458,6 +504,14 @@ fun QuickPhotoScreen(
                             val meal = if (keptId != null) m.copy(foodId = keptId) else m
                             dao.upsertMeal(meal)
                             if (photo != null) MealPhotos.save(context, meal.id, photo)
+                        }
+                        // Remember a rename, so later prompts can warn the reader about foods it mixes up.
+                        if ((source == CheckSource.Meal || source is CheckSource.Text) && !(split && separate)) {
+                            FoodAiMemory.record(context, f.name, name)
+                        }
+                        if (queued != null) {
+                            PhotoQueue.remove(context, queued.id)
+                            PhotoQueueNotifier.refresh(context)
                         }
                         val total = meals.sumOf { it.kcal }
                         Toast.makeText(context, "Added " + Math.round(total) + " kcal to " + mealType, Toast.LENGTH_SHORT).show()
