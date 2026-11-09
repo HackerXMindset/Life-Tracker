@@ -10,6 +10,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -172,9 +175,13 @@ fun GeminiKeyDialog(onSaved: () -> Unit, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val p = LocalPaper.current
     val uriHandler = LocalUriHandler.current
+    val scope = rememberCoroutineScope()
     var key by remember { mutableStateOf(FoodAiSettings.key(context)) }
     var model by remember { mutableStateOf(FoodAiSettings.model(context)) }
     var strong by remember { mutableStateOf(FoodAiSettings.strongModel(context)) }
+    var checking by remember { mutableStateOf(false) }
+    var checkText by remember { mutableStateOf("") }
+    var checkOk by remember { mutableStateOf(true) }
     PaperDialog(
         title = "Gemini key",
         onDismiss = onDismiss,
@@ -186,19 +193,44 @@ fun GeminiKeyDialog(onSaved: () -> Unit, onDismiss: () -> Unit) {
             }
         },
     ) {
-        Text(
-            "A free key from Google lets Kairos read food photos. Open Google AI Studio, sign in, choose Create API key, and paste it here. " +
-                "The key stays on this phone and is not put in backups.",
-            fontSize = 13.sp, color = p.ink2,
-        )
-        PaperButton("Open Google AI Studio", { uriHandler.openUri("https://aistudio.google.com/apikey") }, Modifier.padding(top = 8.dp), style = PaperButtonStyle.Ghost, small = true)
-        PaperField(key, { key = it }, "Key", Modifier.padding(top = 8.dp), singleLine = true)
-        PaperField(model, { model = it }, "Model (quick)", Modifier.padding(top = 8.dp), singleLine = true)
-        PaperField(strong, { strong = it }, "Model (think harder)", Modifier.padding(top = 8.dp), singleLine = true)
-        Text(
-            "Google changes the free models from time to time. If a model stops working, type a newer name from the AI Studio list.",
-            fontSize = 12.sp, color = p.ink2, modifier = Modifier.padding(top = 8.dp),
-        )
+        Column(
+            modifier = Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                "A free key from Google lets Kairos read food photos. Open Google AI Studio, sign in, choose Create API key, and paste it here. " +
+                    "The key stays on this phone and is not put in backups.",
+                fontSize = 13.sp, color = p.ink2,
+            )
+            PaperButton("Open Google AI Studio", { uriHandler.openUri("https://aistudio.google.com/apikey") }, style = PaperButtonStyle.Ghost, small = true)
+            PaperField(key, { key = it; checkText = "" }, "Key", singleLine = true)
+            PaperField(model, { model = it; checkText = "" }, "Model (quick)", singleLine = true)
+            PaperField(strong, { strong = it; checkText = "" }, "Model (think harder)", singleLine = true)
+            PaperButton(
+                if (checking) "Testing…" else "Test the key",
+                {
+                    scope.launch {
+                        checking = true
+                        val result = FoodPhotoAi.checkKey(
+                            key,
+                            listOf(
+                                "Quick" to model.trim().ifEmpty { FoodAiSettings.DEFAULT_MODEL },
+                                "Think harder" to strong.trim().ifEmpty { FoodAiSettings.DEFAULT_STRONG_MODEL },
+                            ),
+                        )
+                        checkText = result.message
+                        checkOk = result.ok
+                        checking = false
+                    }
+                },
+                style = PaperButtonStyle.Ghost, small = true, enabled = !checking && key.isNotBlank(),
+            )
+            if (checkText.isNotEmpty()) Text(checkText, fontSize = 12.5.sp, color = if (checkOk) p.ink2 else p.bad)
+            Text(
+                "Google changes the free models from time to time. If a model stops working, type a newer name from the AI Studio list.",
+                fontSize = 12.sp, color = p.ink2,
+            )
+        }
     }
 }
 

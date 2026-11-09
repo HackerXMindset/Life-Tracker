@@ -63,6 +63,8 @@ data class PhotoFood(
     val ingredients: List<String>,
     /** True when the model gave no weight, so 100 g was assumed. */
     val weightGuessed: Boolean,
+    /** Vitamins, minerals and your own nutrients for the whole serving, by nutrient id. Only the ones you asked for in your boxes. */
+    val micro: Map<String, Double> = emptyMap(),
 ) {
     /** The numbers per 100 g (or 100 ml), which is how foods are kept. */
     fun per100(): PhotoFood {
@@ -70,6 +72,7 @@ data class PhotoFood(
         return copy(
             servingGrams = 100.0, kcal = kcal * k, protein = protein * k, carbs = carbs * k, fat = fat * k,
             fiber = fiber * k, sugar = sugar * k, sodiumMg = sodiumMg * k, sat = sat * k, mono = mono * k, poly = poly * k,
+            micro = micro.mapValues { it.value * k },
         )
     }
 }
@@ -94,15 +97,28 @@ object FoodPhotoAi {
             .build()
     }
 
-    fun prompt(note: String): String = buildString {
+    fun prompt(note: String, fields: List<FieldDef> = FoodFields.FIXED): String = buildString {
+        val fixed = fields.filter { it.fixed }.ifEmpty { listOf(FoodFields.FIXED.first()) }
+        val nutrients = fields.filter { !it.fixed }
+        val shape = StringBuilder("{\"name\":\"...\",\"serving_size_grams\":0")
+        for (f in fixed) shape.append(",\"").append(f.aiKey).append("\":").append(if (f.id == FoodFields.KCAL) "0" else "0.0")
+        if (nutrients.isNotEmpty()) {
+            shape.append(",\"nutrients\":{")
+            shape.append(nutrients.joinToString(",") { "\"" + it.aiKey + "\":0.0" })
+            shape.append("}")
+        }
+        shape.append(",\"is_drink\":false,\"ingredients\":[{\"name\":\"...\",\"grams\":0.0}]}")
         append(
             "Look at this food photo. Identify the food (Indian dishes are common) and estimate what is on the plate or in the glass.\n" +
-                "Respond ONLY with JSON in this shape:\n" +
-                "{\"name\":\"...\",\"serving_size_grams\":0,\"calories\":0,\"protein\":0.0,\"carbs\":0.0,\"fat\":0.0,\"fiber\":0.0," +
-                "\"sugar\":0.0,\"sodium\":0.0,\"saturated_fat\":0.0,\"monounsaturated_fat\":0.0,\"polyunsaturated_fat\":0.0," +
-                "\"is_drink\":false,\"ingredients\":[{\"name\":\"...\",\"grams\":0.0}]}\n" +
+                "Respond ONLY with JSON in this shape:\n" + shape + "\n" +
                 "All numbers are for the whole serving you can see (serving_size_grams, or millilitres for a drink), not per 100 g. " +
-                "Calories are an integer. Protein, carbs, fat, fiber, sugar and the fat types are grams; sodium is milligrams. " +
+                "Calories are an integer. Protein, carbs, fat, fiber, sugar and the fat types are grams; sodium is milligrams. ",
+        )
+        if (nutrients.isNotEmpty()) {
+            append("In nutrients, give each amount in the unit shown: " + nutrients.joinToString("; ") { it.aiKey + " = " + it.label + " in " + it.unit } + ". ")
+        }
+        append(
+            "Give only the numbers listed in the shape above. " +
                 "If a nutrition label is visible, use its numbers. Otherwise estimate, including the oil and ghee used in cooking. " +
                 "Put a visible count in the name, for example \"3 rotis with dal\". " +
                 "When there are several foods, name the whole meal and list each food once in ingredients (at most 12). " +
@@ -128,7 +144,7 @@ object FoodPhotoAi {
     }
 
     fun requestBody(jpeg: ByteArray, prompt: String, model: String): JSONObject {
-        val config = JSONObject().put("maxOutputTokens", 1500).put("responseMimeType", "application/json")
+        val config = JSONObject().put("maxOutputTokens", 2500).put("responseMimeType", "application/json")
         thinkingLevel(model)?.let { config.put("thinkingConfig", JSONObject().put("thinkingLevel", it)) }
         val parts = JSONArray()
             .put(JSONObject().put("inlineData", JSONObject().put("mimeType", "image/jpeg").put("data", Base64.getEncoder().encodeToString(jpeg))))
@@ -145,7 +161,7 @@ object FoodPhotoAi {
         return if (start in 0 until end) text.substring(start, end + 1) else null
     }
 
-    fun parse(text: String): PhotoFood {
+    fun parse(text: String, fields: List<FieldDef> = FoodFields.FIXED): PhotoFood {
         val json = extractJson(text)?.let { runCatching { JSONObject(it) }.getOrNull() }
             ?: throw PhotoAiException("The answer was not readable. Try again, or type the food in.")
         val name = json.optString("name").trim().takeIf { it.isNotEmpty() && it != "null" }
@@ -162,6 +178,14 @@ object FoodPhotoAi {
                 if (g != null) n + " " + Math.round(g) + " g" else n
             }
         }.orEmpty().take(12)
+        val nutrientJson = json.optJSONObject("nutrients")
+        val micro = LinkedHashMap<String, Double>()
+        if (nutrientJson != null) {
+            for (f in fields.filter { !it.fixed }) {
+                val v = if (nutrientJson.isNull(f.aiKey)) 0.0 else nutrientJson.optDouble(f.aiKey, 0.0)
+                if (v.isFinite() && v > 0) micro[f.id] = v
+            }
+        }
         return PhotoFood(
             name = name,
             servingGrams = if (grams > 0) grams else 100.0,
@@ -172,6 +196,7 @@ object FoodPhotoAi {
             drink = json.optBoolean("is_drink", false),
             ingredients = ingredients,
             weightGuessed = grams <= 0,
+            micro = micro,
         )
     }
 
@@ -238,10 +263,11 @@ object FoodPhotoAi {
         val key = FoodAiSettings.key(context)
         if (key.isEmpty()) throw PhotoAiException("Add your Gemini key first.")
         val model = if (strong) FoodAiSettings.strongModel(context) else FoodAiSettings.model(context)
+        val fields = FoodFields.defs(context)
         val request = Request.Builder()
             .url("$BASE/models/$model:generateContent")
             .addHeader("x-goog-api-key", key)
-            .post(requestBody(jpeg, prompt(note), model).toString().toRequestBody(JSON))
+            .post(requestBody(jpeg, prompt(note, fields), model).toString().toRequestBody(JSON))
             .build()
         val delays = longArrayOf(2_000, 5_000)
         var attempt = 0
@@ -252,23 +278,61 @@ object FoodPhotoAi {
                 throw PhotoAiException("Could not reach Google. Check the internet and try again.")
             }
             when {
-                code in 200..299 -> return parse(answerText(body))
+                code in 200..299 -> return parse(answerText(body), fields)
                 (code == 429 || code == 503 || code == 500) && attempt < delays.size -> {
                     delay(delays[attempt]); attempt++
                 }
-                code == 429 -> throw PhotoAiException(
-                    "Gemini's free allowance is used up for now (it resets at 12:30 pm India time). Try the other model, or type the food in.",
-                )
-                code == 400 || code == 403 || code == 401 -> {
-                    val detail = runCatching { JSONObject(body).getJSONObject("error").optString("message") }.getOrNull().orEmpty()
-                    throw PhotoAiException(
-                        if ("API key" in detail || code == 403 || code == 401) "Google did not accept the key. Check it in the AI settings."
-                        else "Google refused the request" + (if (model.isNotBlank()) " (model $model)" else "") + ". Check the model name in the AI settings.",
-                    )
-                }
-                code == 404 -> throw PhotoAiException("Google does not know the model $model. Change its name in the AI settings.")
-                else -> throw PhotoAiException("Google had a problem (error $code). Try again in a minute.")
+                else -> throw failure(code, body, model)
             }
         }
+    }
+
+    /** What went wrong with a request, said so that you know what to do. */
+    fun failure(code: Int, body: String, model: String): PhotoAiException = when (code) {
+        429 -> PhotoAiException(
+            "Gemini's free allowance is used up for now (it resets at 12:30 pm India time). Try the other model, or type the food in.",
+        )
+        400, 401, 403 -> {
+            val detail = runCatching { JSONObject(body).getJSONObject("error").optString("message") }.getOrNull().orEmpty()
+            PhotoAiException(
+                if ("API key" in detail || code == 403 || code == 401) "Google did not accept the key. Check it in the AI settings."
+                else "Google refused the request" + (if (model.isNotBlank()) " (model $model)" else "") + ". Check the model name in the AI settings.",
+            )
+        }
+        404 -> PhotoAiException("Google does not know the model $model. Change its name in the AI settings.")
+        else -> PhotoAiException("Google had a problem (error $code). Try again in a minute.")
+    }
+
+    /** The answer of [checkKey]: [ok] when both models answered, and one line for each model. */
+    data class KeyCheck(val ok: Boolean, val message: String)
+
+    /** Asks each model one tiny question with the key as typed (before saving it), so a wrong key or model name shows up now and not at the first photo. */
+    suspend fun checkKey(key: String, models: List<Pair<String, String>>): KeyCheck = withContext(Dispatchers.IO) {
+        if (key.isBlank()) return@withContext KeyCheck(false, "Paste the key first.")
+        var allOk = true
+        val lines = models.map { (label, model) ->
+            val config = JSONObject().put("maxOutputTokens", 64)
+            thinkingLevel(model)?.let { config.put("thinkingConfig", JSONObject().put("thinkingLevel", it)) }
+            val body = JSONObject()
+                .put("contents", JSONArray().put(JSONObject().put("parts", JSONArray().put(JSONObject().put("text", "Reply with the word OK.")))))
+                .put("generationConfig", config)
+            val request = Request.Builder()
+                .url("$BASE/models/${model.trim()}:generateContent")
+                .addHeader("x-goog-api-key", key.trim())
+                .post(body.toString().toRequestBody(JSON))
+                .build()
+            val result = try {
+                client.newCall(request).execute().use { it.code to it.body?.string().orEmpty() }
+            } catch (e: IOException) {
+                return@withContext KeyCheck(false, "Could not reach Google. Check the internet and test again.")
+            }
+            val (code, text) = result
+            when {
+                code in 200..299 -> "$label model ($model): works."
+                code == 429 -> "$label model ($model): the key works, but today's free allowance is used up."
+                else -> { allOk = false; "$label model ($model): " + failure(code, text, model).message }
+            }
+        }
+        KeyCheck(allOk, lines.joinToString("\n"))
     }
 }
