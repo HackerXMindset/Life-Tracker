@@ -83,6 +83,8 @@ dependencies {
 
     // Android's geofences (arrive at and leave a named place), still/moving detection and one-off position reads.
     implementation("com.google.android.gms:play-services-location:21.3.0")
+    // Barcode scanner screen from Google Play services: no camera permission and no scanner screen of our own to maintain.
+    implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
 
     // The map (MapLibre, open and free) and the web client it uses, which the app sets up with its own name and 4 requests at a time.
     implementation("org.maplibre.gl:android-sdk:11.13.5")

@@ -2,6 +2,20 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📦 Scan a barcode, read a label, say what you ate
+
+### ✨ New
+
+- **Scan barcode** in Add food: Google's scanner screen reads the pack (no camera permission needed), the numbers come from **Open Food Facts**, the free open food database, and you land on the check page. Many Indian products are missing there; then it offers to read the label instead, or you can type the number.
+- **Read a label**: photograph the nutrition table on a pack and Gemini reads the printed numbers (per 100 g, converted from per serving if that is all it prints) and the pack's serving size. Only the boxes in your form are read.
+- **Say what you ate**: type or speak "2 rotis, 1 katori dal, curd" and Gemini works out the foods and amounts, with the same tick boxes and numbers on the check page.
+- The check page has **Also keep it as one of my foods** (on for barcodes and labels): the next time the food is one tap in Add food.
+
+### ⚠️ Good to know
+
+- Barcode scanning needs Google Play services. Typing the digits under the barcode works without it.
+- A barcode is looked up on Open Food Facts (it sees only the number); typed or spoken words and photos go to Google's Gemini, as the notice says.
+
 ## 🍽️ A calmer Add food, and a smarter check page
 
 ### ✨ New

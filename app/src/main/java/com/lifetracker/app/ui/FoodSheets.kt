@@ -225,7 +225,7 @@ fun AddFoodWindow(vm: FoodViewModel, startMeal: String, focus: Boolean, onClose:
     var dish by remember { mutableStateOf<ReadyDish?>(null) }
     var creating by remember { mutableStateOf(false) }
     var added by remember { mutableIntStateOf(0) }
-    var photo by remember { mutableStateOf(false) }
+    var check by remember { mutableStateOf<CheckSource?>(null) }
     var browse by remember { mutableStateOf(false) }
     val day by vm.date.collectAsState()
     val focusRequester = remember { FocusRequester() }
@@ -295,7 +295,7 @@ fun AddFoodWindow(vm: FoodViewModel, startMeal: String, focus: Boolean, onClose:
         }
 
         if (simple) {
-            AddRoutes(onCamera = { photo = true })
+            AddRoutes(onRoute = { check = it })
         } else if (query.isBlank()) {
             PaperButton(
                 "Back to the short list", { browse = false; shelf = Shelf.All; cat = null },
@@ -402,8 +402,8 @@ fun AddFoodWindow(vm: FoodViewModel, startMeal: String, focus: Boolean, onClose:
         }
     }
 
-    if (photo) {
-        PhotoCheckWindow(startMeal = startMeal, date = day, onAdded = { added += 1 }, onClose = { photo = false })
+    check?.let { source ->
+        PhotoCheckWindow(startMeal = startMeal, date = day, source = source, onAdded = { added += 1 }, onClose = { check = null })
     }
     logging?.let { food ->
         LogFoodSheet(
@@ -425,16 +425,6 @@ fun AddFoodWindow(vm: FoodViewModel, startMeal: String, focus: Boolean, onClose:
             onDismiss = { creating = false },
             onSaved = { logging = it },
         )
-    }
-}
-
-/** The ways to add food that are not typing in a search. Camera now; barcode and describe-it come next. */
-@Composable
-private fun AddRoutes(onCamera: () -> Unit) {
-    val p = LocalPaper.current
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        PaperButton("Take a photo of the meal", onCamera, Modifier.fillMaxWidth(), icon = R.drawable.ic_p_camera)
-        Text("Gemini reads the photo, and you check it before anything is added.", fontSize = 12.sp, color = p.ink2)
     }
 }
 

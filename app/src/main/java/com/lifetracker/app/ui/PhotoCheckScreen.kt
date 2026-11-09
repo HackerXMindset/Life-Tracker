@@ -45,7 +45,14 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.FileProvider
+import com.google.mlkit.vision.barcode.common.Barcode
+import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import com.lifetracker.app.data.AppDatabase
+import com.lifetracker.app.data.FoodEntity
+import com.lifetracker.app.data.FoodNutrientEntity
+import com.lifetracker.app.data.OpenFoodFacts
+import com.lifetracker.app.data.PortionKind
 import com.lifetracker.app.data.FoodAiSettings
 import com.lifetracker.app.data.FoodLogic
 import com.lifetracker.app.data.FoodPhotoAi
@@ -69,6 +76,21 @@ import java.time.LocalDate
 import java.time.LocalTime
 import kotlinx.coroutines.launch
 
+/** Where the food on the check page comes from. */
+sealed interface CheckSource {
+    /** A photo of the plate. */
+    object Meal : CheckSource
+
+    /** A photo of the nutrition table on a pack. */
+    object Label : CheckSource
+
+    /** A barcode, looked up on Open Food Facts. */
+    object Barcode : CheckSource
+
+    /** A meal that was typed or spoken. */
+    class Text(val text: String) : CheckSource
+}
+
 /**
  * The page behind the "Snap a meal" button: opens the camera, has the photo read, and asks "Is this what you ate?" before anything
  * is added. You can rename it, change how much, fix any number, pick the meal, or ask again with a hint or the bigger model.
@@ -81,6 +103,8 @@ fun QuickPhotoScreen(
     /** The day to add to. */
     date: LocalDate = LocalDate.now(),
     onAdded: () -> Unit = {},
+    /** What to read: a photo of the plate unless told otherwise. */
+    initialSource: CheckSource = CheckSource.Meal,
 ) {
     val context = LocalContext.current
     val p = LocalPaper.current
@@ -109,6 +133,9 @@ fun QuickPhotoScreen(
     var mealType by remember { mutableStateOf(startMeal ?: FoodLogic.mealTypeFor(minute)) }
     var ticked by remember { mutableStateOf<Set<Int>>(emptySet()) }
     var separate by remember { mutableStateOf(false) }
+    var source by remember { mutableStateOf(initialSource) }
+    var code by remember { mutableStateOf("") }
+    var keep by remember { mutableStateOf(false) }
 
     fun photoUri(): Uri {
         val dir = File(context.cacheDir, "food-photos").apply { mkdirs() }
@@ -118,11 +145,23 @@ fun QuickPhotoScreen(
     fun read(strong: Boolean) {
         busy = true
         failed = false
-        message = if (strong) "Asking the stronger model…" else "Reading the photo…"
+        message = when (source) {
+            CheckSource.Barcode -> "Looking the barcode up…"
+            is CheckSource.Text -> if (strong) "Asking the stronger model…" else "Reading what you wrote…"
+            else -> if (strong) "Asking the stronger model…" else "Reading the photo…"
+        }
         scope.launch {
             try {
-                val bytes = jpeg ?: FoodPhotoAi.prepare(context, photoUri()).also { jpeg = it }
-                val result = FoodPhotoAi.analyze(context, bytes, note, strong)
+                val result = when (val s = source) {
+                    CheckSource.Barcode -> OpenFoodFacts.lookup(code)
+                        ?: throw PhotoAiException("Open Food Facts has no numbers for this barcode. Photograph the nutrition label instead.")
+                    is CheckSource.Text -> FoodPhotoAi.analyzeText(context, s.text, note, strong)
+                    else -> {
+                        val bytes = jpeg ?: FoodPhotoAi.prepare(context, photoUri()).also { jpeg = it }
+                        if (s == CheckSource.Label) FoodPhotoAi.analyzeLabel(context, bytes, note, strong)
+                        else FoodPhotoAi.analyze(context, bytes, note, strong)
+                    }
+                }
                 food = result
                 name = result.name
                 scale = 1f
@@ -130,6 +169,7 @@ fun QuickPhotoScreen(
                 editing = false
                 ticked = result.items.indices.toSet()
                 separate = false
+                keep = source == CheckSource.Barcode || source == CheckSource.Label
                 message = ""
             } catch (e: PhotoAiException) {
                 message = e.message.orEmpty()
@@ -142,6 +182,25 @@ fun QuickPhotoScreen(
         }
     }
 
+    fun scan() {
+        val options = GmsBarcodeScannerOptions.Builder()
+            .setBarcodeFormats(Barcode.FORMAT_EAN_13, Barcode.FORMAT_EAN_8, Barcode.FORMAT_UPC_A, Barcode.FORMAT_UPC_E)
+            .build()
+        GmsBarcodeScanning.getClient(context, options).startScan()
+            .addOnSuccessListener { barcode ->
+                code = barcode.rawValue.orEmpty()
+                if (code.isBlank()) {
+                    message = "The barcode could not be read. Scan again, or type the number."
+                    failed = true
+                } else read(false)
+            }
+            .addOnCanceledListener { if (food == null && !busy && code.isBlank()) onClose() }
+            .addOnFailureListener {
+                message = "The barcode scanner is not available on this phone (it needs Google Play services). Type the number under the barcode instead."
+                failed = true
+            }
+    }
+
     val take = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
         if (ok) shot += 1
         else if (food == null && jpeg == null && !busy) onClose() // nothing taken and nothing to look at
@@ -149,8 +208,10 @@ fun QuickPhotoScreen(
 
     fun proceed() {
         when {
+            source == CheckSource.Barcode -> scan()
             FoodAiSettings.key(context).isEmpty() -> showKey = true
             !FoodAiSettings.noticeSeen(context) -> showNotice = true
+            source is CheckSource.Text -> read(false)
             else -> take.launch(photoUri())
         }
     }
@@ -183,10 +244,20 @@ fun QuickPhotoScreen(
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Kicker("Snap a meal")
+            Kicker(
+                when (source) {
+                    CheckSource.Barcode -> "Barcode"
+                    CheckSource.Label -> "Nutrition label"
+                    is CheckSource.Text -> "Your description"
+                    else -> "Snap a meal"
+                },
+            )
             PaperButton("Close", onClose, style = PaperButtonStyle.Ghost, small = true)
         }
-        Text("Check this meal", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = p.ink)
+        Text(
+            if (source == CheckSource.Barcode || source == CheckSource.Label) "Check this food" else "Check this meal",
+            fontSize = 28.sp, fontWeight = FontWeight.Bold, color = p.ink,
+        )
 
         if (preview != null) {
             Image(
@@ -203,8 +274,23 @@ fun QuickPhotoScreen(
             PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(message, fontSize = 14.sp, color = p.bad)
-                    PaperButton("Try again", { read(false) }, Modifier.fillMaxWidth(), enabled = shot > 0)
-                    PaperButton("Take another photo", { proceed() }, Modifier.fillMaxWidth(), style = PaperButtonStyle.Ghost)
+                    when (source) {
+                        CheckSource.Barcode -> {
+                            PaperField(code, { code = it }, "Barcode number", singleLine = true, keyboardOptions = DecimalKeys)
+                            PaperButton("Look it up", { read(false) }, Modifier.fillMaxWidth(), enabled = code.any { it.isDigit() })
+                            PaperButton("Scan again", { scan() }, Modifier.fillMaxWidth(), style = PaperButtonStyle.Ghost)
+                            PaperButton(
+                                "Photograph the label instead",
+                                { source = CheckSource.Label; failed = false; jpeg = null; food = null; shot = 0; proceed() },
+                                Modifier.fillMaxWidth(), style = PaperButtonStyle.Ghost,
+                            )
+                        }
+                        is CheckSource.Text -> PaperButton("Try again", { read(false) }, Modifier.fillMaxWidth())
+                        else -> {
+                            PaperButton("Try again", { read(false) }, Modifier.fillMaxWidth(), enabled = shot > 0)
+                            PaperButton("Take another photo", { proceed() }, Modifier.fillMaxWidth(), style = PaperButtonStyle.Ghost)
+                        }
+                    }
                 }
             }
         }
@@ -326,10 +412,18 @@ fun QuickPhotoScreen(
                 }
             }
 
+            if (!(split && separate)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Also keep it as one of my foods", fontSize = 13.sp, color = p.ink, modifier = Modifier.weight(1f))
+                    PaperToggle(keep, { keep = it })
+                }
+            }
+
             PaperButton(
                 "Yes, add this",
                 {
                     val day = date.toString()
+                    var keptFood: PhotoFood? = null
                     val meals = if (split && separate) {
                         shown.separateItems(ticked).map { it.toMeal(it.name, mealType, day, minute) }
                     } else {
@@ -337,12 +431,31 @@ fun QuickPhotoScreen(
                             kcal = number("kcal", part.kcal), protein = number("protein", part.protein),
                             carbs = number("carbs", part.carbs), fat = number("fat", part.fat),
                         )
+                        keptFood = if (keep) adjusted else null
                         listOf(adjusted.toMeal(name, mealType, day, minute))
                     }
                     val photo = jpeg
+                    val kept = keptFood
                     scope.launch {
                         val dao = AppDatabase.get(context).foodDao()
-                        for (meal in meals) {
+                        // Keeping it as a food of your own means the next time it is one tap from Add food, and the meal points to it.
+                        val keptId = if (kept != null) {
+                            val per = kept.per100()
+                            val entity = FoodEntity(
+                                id = FoodLogic.newFoodId(), name = name.trim().ifEmpty { "Food" },
+                                kcal100 = per.kcal, protein100 = per.protein, carbs100 = per.carbs, fat100 = per.fat,
+                                fiber100 = per.fiber, sugar100 = per.sugar, sodium100 = per.sodiumMg,
+                                sat100 = per.sat, mono100 = per.mono, poly100 = per.poly,
+                                animal100 = 0.0, amino = "", liquid = kept.drink,
+                                portionKind = PortionKind.Serving.key, portionGrams = kept.servingGrams,
+                                category = "", cookedYield = 0.0, createdMs = System.currentTimeMillis(),
+                            )
+                            dao.upsertFood(entity)
+                            dao.upsertFoodNutrients(per.micro.filter { it.value > 0 }.map { FoodNutrientEntity(entity.id, it.key, it.value) })
+                            entity.id
+                        } else null
+                        for (m in meals) {
+                            val meal = if (keptId != null) m.copy(foodId = keptId) else m
                             dao.upsertMeal(meal)
                             if (photo != null) MealPhotos.save(context, meal.id, photo)
                         }
@@ -359,26 +472,52 @@ fun QuickPhotoScreen(
             PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Kicker("Not right?")
-                    PaperField(note, { note = it }, "Tell it what it is (optional)", placeholder = "e.g. 2 rotis, 1 katori dal", singleLine = true)
-                    PaperButton("Read again", { read(false) }, Modifier.fillMaxWidth(), style = PaperButtonStyle.Ghost)
-                    PaperButton("Think harder", { read(true) }, Modifier.fillMaxWidth(), style = PaperButtonStyle.Ghost)
-                    PaperButton("Take another photo", { proceed() }, Modifier.fillMaxWidth(), style = PaperButtonStyle.Ghost)
+                    when (source) {
+                        CheckSource.Barcode -> {
+                            PaperButton("Scan again", { food = null; scan() }, Modifier.fillMaxWidth(), style = PaperButtonStyle.Ghost)
+                            PaperButton(
+                                "Read the label instead",
+                                { source = CheckSource.Label; jpeg = null; food = null; shot = 0; proceed() },
+                                Modifier.fillMaxWidth(), style = PaperButtonStyle.Ghost,
+                            )
+                        }
+                        else -> {
+                            PaperField(
+                                note, { note = it }, "Tell it more (optional)",
+                                placeholder = if (source is CheckSource.Text) "e.g. the roti were large" else "e.g. 2 rotis, 1 katori dal",
+                                singleLine = true,
+                            )
+                            PaperButton("Read again", { read(false) }, Modifier.fillMaxWidth(), style = PaperButtonStyle.Ghost)
+                            PaperButton("Think harder", { read(true) }, Modifier.fillMaxWidth(), style = PaperButtonStyle.Ghost)
+                            if (source !is CheckSource.Text) {
+                                PaperButton("Take another photo", { proceed() }, Modifier.fillMaxWidth(), style = PaperButtonStyle.Ghost)
+                            }
+                        }
+                    }
                 }
             }
-            Text("This is a guess made from a photo, so check the numbers.", fontSize = 12.sp, color = p.ink2)
+            Text(
+                when (source) {
+                    CheckSource.Barcode -> "From Open Food Facts, where people type in the numbers, so check them against the pack."
+                    CheckSource.Label -> "Read from the label by Gemini, so check the numbers against the pack."
+                    is CheckSource.Text -> "This is a guess made from your words, so check the numbers."
+                    else -> "This is a guess made from a photo, so check the numbers."
+                },
+                fontSize = 12.sp, color = p.ink2,
+            )
         }
     }
 }
 
 /** The same page as a window on top of the Add food window, adding to that window's meal and day. */
 @Composable
-fun PhotoCheckWindow(startMeal: String, date: LocalDate, onAdded: () -> Unit, onClose: () -> Unit) {
+fun PhotoCheckWindow(startMeal: String, date: LocalDate, source: CheckSource, onAdded: () -> Unit, onClose: () -> Unit) {
     Dialog(
         onDismissRequest = onClose,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
     ) {
         PaperBackground {
-            QuickPhotoScreen(onClose = onClose, startMeal = startMeal, date = date, onAdded = onAdded)
+            QuickPhotoScreen(onClose = onClose, startMeal = startMeal, date = date, onAdded = onAdded, initialSource = source)
         }
     }
 }
