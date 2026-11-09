@@ -2,6 +2,12 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🏷️ Name the dish before it is sent
+
+### ✨ New
+
+- After you take a photo of a meal, Kairos now asks **Do you want to name this dish?** before anything goes to the reader. Type a name and press **Send with this name**, or press **Skip, just read the photo**. The name is sent as a hint to get the food and the amount right, and it becomes the name on the check page (you can still change it there). You can also take the photo again from that step.
+
 ## 📶 Photos without internet, a second model, and learning from your fixes
 
 ### ✨ New
