@@ -240,7 +240,7 @@ fun PhotoNoticeDialog(onContinue: () -> Unit, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val p = LocalPaper.current
     PaperDialog(
-        title = "Your photo goes to Google",
+        title = "Your photo or words go to Google",
         onDismiss = onDismiss,
         confirmText = "Continue",
         onConfirm = {
@@ -249,8 +249,8 @@ fun PhotoNoticeDialog(onContinue: () -> Unit, onDismiss: () -> Unit) {
         },
     ) {
         Text(
-            "The photo and your note are sent to Google's Gemini to be read. On Google's free plan they may be used to improve Google's products and be seen by reviewers. " +
-                "Do not photograph anything private. Nothing else from Kairos is sent.",
+            "The photo (or the words you typed or said) and your note are sent to Google's Gemini to be read. On Google's free plan they may be used to improve Google's products and be seen by reviewers. " +
+                "Do not photograph anything private. Nothing else from Kairos is sent. A barcode is looked up on Open Food Facts instead, which sees only the number.",
             fontSize = 13.sp, color = p.ink2,
         )
     }

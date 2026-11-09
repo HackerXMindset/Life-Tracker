@@ -110,7 +110,8 @@ object FoodPhotoAi {
             .build()
     }
 
-    fun prompt(note: String, fields: List<FieldDef> = FoodFields.FIXED): String = buildString {
+    /** The JSON the model is asked to answer with: only the boxes in the form, then (for a plate) the foods on it. */
+    private fun shape(fields: List<FieldDef>, withItems: Boolean): String {
         val fixed = fields.filter { it.fixed }.ifEmpty { listOf(FoodFields.FIXED.first()) }
         val nutrients = fields.filter { !it.fixed }
         val shape = StringBuilder("{\"name\":\"...\",\"serving_size_grams\":0")
@@ -120,24 +121,61 @@ object FoodPhotoAi {
             shape.append(nutrients.joinToString(",") { "\"" + it.aiKey + "\":0.0" })
             shape.append("}")
         }
-        shape.append(",\"is_drink\":false,\"items\":[{\"name\":\"...\",\"grams\":0.0,\"calories\":0,\"protein\":0.0,\"carbs\":0.0,\"fat\":0.0}]}")
+        shape.append(",\"is_drink\":false")
+        if (withItems) shape.append(",\"items\":[{\"name\":\"...\",\"grams\":0.0,\"calories\":0,\"protein\":0.0,\"carbs\":0.0,\"fat\":0.0}]")
+        shape.append("}")
+        return shape.toString()
+    }
+
+    private fun nutrientUnits(fields: List<FieldDef>): String {
+        val nutrients = fields.filter { !it.fixed }
+        return if (nutrients.isEmpty()) "" else "In nutrients, give each amount in the unit shown: " +
+            nutrients.joinToString("; ") { it.aiKey + " = " + it.label + " in " + it.unit } + ". "
+    }
+
+    private const val UNITS = "Calories are an integer. Protein, carbs, fat, fiber, sugar and the fat types are grams; sodium is milligrams. "
+
+    private fun mealPrompt(intro: String, fields: List<FieldDef>, hint: String, hintLead: String, seesPhoto: Boolean): String = buildString {
+        append(intro + "\nRespond ONLY with JSON in this shape:\n" + shape(fields, withItems = true) + "\n")
+        append("All numbers are for the whole serving (serving_size_grams, or millilitres for a drink), not per 100 g. " + UNITS)
+        append(nutrientUnits(fields))
+        append("Give only the numbers listed in the shape above. ")
         append(
-            "Look at this food photo. Identify the food (Indian dishes are common) and estimate what is on the plate or in the glass.\n" +
-                "Respond ONLY with JSON in this shape:\n" + shape + "\n" +
-                "All numbers are for the whole serving you can see (serving_size_grams, or millilitres for a drink), not per 100 g. " +
-                "Calories are an integer. Protein, carbs, fat, fiber, sugar and the fat types are grams; sodium is milligrams. ",
+            if (seesPhoto) "If a nutrition label is visible, use its numbers. Otherwise estimate, including the oil and ghee used in cooking. "
+            else "Estimate, including the oil and ghee used in cooking. ",
         )
-        if (nutrients.isNotEmpty()) {
-            append("In nutrients, give each amount in the unit shown: " + nutrients.joinToString("; ") { it.aiKey + " = " + it.label + " in " + it.unit } + ". ")
-        }
         append(
-            "Give only the numbers listed in the shape above. " +
-                "If a nutrition label is visible, use its numbers. Otherwise estimate, including the oil and ghee used in cooking. " +
-                "Put a visible count in the name, for example \"3 rotis with dal\". " +
+            (if (seesPhoto) "Put a visible count in the name, for example \"3 rotis with dal\". " else "Put the counts in the name, for example \"3 rotis with dal\". ") +
                 "When there are several foods, name the whole meal and list each food once in items (at most 12), each with its own weight, calories, protein, carbs and fat; the items should add up to the totals. For a single food give one item. " +
                 "Use null for a number you cannot estimate.",
         )
-        if (note.isNotBlank()) append("\n\nThe user says about this food: ${note.trim()}\nUse this to improve the name, the portion size and the numbers.")
+        if (hint.isNotBlank()) append("\n\n$hintLead ${hint.trim()}\nUse this to improve the name, the portion size and the numbers.")
+    }
+
+    fun prompt(note: String, fields: List<FieldDef> = FoodFields.FIXED): String = mealPrompt(
+        "Look at this food photo. Identify the food (Indian dishes are common) and estimate what is on the plate or in the glass.",
+        fields, note, "The user says about this food:", seesPhoto = true,
+    )
+
+    /** For a meal that was typed or spoken instead of photographed. */
+    fun textPrompt(text: String, note: String, fields: List<FieldDef> = FoodFields.FIXED): String = mealPrompt(
+        "The user describes what they ate or drank: \"" + text.trim() + "\". Work out the foods (Indian dishes are common) and estimate the amounts " +
+            "from the counts and sizes they gave; use usual home portions where they gave none (a roti about 40 g, a katori of dal about 150 g, a glass about 250 ml).",
+        fields, note, "The user adds:", seesPhoto = false,
+    )
+
+    /** For a photo of the nutrition table on a pack: read it, do not estimate. */
+    fun labelPrompt(note: String, fields: List<FieldDef> = FoodFields.FIXED): String = buildString {
+        append("This is a photo of the nutrition facts table on a food package. Read the table; do not guess what is not printed.\nRespond ONLY with JSON in this shape:\n")
+        append(shape(fields, withItems = false) + "\n")
+        append(
+            "name is the product name. The numbers are PER 100 g (or per 100 ml for a drink). If the table has only a per-serving column, convert it " +
+                "to per 100 g using the serving size. serving_size_grams is the weight (or millilitres) of ONE serving as printed on the pack, or 0 if none is printed. " + UNITS +
+                "If only salt is given, sodium is the salt in grams times 400. ",
+        )
+        append(nutrientUnits(fields))
+        append("Give only the numbers listed in the shape above. Use null for a number that is not on the label.")
+        if (note.isNotBlank()) append("\n\nThe user says about this product: ${note.trim()}")
     }
 
     /** "minimal" for the small models, "low" for newer big ones, nothing for models that do not take the setting. */
@@ -164,6 +202,15 @@ object FoodPhotoAi {
             .put(JSONObject().put("text", prompt))
         return JSONObject()
             .put("contents", JSONArray().put(JSONObject().put("parts", parts)))
+            .put("generationConfig", config)
+    }
+
+    /** The same request without a photo, for a meal that was typed or spoken. */
+    fun requestBodyText(prompt: String, model: String): JSONObject {
+        val config = JSONObject().put("maxOutputTokens", 2500).put("responseMimeType", "application/json")
+        thinkingLevel(model)?.let { config.put("thinkingConfig", JSONObject().put("thinkingLevel", it)) }
+        return JSONObject()
+            .put("contents", JSONArray().put(JSONObject().put("parts", JSONArray().put(JSONObject().put("text", prompt)))))
             .put("generationConfig", config)
     }
 
@@ -219,6 +266,19 @@ object FoodPhotoAi {
             micro = micro,
             items = items,
         )
+    }
+
+    /**
+     * A label answer: numbers are per 100 g and [serving_size_grams] is the printed serving. The result is one serving of the product
+     * (or 100 g, marked as guessed, when the pack prints no serving).
+     */
+    fun parseLabel(text: String, fields: List<FieldDef> = FoodFields.FIXED): PhotoFood {
+        val json = extractJson(text)?.let { runCatching { JSONObject(it) }.getOrNull() }
+            ?: throw PhotoAiException("The answer was not readable. Try again with a closer, brighter photo of the table.")
+        val serving = json.positive("serving_size_grams")
+        json.put("serving_size_grams", 100.0)
+        val per100 = parse(json.toString(), fields).copy(weightGuessed = false)
+        return if (serving > 0) per100.atGrams(serving) else per100.copy(weightGuessed = true)
     }
 
     /** The text of the answer, or an error that says what to do. */
@@ -278,17 +338,33 @@ object FoodPhotoAi {
 
     /** Sends the photo and returns what the model saw. [strong] uses the bigger model. */
     suspend fun analyze(context: Context, jpeg: ByteArray, note: String, strong: Boolean): PhotoFood =
-        withContext(Dispatchers.IO) { send(context, jpeg, note, strong) }
+        withContext(Dispatchers.IO) { send(context, jpeg, strong, { prompt(note, it) }, { text, fields -> parse(text, fields) }) }
 
-    private suspend fun send(context: Context, jpeg: ByteArray, note: String, strong: Boolean): PhotoFood {
+    /** Sends a photo of a nutrition table and returns one serving of the product. */
+    suspend fun analyzeLabel(context: Context, jpeg: ByteArray, note: String, strong: Boolean): PhotoFood =
+        withContext(Dispatchers.IO) { send(context, jpeg, strong, { labelPrompt(note, it) }, { text, fields -> parseLabel(text, fields) }) }
+
+    /** Sends a typed or spoken meal and returns what the model made of it. */
+    suspend fun analyzeText(context: Context, text: String, note: String, strong: Boolean): PhotoFood =
+        withContext(Dispatchers.IO) { send(context, null, strong, { textPrompt(text, note, it) }, { answer, fields -> parse(answer, fields) }) }
+
+    private suspend fun send(
+        context: Context,
+        jpeg: ByteArray?,
+        strong: Boolean,
+        promptFor: (List<FieldDef>) -> String,
+        parser: (String, List<FieldDef>) -> PhotoFood,
+    ): PhotoFood {
         val key = FoodAiSettings.key(context)
         if (key.isEmpty()) throw PhotoAiException("Add your Gemini key first.")
         val model = if (strong) FoodAiSettings.strongModel(context) else FoodAiSettings.model(context)
         val fields = FoodFields.defs(context)
+        val prompt = promptFor(fields)
+        val payload = if (jpeg != null) requestBody(jpeg, prompt, model) else requestBodyText(prompt, model)
         val request = Request.Builder()
             .url("$BASE/models/$model:generateContent")
             .addHeader("x-goog-api-key", key)
-            .post(requestBody(jpeg, prompt(note, fields), model).toString().toRequestBody(JSON))
+            .post(payload.toString().toRequestBody(JSON))
             .build()
         val delays = longArrayOf(2_000, 5_000)
         var attempt = 0
@@ -299,7 +375,7 @@ object FoodPhotoAi {
                 throw PhotoAiException("Could not reach Google. Check the internet and try again.")
             }
             when {
-                code in 200..299 -> return parse(answerText(body), fields)
+                code in 200..299 -> return parser(answerText(body), fields)
                 (code == 429 || code == 503 || code == 500) && attempt < delays.size -> {
                     delay(delays[attempt]); attempt++
                 }
