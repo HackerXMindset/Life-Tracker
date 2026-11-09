@@ -88,7 +88,7 @@ data class PhotoFood(
     }
 }
 
-class PhotoAiException(message: String) : IOException(message)
+class PhotoAiException(message: String, val offline: Boolean = false) : IOException(message)
 
 /**
  * Asks Google's Gemini what is in a food photo. The method is the one the open-source calorie apps (Fud AI, CalorieMate) use:
@@ -135,7 +135,10 @@ object FoodPhotoAi {
 
     private const val UNITS = "Calories are an integer. Protein, carbs, fat, fiber, sugar and the fat types are grams; sodium is milligrams. "
 
-    private fun mealPrompt(intro: String, fields: List<FieldDef>, hint: String, hintLead: String, seesPhoto: Boolean): String = buildString {
+    private fun mealPrompt(
+        intro: String, fields: List<FieldDef>, hint: String, hintLead: String, seesPhoto: Boolean,
+        corrections: List<Pair<String, String>> = emptyList(),
+    ): String = buildString {
         append(intro + "\nRespond ONLY with JSON in this shape:\n" + shape(fields, withItems = true) + "\n")
         append("All numbers are for the whole serving (serving_size_grams, or millilitres for a drink), not per 100 g. " + UNITS)
         append(nutrientUnits(fields))
@@ -150,18 +153,24 @@ object FoodPhotoAi {
                 "Use null for a number you cannot estimate.",
         )
         if (hint.isNotBlank()) append("\n\n$hintLead ${hint.trim()}\nUse this to improve the name, the portion size and the numbers.")
+        if (corrections.isNotEmpty()) {
+            append(
+                "\n\nEarlier the user corrected foods that were named wrongly. Take care with similar foods; this is a hint, not a rule: " +
+                    corrections.joinToString("; ") { "\"" + it.first + "\" was really \"" + it.second + "\"" } + ".",
+            )
+        }
     }
 
-    fun prompt(note: String, fields: List<FieldDef> = FoodFields.FIXED): String = mealPrompt(
+    fun prompt(note: String, fields: List<FieldDef> = FoodFields.FIXED, corrections: List<Pair<String, String>> = emptyList()): String = mealPrompt(
         "Look at this food photo. Identify the food (Indian dishes are common) and estimate what is on the plate or in the glass.",
-        fields, note, "The user says about this food:", seesPhoto = true,
+        fields, note, "The user says about this food:", seesPhoto = true, corrections = corrections,
     )
 
     /** For a meal that was typed or spoken instead of photographed. */
-    fun textPrompt(text: String, note: String, fields: List<FieldDef> = FoodFields.FIXED): String = mealPrompt(
+    fun textPrompt(text: String, note: String, fields: List<FieldDef> = FoodFields.FIXED, corrections: List<Pair<String, String>> = emptyList()): String = mealPrompt(
         "The user describes what they ate or drank: \"" + text.trim() + "\". Work out the foods (Indian dishes are common) and estimate the amounts " +
             "from the counts and sizes they gave; use usual home portions where they gave none (a roti about 40 g, a katori of dal about 150 g, a glass about 250 ml).",
-        fields, note, "The user adds:", seesPhoto = false,
+        fields, note, "The user adds:", seesPhoto = false, corrections = corrections,
     )
 
     /** For a photo of the nutrition table on a pack: read it, do not estimate. */
@@ -338,50 +347,65 @@ object FoodPhotoAi {
 
     /** Sends the photo and returns what the model saw. [strong] uses the bigger model. */
     suspend fun analyze(context: Context, jpeg: ByteArray, note: String, strong: Boolean): PhotoFood =
-        withContext(Dispatchers.IO) { send(context, jpeg, strong, { prompt(note, it) }, { text, fields -> parse(text, fields) }) }
+        withContext(Dispatchers.IO) { send(context, jpeg, strong, { fields, fixes -> prompt(note, fields, fixes) }, { text, fields -> parse(text, fields) }) }
 
     /** Sends a photo of a nutrition table and returns one serving of the product. */
     suspend fun analyzeLabel(context: Context, jpeg: ByteArray, note: String, strong: Boolean): PhotoFood =
-        withContext(Dispatchers.IO) { send(context, jpeg, strong, { labelPrompt(note, it) }, { text, fields -> parseLabel(text, fields) }) }
+        withContext(Dispatchers.IO) { send(context, jpeg, strong, { fields, _ -> labelPrompt(note, fields) }, { text, fields -> parseLabel(text, fields) }) }
 
     /** Sends a typed or spoken meal and returns what the model made of it. */
     suspend fun analyzeText(context: Context, text: String, note: String, strong: Boolean): PhotoFood =
-        withContext(Dispatchers.IO) { send(context, null, strong, { textPrompt(text, note, it) }, { answer, fields -> parse(answer, fields) }) }
+        withContext(Dispatchers.IO) { send(context, null, strong, { fields, fixes -> textPrompt(text, note, fields, fixes) }, { answer, fields -> parse(answer, fields) }) }
+
+    /** The models to try, the chosen one first, then the other one (when it is a different model) in case the free allowance of the first is used up. */
+    fun modelOrder(chosen: String, other: String): List<String> =
+        listOf(chosen, other).map { it.trim() }.filter { it.isNotEmpty() }.distinct()
 
     private suspend fun send(
         context: Context,
         jpeg: ByteArray?,
         strong: Boolean,
-        promptFor: (List<FieldDef>) -> String,
+        promptFor: (List<FieldDef>, List<Pair<String, String>>) -> String,
         parser: (String, List<FieldDef>) -> PhotoFood,
     ): PhotoFood {
         val key = FoodAiSettings.key(context)
         if (key.isEmpty()) throw PhotoAiException("Add your Gemini key first.")
-        val model = if (strong) FoodAiSettings.strongModel(context) else FoodAiSettings.model(context)
+        val chosen = if (strong) FoodAiSettings.strongModel(context) else FoodAiSettings.model(context)
+        val other = if (strong) FoodAiSettings.model(context) else FoodAiSettings.strongModel(context)
+        val models = modelOrder(chosen, other)
         val fields = FoodFields.defs(context)
-        val prompt = promptFor(fields)
-        val payload = if (jpeg != null) requestBody(jpeg, prompt, model) else requestBodyText(prompt, model)
-        val request = Request.Builder()
-            .url("$BASE/models/$model:generateContent")
-            .addHeader("x-goog-api-key", key)
-            .post(payload.toString().toRequestBody(JSON))
-            .build()
+        val prompt = promptFor(fields, FoodAiMemory.load(context))
         val delays = longArrayOf(2_000, 5_000)
-        var attempt = 0
-        while (true) {
-            val (code, body) = try {
-                client.newCall(request).execute().use { it.code to it.body?.string().orEmpty() }
-            } catch (e: IOException) {
-                throw PhotoAiException("Could not reach Google. Check the internet and try again.")
-            }
-            when {
-                code in 200..299 -> return parser(answerText(body), fields)
-                (code == 429 || code == 503 || code == 500) && attempt < delays.size -> {
-                    delay(delays[attempt]); attempt++
+        var lastFailure: PhotoAiException? = null
+        for ((index, model) in models.withIndex()) {
+            val payload = if (jpeg != null) requestBody(jpeg, prompt, model) else requestBodyText(prompt, model)
+            val request = Request.Builder()
+                .url("$BASE/models/$model:generateContent")
+                .addHeader("x-goog-api-key", key)
+                .post(payload.toString().toRequestBody(JSON))
+                .build()
+            var attempt = 0
+            attempts@ while (true) {
+                val (code, body) = try {
+                    client.newCall(request).execute().use { it.code to it.body?.string().orEmpty() }
+                } catch (e: IOException) {
+                    throw PhotoAiException("Could not reach Google. Check the internet and try again.", offline = true)
                 }
-                else -> throw failure(code, body, model)
+                when {
+                    code in 200..299 -> return parser(answerText(body), fields)
+                    // The free allowance of this model is used up: try the other model at once instead of waiting.
+                    code == 429 && index < models.lastIndex -> {
+                        lastFailure = failure(code, body, model)
+                        break@attempts
+                    }
+                    (code == 429 || code == 503 || code == 500) && attempt < delays.size -> {
+                        delay(delays[attempt]); attempt++
+                    }
+                    else -> throw failure(code, body, model)
+                }
             }
         }
+        throw lastFailure ?: PhotoAiException("Gemini did not answer. Try again in a minute.")
     }
 
     /** What went wrong with a request, said so that you know what to do. */
