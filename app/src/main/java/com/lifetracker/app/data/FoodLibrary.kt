@@ -20,6 +20,8 @@ enum class PortionKind(val key: String, val one: String, val many: String) {
     Tsp("tsp", "tsp", "tsp"),
     Cup("cup", "cup", "cups"),
     Glass("glass", "glass", "glasses"),
+    Katori("katori", "katori", "katoris"),
+    Bowl("bowl", "bowl", "bowls"),
     /** A food you saved from Quick add: one "serving" of whatever you typed. */
     Serving("serving", "serving", "servings");
 
