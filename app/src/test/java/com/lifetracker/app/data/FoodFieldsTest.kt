@@ -57,9 +57,12 @@ class FoodFieldsTest {
         assertTrue(prompt.contains("\"protein\":0.0"))
         assertTrue(prompt.contains("\"nutrients\":{\"vit-b9\":0.0}"))
         assertTrue(prompt.contains("vit-b9 = Vitamin B9 (folate) in µg"))
-        assertFalse(prompt.contains("\"fat\":0.0"))
-        assertFalse(prompt.contains("\"sodium\":0.0"))
-        assertFalse(prompt.contains("\"carbs\""))
+        // The totals part of the answer shape (before the per-food items) holds only the boxes in the form.
+        val totals = prompt.substringBefore("\"items\"")
+        assertFalse(totals.contains("\"fat\":0.0"))
+        assertFalse(totals.contains("\"sodium\":0.0"))
+        assertFalse(totals.contains("\"carbs\""))
+        assertTrue(prompt.substringAfter("\"items\"").contains("\"fat\":0.0")) // each food on the plate still gets the main numbers
         val usual = FoodFoodsPrompt.usual()
         assertTrue(usual.contains("\"saturated_fat\":0.0"))
         assertFalse(usual.contains("\"nutrients\""))
