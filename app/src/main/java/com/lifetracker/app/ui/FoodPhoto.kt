@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifetracker.app.R
+import com.lifetracker.app.data.MealPhotos
 import com.lifetracker.app.ui.theme.LocalPaper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -105,6 +106,23 @@ fun FoodPlate(items: List<Pair<String?, String>>, size: Dp, modifier: Modifier =
         shown.asReversed().forEachIndexed { i, (asset, name) ->
             val slot = shown.size - 1 - i
             FoodPhoto(asset, name, size, modifier = Modifier.offset(x = step * slot))
+        }
+    }
+}
+
+/** The small photo kept with a meal that was added from a photo; any other meal shows its food's picture. */
+@Composable
+fun MealThumb(mealId: String, asset: String?, name: String, size: Dp, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val p = LocalPaper.current
+    val own by produceState<ImageBitmap?>(null, mealId) { value = MealPhotos.load(context, mealId)?.asImageBitmap() }
+    val image = own
+    if (image == null) {
+        FoodPhoto(asset, name, size, modifier)
+    } else {
+        val shape = RoundedCornerShape(size / 4)
+        Box(modifier.size(size).border(1.25.dp, p.line, shape).clip(shape)) {
+            Image(bitmap = image, contentDescription = name, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
         }
     }
 }

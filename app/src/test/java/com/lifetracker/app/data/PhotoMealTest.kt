@@ -1,6 +1,8 @@
 package com.lifetracker.app.data
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PhotoMealTest {
@@ -40,5 +42,73 @@ class PhotoMealTest {
     fun anEmptyNameBecomesFoodAndAZeroPortionChangesNothing() {
         assertEquals("Food", food.toMeal("   ", "snack", "2026-11-09", 600).name)
         assertEquals(food, food.atGrams(0.0))
+    }
+
+    private val plate = FoodPhotoAi.parse(
+        """{"name":"Roti and dal","serving_size_grams":300,"calories":500,"protein":20,"carbs":80,"fat":10,"fiber":8,
+            "items":[{"name":"Roti","grams":100,"calories":300,"protein":9,"carbs":55,"fat":4},
+                     {"name":"Dal","grams":200,"calories":200,"protein":11,"carbs":25,"fat":6}]}""",
+    )
+
+    @Test
+    fun theFoodsOnThePlateAreReadWithTheirOwnNumbers() {
+        assertEquals(2, plate.items.size)
+        assertTrue(plate.canSplit)
+        assertEquals(listOf("Roti 100 g", "Dal 200 g"), plate.ingredients)
+        assertEquals(200.0, plate.items[1].kcal, 1e-9)
+    }
+
+    @Test
+    fun aSinglefoodOrItemsWithoutCaloriesCannotBeTickedOneByOne() {
+        assertFalse(FoodPhotoAi.parse("""{"name":"Apple","calories":52,"items":[{"name":"Apple","grams":100,"calories":52}]}""").canSplit)
+        assertFalse(FoodPhotoAi.parse("""{"name":"Tea","calories":40,"items":[{"name":"Tea","grams":100},{"name":"Milk","grams":50}]}""").canSplit)
+        assertEquals(listOf(food), food.separateItems(setOf(0)))
+    }
+
+    @Test
+    fun untickingAFoodRemovesItsShareOfEveryNumber() {
+        val onlyRoti = plate.onlyTicked(setOf(0))
+        assertEquals(300.0, onlyRoti.kcal, 1e-9)
+        assertEquals(180.0, onlyRoti.servingGrams, 1e-9)
+        assertEquals(4.8, onlyRoti.fiber, 1e-9)
+        assertEquals(1, onlyRoti.items.size)
+        assertEquals(plate, plate.onlyTicked(setOf(0, 1)))
+    }
+
+    @Test
+    fun eachTickedFoodCanBeLoggedOnItsOwn() {
+        val parts = plate.separateItems(setOf(0, 1))
+        assertEquals(listOf("Roti", "Dal"), parts.map { it.name })
+        assertEquals(listOf(300.0, 200.0), parts.map { it.kcal })
+        assertEquals(listOf(100.0, 200.0), parts.map { it.servingGrams })
+        assertEquals(9.0, parts[0].protein, 1e-9)
+        assertEquals(4.8, parts[0].fiber, 1e-9) // 60% of the plate's calories
+        assertEquals(3.2, parts[1].fiber, 1e-9)
+        assertEquals(listOf("Dal"), plate.separateItems(setOf(1)).map { it.name })
+        val meal = parts[1].toMeal("Dal", "dinner", "2026-11-09", 1200)
+        assertEquals(200.0, meal.kcal, 1e-9)
+        assertEquals(200.0, meal.grams, 1e-9)
+    }
+
+    @Test
+    fun theItemsFollowThePortionSlider() {
+        val half = plate.atGrams(150.0)
+        assertEquals(150.0, half.items[0].kcal, 1e-9)
+        assertEquals(50.0, half.items[0].grams, 1e-9)
+        assertTrue(plate.per100().items.isEmpty())
+    }
+
+    @Test
+    fun aMealPhotoFileNameCannotEscapeItsFolder() {
+        assertEquals("ab", MealPhotos.safe("a/../b"))
+        assertEquals("m-12_x", MealPhotos.safe("m-12_x"))
+        assertEquals("x", MealPhotos.safe("///"))
+    }
+
+    @Test
+    fun katoriAndBowlAreKnownPortionsWithUniqueKeys() {
+        assertEquals(PortionKind.Katori, PortionKind.of("katori"))
+        assertEquals(PortionKind.Bowl, PortionKind.of("bowl"))
+        assertEquals(PortionKind.entries.size, PortionKind.entries.map { it.key }.toSet().size)
     }
 }

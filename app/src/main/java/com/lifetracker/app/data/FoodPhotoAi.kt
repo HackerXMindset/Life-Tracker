@@ -45,6 +45,11 @@ object FoodAiSettings {
     fun markNoticeSeen(context: Context) = prefs(context).edit { putBoolean("notice", true) }
 }
 
+/** One food on the plate, as the photo reader saw it. */
+data class PhotoItem(val name: String, val grams: Double, val kcal: Double, val protein: Double, val carbs: Double, val fat: Double) {
+    fun label(): String = if (grams > 0) name + " " + Math.round(grams) + " g" else name
+}
+
 /** What the model said about one photo. Every number is for the whole serving shown ([servingGrams]), not per 100 g. */
 data class PhotoFood(
     val name: String,
@@ -65,7 +70,12 @@ data class PhotoFood(
     val weightGuessed: Boolean,
     /** Vitamins, minerals and your own nutrients for the whole serving, by nutrient id. Only the ones you asked for in your boxes. */
     val micro: Map<String, Double> = emptyMap(),
+    /** The foods the photo reader saw on the plate, each with its own weight and main numbers (for the whole amount seen). */
+    val items: List<PhotoItem> = emptyList(),
 ) {
+    /** True when the plate holds several foods with calories of their own, so they can be ticked one by one. */
+    val canSplit: Boolean get() = items.size >= 2 && items.sumOf { it.kcal } > 0
+
     /** The numbers per 100 g (or 100 ml), which is how foods are kept. */
     fun per100(): PhotoFood {
         val k = 100.0 / servingGrams
@@ -73,6 +83,7 @@ data class PhotoFood(
             servingGrams = 100.0, kcal = kcal * k, protein = protein * k, carbs = carbs * k, fat = fat * k,
             fiber = fiber * k, sugar = sugar * k, sodiumMg = sodiumMg * k, sat = sat * k, mono = mono * k, poly = poly * k,
             micro = micro.mapValues { it.value * k },
+            items = emptyList(),
         )
     }
 }
@@ -84,6 +95,8 @@ class PhotoAiException(message: String) : IOException(message)
  * a small JPEG goes inline with a prompt that asks for JSON only, with thinking turned down so the answer is quick,
  * and the result is shown to you to check before anything is saved.
  */
+private fun JSONObject.positive(key: String): Double = if (isNull(key)) 0.0 else optDouble(key, 0.0).takeIf { it.isFinite() && it > 0 } ?: 0.0
+
 object FoodPhotoAi {
     private const val BASE = "https://generativelanguage.googleapis.com/v1beta"
     private const val MAX_SIDE = 1600
@@ -107,7 +120,7 @@ object FoodPhotoAi {
             shape.append(nutrients.joinToString(",") { "\"" + it.aiKey + "\":0.0" })
             shape.append("}")
         }
-        shape.append(",\"is_drink\":false,\"ingredients\":[{\"name\":\"...\",\"grams\":0.0}]}")
+        shape.append(",\"is_drink\":false,\"items\":[{\"name\":\"...\",\"grams\":0.0,\"calories\":0,\"protein\":0.0,\"carbs\":0.0,\"fat\":0.0}]}")
         append(
             "Look at this food photo. Identify the food (Indian dishes are common) and estimate what is on the plate or in the glass.\n" +
                 "Respond ONLY with JSON in this shape:\n" + shape + "\n" +
@@ -121,7 +134,7 @@ object FoodPhotoAi {
             "Give only the numbers listed in the shape above. " +
                 "If a nutrition label is visible, use its numbers. Otherwise estimate, including the oil and ghee used in cooking. " +
                 "Put a visible count in the name, for example \"3 rotis with dal\". " +
-                "When there are several foods, name the whole meal and list each food once in ingredients (at most 12). " +
+                "When there are several foods, name the whole meal and list each food once in items (at most 12), each with its own weight, calories, protein, carbs and fat; the items should add up to the totals. For a single food give one item. " +
                 "Use null for a number you cannot estimate.",
         )
         if (note.isNotBlank()) append("\n\nThe user says about this food: ${note.trim()}\nUse this to improve the name, the portion size and the numbers.")
@@ -170,7 +183,14 @@ object FoodPhotoAi {
         val grams = num("serving_size_grams")
         val kcal = num("calories")
         if (kcal <= 0) throw PhotoAiException("No calories came back. Try again, or type the food in.")
-        val ingredients = json.optJSONArray("ingredients")?.let { arr ->
+        val items = json.optJSONArray("items")?.let { arr ->
+            (0 until arr.length()).mapNotNull { i ->
+                val o = arr.optJSONObject(i) ?: return@mapNotNull null
+                val n = o.optString("name").trim().takeIf { it.isNotEmpty() && it != "null" } ?: return@mapNotNull null
+                PhotoItem(n, o.positive("grams"), o.positive("calories"), o.positive("protein"), o.positive("carbs"), o.positive("fat"))
+            }
+        }.orEmpty().take(12)
+        val ingredients = if (items.isNotEmpty()) items.map { it.label() } else json.optJSONArray("ingredients")?.let { arr ->
             (0 until arr.length()).mapNotNull { i ->
                 val item = arr.optJSONObject(i) ?: return@mapNotNull null
                 val n = item.optString("name").trim().takeIf { it.isNotEmpty() && it != "null" } ?: return@mapNotNull null
@@ -197,6 +217,7 @@ object FoodPhotoAi {
             ingredients = ingredients,
             weightGuessed = grams <= 0,
             micro = micro,
+            items = items,
         )
     }
 

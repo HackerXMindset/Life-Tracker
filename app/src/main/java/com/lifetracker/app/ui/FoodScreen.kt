@@ -588,7 +588,7 @@ private fun EntryRow(meal: MealEntity, photo: String?, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        FoodPhoto(photo, meal.name, 40.dp)
+        MealThumb(meal.id, photo, meal.name, 40.dp)
         Column(modifier = Modifier.weight(1f)) {
             Text(meal.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = p.ink, maxLines = 1)
             Text(n(meal.grams) + " g", fontSize = 12.sp, color = p.ink2)

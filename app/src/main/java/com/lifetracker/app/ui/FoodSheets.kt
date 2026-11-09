@@ -225,7 +225,12 @@ fun AddFoodWindow(vm: FoodViewModel, startMeal: String, focus: Boolean, onClose:
     var dish by remember { mutableStateOf<ReadyDish?>(null) }
     var creating by remember { mutableStateOf(false) }
     var added by remember { mutableIntStateOf(0) }
+    var photo by remember { mutableStateOf(false) }
+    var browse by remember { mutableStateOf(false) }
+    val day by vm.date.collectAsState()
     val focusRequester = remember { FocusRequester() }
+    // The short front page: ways to add, then foods you ate before. Everything else sits behind "Browse all foods" or a search.
+    val simple = query.isBlank() && !browse && shelf == Shelf.All && cat == null
 
     val lib = library
     val starred = favs.map { it.foodId }.toSet()
@@ -289,7 +294,16 @@ fun AddFoodWindow(vm: FoodViewModel, startMeal: String, focus: Boolean, onClose:
             PaperIconButton(R.drawable.ic_p_plus, "New food", onClick = { creating = true }, modifier = Modifier.size(48.dp))
         }
 
-        Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (simple) {
+            AddRoutes(onCamera = { photo = true })
+        } else if (query.isBlank()) {
+            PaperButton(
+                "Back to the short list", { browse = false; shelf = Shelf.All; cat = null },
+                style = PaperButtonStyle.Ghost, small = true,
+            )
+        }
+
+        if (!simple) Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             PaperPill("All", shelf == Shelf.All && cat == null, { shelf = Shelf.All; cat = null })
             PaperPill("Ready dishes", shelf == Shelf.Dishes, { shelf = Shelf.Dishes; cat = null })
             PaperPill("My foods", shelf == Shelf.Mine, { shelf = Shelf.Mine; cat = null })
@@ -343,22 +357,27 @@ fun AddFoodWindow(vm: FoodViewModel, startMeal: String, focus: Boolean, onClose:
                 q.isEmpty() -> {
                     Section(
                         "Eaten before",
-                        recent.take(9).map { meal ->
+                        recent.take(if (browse) 9 else 6).map { meal ->
                             val food = FoodLogic.ofMeal(meal, lib)
                             Cell("r:" + meal.id, food.name, kc(food.per100.kcal) + " kcal", listOf(food.photoAsset to food.name), food.ref in starred) { logging = food }
                         },
                     )
                     Section(
                         "Favourites",
-                        favs.take(9).mapNotNull { f ->
+                        favs.take(if (browse) 9 else 6).mapNotNull { f ->
                             vm.loggable(f.foodId)?.let { food ->
                                 Cell("f:" + f.foodId, food.name, kc(food.per100.kcal) + " kcal", listOf(food.photoAsset to food.name), true) { logging = food }
                             }
                         },
                     )
-                    Section("My foods", own.take(9).map { ownCell(it) })
-                    Section("All foods", lib.foods.take(limit).map { libCell(it, lib) })
-                    more = lib.foods.size > limit
+                    if (browse) {
+                        Section("My foods", own.take(9).map { ownCell(it) })
+                        Section("All foods", lib.foods.take(limit).map { libCell(it, lib) })
+                        more = lib.foods.size > limit
+                    } else {
+                        if (recent.isEmpty() && favs.isEmpty()) Text("Foods you add show up here, so adding them again takes one tap.", color = p.ink2, fontSize = 13.sp)
+                        PaperButton("Browse all foods", { browse = true }, style = PaperButtonStyle.Ghost, small = true)
+                    }
                 }
                 else -> {
                     Section("My foods", FoodLogic.searchOwn(own, q, limit = 12).map { ownCell(it) })
@@ -370,7 +389,7 @@ fun AddFoodWindow(vm: FoodViewModel, startMeal: String, focus: Boolean, onClose:
             }
 
             if (more) PaperButton("Show more", { limit += 60 }, style = PaperButtonStyle.Ghost, small = true)
-            if (shownCount == 0 && shelf != Shelf.Stars) {
+            if (shownCount == 0 && shelf != Shelf.Stars && !simple) {
                 Text(
                     if (shelf == Shelf.Mine && q.isEmpty()) "You have not made any foods yet." else "Nothing found.",
                     color = p.ink2, fontSize = 13.sp,
@@ -383,6 +402,9 @@ fun AddFoodWindow(vm: FoodViewModel, startMeal: String, focus: Boolean, onClose:
         }
     }
 
+    if (photo) {
+        PhotoCheckWindow(startMeal = startMeal, date = day, onAdded = { added += 1 }, onClose = { photo = false })
+    }
     logging?.let { food ->
         LogFoodSheet(
             vm = vm, food = food, startMeal = startMeal,
@@ -403,6 +425,16 @@ fun AddFoodWindow(vm: FoodViewModel, startMeal: String, focus: Boolean, onClose:
             onDismiss = { creating = false },
             onSaved = { logging = it },
         )
+    }
+}
+
+/** The ways to add food that are not typing in a search. Camera now; barcode and describe-it come next. */
+@Composable
+private fun AddRoutes(onCamera: () -> Unit) {
+    val p = LocalPaper.current
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        PaperButton("Take a photo of the meal", onCamera, Modifier.fillMaxWidth(), icon = R.drawable.ic_p_camera)
+        Text("Gemini reads the photo, and you check it before anything is added.", fontSize = 12.sp, color = p.ink2)
     }
 }
 
@@ -723,7 +755,7 @@ fun EntrySheet(vm: FoodViewModel, meal: MealEntity, library: FoodLibraryData?, o
     PaperSheet(onDismiss = onDismiss) {
         SheetBody {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                FoodPhoto(photo, meal.name, 56.dp)
+                MealThumb(meal.id, photo, meal.name, 56.dp)
                 SheetTitle(meal.name, "${kc(meal.kcal100)} kcal in 100 g")
             }
             PaperField(amount, { amount = it }, "Amount eaten (g)", singleLine = true, keyboardOptions = DecimalKeys)

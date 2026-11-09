@@ -2,6 +2,16 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🍽️ A calmer Add food, and a smarter check page
+
+### ✨ New
+
+- **Add food opens short**: a **Take a photo of the meal** button, then the foods you ate before and your favourites. The full list, the group pills and your own foods are one tap away under **Browse all foods**, and typing in the search box still searches everything.
+- **Take a photo from Add food** goes to the same check page as the widget, and adds to the meal and day you were adding to.
+- **The check page lists what is on the plate.** When the photo has several foods (roti, dal, sabzi), each shows with its own weight and calories and a tick box. Untick what you did not eat and the numbers follow. A switch logs each food on its own line instead of one meal.
+- **The photo stays with the meal.** A small copy of the photo shows in the food log and in the meal's details. It lives on this phone only (not in backups) and goes when you delete the meal.
+- **Katori and bowl** are now portion sizes you can pick for your own foods.
+
 ## 🧮 Choose the boxes of a food
 
 ### ✨ New

@@ -15,6 +15,7 @@ import com.lifetracker.app.data.FoodRef
 import com.lifetracker.app.data.FoodStats
 import com.lifetracker.app.data.Loggable
 import com.lifetracker.app.data.MealEntity
+import com.lifetracker.app.data.MealPhotos
 import com.lifetracker.app.data.NutrientEntity
 import com.lifetracker.app.data.NutrientMath
 import com.lifetracker.app.data.ReadyDish
@@ -114,7 +115,10 @@ class FoodViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun deleteMeal(meal: MealEntity) {
-        viewModelScope.launch { dao.deleteMeal(meal) }
+        viewModelScope.launch {
+            dao.deleteMeal(meal)
+            MealPhotos.delete(getApplication<Application>(), listOf(meal.id))
+        }
     }
 
     /** Logs [grams] of [food] on the chosen day. */
@@ -178,7 +182,10 @@ class FoodViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun deleteMeals(list: List<MealEntity>) {
-        viewModelScope.launch { list.forEach { dao.deleteMeal(it) } }
+        viewModelScope.launch {
+            list.forEach { dao.deleteMeal(it) }
+            MealPhotos.delete(getApplication<Application>(), list.map { it.id })
+        }
     }
 
     /** The goal from the chosen day on. */

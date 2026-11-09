@@ -8,7 +8,43 @@ fun PhotoFood.atGrams(grams: Double): PhotoFood {
         servingGrams = grams, kcal = kcal * k, protein = protein * k, carbs = carbs * k, fat = fat * k,
         fiber = fiber * k, sugar = sugar * k, sodiumMg = sodiumMg * k, sat = sat * k, mono = mono * k, poly = poly * k,
         micro = micro.mapValues { it.value * k },
+        items = items.map { it.copy(grams = it.grams * k, kcal = it.kcal * k, protein = it.protein * k, carbs = it.carbs * k, fat = it.fat * k) },
     )
+}
+
+/**
+ * The part of the plate that is ticked, as one food. [ticked] are positions in [PhotoFood.items]. Every number is scaled by the share of
+ * the items' calories that is ticked, since fibre, sugar and the rest are only known for the whole plate.
+ */
+fun PhotoFood.onlyTicked(ticked: Set<Int>): PhotoFood {
+    if (!canSplit) return this
+    val total = items.sumOf { it.kcal }
+    val part = items.withIndex().filter { it.index in ticked }.sumOf { it.value.kcal }
+    if (part >= total - 1e-9) return this
+    if (part <= 0.0) return atGrams(servingGrams * 1e-6).copy(items = emptyList())
+    val scaled = atGrams(servingGrams * part / total)
+    return scaled.copy(items = scaled.items.filterIndexed { i, _ -> i in ticked })
+}
+
+/** One food for each ticked item, with the item's own weight and main numbers. The other numbers are shared out by calories. */
+fun PhotoFood.separateItems(ticked: Set<Int>): List<PhotoFood> {
+    if (!canSplit) return listOf(this)
+    val total = items.sumOf { it.kcal }
+    return items.withIndex().filter { it.index in ticked && it.value.kcal > 0 }.map { (_, item) ->
+        val share = item.kcal / total
+        val own = item.protein + item.carbs + item.fat > 0
+        val shared = atGrams(servingGrams * share)
+        shared.copy(
+            name = item.name,
+            servingGrams = if (item.grams > 0) item.grams else shared.servingGrams,
+            kcal = item.kcal,
+            protein = if (own) item.protein else shared.protein,
+            carbs = if (own) item.carbs else shared.carbs,
+            fat = if (own) item.fat else shared.fat,
+            ingredients = emptyList(),
+            items = emptyList(),
+        )
+    }
 }
 
 /** What the photo reader said, checked by you, as one logged meal. Meals keep their numbers per 100 g, so the weight matters. */

@@ -6,6 +6,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,6 +19,8 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
@@ -39,21 +42,28 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.FileProvider
 import com.lifetracker.app.data.AppDatabase
 import com.lifetracker.app.data.FoodAiSettings
 import com.lifetracker.app.data.FoodLogic
 import com.lifetracker.app.data.FoodPhotoAi
+import com.lifetracker.app.data.MealPhotos
 import com.lifetracker.app.data.PhotoAiException
 import com.lifetracker.app.data.PhotoFood
 import com.lifetracker.app.data.atGrams
+import com.lifetracker.app.data.onlyTicked
+import com.lifetracker.app.data.separateItems
 import com.lifetracker.app.data.toMeal
 import com.lifetracker.app.ui.theme.LocalPaper
 import com.lifetracker.app.ui.theme.PaperButton
 import com.lifetracker.app.ui.theme.PaperButtonStyle
 import com.lifetracker.app.ui.theme.PaperCard
+import com.lifetracker.app.ui.theme.PaperBackground
 import com.lifetracker.app.ui.theme.PaperField
 import com.lifetracker.app.ui.theme.PaperPill
+import com.lifetracker.app.ui.theme.PaperToggle
 import java.io.File
 import java.time.LocalDate
 import java.time.LocalTime
@@ -64,7 +74,14 @@ import kotlinx.coroutines.launch
  * is added. You can rename it, change how much, fix any number, pick the meal, or ask again with a hint or the bigger model.
  */
 @Composable
-fun QuickPhotoScreen(onClose: () -> Unit) {
+fun QuickPhotoScreen(
+    onClose: () -> Unit,
+    /** The meal to add to; null picks one from the time of day. */
+    startMeal: String? = null,
+    /** The day to add to. */
+    date: LocalDate = LocalDate.now(),
+    onAdded: () -> Unit = {},
+) {
     val context = LocalContext.current
     val p = LocalPaper.current
     val scope = rememberCoroutineScope()
@@ -85,8 +102,13 @@ fun QuickPhotoScreen(onClose: () -> Unit) {
     var scale by remember { mutableFloatStateOf(1f) }
     var edits by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var editing by remember { mutableStateOf(false) }
-    val minute = remember { LocalTime.now().let { it.hour * 60 + it.minute } }
-    var mealType by remember { mutableStateOf(FoodLogic.mealTypeFor(minute)) }
+    val minute = remember {
+        val now = LocalTime.now().let { it.hour * 60 + it.minute }
+        if (startMeal == null) now else FoodLogic.minuteFor(startMeal, date == LocalDate.now(), now)
+    }
+    var mealType by remember { mutableStateOf(startMeal ?: FoodLogic.mealTypeFor(minute)) }
+    var ticked by remember { mutableStateOf<Set<Int>>(emptySet()) }
+    var separate by remember { mutableStateOf(false) }
 
     fun photoUri(): Uri {
         val dir = File(context.cacheDir, "food-photos").apply { mkdirs() }
@@ -106,6 +128,8 @@ fun QuickPhotoScreen(onClose: () -> Unit) {
                 scale = 1f
                 edits = emptyMap()
                 editing = false
+                ticked = result.items.indices.toSet()
+                separate = false
                 message = ""
             } catch (e: PhotoAiException) {
                 message = e.message.orEmpty()
@@ -190,12 +214,44 @@ fun QuickPhotoScreen(onClose: () -> Unit) {
             val unit = if (f.drink) "ml" else "g"
             val grams = f.servingGrams * scale
             val shown = f.atGrams(grams)
+            val part = shown.onlyTicked(ticked)
+            val split = f.canSplit
 
             fun number(key: String, auto: Double): Double = edits[key]?.let { foodParse(it) } ?: auto
 
             Text("Is this what you ate?", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = p.ink)
             PaperField(name, { name = it }, "What it is", singleLine = true)
-            if (f.ingredients.isNotEmpty()) {
+            if (split) {
+                PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Kicker("On the plate")
+                        shown.items.forEachIndexed { i, item ->
+                            val on = i in ticked
+                            Row(
+                                modifier = Modifier.fillMaxWidth().clickable { ticked = if (on) ticked - i else ticked + i },
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Checkbox(
+                                    checked = on, onCheckedChange = { ticked = if (it) ticked + i else ticked - i },
+                                    colors = CheckboxDefaults.colors(checkedColor = p.ink, checkmarkColor = p.surface, uncheckedColor = p.ink2),
+                                )
+                                Column(Modifier.weight(1f)) {
+                                    Text(item.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = p.ink, maxLines = 1)
+                                    Text(
+                                        (if (item.grams > 0) Math.round(item.grams).toString() + " $unit · " else "") + Math.round(item.kcal) + " kcal",
+                                        fontSize = 12.sp, color = p.ink2,
+                                    )
+                                }
+                            }
+                        }
+                        Text("Untick anything you did not eat.", fontSize = 12.sp, color = p.ink2)
+                        Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text("Log each food on its own line", fontSize = 13.sp, color = p.ink, modifier = Modifier.weight(1f))
+                            PaperToggle(separate, { separate = it; if (it) { editing = false } })
+                        }
+                    }
+                }
+            } else if (f.ingredients.isNotEmpty()) {
                 Text("Seen: " + f.ingredients.joinToString(", "), fontSize = 12.5.sp, color = p.ink2)
             }
 
@@ -222,38 +278,40 @@ fun QuickPhotoScreen(onClose: () -> Unit) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Kicker("For this much")
                     Row(Modifier.fillMaxWidth()) {
-                        CheckStat("kcal", Math.round(number("kcal", shown.kcal)).toString(), Modifier.weight(1f))
-                        CheckStat("protein g", Math.round(number("protein", shown.protein)).toString(), Modifier.weight(1f))
-                        CheckStat("carbs g", Math.round(number("carbs", shown.carbs)).toString(), Modifier.weight(1f))
-                        CheckStat("fat g", Math.round(number("fat", shown.fat)).toString(), Modifier.weight(1f))
+                        CheckStat("kcal", Math.round(number("kcal", part.kcal)).toString(), Modifier.weight(1f))
+                        CheckStat("protein g", Math.round(number("protein", part.protein)).toString(), Modifier.weight(1f))
+                        CheckStat("carbs g", Math.round(number("carbs", part.carbs)).toString(), Modifier.weight(1f))
+                        CheckStat("fat g", Math.round(number("fat", part.fat)).toString(), Modifier.weight(1f))
                     }
-                    if (editing) {
+                    if (editing && !(split && separate)) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             PaperField(
-                                edits["kcal"] ?: foodNum(shown.kcal), { edits = edits + ("kcal" to it) }, "Calories",
+                                edits["kcal"] ?: foodNum(part.kcal), { edits = edits + ("kcal" to it) }, "Calories",
                                 Modifier.weight(1f), singleLine = true, keyboardOptions = DecimalKeys,
                             )
                             PaperField(
-                                edits["protein"] ?: foodNum(shown.protein), { edits = edits + ("protein" to it) }, "Protein g",
+                                edits["protein"] ?: foodNum(part.protein), { edits = edits + ("protein" to it) }, "Protein g",
                                 Modifier.weight(1f), singleLine = true, keyboardOptions = DecimalKeys,
                             )
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             PaperField(
-                                edits["carbs"] ?: foodNum(shown.carbs), { edits = edits + ("carbs" to it) }, "Carbs g",
+                                edits["carbs"] ?: foodNum(part.carbs), { edits = edits + ("carbs" to it) }, "Carbs g",
                                 Modifier.weight(1f), singleLine = true, keyboardOptions = DecimalKeys,
                             )
                             PaperField(
-                                edits["fat"] ?: foodNum(shown.fat), { edits = edits + ("fat" to it) }, "Fat g",
+                                edits["fat"] ?: foodNum(part.fat), { edits = edits + ("fat" to it) }, "Fat g",
                                 Modifier.weight(1f), singleLine = true, keyboardOptions = DecimalKeys,
                             )
                         }
                         Text("Moving the slider puts the numbers back to what the photo reader said.", fontSize = 12.sp, color = p.ink2)
                     }
-                    PaperButton(
-                        if (editing) "Done" else "Fix the numbers", { editing = !editing },
-                        style = PaperButtonStyle.Ghost, small = true,
-                    )
+                    if (!(split && separate)) {
+                        PaperButton(
+                            if (editing) "Done" else "Fix the numbers", { editing = !editing },
+                            style = PaperButtonStyle.Ghost, small = true,
+                        )
+                    }
                 }
             }
 
@@ -271,18 +329,31 @@ fun QuickPhotoScreen(onClose: () -> Unit) {
             PaperButton(
                 "Yes, add this",
                 {
-                    val adjusted = shown.copy(
-                        kcal = number("kcal", shown.kcal), protein = number("protein", shown.protein),
-                        carbs = number("carbs", shown.carbs), fat = number("fat", shown.fat),
-                    )
-                    val meal = adjusted.toMeal(name, mealType, LocalDate.now().toString(), minute)
+                    val day = date.toString()
+                    val meals = if (split && separate) {
+                        shown.separateItems(ticked).map { it.toMeal(it.name, mealType, day, minute) }
+                    } else {
+                        val adjusted = part.copy(
+                            kcal = number("kcal", part.kcal), protein = number("protein", part.protein),
+                            carbs = number("carbs", part.carbs), fat = number("fat", part.fat),
+                        )
+                        listOf(adjusted.toMeal(name, mealType, day, minute))
+                    }
+                    val photo = jpeg
                     scope.launch {
-                        AppDatabase.get(context).foodDao().upsertMeal(meal)
-                        Toast.makeText(context, "Added " + Math.round(meal.kcal) + " kcal to " + mealType, Toast.LENGTH_SHORT).show()
+                        val dao = AppDatabase.get(context).foodDao()
+                        for (meal in meals) {
+                            dao.upsertMeal(meal)
+                            if (photo != null) MealPhotos.save(context, meal.id, photo)
+                        }
+                        val total = meals.sumOf { it.kcal }
+                        Toast.makeText(context, "Added " + Math.round(total) + " kcal to " + mealType, Toast.LENGTH_SHORT).show()
+                        onAdded()
                         onClose()
                     }
                 },
                 Modifier.fillMaxWidth(),
+                enabled = !split || ticked.isNotEmpty(),
             )
 
             PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
@@ -295,6 +366,19 @@ fun QuickPhotoScreen(onClose: () -> Unit) {
                 }
             }
             Text("This is a guess made from a photo, so check the numbers.", fontSize = 12.sp, color = p.ink2)
+        }
+    }
+}
+
+/** The same page as a window on top of the Add food window, adding to that window's meal and day. */
+@Composable
+fun PhotoCheckWindow(startMeal: String, date: LocalDate, onAdded: () -> Unit, onClose: () -> Unit) {
+    Dialog(
+        onDismissRequest = onClose,
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+    ) {
+        PaperBackground {
+            QuickPhotoScreen(onClose = onClose, startMeal = startMeal, date = date, onAdded = onAdded)
         }
     }
 }
