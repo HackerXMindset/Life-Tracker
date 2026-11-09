@@ -131,6 +131,9 @@ fun QuickPhotoScreen(
     var failed by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf("") }
     var note by remember { mutableStateOf(queued?.note.orEmpty()) }
+    // The optional name typed before a meal photo is sent, and whether that question is on screen.
+    var dishName by remember { mutableStateOf("") }
+    var naming by remember { mutableStateOf(false) }
     var scale by remember { mutableFloatStateOf(1f) }
     var edits by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var editing by remember { mutableStateOf(false) }
@@ -153,7 +156,14 @@ fun QuickPhotoScreen(
         return FileProvider.getUriForFile(context, context.packageName + ".photos", File(dir, "snap.jpg"))
     }
 
+    /** What is sent along with the picture: the name given up front, then anything typed under "Not right?". */
+    fun hint(): String = listOf(
+        if (dishName.isNotBlank()) "The user says this dish is called \"${dishName.trim()}\". Use that as its name." else "",
+        note.trim(),
+    ).filter { it.isNotEmpty() }.joinToString(" ")
+
     fun read(strong: Boolean) {
+        naming = false
         busy = true
         failed = false
         offlineFail = false
@@ -167,15 +177,15 @@ fun QuickPhotoScreen(
                 val result = when (val s = source) {
                     CheckSource.Barcode -> OpenFoodFacts.lookup(code)
                         ?: throw PhotoAiException("Open Food Facts has no numbers for this barcode. Photograph the nutrition label instead.")
-                    is CheckSource.Text -> FoodPhotoAi.analyzeText(context, s.text, note, strong)
+                    is CheckSource.Text -> FoodPhotoAi.analyzeText(context, s.text, hint(), strong)
                     else -> {
                         val bytes = jpeg ?: FoodPhotoAi.prepare(context, photoUri()).also { jpeg = it }
-                        if (s == CheckSource.Label) FoodPhotoAi.analyzeLabel(context, bytes, note, strong)
-                        else FoodPhotoAi.analyze(context, bytes, note, strong)
+                        if (s == CheckSource.Label) FoodPhotoAi.analyzeLabel(context, bytes, hint(), strong)
+                        else FoodPhotoAi.analyze(context, bytes, hint(), strong)
                     }
                 }
                 food = result
-                name = result.name
+                name = dishName.trim().ifBlank { result.name }
                 scale = 1f
                 edits = emptyMap()
                 editing = false
@@ -250,7 +260,23 @@ fun QuickPhotoScreen(
         if (shot > 0) {
             jpeg = null
             food = null
-            read(false)
+            failed = false
+            if (source == CheckSource.Meal) {
+                // A plate photo waits for the question "Do you want to name it?" before anything is sent.
+                busy = true
+                message = "Getting the photo ready…"
+                try {
+                    jpeg = FoodPhotoAi.prepare(context, photoUri())
+                    naming = true
+                } catch (e: PhotoAiException) {
+                    message = e.message.orEmpty()
+                    failed = true
+                } catch (e: Exception) {
+                    message = "Something went wrong: " + (e.message ?: e.javaClass.simpleName)
+                    failed = true
+                }
+                busy = false
+            } else read(false)
         }
     }
 
@@ -290,7 +316,18 @@ fun QuickPhotoScreen(
             )
         }
 
-        if (busy) {
+        if (naming && !busy && food == null) {
+            PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Do you want to name this dish?", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = p.ink)
+                    Text("A name helps it get the food and the amount right. You can skip it.", fontSize = 12.sp, color = p.ink2)
+                    PaperField(dishName, { dishName = it }, "Dish name", placeholder = "e.g. bhindi sabzi with roti", singleLine = true)
+                    PaperButton("Send with this name", { read(false) }, Modifier.fillMaxWidth(), enabled = dishName.isNotBlank())
+                    PaperButton("Skip, just read the photo", { dishName = ""; read(false) }, Modifier.fillMaxWidth(), style = PaperButtonStyle.Ghost)
+                    PaperButton("Take another photo", { proceed() }, Modifier.fillMaxWidth(), style = PaperButtonStyle.Ghost)
+                }
+            }
+        } else if (busy) {
             PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
                 Text(message, fontSize = 14.sp, color = p.ink2)
             }
@@ -322,7 +359,7 @@ fun QuickPhotoScreen(
                                                 withContext(Dispatchers.IO) {
                                                     PhotoQueue.add(
                                                         context, bytes,
-                                                        QueuedPhoto(QueuedPhoto.newId(), source == CheckSource.Label, mealType, date.toString(), minute, note),
+                                                        QueuedPhoto(QueuedPhoto.newId(), source == CheckSource.Label, mealType, date.toString(), minute, hint()),
                                                     )
                                                 }
                                             }
