@@ -2,6 +2,18 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧮 Choose the boxes of a food
+
+### ✨ New
+
+- **Change these boxes** on the New food form: take out a box you never use and add one you do (a vitamin, a mineral or one of your own nutrients, for example Vitamin B9). Calories always stay. A box you take out is only hidden, so foods keep the numbers they already have.
+- **The photo reader fills exactly your boxes.** Fill from a photo and the widget ask Gemini only for the numbers in your form, including the vitamins you added (these are rough guesses, and the photo check page keeps them with the meal).
+- **Test the key** button in the Gemini key window: it tries both models and says "works", or tells you if the key is wrong, the model name is wrong, or the free allowance is used up.
+
+### 🎨 Changed
+
+- The New food form is calmer: name, drink switch and your number boxes first. Group, portion, cooked weight and the full vitamin list are under **More**.
+
 ## 📷 Snap a meal from your home screen
 
 ### ✨ New

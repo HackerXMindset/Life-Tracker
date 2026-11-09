@@ -7,6 +7,7 @@ fun PhotoFood.atGrams(grams: Double): PhotoFood {
     return copy(
         servingGrams = grams, kcal = kcal * k, protein = protein * k, carbs = carbs * k, fat = fat * k,
         fiber = fiber * k, sugar = sugar * k, sodiumMg = sodiumMg * k, sat = sat * k, mono = mono * k, poly = poly * k,
+        micro = micro.mapValues { it.value * k },
     )
 }
 
@@ -20,5 +21,6 @@ fun PhotoFood.toMeal(name: String, mealType: String, date: String, minuteOfDay: 
         source = "app", raw = "",
         fiber100 = base.fiber, sugar100 = base.sugar, sodium100 = base.sodiumMg,
         sat100 = base.sat, mono100 = base.mono, poly100 = base.poly,
+        extra = NutrientValues.encode(base.micro),
     )
 }
