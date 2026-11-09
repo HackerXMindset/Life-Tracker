@@ -2,6 +2,18 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧭 Add food: the same screen every time
+
+### ✨ New
+
+- **One layout, always**: under the search box there is now always a row of **Photo**, **Barcode** and **Label**, then the shelves (All, Ready dishes, My foods, Favourites, categories), then the foods. Before, the ways to add and the shelves swapped places depending on whether you had searched or pressed Browse, and a "Back to the short list" button hid the shelves.
+- **When the food is not there**: type what you ate and two buttons appear under the row, **Describe it with AI** (the words go to the check page) and **Just calories** (opens Quick add with the name filled in). The search box has a **Speak** link when it is empty.
+- **Browse all foods** now only makes the list longer, and turns into **Show fewer foods**.
+
+### 🔧 Changed
+
+- The long "Say what you ate" form on the front of Add food is gone; the search box does that job.
+
 ## 🏷️ Name the dish before it is sent
 
 ### ✨ New

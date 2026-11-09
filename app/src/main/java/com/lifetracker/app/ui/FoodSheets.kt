@@ -227,10 +227,11 @@ fun AddFoodWindow(vm: FoodViewModel, startMeal: String, focus: Boolean, onClose:
     var added by remember { mutableIntStateOf(0) }
     var check by remember { mutableStateOf<CheckSource?>(null) }
     var browse by remember { mutableStateOf(false) }
+    var quick by remember { mutableStateOf(false) }
+    val speak = rememberSpeak { query = it }
     val day by vm.date.collectAsState()
     val focusRequester = remember { FocusRequester() }
-    // The short front page: ways to add, then foods you ate before. Everything else sits behind "Browse all foods" or a search.
-    val simple = query.isBlank() && !browse && shelf == Shelf.All && cat == null
+    // The screen always has the same parts, top to bottom: search, ways to add, shelves, foods. "Browse all foods" only makes the list longer.
 
     val lib = library
     val starred = favs.map { it.foodId }.toSet()
@@ -284,26 +285,24 @@ fun AddFoodWindow(vm: FoodViewModel, startMeal: String, focus: Boolean, onClose:
                         }
                     },
                 )
-                if (query.isNotEmpty()) {
-                    Text(
-                        "Clear", fontSize = 12.sp, color = p.ink2,
-                        modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable { query = "" }.padding(4.dp),
-                    )
-                }
+                Text(
+                    if (query.isNotEmpty()) "Clear" else "Speak", fontSize = 12.sp, color = p.ink2,
+                    modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable { if (query.isNotEmpty()) query = "" else speak() }.padding(4.dp),
+                )
             }
             PaperIconButton(R.drawable.ic_p_plus, "New food", onClick = { creating = true }, modifier = Modifier.size(48.dp))
         }
 
-        if (simple) {
-            AddRoutes(onRoute = { check = it })
-        } else if (query.isBlank()) {
-            PaperButton(
-                "Back to the short list", { browse = false; shelf = Shelf.All; cat = null },
-                style = PaperButtonStyle.Ghost, small = true,
-            )
+        AddRouteRow(onRoute = { check = it })
+
+        if (query.isNotBlank()) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PaperButton("Describe it with AI", { check = CheckSource.Text(query.trim()) }, Modifier.weight(1f), style = PaperButtonStyle.Ghost, small = true)
+                PaperButton("Just calories", { quick = true }, Modifier.weight(1f), style = PaperButtonStyle.Ghost, small = true)
+            }
         }
 
-        if (!simple) Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             PaperPill("All", shelf == Shelf.All && cat == null, { shelf = Shelf.All; cat = null })
             PaperPill("Ready dishes", shelf == Shelf.Dishes, { shelf = Shelf.Dishes; cat = null })
             PaperPill("My foods", shelf == Shelf.Mine, { shelf = Shelf.Mine; cat = null })
@@ -376,8 +375,11 @@ fun AddFoodWindow(vm: FoodViewModel, startMeal: String, focus: Boolean, onClose:
                         more = lib.foods.size > limit
                     } else {
                         if (recent.isEmpty() && favs.isEmpty()) Text("Foods you add show up here, so adding them again takes one tap.", color = p.ink2, fontSize = 13.sp)
-                        PaperButton("Browse all foods", { browse = true }, style = PaperButtonStyle.Ghost, small = true)
                     }
+                    PaperButton(
+                        if (browse) "Show fewer foods" else "Browse all foods", { browse = !browse },
+                        style = PaperButtonStyle.Ghost, small = true,
+                    )
                 }
                 else -> {
                     Section("My foods", FoodLogic.searchOwn(own, q, limit = 12).map { ownCell(it) })
@@ -389,7 +391,7 @@ fun AddFoodWindow(vm: FoodViewModel, startMeal: String, focus: Boolean, onClose:
             }
 
             if (more) PaperButton("Show more", { limit += 60 }, style = PaperButtonStyle.Ghost, small = true)
-            if (shownCount == 0 && shelf != Shelf.Stars && !simple) {
+            if (shownCount == 0 && shelf != Shelf.Stars && (q.isNotEmpty() || shelf != Shelf.All || cat != null)) {
                 Text(
                     if (shelf == Shelf.Mine && q.isEmpty()) "You have not made any foods yet." else "Nothing found.",
                     color = p.ink2, fontSize = 13.sp,
@@ -404,6 +406,12 @@ fun AddFoodWindow(vm: FoodViewModel, startMeal: String, focus: Boolean, onClose:
 
     check?.let { source ->
         PhotoCheckWindow(startMeal = startMeal, date = day, source = source, onAdded = { added += 1 }, onClose = { check = null })
+    }
+    if (quick) {
+        QuickAddSheet(
+            vm = vm, startMeal = startMeal, startName = query.trim(),
+            onDone = { quick = false; added += 1 }, onDismiss = { quick = false },
+        )
     }
     logging?.let { food ->
         LogFoodSheet(
@@ -647,12 +655,12 @@ fun LogFoodSheet(vm: FoodViewModel, food: Loggable, startMeal: String, onDone: (
 // ---- quick add ----
 
 @Composable
-fun QuickAddSheet(vm: FoodViewModel, startMeal: String, onDone: () -> Unit, onDismiss: () -> Unit) {
+fun QuickAddSheet(vm: FoodViewModel, startMeal: String, onDone: () -> Unit, onDismiss: () -> Unit, startName: String = "") {
     val p = LocalPaper.current
     val date by vm.date.collectAsState()
     val today = date == LocalDate.now()
 
-    var name by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf(startName) }
     var kcal by remember { mutableStateOf("") }
     var protein by remember { mutableStateOf("") }
     var carbs by remember { mutableStateOf("") }
