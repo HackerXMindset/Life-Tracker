@@ -58,6 +58,7 @@ import com.lifetracker.app.data.MealPlanEntity
 import com.lifetracker.app.data.NutrientValues
 import com.lifetracker.app.data.PlanMath
 import com.lifetracker.app.data.FoodPartOrder
+import com.lifetracker.app.data.FoodReminderRules
 import com.lifetracker.app.data.QualityMath
 import com.lifetracker.app.data.SavedMealItem
 import com.lifetracker.app.data.SupplementEntity
@@ -108,6 +109,49 @@ fun TrackersSheet(onDismiss: () -> Unit) {
                 }
             }
             Text("Water and Protein shake share one row, which sits where the higher of the two is.", fontSize = 12.sp, color = p.ink2)
+
+            MonoLabel("Reminders")
+            val mealOn = remember(tick) { FoodSettings.mealReminders(context) }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Meal reminders", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = p.ink)
+                    Text("At each meal time, only if nothing is logged for that meal yet. Off until you switch it on.", fontSize = 12.sp, color = p.ink2)
+                }
+                PaperToggle(mealOn, { FoodSettings.setMealReminders(context, it) })
+            }
+            if (mealOn) {
+                FoodReminderRules.MEALS.forEach { meal ->
+                    val remind = remember(tick) { FoodSettings.mealRemindOn(context, meal) }
+                    val minute = remember(tick) { FoodSettings.mealMinute(context, meal) }
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(mealTypeLabel(meal), fontSize = 14.sp, color = p.ink, modifier = Modifier.weight(1f))
+                        TimeButton(minute, { FoodSettings.setMealMinute(context, meal, it) })
+                        PaperToggle(remind, { FoodSettings.setMealRemindOn(context, meal, it) })
+                    }
+                }
+            }
+            val waterOn = remember(tick) { FoodSettings.waterReminders(context) }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Water reminders", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = p.ink)
+                    Text("Through the day, only when you are behind on your water goal. Off until you switch it on.", fontSize = 12.sp, color = p.ink2)
+                }
+                PaperToggle(waterOn, { FoodSettings.setWaterReminders(context, it) })
+            }
+            if (waterOn) {
+                val w = remember(tick) { FoodSettings.waterWindow(context) }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(60 to "Every hour", 120 to "Every 2 h", 180 to "Every 3 h").forEach { (minutes, label) ->
+                        PaperPill(label, w.interval == minutes, { FoodSettings.setWaterWindow(context, w.start, w.end, minutes) })
+                    }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("From", fontSize = 13.sp, color = p.ink2)
+                    TimeButton(w.start, { FoodSettings.setWaterWindow(context, it, w.end, w.interval) })
+                    Text("to", fontSize = 13.sp, color = p.ink2)
+                    TimeButton(w.end, { FoodSettings.setWaterWindow(context, w.start, it, w.interval) })
+                }
+            }
             Spacer(Modifier.height(12.dp))
         }
     }

@@ -93,6 +93,8 @@ object SupplementReminderScheduler {
         for (id in before - armed) cancelAlarm(app, id)
         prefs.edit { putStringSet(ARMED, armed) }
         if (list.isEmpty()) SupplementReminderNotifier.cancelAll(app)
+        // Meal and water reminders are set again at the same moments (boot, time change, feature switch, settings change).
+        FoodReminderScheduler.rearmAll(app)
     }
 
     private suspend fun due(app: Context, id: String): SupplementEntity? {

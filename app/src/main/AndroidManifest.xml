@@ -190,6 +190,10 @@
         <receiver
             android:name=".data.SupplementReminderReceiver"
             android:exported="false" />
+        <!-- Meal and water reminders (Food): the alarms and the glass button. Set again together with the supplement alarms. -->
+        <receiver
+            android:name=".data.FoodReminderReceiver"
+            android:exported="false" />
         <receiver
             android:name=".data.HabitReminderBootReceiver"
             android:exported="true">

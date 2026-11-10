@@ -2,6 +2,15 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🔔 Meal and water reminders
+
+### ✨ New
+
+- **Reminders** section at the bottom of **What to show** on the Food tab. Both are **off until you switch them on**.
+- **Meal reminders**: a time for breakfast, lunch, snack and dinner (8:30, 13:00, 17:00 and 20:00 to start with), each with its own switch. The reminder is **skipped if anything is already logged for that meal today**.
+- **Water reminders**: every hour, 2 hours or 3 hours between a start and an end time (8:00 to 22:00 to start with). A reminder is **skipped when you are on track**, meaning you have drunk at least the share of your goal that the waking window has used up. The banner has a **Drank a glass** button that adds one glass.
+- They have their own notification channel, **Meal and water reminders**, so you can mute them in Android settings.
+
 ## 🔥 Calories burned from your phone
 
 ### ✨ New
