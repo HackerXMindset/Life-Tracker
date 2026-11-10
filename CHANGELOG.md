@@ -2,6 +2,14 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🔥 Calories burned from your phone
+
+### ✨ New
+
+- **Count what my phone measured** switch in the Calories burned box (tap Burned on the Food tab). It is **off until you turn it on**. When on, the day uses Health Connect's **active calories** (the calories above resting, which your daily goal already includes). If Health Connect has none for a day, it estimates from your steps and your latest weigh-in (about 0.0004 kcal per step per kg, so 10,000 steps at 70 kg is 280 kcal). A number you type always wins.
+- Health Connect calories are a **separate permission**, asked only when you turn the switch on and press **Allow Health Connect to share calories**. Steps and sleep keep working as before.
+- The week strip rings use the same burned numbers.
+
 ## ↕️ Move the parts of the Food tab
 
 ### ✨ New

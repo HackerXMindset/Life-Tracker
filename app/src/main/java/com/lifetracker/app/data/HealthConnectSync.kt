@@ -3,6 +3,7 @@ package com.lifetracker.app.data
 import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.request.AggregateGroupByPeriodRequest
@@ -28,6 +29,9 @@ object HealthConnectSync {
         HealthPermission.getReadPermission(StepsRecord::class),
         HealthPermission.getReadPermission(SleepSessionRecord::class),
     )
+
+    /** Asked for on its own, when you turn on counting burned calories on the Food tab. */
+    val CALORIES_PERMISSION: String = HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class)
 
     /** What is asked for: the above, plus permission to read more than 30 days back. */
     val REQUEST: Set<String> = PERMISSIONS + HISTORY_PERMISSION
@@ -106,6 +110,22 @@ object HealthConnectSync {
             val key = date.toString()
             if (SleepStats.mayReplace(sleepDao.night(key), SleepStats.HEALTH_CONNECT)) {
                 sleepDao.upsert(SleepNightEntity(key, pair.first, pair.second, SleepStats.HEALTH_CONNECT))
+            }
+        }
+        // Active calories (not resting ones, which the daily goal already includes), only if you allowed it.
+        if (CALORIES_PERMISSION in granted) {
+            runCatching {
+                val burned = client.aggregateGroupByPeriod(
+                    AggregateGroupByPeriodRequest(
+                        metrics = setOf(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL),
+                        timeRangeFilter = TimeRangeFilter.between(first.atStartOfDay(), today.plusDays(1).atStartOfDay()),
+                        timeRangeSlicer = Period.ofDays(1),
+                    ),
+                )
+                for (bucket in burned) {
+                    val kcal = bucket.result[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories ?: 0.0
+                    FoodSettings.setHealthKcal(context, bucket.startTime.toLocalDate().toString(), Math.round(kcal).toInt())
+                }
             }
         }
         settings.healthConnectFirstDone = true

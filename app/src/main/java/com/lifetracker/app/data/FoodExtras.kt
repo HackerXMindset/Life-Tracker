@@ -379,6 +379,28 @@ object FoodSettings {
         changed()
     }
 
+    /** Whether the calories burned on a day also come from Health Connect, or from your steps when it has none (off until you switch it on). */
+    fun autoBurned(context: Context): Boolean = prefs(context).getBoolean("auto_burned", false)
+
+    fun setAutoBurned(context: Context, on: Boolean) {
+        prefs(context).edit { putBoolean("auto_burned", on) }
+        changed()
+    }
+
+    /** Active calories Health Connect reported for a day, or 0. */
+    fun healthKcal(context: Context, date: String): Int = prefs(context).getInt("burned_hc_$date", 0)
+
+    fun setHealthKcal(context: Context, date: String, kcal: Int) {
+        prefs(context).edit { if (kcal <= 0) remove("burned_hc_$date") else putInt("burned_hc_$date", kcal.coerceAtMost(20_000)) }
+        changed()
+    }
+
+    /** The calories burned that count on [date]: what you typed, else (when switched on) Health Connect's number, else an estimate from [steps]. */
+    fun burnedFor(context: Context, date: String, steps: Int, kg: Double): BurnedMath.Burned {
+        val auto = autoBurned(context)
+        return BurnedMath.pick(burnedKcal(context, date), if (auto) healthKcal(context, date) else 0, if (auto) steps else 0, kg)
+    }
+
     fun waterGoalMl(context: Context): Int = prefs(context).getInt("water_goal", FoodStats.DEFAULT_WATER_GOAL_ML)
     fun glassMl(context: Context): Int = prefs(context).getInt("glass_ml", 250)
 

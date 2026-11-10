@@ -23,6 +23,8 @@
     <!-- Reads your steps and sleep from Health Connect, once you allow it inside the app. -->
     <uses-permission android:name="android.permission.health.READ_STEPS" />
     <uses-permission android:name="android.permission.health.READ_SLEEP" />
+    <!-- Optional: the calories your watch or phone counts as burned, for the Food tab. -->
+    <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED" />
     <!-- Lets the first read go back further than 30 days, if another app has that history. Optional. -->
     <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_HISTORY" />
     <!-- Only for the fallback: counts steps with the phone's own step counter. Optional. -->
