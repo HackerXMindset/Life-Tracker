@@ -2,6 +2,12 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## ↕️ Move the parts of the Food tab
+
+### ✨ New
+
+- **What to show** now has **Up** and **Down** buttons beside each switch, so you can put Water, Supplements, This week or anything else where you want it. The parts are in two piles, the ones above the "Details" heading and the ones under it, and each moves inside its own pile. Water and Protein shake share a row, which sits where the higher of the two is. The order is saved with your other settings and in the backup.
+
 ## 📅 The week window and weekly report
 
 ### ✨ New
