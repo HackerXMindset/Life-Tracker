@@ -556,7 +556,7 @@ fun WeightCard(x: FoodExtrasViewModel, date: LocalDate) {
 // ---- the week ----
 
 @Composable
-fun WeekCard(x: FoodExtrasViewModel, date: LocalDate) {
+fun WeekCard(x: FoodExtrasViewModel, date: LocalDate, onOpen: (() -> Unit)? = null) {
     val p = LocalPaper.current
     val meals by x.weekMeals.collectAsState()
     val goals by x.goals.collectAsState()
@@ -586,6 +586,7 @@ fun WeekCard(x: FoodExtrasViewModel, date: LocalDate) {
                 )
             }
         },
+        onClick = onOpen,
     )
 }
 
