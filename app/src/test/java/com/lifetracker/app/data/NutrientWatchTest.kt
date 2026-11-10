@@ -12,8 +12,8 @@ class NutrientWatchTest {
 
     // 100 g of a food with [ironMg] iron per 100 g, remembered on the meal as its nutrient numbers.
     private fun meal(id: String, date: String, ironMg: Double?) = MealEntity(
-        id, date, 700, "lunch", "Food", 100.0, 100.0, 10.0, 5.0, 10.0, "app",
-        if (ironMg == null) "" else NutrientValues.encode(mapOf("iron" to ironMg)),
+        id, date, 700, "lunch", "Food", 100.0, 100.0, 10.0, 5.0, 10.0, "app", "{}",
+        extra = if (ironMg == null) "" else NutrientValues.encode(mapOf("iron" to ironMg)),
     )
 
     private fun week(vararg iron: Double?) = iron.mapIndexed { i, v -> meal("m$i", "2026-11-0${i + 1}", v) }
