@@ -25,6 +25,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.PermissionController
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import com.lifetracker.app.data.AppDatabase
+import com.lifetracker.app.data.BurnedMath
+import com.lifetracker.app.data.HealthConnectSync
+import com.lifetracker.app.ui.theme.PaperToggle
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -131,12 +140,20 @@ fun FoodScreen(vm: FoodViewModel = viewModel(), x: FoodExtrasViewModel = viewMod
     var openMeal by remember { mutableStateOf(FoodLogic.mealTypeFor(java.time.LocalTime.now().let { it.hour * 60 + it.minute })) }
     val totals = FoodStats.totals(meals)
     val extras = FoodLogic.extras(meals)
-    val burned = remember(tick, date) { FoodSettings.burnedKcal(context, date.toString()) }
+    // Calories burned: what you typed, else (when switched on) what the phone measured.
+    val weekDays = remember(date) { FoodLogic.weekOf(date) }
+    val stepRows by remember(date) { AppDatabase.get(context).stepDao().daysBetween(weekDays.first().toString(), weekDays.last().toString()) }
+        .collectAsState(emptyList())
+    val stepsByDay = remember(stepRows) { stepRows.associate { it.date to it.steps } }
+    val bodyKg = weights.lastOrNull()?.kg ?: 70.0
+    val burned = remember(tick, date, stepsByDay, bodyKg) {
+        FoodSettings.burnedFor(context, date.toString(), stepsByDay[date.toString()] ?: 0, bodyKg).kcal
+    }
     var askBurned by remember { mutableStateOf(false) }
-    val ringPct: (LocalDate) -> Float = remember(weekMeals, allGoals, tick) {
+    val ringPct: (LocalDate) -> Float = remember(weekMeals, allGoals, tick, stepsByDay, bodyKg) {
         val byDay = weekMeals.groupBy { it.date };
         { d: LocalDate ->
-            val budget = (FoodStats.goalFor(allGoals, d)?.kcal ?: 0.0) + FoodSettings.burnedKcal(context, d.toString())
+            val budget = (FoodStats.goalFor(allGoals, d)?.kcal ?: 0.0) + FoodSettings.burnedFor(context, d.toString(), stepsByDay[d.toString()] ?: 0, bodyKg).kcal
             if (budget <= 0) 0f else ((byDay[d.toString()]?.sumOf { it.kcal } ?: 0.0) / budget).toFloat()
         }
     }
@@ -270,15 +287,50 @@ fun FoodScreen(vm: FoodViewModel = viewModel(), x: FoodExtrasViewModel = viewMod
     }
 
     if (askBurned) {
-        var text by remember { mutableStateOf(if (burned > 0) burned.toString() else "") }
+        val day = date.toString()
+        var text by remember { mutableStateOf(FoodSettings.burnedKcal(context, day).let { if (it > 0) it.toString() else "" }) }
+        var auto by remember { mutableStateOf(FoodSettings.autoBurned(context)) }
+        var allowed by remember { mutableStateOf<Boolean?>(null) }
+        val scope = rememberCoroutineScope()
+        val hcAvailable = remember { HealthConnectSync.status(context) == HealthConnectClient.SDK_AVAILABLE }
+        val ask = rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) { granted ->
+            allowed = HealthConnectSync.CALORIES_PERMISSION in granted
+            if (allowed == true) scope.launch { HealthConnectSync.sync(context) }
+        }
+        LaunchedEffect(Unit) { allowed = hcAvailable && HealthConnectSync.CALORIES_PERMISSION in HealthConnectSync.granted(context) }
+        val ink2 = LocalPaper.current.ink2
         PaperDialog(
             title = "Calories burned",
             onDismiss = { askBurned = false },
             confirmText = "Save",
-            onConfirm = { FoodSettings.setBurnedKcal(context, date.toString(), text.toIntOrNull() ?: 0); askBurned = false },
+            onConfirm = { FoodSettings.setBurnedKcal(context, day, text.toIntOrNull() ?: 0); askBurned = false },
         ) {
-            Text("Type what you burned on this day (a watch or an app tells you). It is added to that day's calories.", fontSize = 13.sp, color = LocalPaper.current.ink2)
+            Text("Type what you burned on this day (a watch or an app tells you). It is added to that day's calories, and a number you type always wins.", fontSize = 13.sp, color = ink2)
             PaperField(text, { text = it }, "Calories burned (kcal)", Modifier.padding(top = 8.dp), singleLine = true, keyboardOptions = DecimalKeys)
+            Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(Modifier.weight(1f)) {
+                    Text("Count what my phone measured", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = LocalPaper.current.ink)
+                    Text("Health Connect's active calories, or an estimate from your steps and weight. Applies at once.", fontSize = 12.sp, color = ink2)
+                }
+                PaperToggle(auto, { auto = it; FoodSettings.setAutoBurned(context, it) })
+            }
+            if (auto) {
+                val phone = BurnedMath.pick(0, FoodSettings.healthKcal(context, day), stepsByDay[day] ?: 0, bodyKg)
+                Text(
+                    when (phone.source) {
+                        BurnedMath.Source.HEALTH_CONNECT -> "Health Connect says ${phone.kcal} kcal for this day."
+                        BurnedMath.Source.STEPS -> "Estimated at ${phone.kcal} kcal from ${stepsByDay[day]} steps at ${Math.round(bodyKg)} kg."
+                        else -> "Nothing from your phone for this day yet."
+                    },
+                    fontSize = 12.sp, color = ink2, modifier = Modifier.padding(top = 6.dp),
+                )
+                if (hcAvailable && allowed == false) {
+                    PaperButton(
+                        "Allow Health Connect to share calories", { ask.launch(setOf(HealthConnectSync.CALORIES_PERMISSION)) },
+                        Modifier.padding(top = 6.dp), style = PaperButtonStyle.Ghost, small = true,
+                    )
+                }
+            }
         }
     }
 
