@@ -168,3 +168,21 @@ class FoodExtrasTest {
         assertTrue(DiaryMath.days(emptyList(), emptyList()).isEmpty())
     }
 }
+
+class BatchOwnFoodTest {
+    @Test
+    fun aBatchBecomesAFoodWithOneServingPerPortion() {
+        val rice = SavedMealItem("a:rice", "Rice", 300.0, 130.0, 2.7, 28.0, 0.3)
+        val chicken = SavedMealItem("a:chicken", "Chicken", 500.0, 165.0, 31.0, 0.0, 3.6)
+        val batch = BatchEntity("b", "Chicken and rice", SavedMealItems.encode(listOf(rice, chicken)), 1L, cookedGrams = 800.0, leftGrams = 800.0, portions = 4)
+        val (food, _) = BatchMath.asOwnFood(batch, id = "m:test", nowMs = 5L)
+        assertEquals("m:test", food.id)
+        assertEquals("Chicken and rice", food.name)
+        assertEquals("serving", food.portionKind)
+        // 800 g pot in 4 portions: 200 g each.
+        assertEquals(200.0, food.portionGrams, 1e-9)
+        // All the calories of the ingredients spread over 800 g: (300*1.3 + 500*1.65) / 8 per 100 g.
+        assertEquals((300 * 1.30 + 500 * 1.65) / 8, food.kcal100, 1e-6)
+        assertEquals(5L, food.createdMs)
+    }
+}

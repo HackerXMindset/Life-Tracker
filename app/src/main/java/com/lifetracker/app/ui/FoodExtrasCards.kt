@@ -861,6 +861,7 @@ private fun BatchSheet(vm: FoodViewModel, x: FoodExtrasViewModel, batch: BatchEn
     var amount by remember { mutableStateOf(foodNum(food.portionGrams.coerceAtMost(maxOf(batch.leftGrams, 1.0)))) }
     var left by remember { mutableStateOf(foodNum(batch.leftGrams)) }
     var editing by remember { mutableStateOf(false) }
+    var savedAsFood by remember { mutableStateOf(false) }
     val grams = foodParse(amount) ?: 0.0
     val k = grams / 100
 
@@ -899,6 +900,15 @@ private fun BatchSheet(vm: FoodViewModel, x: FoodExtrasViewModel, batch: BatchEn
                 )
                 PaperButton("Edit batch", { editing = true }, style = PaperButtonStyle.Ghost, small = true)
             }
+            PaperButton(
+                if (savedAsFood) "Saved in My foods" else "Save as a food",
+                { val (entity, micro) = BatchMath.asOwnFood(batch); vm.saveFood(entity, micro); savedAsFood = true },
+                Modifier.fillMaxWidth(), style = PaperButtonStyle.Ghost, small = true, enabled = !savedAsFood,
+            )
+            Text(
+                "Makes this recipe a food of your own, so you can find it by name and log a serving (" + kc(food.portionGrams) + " g) any time.",
+                fontSize = 12.sp, color = p.ink2,
+            )
             Spacer(Modifier.height(12.dp))
         }
     }
