@@ -239,6 +239,8 @@ fun AddFoodWindow(vm: FoodViewModel, startMeal: String, focus: Boolean, onClose:
     var loggingGrams by remember { mutableStateOf<Double?>(null) }
     // The amount you ate last time for each food, so adding it again starts from that.
     val lastGrams = remember(rawRecent) { rawRecent.filter { it.foodId.isNotEmpty() }.distinctBy { it.foodId }.associate { it.foodId to it.grams } }
+    // Starred and recently eaten foods come first among equally good matches.
+    val boost = remember(rawRecent, favs) { favs.map { it.foodId }.toSet() + rawRecent.take(80).map { it.foodId }.filter { it.isNotEmpty() } }
     LaunchedEffect(just) {
         if (just != null) {
             delay(7000)
@@ -396,7 +398,7 @@ fun AddFoodWindow(vm: FoodViewModel, startMeal: String, focus: Boolean, onClose:
                     if (favs.isEmpty()) Text("Open a food and tap the star to keep it here.", color = p.ink2, fontSize = 13.sp)
                 }
                 cat != null -> {
-                    val list = lib.search(q, cat, limit + 1)
+                    val list = lib.search(q, cat, limit + 1, boost)
                     Section(null, list.take(limit).map { libCell(it, lib) })
                     more = list.size > limit
                 }
@@ -431,7 +433,7 @@ fun AddFoodWindow(vm: FoodViewModel, startMeal: String, focus: Boolean, onClose:
                 }
                 else -> {
                     Section("My foods", FoodLogic.searchOwn(own, q, limit = 12).map { ownCell(it) })
-                    val list = lib.search(q, null, limit + 1)
+                    val list = lib.search(q, null, limit + 1, boost)
                     Section("Foods", list.take(limit).map { libCell(it, lib) })
                     more = list.size > limit
                     Section("Ready dishes", lib.searchDishes(q).take(6).map { dishCell(it, lib) })
