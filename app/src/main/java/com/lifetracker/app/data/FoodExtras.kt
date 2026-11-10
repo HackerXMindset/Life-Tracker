@@ -313,6 +313,33 @@ enum class FoodPart(val id: String, val title: String, val hint: String, val onB
     TRACKERS("trackers", "Custom trackers", "Count anything with one tap, such as a headache or a cup of tea, and the Diary timeline", false),
 }
 
+/** The two stacks of parts on the Food tab and how a saved order is applied to them. */
+object FoodPartOrder {
+    /** Above the "Details" heading, in the order they come in until you move them. */
+    val TOP = listOf(FoodPart.FASTING, FoodPart.WATER, FoodPart.SHAKE, FoodPart.SUPPLEMENTS, FoodPart.TRACKERS, FoodPart.PREP, FoodPart.PLANS)
+
+    /** Under the "Details" heading. */
+    val DETAILS = listOf(FoodPart.EXTRAS, FoodPart.VITAMINS, FoodPart.QUALITY, FoodPart.FATS, FoodPart.WEEK, FoodPart.WEIGHT)
+
+    /** [parts] in the order of [saved] (ids); a part that is not in [saved] keeps its place among the others at the end. */
+    fun sorted(saved: List<String>, parts: List<FoodPart>): List<FoodPart> {
+        val rank = saved.withIndex().associate { it.value to it.index }
+        return parts.withIndex().sortedWith(compareBy({ rank[it.value.id] ?: Int.MAX_VALUE }, { it.index })).map { it.value }
+    }
+
+    /** [saved] after [part] moves [delta] places inside [parts] (-1 up, 1 down); unchanged when it is already at that end. */
+    fun move(saved: List<String>, parts: List<FoodPart>, part: FoodPart, delta: Int): List<String> {
+        val list = sorted(saved, parts).toMutableList()
+        val i = list.indexOf(part)
+        val j = i + delta
+        if (i < 0 || j !in list.indices) return saved
+        val other = list[j]
+        list[j] = list[i]
+        list[i] = other
+        return saved.filter { id -> parts.none { it.id == id } } + list.map { it.id }
+    }
+}
+
 /** Choices for the Food tab, kept on the phone and saved in the backup with every other setting. */
 object FoodSettings {
     private const val FILE = "food_tracking"
@@ -331,6 +358,16 @@ object FoodSettings {
 
     fun setOn(context: Context, part: FoodPart, on: Boolean) {
         prefs(context).edit { putBoolean("on_" + part.id, on) }
+        changed()
+    }
+
+    /** The order you put the parts in, as part ids (parts you never moved are not in it). */
+    fun order(context: Context): List<String> = (prefs(context).getString("order", "") ?: "").split(',').filter { it.isNotBlank() }
+
+    /** Moves [part] one place up (-1) or down (1) inside its stack [parts]. */
+    fun move(context: Context, parts: List<FoodPart>, part: FoodPart, delta: Int) {
+        val next = FoodPartOrder.move(order(context), parts, part, delta)
+        prefs(context).edit { putString("order", next.joinToString(",")) }
         changed()
     }
 

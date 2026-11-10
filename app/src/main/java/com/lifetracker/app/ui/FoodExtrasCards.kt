@@ -57,6 +57,7 @@ import com.lifetracker.app.data.MealEntity
 import com.lifetracker.app.data.MealPlanEntity
 import com.lifetracker.app.data.NutrientValues
 import com.lifetracker.app.data.PlanMath
+import com.lifetracker.app.data.FoodPartOrder
 import com.lifetracker.app.data.QualityMath
 import com.lifetracker.app.data.SavedMealItem
 import com.lifetracker.app.data.SupplementEntity
@@ -88,17 +89,25 @@ fun TrackersSheet(onDismiss: () -> Unit) {
     val tick by FoodSettings.changes.collectAsState()
     PaperSheet(onDismiss = onDismiss) {
         SheetBody {
-            SheetTitle("What to show", "Switch parts of the Food tab on or off. Nothing you logged is deleted.")
-            FoodPart.entries.forEach { part ->
-                val on = remember(tick) { FoodSettings.isOn(context, part) }
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(part.title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = p.ink)
-                        Text(part.hint, fontSize = 12.sp, color = p.ink2)
+            SheetTitle("What to show", "Switch parts of the Food tab on or off, and move them up or down. Nothing you logged is deleted.")
+            val order = remember(tick) { FoodSettings.order(context) }
+            listOf("Above the details" to FoodPartOrder.TOP, "Details" to FoodPartOrder.DETAILS).forEach { (heading, group) ->
+                MonoLabel(heading)
+                val sorted = FoodPartOrder.sorted(order, group)
+                sorted.forEachIndexed { index, part ->
+                    val on = remember(tick) { FoodSettings.isOn(context, part) }
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(part.title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = p.ink)
+                            Text(part.hint, fontSize = 12.sp, color = p.ink2)
+                        }
+                        PaperButton("Up", { FoodSettings.move(context, group, part, -1) }, style = PaperButtonStyle.Ghost, small = true, enabled = index > 0)
+                        PaperButton("Down", { FoodSettings.move(context, group, part, 1) }, style = PaperButtonStyle.Ghost, small = true, enabled = index < sorted.lastIndex)
+                        PaperToggle(on, { FoodSettings.setOn(context, part, it) })
                     }
-                    PaperToggle(on, { FoodSettings.setOn(context, part, it) })
                 }
             }
+            Text("Water and Protein shake share one row, which sits where the higher of the two is.", fontSize = 12.sp, color = p.ink2)
             Spacer(Modifier.height(12.dp))
         }
     }

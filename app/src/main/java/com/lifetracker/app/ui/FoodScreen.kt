@@ -49,6 +49,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lifetracker.app.R
 import com.lifetracker.app.data.FoodLogic
 import com.lifetracker.app.data.FoodPart
+import com.lifetracker.app.data.FoodPartOrder
 import com.lifetracker.app.data.FoodSettings
 import com.lifetracker.app.data.FoodRef
 import com.lifetracker.app.data.FoodStats
@@ -121,6 +122,7 @@ fun FoodScreen(vm: FoodViewModel = viewModel(), x: FoodExtrasViewModel = viewMod
     val weekMeals by x.weekMeals.collectAsState()
     val allGoals by x.goals.collectAsState()
     val shown = remember(tick) { FoodPart.entries.associateWith { FoodSettings.isOn(context, it) } }
+    val order = remember(tick) { FoodSettings.order(context) }
     LaunchedEffect(date) { x.setDay(date) }
     val tapped = if (shown[FoodPart.TRACKERS] == true) eventDays else emptySet()
 
@@ -221,34 +223,49 @@ fun FoodScreen(vm: FoodViewModel = viewModel(), x: FoodExtrasViewModel = viewMod
                     onEntry = { sheet = Sheet.Entry(it) },
                 )
             }
-            if (shown[FoodPart.FASTING] == true) item { FastingCard(x) }
-            if (shown[FoodPart.WATER] == true || shown[FoodPart.SHAKE] == true) item {
-                val waterTile: (@Composable (Modifier) -> Unit)? =
-                    if (shown[FoodPart.WATER] == true) { m -> WaterTile(water, onAdd = vm::addWater, modifier = m) } else null
-                val shakeTile: (@Composable (Modifier) -> Unit)? =
-                    if (shown[FoodPart.SHAKE] == true) { m -> ShakeCard(vm, openMeal, totals.protein, goal?.protein, modifier = m) } else null
-                TilePair(waterTile, shakeTile)
+            var pairDone = false
+            FoodPartOrder.sorted(order, FoodPartOrder.TOP).forEach { part ->
+                when (part) {
+                    FoodPart.FASTING -> if (shown[part] == true) item { FastingCard(x) }
+                    // Water and the shake share one row, which sits where the higher of the two is.
+                    FoodPart.WATER, FoodPart.SHAKE -> if (!pairDone && (shown[FoodPart.WATER] == true || shown[FoodPart.SHAKE] == true)) {
+                        pairDone = true
+                        item {
+                            val waterTile: (@Composable (Modifier) -> Unit)? =
+                                if (shown[FoodPart.WATER] == true) { m -> WaterTile(water, onAdd = vm::addWater, modifier = m) } else null
+                            val shakeTile: (@Composable (Modifier) -> Unit)? =
+                                if (shown[FoodPart.SHAKE] == true) { m -> ShakeCard(vm, openMeal, totals.protein, goal?.protein, modifier = m) } else null
+                            TilePair(waterTile, shakeTile)
+                        }
+                    }
+                    FoodPart.SUPPLEMENTS -> if (shown[part] == true) item { SupplementsCard(x, date) }
+                    FoodPart.TRACKERS -> if (shown[part] == true) item { TrackersCard(x, date) }
+                    FoodPart.PREP -> if (shown[part] == true) item { Spacer(Modifier.height(6.dp)); PrepCard(vm, x, openMeal) }
+                    FoodPart.PLANS -> if (shown[part] == true) item { Spacer(Modifier.height(6.dp)); PlansCard(vm, x, date, meals) }
+                    else -> Unit
+                }
             }
-            if (shown[FoodPart.SUPPLEMENTS] == true) item { SupplementsCard(x, date) }
-            if (shown[FoodPart.TRACKERS] == true) item { TrackersCard(x, date) }
-            if (shown[FoodPart.PREP] == true) item { Spacer(Modifier.height(6.dp)); PrepCard(vm, x, openMeal) }
-            if (shown[FoodPart.PLANS] == true) item { Spacer(Modifier.height(6.dp)); PlansCard(vm, x, date, meals) }
 
             item { Spacer(Modifier.height(6.dp)); SectionHeading("Details") }
-            if (shown[FoodPart.EXTRAS] == true) item { DetailGrid(totals.protein, QualityMath.animalShare(meals), extras.fiber, extras.sugar, extras.sodiumMg) }
-            if (shown[FoodPart.VITAMINS] == true) item {
-                val dayTotals = NutrientMath.dayTotals(meals)
-                VitaminsCard(
-                    nutrients = nutrients.filter { !it.hidden },
-                    totals = dayTotals,
-                    anyMeals = meals.isNotEmpty(),
-                    anyMissing = meals.any { NutrientMath.isMissing(it) },
-                )
+            FoodPartOrder.sorted(order, FoodPartOrder.DETAILS).forEach { part ->
+                when (part) {
+                    FoodPart.EXTRAS -> if (shown[part] == true) item { DetailGrid(totals.protein, QualityMath.animalShare(meals), extras.fiber, extras.sugar, extras.sodiumMg) }
+                    FoodPart.VITAMINS -> if (shown[part] == true) item {
+                        val dayTotals = NutrientMath.dayTotals(meals)
+                        VitaminsCard(
+                            nutrients = nutrients.filter { !it.hidden },
+                            totals = dayTotals,
+                            anyMeals = meals.isNotEmpty(),
+                            anyMissing = meals.any { NutrientMath.isMissing(it) },
+                        )
+                    }
+                    FoodPart.QUALITY -> if (shown[part] == true) item { QualityCard(meals, weights.lastOrNull()?.kg ?: 70.0) }
+                    FoodPart.FATS -> if (shown[part] == true) item { FatsCard(meals, goal) }
+                    FoodPart.WEEK -> if (shown[part] == true) item { WeekCard(x, date, onOpen = { sheet = Sheet.Week }) }
+                    FoodPart.WEIGHT -> if (shown[part] == true) item { WeightCard(x, date) }
+                    else -> Unit
+                }
             }
-            if (shown[FoodPart.QUALITY] == true) item { QualityCard(meals, weights.lastOrNull()?.kg ?: 70.0) }
-            if (shown[FoodPart.FATS] == true) item { FatsCard(meals, goal) }
-            if (shown[FoodPart.WEEK] == true) item { WeekCard(x, date, onOpen = { sheet = Sheet.Week }) }
-            if (shown[FoodPart.WEIGHT] == true) item { WeightCard(x, date) }
         }
     }
 
