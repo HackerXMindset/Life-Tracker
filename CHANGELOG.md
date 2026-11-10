@@ -2,6 +2,14 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧺 Add food: add several foods at once
+
+### ✨ New
+
+- **Add several** switch under the Photo, Barcode and Label row. While it is on, tapping a quick pick puts it on a **To log** list at the amount you ate last time, and opening any other food asks only for the amount (no meal or time) and has **Put on the list**. Tap a row on the list to change its amount, or **Remove** it.
+- **Add N foods to lunch** puts everything on the list into the day in one go, with the same time, and the bar at the top has **Undo** for the whole batch.
+- Pressing Close with foods still on the list asks **Leave without adding?**, so nothing is lost by accident.
+
 ## 🔎 Add food: search that knows other names
 
 ### ✨ New

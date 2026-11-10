@@ -27,6 +27,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -75,6 +76,7 @@ import com.lifetracker.app.ui.theme.PaperSheet
 import com.lifetracker.app.ui.theme.PaperToggle
 import java.time.LocalDate
 import java.time.LocalTime
+import java.util.UUID
 import kotlinx.coroutines.delay
 
 internal fun kc(v: Double): String = Math.round(v).toString()
@@ -174,8 +176,13 @@ private enum class Shelf { All, Dishes, Mine, Stars }
 /** A food offered on the front of Add food with the amount one tap would add. */
 private class Pick(val food: Loggable, val grams: Double)
 
-/** What the "Added" bar is about, so it can take the meal back or reopen it with the amount to change. */
-private class JustAdded(val id: String, val food: Loggable, val grams: Double, val meal: String)
+/** What the "Added" bar is about, so it can take the meals back, or (for one food) reopen it with the amount to change. */
+private class JustAdded(val ids: List<String>, val text: String, val food: Loggable? = null, val grams: Double = 0.0)
+
+/** A food on the "To log" list of Add several mode. */
+private class TrayItem(val key: String, val food: Loggable, val grams: Double) {
+    val kcal: Double get() = food.per100.kcal * grams / 100
+}
 
 private class Cell(
     val key: String,
@@ -236,6 +243,10 @@ fun AddFoodWindow(vm: FoodViewModel, startMeal: String, focus: Boolean, onClose:
     var browse by remember { mutableStateOf(false) }
     var quick by remember { mutableStateOf(false) }
     var just by remember { mutableStateOf<JustAdded?>(null) }
+    var several by remember { mutableStateOf(false) }
+    val tray = remember { mutableStateListOf<TrayItem>() }
+    var trayEdit by remember { mutableStateOf<TrayItem?>(null) }
+    var confirmLeave by remember { mutableStateOf(false) }
     var loggingGrams by remember { mutableStateOf<Double?>(null) }
     // The amount you ate last time for each food, so adding it again starts from that.
     val lastGrams = remember(rawRecent) { rawRecent.filter { it.foodId.isNotEmpty() }.distinctBy { it.foodId }.associate { it.foodId to it.grams } }
@@ -260,7 +271,26 @@ fun AddFoodWindow(vm: FoodViewModel, startMeal: String, focus: Boolean, onClose:
         val id = FoodLogic.newMealId()
         vm.logFood(food, grams, startMeal, day, minute, id)
         added += 1
-        just = JustAdded(id, food, grams, startMeal)
+        just = JustAdded(
+            listOf(id), "Added " + food.name + ", " + kc(food.per100.kcal * grams / 100) + " kcal, to " + mealTypeLabel(startMeal), food, grams,
+        )
+    }
+
+    /** One tap on a quick pick: on the list in Add several mode, otherwise straight into the day. */
+    fun pick(food: Loggable, grams: Double) {
+        if (several) tray.add(TrayItem(UUID.randomUUID().toString(), food, grams)) else addNow(food, grams)
+    }
+
+    fun logTray() {
+        if (tray.isEmpty()) return
+        val minute = FoodLogic.minuteFor(startMeal, day == LocalDate.now(), minuteNow())
+        val items = tray.toList()
+        val ids = items.map { item -> FoodLogic.newMealId().also { id -> vm.logFood(item.food, item.grams, startMeal, day, minute, id) } }
+        added += items.size
+        just = JustAdded(
+            ids, "Added " + (if (items.size == 1) "1 food" else "${items.size} foods") + ", " + kc(items.sumOf { it.kcal }) + " kcal, to " + mealTypeLabel(startMeal),
+        )
+        tray.clear()
     }
 
     fun libCell(f: LibraryFood, lib: FoodLibraryData) = Cell(
@@ -282,7 +312,7 @@ fun AddFoodWindow(vm: FoodViewModel, startMeal: String, focus: Boolean, onClose:
     EditWindow(
         title = "Add food",
         sub = "To ${mealTypeLabel(startMeal)}" + if (added > 0) " · $added added" else "",
-        onClose = onClose,
+        onClose = { if (tray.isNotEmpty()) confirmLeave = true else onClose() },
     ) {
         LaunchedEffect(Unit) { if (focus) runCatching { focusRequester.requestFocus() } }
 
@@ -323,21 +353,44 @@ fun AddFoodWindow(vm: FoodViewModel, startMeal: String, focus: Boolean, onClose:
         just?.let { j ->
             PaperCard(modifier = Modifier.fillMaxWidth(), padding = 12.dp, shadow = false) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        "Added " + j.food.name + ", " + kc(j.food.per100.kcal * j.grams / 100) + " kcal, to " + mealTypeLabel(j.meal),
-                        fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = p.ink,
-                    )
+                    Text(j.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = p.ink)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         PaperButton(
-                            "Undo", { vm.undoMeal(j.id); added = maxOf(0, added - 1); just = null },
+                            "Undo", { j.ids.forEach { vm.undoMeal(it) }; added = maxOf(0, added - j.ids.size); just = null },
                             Modifier.weight(1f), style = PaperButtonStyle.Ghost, small = true,
                         )
-                        PaperButton(
-                            "Change amount",
-                            { vm.undoMeal(j.id); added = maxOf(0, added - 1); just = null; loggingGrams = j.grams; logging = j.food },
-                            Modifier.weight(1f), style = PaperButtonStyle.Ghost, small = true,
-                        )
+                        if (j.food != null) {
+                            PaperButton(
+                                "Change amount",
+                                { j.ids.forEach { vm.undoMeal(it) }; added = maxOf(0, added - j.ids.size); just = null; loggingGrams = j.grams; logging = j.food },
+                                Modifier.weight(1f), style = PaperButtonStyle.Ghost, small = true,
+                            )
+                        }
                     }
+                }
+            }
+        }
+
+        if (tray.isNotEmpty()) {
+            PaperCard(modifier = Modifier.fillMaxWidth(), padding = 12.dp, shadow = false) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    MonoLabel("To log · " + tray.size + " · " + kc(tray.sumOf { it.kcal }) + " kcal")
+                    tray.toList().forEach { item ->
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Column(Modifier.weight(1f).clip(RoundedCornerShape(8.dp)).clickable { trayEdit = item }.padding(vertical = 4.dp)) {
+                                Text(item.food.name, fontSize = 14.sp, color = p.ink, maxLines = 1)
+                                Text(kc(item.grams) + " " + item.food.unit + " · " + kc(item.kcal) + " kcal. Tap to change.", fontSize = 12.sp, color = p.ink2)
+                            }
+                            Text(
+                                "Remove", fontSize = 12.sp, color = p.ink2,
+                                modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable { tray.remove(item) }.padding(6.dp),
+                            )
+                        }
+                    }
+                    PaperButton(
+                        "Add " + (if (tray.size == 1) "1 food" else "${tray.size} foods") + " to " + mealTypeLabel(startMeal),
+                        { logTray() }, Modifier.fillMaxWidth(), icon = R.drawable.ic_p_plus,
+                    )
                 }
             }
         }
@@ -349,6 +402,17 @@ fun AddFoodWindow(vm: FoodViewModel, startMeal: String, focus: Boolean, onClose:
                 PaperButton("Describe it with AI", { check = CheckSource.Text(query.trim()) }, Modifier.weight(1f), style = PaperButtonStyle.Ghost, small = true)
                 PaperButton("Just calories", { quick = true }, Modifier.weight(1f), style = PaperButtonStyle.Ghost, small = true)
             }
+        }
+
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(Modifier.weight(1f)) {
+                Text("Add several", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = p.ink)
+                Text(
+                    if (several) "Foods go on a list first, then you add them all at once." else "Each food is added as soon as you tap it.",
+                    fontSize = 12.sp, color = p.ink2,
+                )
+            }
+            PaperToggle(several, { several = it })
         }
 
         Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -416,7 +480,7 @@ fun AddFoodWindow(vm: FoodViewModel, startMeal: String, focus: Boolean, onClose:
                                 "q:" + food.ref + food.name, food.name,
                                 kc(food.per100.kcal * pick.grams / 100) + " kcal · " + kc(pick.grams) + " " + food.unit,
                                 listOf(food.photoAsset to food.name), food.ref in starred,
-                            ) { addNow(food, pick.grams) }
+                            ) { pick(food, pick.grams) }
                         },
                     )
                     if (browse) {
@@ -467,7 +531,31 @@ fun AddFoodWindow(vm: FoodViewModel, startMeal: String, focus: Boolean, onClose:
         LogFoodSheet(
             vm = vm, food = food, startMeal = startMeal, startGrams = loggingGrams ?: lastGrams[food.ref],
             onDone = { logging = null; loggingGrams = null; added += 1 }, onDismiss = { logging = null; loggingGrams = null },
+            onPick = if (several) ({ g: Double -> tray.add(TrayItem(UUID.randomUUID().toString(), food, g)); logging = null; loggingGrams = null }) else null,
         )
+    }
+    trayEdit?.let { item ->
+        LogFoodSheet(
+            vm = vm, food = item.food, startMeal = startMeal, startGrams = item.grams,
+            onDone = { trayEdit = null }, onDismiss = { trayEdit = null },
+            onPick = { g ->
+                val at = tray.indexOfFirst { it.key == item.key }
+                if (at >= 0) tray[at] = TrayItem(item.key, item.food, g)
+                trayEdit = null
+            },
+        )
+    }
+    if (confirmLeave) {
+        PaperDialog(
+            title = "Leave without adding?",
+            onDismiss = { confirmLeave = false },
+            confirmText = "Leave",
+            confirmStyle = PaperButtonStyle.Danger,
+            dismissText = "Stay",
+            onConfirm = { confirmLeave = false; tray.clear(); onClose() },
+        ) {
+            Text("The " + (if (tray.size == 1) "food" else "${tray.size} foods") + " on your list have not been added to the day.", color = p.ink)
+        }
     }
     dish?.let { d ->
         if (lib != null) {
@@ -552,7 +640,11 @@ private fun DishSheet(
 // ---- logging one food ----
 
 @Composable
-fun LogFoodSheet(vm: FoodViewModel, food: Loggable, startMeal: String, onDone: () -> Unit, onDismiss: () -> Unit, startGrams: Double? = null) {
+fun LogFoodSheet(
+    vm: FoodViewModel, food: Loggable, startMeal: String, onDone: () -> Unit, onDismiss: () -> Unit, startGrams: Double? = null,
+    /** In Add several mode: the amount goes on the list instead of into the day, so the meal and time are not asked. */
+    onPick: ((Double) -> Unit)? = null,
+) {
     val p = LocalPaper.current
     val library by vm.library.collectAsState()
     val date by vm.date.collectAsState()
@@ -656,13 +748,15 @@ fun LogFoodSheet(vm: FoodViewModel, food: Loggable, startMeal: String, onDone: (
                 }
             }
 
-            MealPills(meal) { t ->
-                meal = t
-                if (!touched) minute = FoodLogic.minuteFor(t, today, minuteNow())
-            }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Time", fontSize = 13.sp, color = p.ink2)
-                TimeButton(minute, { minute = it; touched = true })
+            if (onPick == null) {
+                MealPills(meal) { t ->
+                    meal = t
+                    if (!touched) minute = FoodLogic.minuteFor(t, today, minuteNow())
+                }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Time", fontSize = 13.sp, color = p.ink2)
+                    TimeButton(minute, { minute = it; touched = true })
+                }
             }
 
             val vitamins = shown.micro.mapValues { it.value * k }
@@ -680,7 +774,8 @@ fun LogFoodSheet(vm: FoodViewModel, food: Loggable, startMeal: String, onDone: (
             }
 
             PaperButton(
-                "Add to $meal", onClick = { vm.logFood(shown, grams, meal, date, minute); onDone() },
+                if (onPick != null) "Put on the list" else "Add to $meal",
+                onClick = { if (onPick != null) onPick(grams) else { vm.logFood(shown, grams, meal, date, minute); onDone() } },
                 modifier = Modifier.fillMaxWidth(), enabled = grams > 0, icon = R.drawable.ic_p_plus,
             )
             Spacer(Modifier.height(12.dp))
