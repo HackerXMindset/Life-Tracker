@@ -2,6 +2,14 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🥦 Vitamin watch
+
+### ✨ New
+
+- **Vitamin watch** card for the Food tab. It is **off until you switch it on** in **What to show**. Pick the vitamins and minerals you care about (**Choose**), and it shows their average over the last 7 days (not counting today) against your daily targets.
+- A nutrient is called **Low** when its average is under 70% of the target, and only once at least 4 of those days have foods with vitamin numbers. A low one lists the three foods in the library with the most of it (spices, oils, sauces and pantry items are left out).
+- Days where no food had vitamin numbers are left out of the average, and the card says how many of the library's foods have vitamin numbers, so a low result can be missing data rather than a real gap.
+
 ## 🔔 Meal and water reminders
 
 ### ✨ New

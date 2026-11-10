@@ -309,6 +309,7 @@ enum class FoodPart(val id: String, val title: String, val hint: String, val onB
     PLANS("plans", "Meal plans", "A day of meals to log with one tap", true),
     QUALITY("quality", "Protein quality", "Animal and plant protein, and the essential amino acids", false),
     FATS("fats", "Types of fat", "Saturated, mono- and polyunsaturated fat", false),
+    WATCH("watch", "Vitamin watch", "Tells you when a vitamin or mineral you picked ran low over the last week", false),
     FASTING("fasting", "Fasting", "A timer for intermittent fasting", false),
     TRACKERS("trackers", "Custom trackers", "Count anything with one tap, such as a headache or a cup of tea, and the Diary timeline", false),
 }
@@ -319,7 +320,7 @@ object FoodPartOrder {
     val TOP = listOf(FoodPart.FASTING, FoodPart.WATER, FoodPart.SHAKE, FoodPart.SUPPLEMENTS, FoodPart.TRACKERS, FoodPart.PREP, FoodPart.PLANS)
 
     /** Under the "Details" heading. */
-    val DETAILS = listOf(FoodPart.EXTRAS, FoodPart.VITAMINS, FoodPart.QUALITY, FoodPart.FATS, FoodPart.WEEK, FoodPart.WEIGHT)
+    val DETAILS = listOf(FoodPart.EXTRAS, FoodPart.VITAMINS, FoodPart.WATCH, FoodPart.QUALITY, FoodPart.FATS, FoodPart.WEEK, FoodPart.WEIGHT)
 
     /** [parts] in the order of [saved] (ids); a part that is not in [saved] keeps its place among the others at the end. */
     fun sorted(saved: List<String>, parts: List<FoodPart>): List<FoodPart> {
@@ -376,6 +377,16 @@ object FoodSettings {
 
     fun setBurnedKcal(context: Context, date: String, kcal: Int) {
         prefs(context).edit { if (kcal <= 0) remove("burned_$date") else putInt("burned_$date", kcal.coerceAtMost(20_000)) }
+        changed()
+    }
+
+    /** The nutrients the vitamin watch keeps an eye on (ids from the nutrient list). */
+    fun watchIds(context: Context): Set<String> = prefs(context).getStringSet("watch_ids", emptySet()) ?: emptySet()
+
+    fun setWatch(context: Context, id: String, on: Boolean) {
+        val all = watchIds(context).toMutableSet()
+        if (on) all += id else all -= id
+        prefs(context).edit { putStringSet("watch_ids", all) }
         changed()
     }
 
