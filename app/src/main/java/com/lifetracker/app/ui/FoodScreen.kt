@@ -276,6 +276,7 @@ fun FoodScreen(vm: FoodViewModel = viewModel(), x: FoodExtrasViewModel = viewMod
                             anyMissing = meals.any { NutrientMath.isMissing(it) },
                         )
                     }
+                    FoodPart.WATCH -> if (shown[part] == true) item { NutrientWatchCard(nutrients.filter { !it.hidden }, library) }
                     FoodPart.QUALITY -> if (shown[part] == true) item { QualityCard(meals, weights.lastOrNull()?.kg ?: 70.0) }
                     FoodPart.FATS -> if (shown[part] == true) item { FatsCard(meals, goal) }
                     FoodPart.WEEK -> if (shown[part] == true) item { WeekCard(x, date, onOpen = { sheet = Sheet.Week }) }
@@ -742,7 +743,7 @@ private fun VitaminsCard(
     }
 }
 
-private fun amountShort(v: Double): String = when {
+internal fun amountShort(v: Double): String = when {
     v >= 100 -> Math.round(v).toString()
     v >= 10 -> (Math.round(v * 10) / 10.0).toString().removeSuffix(".0")
     else -> (Math.round(v * 100) / 100.0).toString().removeSuffix(".0")
