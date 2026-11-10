@@ -379,6 +379,53 @@ object FoodSettings {
         changed()
     }
 
+    /** Lets the screens look again after something changed outside them (a reminder button, say). */
+    fun touch() = changed()
+
+    /** Meal reminders: off until you switch them on; each meal has its own time and can be left out. */
+    fun mealReminders(context: Context): Boolean = prefs(context).getBoolean("meal_reminders", false)
+
+    fun setMealReminders(context: Context, on: Boolean) {
+        prefs(context).edit { putBoolean("meal_reminders", on) }
+        changed()
+    }
+
+    fun mealRemindOn(context: Context, meal: String): Boolean = prefs(context).getBoolean("remind_on_$meal", true)
+
+    fun setMealRemindOn(context: Context, meal: String, on: Boolean) {
+        prefs(context).edit { putBoolean("remind_on_$meal", on) }
+        changed()
+    }
+
+    fun mealMinute(context: Context, meal: String): Int = prefs(context).getInt("remind_at_$meal", FoodReminderRules.defaultMinute(meal))
+
+    fun setMealMinute(context: Context, meal: String, minute: Int) {
+        prefs(context).edit { putInt("remind_at_$meal", minute.coerceIn(0, 1439)) }
+        changed()
+    }
+
+    /** Water reminders: off until you switch them on; they ring every [WaterWindow.interval] minutes between [WaterWindow.start] and [WaterWindow.end]. */
+    class WaterWindow(val start: Int, val end: Int, val interval: Int)
+
+    fun waterReminders(context: Context): Boolean = prefs(context).getBoolean("water_reminders", false)
+
+    fun setWaterReminders(context: Context, on: Boolean) {
+        prefs(context).edit { putBoolean("water_reminders", on) }
+        changed()
+    }
+
+    fun waterWindow(context: Context): WaterWindow {
+        val p = prefs(context)
+        val start = p.getInt("water_from", 8 * 60).coerceIn(0, 1379)
+        val end = p.getInt("water_to", 22 * 60).coerceIn(start + 60, 1439)
+        return WaterWindow(start, end, p.getInt("water_every", 120).coerceIn(30, 360))
+    }
+
+    fun setWaterWindow(context: Context, start: Int, end: Int, interval: Int) {
+        prefs(context).edit { putInt("water_from", start.coerceIn(0, 1379)); putInt("water_to", end.coerceIn(60, 1439)); putInt("water_every", interval.coerceIn(30, 360)) }
+        changed()
+    }
+
     /** Whether the calories burned on a day also come from Health Connect, or from your steps when it has none (off until you switch it on). */
     fun autoBurned(context: Context): Boolean = prefs(context).getBoolean("auto_burned", false)
 
