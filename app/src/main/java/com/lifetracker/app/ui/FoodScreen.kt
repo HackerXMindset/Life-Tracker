@@ -99,6 +99,7 @@ private sealed interface Sheet {
     data object Goals : Sheet
     data object Trackers : Sheet
     data object Diary : Sheet
+    data object Week : Sheet
 }
 
 @Composable
@@ -246,7 +247,7 @@ fun FoodScreen(vm: FoodViewModel = viewModel(), x: FoodExtrasViewModel = viewMod
             }
             if (shown[FoodPart.QUALITY] == true) item { QualityCard(meals, weights.lastOrNull()?.kg ?: 70.0) }
             if (shown[FoodPart.FATS] == true) item { FatsCard(meals, goal) }
-            if (shown[FoodPart.WEEK] == true) item { WeekCard(x, date) }
+            if (shown[FoodPart.WEEK] == true) item { WeekCard(x, date, onOpen = { sheet = Sheet.Week }) }
             if (shown[FoodPart.WEIGHT] == true) item { WeightCard(x, date) }
         }
     }
@@ -282,6 +283,7 @@ fun FoodScreen(vm: FoodViewModel = viewModel(), x: FoodExtrasViewModel = viewMod
         Sheet.Goals -> GoalsSheet(vm = vm, onDismiss = { sheet = null })
         Sheet.Trackers -> TrackersSheet(onDismiss = { sheet = null })
         Sheet.Diary -> FoodDiaryWindow(x, onPickDay = { vm.select(it) }, onClose = { sheet = null })
+        Sheet.Week -> WeekWindow(x, date, onShiftWeek = { vm.shift(it.toLong()) }, onPickDay = { vm.select(it) }, onClose = { sheet = null })
     }
 }
 

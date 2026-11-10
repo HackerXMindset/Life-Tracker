@@ -2,6 +2,13 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📅 The week window and weekly report
+
+### ✨ New
+
+- **Tap "This week"** on the Food tab to open the week: average calories and protein, days on target, days the protein goal was reached, the day closest to and furthest from your calorie goal, the five foods you ate most, and how your weight moved (when you weighed in at least twice).
+- Under that, **every day of the week** with its calories, protein and what you ate at each meal. Tap a day to open it. **Earlier week** and **Later week** move through the weeks.
+
 ## 🧺 Add food: add several foods at once
 
 ### ✨ New
