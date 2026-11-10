@@ -620,6 +620,21 @@ object BatchMath {
         )
     }
 
+    /**
+     * The batch as a food of your own, so it turns up in search and quick picks like any other: numbers per 100 g of what the pot
+     * weighs, one "serving" being a share of the pot ([BatchEntity.portions]). Also returns its vitamin numbers, by nutrient id.
+     */
+    fun asOwnFood(b: BatchEntity, id: String = FoodLogic.newFoodId(), nowMs: Long = System.currentTimeMillis()): Pair<FoodEntity, Map<String, Double>> {
+        val f = asFood(b)
+        val per = f.per100
+        val entity = FoodEntity(
+            id = id, name = b.name, kcal100 = per.kcal, protein100 = per.protein, carbs100 = per.carbs, fat100 = per.fat,
+            fiber100 = per.fiber, sugar100 = per.sugar, sodium100 = per.sodiumMg, sat100 = per.sat, mono100 = per.mono, poly100 = per.poly,
+            animal100 = per.animalProtein, portionKind = PortionKind.Serving.key, portionGrams = f.portionGrams, createdMs = nowMs,
+        )
+        return entity to f.micro
+    }
+
     fun kcalTotal(b: BatchEntity): Double = SavedMealItems.decode(b.items).sumOf { it.kcal }
 
     fun finished(b: BatchEntity): Boolean = b.leftGrams <= 0.5

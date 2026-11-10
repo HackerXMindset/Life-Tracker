@@ -2,6 +2,12 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🍲 Recipes as foods
+
+### ✨ New
+
+- **Save as a food** in a Meal prep batch. A batch already has the ingredients, what the pot weighs once cooked and the number of portions; this button makes it a food of your own (numbers per 100 g of the cooked pot, one serving being one portion), including its vitamin numbers. It then turns up in search, My foods and quick picks like any other food.
+
 ## 🥦 Vitamin watch
 
 ### ✨ New
