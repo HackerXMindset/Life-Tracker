@@ -172,6 +172,9 @@ interface FoodDao {
     @Delete
     suspend fun deleteMeal(meal: MealEntity)
 
+    @Query("DELETE FROM meals WHERE id = :id")
+    suspend fun deleteMealById(id: String)
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertGoals(goals: List<FoodGoalEntity>)
 

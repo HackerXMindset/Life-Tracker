@@ -2,6 +2,14 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## ⚡ Add food: quick picks and one-tap adding
+
+### ✨ New
+
+- **Quick picks for lunch** (or whichever meal you are adding to) replaces "Eaten before" and "Favourites" on the front of Add food. Starred foods come first, then the foods you eat most at that meal, then the ones you eat most overall. A starred food you have never logged is still offered, at one serving.
+- **One tap adds it** with the amount you ate last time, shown under each food. A bar at the top says what was added, with **Undo** and **Change amount** (which takes the meal back and opens the amount sheet). The bar goes away by itself after a few seconds.
+- Foods you open from a search or a shelf now **start at the amount you ate last time** instead of 100 g or one serving.
+
 ## 🧭 Add food: the same screen every time
 
 ### ✨ New

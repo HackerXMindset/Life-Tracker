@@ -58,4 +58,24 @@ class FoodStatsTest {
         )
         assertEquals(listOf("2", "3"), list.map { it.id })
     }
+
+    @Test
+    fun quickPicksPutStarredFirstThenWhatYouEatAtThisMeal() {
+        val dinner = { id: String, name: String, date: String -> meal(id, name, 100.0, 100.0, date = date).copy(mealType = "dinner") }
+        val lunch = { id: String, name: String, date: String -> meal(id, name, 100.0, 100.0, date = date).copy(mealType = "lunch") }
+        val meals = listOf(
+            lunch("1", "Dal", "2026-10-01"), lunch("2", "Dal", "2026-10-02"), lunch("3", "Rice", "2026-10-03"),
+            dinner("4", "Pasta", "2026-10-04"), dinner("5", "Pasta", "2026-10-05"), dinner("6", "Pasta", "2026-10-06"),
+            lunch("7", "Salad", "2026-10-07").copy(foodId = "m:salad"),
+        )
+        // At lunch: the starred salad, then dal (twice at lunch), then rice (once), then pasta (never at lunch).
+        assertEquals(
+            listOf("Salad", "Dal", "Rice", "Pasta"),
+            FoodStats.quickPicks(meals, setOf("m:salad"), "lunch", 10).map { it.name },
+        )
+        // At dinner pasta comes first, and the newest pasta meal stands for it so its amount is the last one eaten.
+        val dinnerPicks = FoodStats.quickPicks(meals, emptySet(), "dinner", 2)
+        assertEquals(listOf("Pasta", "Dal"), dinnerPicks.map { it.name })
+        assertEquals("6", dinnerPicks.first().id)
+    }
 }

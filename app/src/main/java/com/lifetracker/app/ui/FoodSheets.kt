@@ -75,6 +75,7 @@ import com.lifetracker.app.ui.theme.PaperSheet
 import com.lifetracker.app.ui.theme.PaperToggle
 import java.time.LocalDate
 import java.time.LocalTime
+import kotlinx.coroutines.delay
 
 internal fun kc(v: Double): String = Math.round(v).toString()
 
@@ -170,6 +171,12 @@ private fun VitaminLines(nutrients: List<NutrientEntity>, amounts: Map<String, D
 
 private enum class Shelf { All, Dishes, Mine, Stars }
 
+/** A food offered on the front of Add food with the amount one tap would add. */
+private class Pick(val food: Loggable, val grams: Double)
+
+/** What the "Added" bar is about, so it can take the meal back or reopen it with the amount to change. */
+private class JustAdded(val id: String, val food: Loggable, val grams: Double, val meal: String)
+
 private class Cell(
     val key: String,
     val name: String,
@@ -215,7 +222,7 @@ fun AddFoodWindow(vm: FoodViewModel, startMeal: String, focus: Boolean, onClose:
     val library by vm.library.collectAsState()
     val own by vm.ownFoods.collectAsState()
     val favs by vm.favourites.collectAsState()
-    val recent by vm.recent.collectAsState()
+    val rawRecent by vm.recentMeals.collectAsState()
 
     var query by remember { mutableStateOf("") }
     var shelf by remember { mutableStateOf(Shelf.All) }
@@ -228,6 +235,16 @@ fun AddFoodWindow(vm: FoodViewModel, startMeal: String, focus: Boolean, onClose:
     var check by remember { mutableStateOf<CheckSource?>(null) }
     var browse by remember { mutableStateOf(false) }
     var quick by remember { mutableStateOf(false) }
+    var just by remember { mutableStateOf<JustAdded?>(null) }
+    var loggingGrams by remember { mutableStateOf<Double?>(null) }
+    // The amount you ate last time for each food, so adding it again starts from that.
+    val lastGrams = remember(rawRecent) { rawRecent.filter { it.foodId.isNotEmpty() }.distinctBy { it.foodId }.associate { it.foodId to it.grams } }
+    LaunchedEffect(just) {
+        if (just != null) {
+            delay(7000)
+            just = null
+        }
+    }
     val speak = rememberSpeak { query = it }
     val day by vm.date.collectAsState()
     val focusRequester = remember { FocusRequester() }
@@ -235,6 +252,14 @@ fun AddFoodWindow(vm: FoodViewModel, startMeal: String, focus: Boolean, onClose:
 
     val lib = library
     val starred = favs.map { it.foodId }.toSet()
+
+    fun addNow(food: Loggable, grams: Double) {
+        val minute = FoodLogic.minuteFor(startMeal, day == LocalDate.now(), minuteNow())
+        val id = FoodLogic.newMealId()
+        vm.logFood(food, grams, startMeal, day, minute, id)
+        added += 1
+        just = JustAdded(id, food, grams, startMeal)
+    }
 
     fun libCell(f: LibraryFood, lib: FoodLibraryData) = Cell(
         key = f.ref, name = f.name, sub = kc(f.per100.kcal) + " kcal", photos = listOf(f.photoAsset to f.name),
@@ -291,6 +316,28 @@ fun AddFoodWindow(vm: FoodViewModel, startMeal: String, focus: Boolean, onClose:
                 )
             }
             PaperIconButton(R.drawable.ic_p_plus, "New food", onClick = { creating = true }, modifier = Modifier.size(48.dp))
+        }
+
+        just?.let { j ->
+            PaperCard(modifier = Modifier.fillMaxWidth(), padding = 12.dp, shadow = false) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "Added " + j.food.name + ", " + kc(j.food.per100.kcal * j.grams / 100) + " kcal, to " + mealTypeLabel(j.meal),
+                        fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = p.ink,
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        PaperButton(
+                            "Undo", { vm.undoMeal(j.id); added = maxOf(0, added - 1); just = null },
+                            Modifier.weight(1f), style = PaperButtonStyle.Ghost, small = true,
+                        )
+                        PaperButton(
+                            "Change amount",
+                            { vm.undoMeal(j.id); added = maxOf(0, added - 1); just = null; loggingGrams = j.grams; logging = j.food },
+                            Modifier.weight(1f), style = PaperButtonStyle.Ghost, small = true,
+                        )
+                    }
+                }
+            }
         }
 
         AddRouteRow(onRoute = { check = it })
@@ -354,19 +401,20 @@ fun AddFoodWindow(vm: FoodViewModel, startMeal: String, focus: Boolean, onClose:
                     more = list.size > limit
                 }
                 q.isEmpty() -> {
+                    // Starred foods first, then what you eat most at this meal; one tap adds the amount you ate last time.
+                    val eaten = FoodStats.quickPicks(rawRecent, starred, startMeal, 40).map { Pick(FoodLogic.ofMeal(it, lib), it.grams) }
+                    val eatenRefs = eaten.map { it.food.ref }.toSet()
+                    val untried = favs.mapNotNull { f -> if (f.foodId in eatenRefs) null else vm.loggable(f.foodId)?.let { Pick(it, it.startAmount) } }
+                    val (starredPicks, otherPicks) = eaten.partition { it.food.ref in starred }
                     Section(
-                        "Eaten before",
-                        recent.take(if (browse) 9 else 6).map { meal ->
-                            val food = FoodLogic.ofMeal(meal, lib)
-                            Cell("r:" + meal.id, food.name, kc(food.per100.kcal) + " kcal", listOf(food.photoAsset to food.name), food.ref in starred) { logging = food }
-                        },
-                    )
-                    Section(
-                        "Favourites",
-                        favs.take(if (browse) 9 else 6).mapNotNull { f ->
-                            vm.loggable(f.foodId)?.let { food ->
-                                Cell("f:" + f.foodId, food.name, kc(food.per100.kcal) + " kcal", listOf(food.photoAsset to food.name), true) { logging = food }
-                            }
+                        "Quick picks for " + mealTypeLabel(startMeal).lowercase(),
+                        (starredPicks + untried + otherPicks).take(if (browse) 12 else 6).map { pick ->
+                            val food = pick.food
+                            Cell(
+                                "q:" + food.ref + food.name, food.name,
+                                kc(food.per100.kcal * pick.grams / 100) + " kcal · " + kc(pick.grams) + " " + food.unit,
+                                listOf(food.photoAsset to food.name), food.ref in starred,
+                            ) { addNow(food, pick.grams) }
                         },
                     )
                     if (browse) {
@@ -374,7 +422,7 @@ fun AddFoodWindow(vm: FoodViewModel, startMeal: String, focus: Boolean, onClose:
                         Section("All foods", lib.foods.take(limit).map { libCell(it, lib) })
                         more = lib.foods.size > limit
                     } else {
-                        if (recent.isEmpty() && favs.isEmpty()) Text("Foods you add show up here, so adding them again takes one tap.", color = p.ink2, fontSize = 13.sp)
+                        if (rawRecent.isEmpty() && favs.isEmpty()) Text("Foods you add show up here, so adding them again takes one tap.", color = p.ink2, fontSize = 13.sp)
                     }
                     PaperButton(
                         if (browse) "Show fewer foods" else "Browse all foods", { browse = !browse },
@@ -415,8 +463,8 @@ fun AddFoodWindow(vm: FoodViewModel, startMeal: String, focus: Boolean, onClose:
     }
     logging?.let { food ->
         LogFoodSheet(
-            vm = vm, food = food, startMeal = startMeal,
-            onDone = { logging = null; added += 1 }, onDismiss = { logging = null },
+            vm = vm, food = food, startMeal = startMeal, startGrams = loggingGrams ?: lastGrams[food.ref],
+            onDone = { logging = null; loggingGrams = null; added += 1 }, onDismiss = { logging = null; loggingGrams = null },
         )
     }
     dish?.let { d ->
@@ -502,7 +550,7 @@ private fun DishSheet(
 // ---- logging one food ----
 
 @Composable
-fun LogFoodSheet(vm: FoodViewModel, food: Loggable, startMeal: String, onDone: () -> Unit, onDismiss: () -> Unit) {
+fun LogFoodSheet(vm: FoodViewModel, food: Loggable, startMeal: String, onDone: () -> Unit, onDismiss: () -> Unit, startGrams: Double? = null) {
     val p = LocalPaper.current
     val library by vm.library.collectAsState()
     val date by vm.date.collectAsState()
@@ -517,7 +565,7 @@ fun LogFoodSheet(vm: FoodViewModel, food: Loggable, startMeal: String, onDone: (
     LaunchedEffect(food.ref) { full = vm.withYourNumbers(food) }
     var cooked by remember { mutableStateOf(false) }
     val shown = if (cooked && full.canCook) full.cooked() else full
-    var amount by remember { mutableStateOf(foodNum(food.startAmount)) }
+    var amount by remember { mutableStateOf(foodNum(startGrams?.takeIf { it > 0 } ?: food.startAmount)) }
     var meal by remember { mutableStateOf(startMeal) }
     var minute by remember { mutableIntStateOf(FoodLogic.minuteFor(startMeal, today, minuteNow())) }
     var touched by remember { mutableStateOf(false) }

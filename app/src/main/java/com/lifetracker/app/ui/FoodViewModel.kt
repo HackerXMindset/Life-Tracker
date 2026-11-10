@@ -68,6 +68,9 @@ class FoodViewModel(app: Application) : AndroidViewModel(app) {
     val recent: StateFlow<List<MealEntity>> =
         share(emptyList(), dao.observeRecentMeals().map { FoodStats.recentDistinct(it, 12) })
 
+    /** The latest meals as they were logged (not one per name), newest first, for ranking quick picks and finding the last amount. */
+    val recentMeals: StateFlow<List<MealEntity>> = share(emptyList(), dao.observeRecentMeals())
+
     /** Every day that has at least one meal, as yyyy-mm-dd, for the dots on the week strip. */
     val datesWithMeals: StateFlow<Set<String>> =
         share(emptySet(), dao.datesWithMeals().map { it.toSet() })
@@ -122,11 +125,16 @@ class FoodViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Logs [grams] of [food] on the chosen day. */
-    fun logFood(food: Loggable, grams: Double, mealType: String, date: LocalDate, minuteOfDay: Int) {
+    fun logFood(food: Loggable, grams: Double, mealType: String, date: LocalDate, minuteOfDay: Int, id: String = FoodLogic.newMealId()) {
         viewModelScope.launch {
             val full = withYourNumbers(food)
-            dao.upsertMeal(FoodLogic.toMeal(full, grams, date.toString(), minuteOfDay, mealType))
+            dao.upsertMeal(FoodLogic.toMeal(full, grams, date.toString(), minuteOfDay, mealType, id))
         }
+    }
+
+    /** Takes back a meal that was just logged. */
+    fun undoMeal(id: String) {
+        viewModelScope.launch { dao.deleteMealById(id) }
     }
 
     /** Quick add: logs what you typed once and, when [save] is on, also keeps it as one of your foods. */

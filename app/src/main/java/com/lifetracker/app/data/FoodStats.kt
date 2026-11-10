@@ -29,6 +29,22 @@ object FoodStats {
             .take(limit)
 
     /**
+     * The foods to offer first for [mealType]: starred foods, then the ones you ate most at that meal, then the ones you ate
+     * most overall, then the newest. One meal per name, the newest one, so its amount is the last amount you ate.
+     */
+    fun quickPicks(meals: List<MealEntity>, starredRefs: Set<String>, mealType: String, limit: Int): List<MealEntity> =
+        meals.sortedWith(compareByDescending<MealEntity> { it.date }.thenByDescending { it.minuteOfDay })
+            .groupBy { it.name.trim().lowercase() }
+            .values
+            .sortedWith(
+                compareByDescending<List<MealEntity>> { g -> g.first().foodId in starredRefs }
+                    .thenByDescending { g -> g.count { it.mealType == mealType } }
+                    .thenByDescending { g -> g.size },
+            )
+            .take(limit)
+            .map { it.first() }
+
+    /**
      * How wide each meal's piece of the day bar is, as a share of the whole bar (0 to 1), in the order given.
      * The bar stands for the goal, or for what you ate when that is more (or there is no goal).
      */
