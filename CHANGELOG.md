@@ -2,6 +2,13 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🔎 Add food: search that knows other names
+
+### ✨ New
+
+- **Other names find the same food**: "sooji" finds rava, "chapati" and "phulka" find roti, "lauki" finds bottle gourd, "murgh" finds chicken, and so on for about seventy common foods (the list is in `assets/food/aliases.tsv`). A food that really has the word you typed still comes first.
+- **Your foods come first**: among equally good matches, foods you starred or ate recently are listed before the others.
+
 ## ⚡ Add food: quick picks and one-tap adding
 
 ### ✨ New

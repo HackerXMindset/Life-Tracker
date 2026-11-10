@@ -68,6 +68,37 @@ class FoodLibraryTest {
         assertTrue(both.isNotEmpty() && both.all { it.name.lowercase().contains("greek") && it.name.lowercase().contains("yogurt") })
     }
 
+    private fun small(aliases: String = "") = FoodLibrary.parse(
+        "id\ten\tk\nrava\tRava upma mix\t350\nroti\tRoti\t120\nchapati\tChapati\t110\nrice\tRice\t130\ndaltadka\tDal tadka\t100\ndalmakhani\tDal makhani\t120\n",
+        "id\ten\titems\n", "", aliases,
+    )
+
+    @Test
+    fun anotherNameForAFoodFindsItAfterTheExactMatches() {
+        val lib = small("sooji rava semolina\nroti chapati phulka\n")
+        assertEquals(listOf("rava"), lib.search("sooji").map { it.id })
+        assertEquals(listOf("roti", "chapati"), lib.search("phulka").map { it.id }.sortedBy { if (it == "roti") 0 else 1 })
+        // The food that really has the word comes before the one found through another name.
+        assertEquals(listOf("chapati", "roti"), lib.search("chapati").map { it.id })
+        // Without the list nothing changes.
+        assertTrue(small().search("sooji").isEmpty())
+    }
+
+    @Test
+    fun yourOwnFoodsComeFirstAmongEqualMatches() {
+        val lib = small()
+        assertEquals(listOf("daltadka", "dalmakhani"), lib.search("dal").map { it.id })
+        assertEquals(listOf("dalmakhani", "daltadka"), lib.search("dal", boost = setOf("a:dalmakhani")).map { it.id })
+    }
+
+    @Test
+    fun aliasLinesJoinTheirWords() {
+        val map = FoodLibrary.parseAliases("a b\nb c\nsolo\n")
+        assertEquals(setOf("a", "b", "c"), map["b"]!! + map["a"]!! + map["c"]!!)
+        assertEquals(setOf("a", "b"), map["a"])
+        assertTrue("solo" !in map)
+    }
+
     @Test
     fun aCookedDishLineIsMarked() {
         val line = FoodLibrary.parse("id\ten\tk\nrice\tRice\t130\n", "id\ten\titems\nbowl\tBowl\trice:200c rice:50\n").dishes.single().items

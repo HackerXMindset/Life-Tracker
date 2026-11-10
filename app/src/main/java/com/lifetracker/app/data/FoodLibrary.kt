@@ -116,6 +116,8 @@ class FoodLibraryData(
     val dishes: List<ReadyDish>,
     /** Vitamins and minerals per 100 g that come with the app: food id, then nutrient id, then amount. Empty for a food with none. */
     val micro: Map<String, Map<String, Double>> = emptyMap(),
+    /** Other names for the same food: each word points to every word of its group ("sooji" to rava, semolina, suji), itself included. */
+    val aliases: Map<String, Set<String>> = emptyMap(),
 ) {
     private val byId = foods.associateBy { it.id }
     private val folded = foods.map { FoodLibrary.fold(it.name) }
@@ -130,26 +132,32 @@ class FoodLibraryData(
 
     fun inCat(cat: FoodCat): List<LibraryFood> = foods.filter { it.cat == cat }
 
-    /** Foods whose name has every word of [query]: exact name first, then names that start with it, then the rest by length. */
-    fun search(query: String, cat: FoodCat? = null, limit: Int = 60): List<LibraryFood> {
+    /**
+     * Foods whose name has every word of [query] (or another name for that word, so "chapati" finds roti and "sooji" finds rava).
+     * Exact name first, then names that start with it, then the rest by length; a food found only through another name comes last.
+     * Within the same kind of match, the foods in [boost] (food references such as your starred and recent ones) come first.
+     */
+    fun search(query: String, cat: FoodCat? = null, limit: Int = 60, boost: Set<String> = emptySet()): List<LibraryFood> {
         val q = FoodLibrary.fold(query).trim()
         if (q.isEmpty()) return if (cat == null) emptyList() else inCat(cat).take(limit)
         val words = q.split(' ').filter { it.isNotEmpty() }
-        val scored = ArrayList<Pair<Int, LibraryFood>>()
+        val scored = ArrayList<Triple<Int, Int, LibraryFood>>()
         for (i in foods.indices) {
             val f = foods[i]
             if (cat != null && f.cat != cat) continue
             val name = folded[i]
-            if (!words.all { name.contains(it) }) continue
+            val direct = words.all { name.contains(it) }
+            if (!direct && !words.all { w -> (aliases[w] ?: setOf(w)).any { name.contains(it) } }) continue
             val rank = when {
+                !direct -> 4
                 name == q -> 0
                 name.startsWith(q) -> 1
                 name.split(' ', '-').any { it.startsWith(words.first()) } -> 2
                 else -> 3
             }
-            scored += (rank * 1000 + name.length) to f
+            scored += Triple(rank * 2 + (if (f.ref in boost) 0 else 1), name.length, f)
         }
-        return scored.sortedBy { it.first }.take(limit).map { it.second }
+        return scored.sortedWith(compareBy({ it.first }, { it.second })).take(limit).map { it.third }
     }
 
     fun searchDishes(query: String): List<ReadyDish> {
@@ -163,6 +171,7 @@ object FoodLibrary {
     private const val FOODS_FILE = "food/foods.tsv"
     private const val DISHES_FILE = "food/dishes.tsv"
     private const val MICRO_FILE = "food/micro.tsv"
+    private const val ALIASES_FILE = "food/aliases.tsv"
     private val EXTRA_FILES = listOf("food/foods-india.tsv", "food/foods-ifct.tsv")
 
     @Volatile
@@ -178,7 +187,8 @@ object FoodLibrary {
             )
             val dishes = assets.open(DISHES_FILE).bufferedReader().use { it.readText() }
             val micro = runCatching { assets.open(MICRO_FILE).bufferedReader().use { it.readText() } }.getOrDefault("")
-            parse(foods, dishes, micro).also { cached = it }
+            val aliases = runCatching { assets.open(ALIASES_FILE).bufferedReader().use { it.readText() } }.getOrDefault("")
+            parse(foods, dishes, micro, aliases).also { cached = it }
         }
     }
 
@@ -201,7 +211,7 @@ object FoodLibrary {
     }
 
     /** Reads the two files. A line that cannot be read is skipped. */
-    fun parse(foodsTsv: String, dishesTsv: String, microTsv: String = ""): FoodLibraryData {
+    fun parse(foodsTsv: String, dishesTsv: String, microTsv: String = "", aliasesTxt: String = ""): FoodLibraryData {
         val foods = ArrayList<LibraryFood>()
         val lines = foodsTsv.lines().filter { it.isNotBlank() }
         if (lines.isNotEmpty()) {
@@ -245,7 +255,18 @@ object FoodLibrary {
             }
             if (items.isNotEmpty()) dishes += ReadyDish(c[0], c[1], items)
         }
-        return FoodLibraryData(foods, dishes, parseMicro(microTsv))
+        return FoodLibraryData(foods, dishes, parseMicro(microTsv), parseAliases(aliasesTxt))
+    }
+
+    /** One line per food, the words that mean it separated by spaces. A word on two lines gets the words of both. */
+    fun parseAliases(text: String): Map<String, Set<String>> {
+        val out = HashMap<String, MutableSet<String>>()
+        for (line in text.lines()) {
+            val group = line.split(' ', '\t').map { fold(it).trim() }.filter { it.isNotEmpty() }.toSet()
+            if (group.size < 2) continue
+            for (w in group) out.getOrPut(w) { HashSet() }.addAll(group)
+        }
+        return out
     }
 
     /** The first column is the food id, the other columns are headed by a nutrient id and hold amounts per 100 g (empty = not known). */
