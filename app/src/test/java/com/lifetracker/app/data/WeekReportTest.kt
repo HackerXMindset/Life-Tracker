@@ -29,7 +29,8 @@ class WeekReportTest {
     @Test
     fun closestAndFurthestDaysAreMeasuredAgainstTheGoal() {
         val meals = listOf(
-            meal("1", "Dal", "2026-11-02", 2000.0),
+            // Day one is on the calorie goal with 100 g of protein, so it counts as on target.
+            meal("1", "Dal", "2026-11-02", 2000.0, protein100 = 100.0),
             meal("2", "Dal", "2026-11-03", 1000.0),
             meal("3", "Rice", "2026-11-04", 2600.0),
         )
