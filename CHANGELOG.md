@@ -2,6 +2,13 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📋 Copy a food to another meal
+
+### ✨ New
+
+- **Copy to...** replaces "Copy to a day". On a food, and on the menu of a whole meal, you now pick **which meal** (so breakfast can be copied to lunch, a snack or dinner) and **which day** (today, tomorrow or any day), then copy.
+- A copy into another meal today gets the time right now; on another day it gets that meal's usual time; a copy into the same meal keeps its time.
+
 ## 🔁 Meals you eat again
 
 ### ✨ New
