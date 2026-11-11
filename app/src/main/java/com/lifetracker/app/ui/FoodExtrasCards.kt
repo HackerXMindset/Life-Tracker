@@ -152,6 +152,21 @@ fun TrackersSheet(onDismiss: () -> Unit) {
                     TimeButton(w.end, { FoodSettings.setWaterWindow(context, w.start, it, w.interval) })
                 }
             }
+            val weekOn = remember(tick) { FoodSettings.weeklyReport(context) }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Sunday week report", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = p.ink)
+                    Text("A short summary of the week, on Sundays, only if you logged something. Off until you switch it on.", fontSize = 12.sp, color = p.ink2)
+                }
+                PaperToggle(weekOn, { FoodSettings.setWeeklyReport(context, it) })
+            }
+            if (weekOn) {
+                val minute = remember(tick) { FoodSettings.weeklyMinute(context) }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Sunday at", fontSize = 13.sp, color = p.ink2)
+                    TimeButton(minute, { FoodSettings.setWeeklyMinute(context, it) })
+                }
+            }
             Spacer(Modifier.height(12.dp))
         }
     }

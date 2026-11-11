@@ -437,6 +437,21 @@ object FoodSettings {
         changed()
     }
 
+    /** The Sunday-evening week report: off until you switch it on, at [weeklyMinute] on Sundays (19:00 unless changed). */
+    fun weeklyReport(context: Context): Boolean = prefs(context).getBoolean("weekly_report", false)
+
+    fun setWeeklyReport(context: Context, on: Boolean) {
+        prefs(context).edit { putBoolean("weekly_report", on) }
+        changed()
+    }
+
+    fun weeklyMinute(context: Context): Int = prefs(context).getInt("weekly_at", 19 * 60)
+
+    fun setWeeklyMinute(context: Context, minute: Int) {
+        prefs(context).edit { putInt("weekly_at", minute.coerceIn(0, 1439)) }
+        changed()
+    }
+
     /** Whether the calories burned on a day also come from Health Connect, or from your steps when it has none (off until you switch it on). */
     fun autoBurned(context: Context): Boolean = prefs(context).getBoolean("auto_burned", false)
 

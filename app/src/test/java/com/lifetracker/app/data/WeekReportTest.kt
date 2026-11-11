@@ -74,4 +74,15 @@ class WeekReportTest {
         val two = one + WeightEntity("2026-11-08", 69.5)
         assertEquals(-0.5, WeekReport.build(week, emptyList(), { null }, two).weightChangeKg!!, 1e-9)
     }
+
+    @Test
+    fun summaryTextIsNothingForAnEmptyWeekAndShortOtherwise() {
+        assertNull(WeekReport.summaryText(WeekReport.build(week, emptyList(), { goal }, emptyList())))
+        val meals = listOf(meal("1", "Dal", "2026-11-02", 2000.0, protein100 = 100.0))
+        val weights = listOf(WeightEntity("2026-11-02", 70.0), WeightEntity("2026-11-08", 69.5))
+        val text = WeekReport.summaryText(WeekReport.build(week, meals, { goal }, weights))!!
+        assertTrue(text, text.startsWith("Logged 1 of 7 days"))
+        assertTrue(text, text.contains("Protein goal met on 1 of 1 days."))
+        assertTrue(text, text.endsWith("Weight -0.5 kg."))
+    }
 }
