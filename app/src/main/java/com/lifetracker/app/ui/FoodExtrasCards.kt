@@ -49,6 +49,9 @@ import com.lifetracker.app.data.FastMath
 import com.lifetracker.app.data.FoodGoalEntity
 import com.lifetracker.app.data.FoodLibrary
 import com.lifetracker.app.data.FoodLogic
+import com.lifetracker.app.data.FoodPhotoAi
+import com.lifetracker.app.data.IngredientText
+import com.lifetracker.app.data.PhotoAiException
 import com.lifetracker.app.data.FoodPart
 import com.lifetracker.app.data.FoodSettings
 import com.lifetracker.app.data.FoodStats
@@ -729,8 +732,14 @@ private fun itemOf(food: Loggable, grams: Double): SavedMealItem =
 @Composable
 private fun IngredientRows(vm: FoodViewModel, items: List<SavedMealItem>, onChange: (List<SavedMealItem>) -> Unit) {
     val p = LocalPaper.current
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val library by vm.library.collectAsState()
     var picking by remember { mutableStateOf(false) }
+    var describe by remember { mutableStateOf("") }
+    var working by remember { mutableStateOf(false) }
+    var report by remember { mutableStateOf<String?>(null) }
+    val speak = rememberSpeak { describe = it }
     items.forEachIndexed { i, item ->
         var text by remember(i, item.foodId, item.name) { mutableStateOf(foodNum(item.grams)) }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -750,6 +759,61 @@ private fun IngredientRows(vm: FoodViewModel, items: List<SavedMealItem>, onChan
         }
     }
     PaperButton("Add a food", { picking = true }, style = PaperButtonStyle.Ghost, small = true, icon = R.drawable.ic_p_plus)
+    PaperField(describe, { describe = it; report = null }, "Or say what is in it", placeholder = "200 g rice, 150 g chicken", singleLine = true)
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        PaperButton("Speak", { speak() }, Modifier.weight(1f), style = PaperButtonStyle.Ghost, small = true)
+        PaperButton(
+            if (working) "Adding..." else "Add them",
+            {
+                scope.launch {
+                    working = true
+                    report = null
+                    val lib = library
+                    val found = ArrayList<SavedMealItem>()
+                    val rest = ArrayList<IngredientText.Part>()
+                    // An ingredient with an amount is looked up in your foods first; only the rest is sent to the AI.
+                    for (part in IngredientText.parse(describe)) {
+                        val grams = part.grams
+                        val food = if (grams != null && lib != null) lib.search(part.name, null, 3).firstOrNull { IngredientText.accepts(it.name, part.name) } else null
+                        if (food != null && grams != null && lib != null) {
+                            found += itemOf(vm.withYourNumbers(FoodLogic.of(food, lib.microOf(food.id))), grams)
+                        } else {
+                            rest += part
+                        }
+                    }
+                    var estimated = 0
+                    var problem: String? = null
+                    if (rest.isNotEmpty()) {
+                        try {
+                            val answer = FoodPhotoAi.analyzeText(
+                                context, rest.joinToString(", ") { it.original },
+                                "These are the ingredients of one recipe. Give one item for each ingredient and keep the weights I wrote.", false,
+                            )
+                            val fromAi = IngredientText.itemsFrom(answer)
+                            found += fromAi
+                            estimated = fromAi.size
+                        } catch (e: PhotoAiException) {
+                            problem = "Could not estimate " + rest.joinToString(", ") { it.original } + ": " + e.message
+                        }
+                    }
+                    if (found.isNotEmpty()) {
+                        onChange(items + found)
+                        describe = ""
+                    }
+                    val fromFoods = found.size - estimated
+                    report = listOfNotNull(
+                        if (found.isEmpty() && problem == null) "Nothing to add. Write what is in it, for example 200 g rice, 150 g chicken." else null,
+                        if (fromFoods > 0) "$fromFoods from your foods." else null,
+                        if (estimated > 0) "$estimated estimated by the AI, so check their grams and numbers." else null,
+                        problem,
+                    ).joinToString(" ")
+                    working = false
+                }
+            },
+            Modifier.weight(1f), small = true, enabled = describe.isNotBlank() && !working,
+        )
+    }
+    report?.let { Text(it, fontSize = 12.sp, color = p.ink2) }
     if (picking) {
         FoodPickerSheet(
             vm, "Add a food",

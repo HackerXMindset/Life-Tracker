@@ -2,6 +2,13 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🥘 Say what is in a recipe
+
+### ✨ New
+
+- **Or say what is in it** under the ingredients of a Meal prep batch (and of meal plans and saved meals, which share the same list). Type or speak something like "200 g rice, 150 g chicken" and press **Add them**.
+- Each ingredient with a weight (g, kg, ml or l) is **looked up in your foods first**, so it costs no AI call and uses real numbers. Only what is not found, or has no weight ("2 roti"), is sent to the AI, and those rows are flagged as estimates so you can check the grams and numbers. If the AI is not set up or offline, the ones found in your foods are still added and the rest are named.
+
 ## 🍲 Recipes as foods
 
 ### ✨ New
