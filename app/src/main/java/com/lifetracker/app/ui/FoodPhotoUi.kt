@@ -4,7 +4,10 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -38,6 +41,7 @@ import com.lifetracker.app.ui.theme.PaperButtonStyle
 import com.lifetracker.app.ui.theme.PaperCard
 import com.lifetracker.app.ui.theme.PaperDialog
 import com.lifetracker.app.ui.theme.PaperField
+import com.lifetracker.app.ui.theme.Wobble
 import java.io.File
 import kotlinx.coroutines.launch
 
@@ -60,6 +64,8 @@ fun PhotoFill(onFilled: (PhotoFood) -> Unit) {
     var showNotice by remember { mutableStateOf(false) }
     var pending by remember { mutableStateOf<(() -> Unit)?>(null) }
     var photoUri by remember { mutableStateOf<Uri?>(null) }
+    val animOn = rememberReadingAnimation()
+    val phase = rememberReadPhase(busy, failed)
 
     fun run(strong: Boolean) {
         val bytes = jpeg ?: return
@@ -132,7 +138,12 @@ fun PhotoFill(onFilled: (PhotoFood) -> Unit) {
                 PaperButton("Camera", { guarded { startTake() } }, Modifier.weight(1f), enabled = !busy)
                 PaperButton("Gallery", { guarded { startPick() } }, Modifier.weight(1f), style = PaperButtonStyle.Ghost, enabled = !busy)
             }
-            if (message.isNotEmpty()) Text(message, fontSize = 12.5.sp, color = if (failed) p.bad else p.ink2)
+            if (animOn && phase != ReadPhase.Idle) {
+                ReadingStage(phase, true, Modifier.fillMaxWidth().height(84.dp)) {
+                    Box(Modifier.matchParentSize().background(p.surface2, Wobble.Card))
+                }
+            }
+            if (message.isNotEmpty() && !(animOn && busy)) Text(message, fontSize = 12.5.sp, color = if (failed) p.bad else p.ink2)
             Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 if (jpeg != null && !busy) {
                     PaperButton("Think harder", { guarded { run(true) } }, style = PaperButtonStyle.Ghost, small = true)

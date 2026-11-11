@@ -437,6 +437,14 @@ object FoodSettings {
         changed()
     }
 
+    /** The paper-style animation while a photo or text is being read and when the answer comes back (on to start; you can switch it off). */
+    fun readingAnimation(context: Context): Boolean = prefs(context).getBoolean("reading_animation", true)
+
+    fun setReadingAnimation(context: Context, on: Boolean) {
+        prefs(context).edit { putBoolean("reading_animation", on) }
+        changed()
+    }
+
     /** The Sunday-evening week report: off until you switch it on, at [weeklyMinute] on Sundays (19:00 unless changed). */
     fun weeklyReport(context: Context): Boolean = prefs(context).getBoolean("weekly_report", false)
 

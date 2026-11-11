@@ -7,7 +7,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -75,6 +77,7 @@ import com.lifetracker.app.ui.theme.PaperBackground
 import com.lifetracker.app.ui.theme.PaperField
 import com.lifetracker.app.ui.theme.PaperPill
 import com.lifetracker.app.ui.theme.PaperToggle
+import com.lifetracker.app.ui.theme.Wobble
 import java.io.File
 import java.time.LocalDate
 import java.time.LocalTime
@@ -127,6 +130,7 @@ fun QuickPhotoScreen(
     var jpeg by remember { mutableStateOf<ByteArray?>(null) }
     var food by remember { mutableStateOf<PhotoFood?>(null) }
     var busy by remember { mutableStateOf(false) }
+    var readToken by remember { mutableStateOf(0) }
     var message by remember { mutableStateOf("") }
     var failed by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf("") }
@@ -185,6 +189,7 @@ fun QuickPhotoScreen(
                     }
                 }
                 food = result
+                readToken += 1
                 name = dishName.trim().ifBlank { result.name }
                 scale = 1f
                 edits = emptyMap()
@@ -283,6 +288,8 @@ fun QuickPhotoScreen(
     if (showKey) GeminiKeyDialog(onSaved = { showKey = false; proceed() }, onDismiss = { showKey = false; onClose() })
     if (showNotice) PhotoNoticeDialog(onContinue = { showNotice = false; proceed() }, onDismiss = { showNotice = false; onClose() })
 
+    val animOn = rememberReadingAnimation()
+    val phase = rememberReadPhase(busy, failed)
     val preview = remember(jpeg) {
         jpeg?.let { b ->
             BitmapFactory.decodeByteArray(b, 0, b.size, BitmapFactory.Options().apply { inSampleSize = 2 })?.asImageBitmap()
@@ -310,10 +317,17 @@ fun QuickPhotoScreen(
         )
 
         if (preview != null) {
-            Image(
-                bitmap = preview, contentDescription = "Your photo", contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(16.dp)),
-            )
+            ReadingStage(phase, animOn, Modifier.fillMaxWidth()) {
+                Image(
+                    bitmap = preview, contentDescription = "Your photo", contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(16.dp)),
+                )
+            }
+        } else if (animOn && phase != ReadPhase.Idle) {
+            // Typed words and barcodes have no picture, so the same animation plays on an empty paper card.
+            ReadingStage(phase, true, Modifier.fillMaxWidth().height(120.dp)) {
+                Box(Modifier.matchParentSize().background(p.surface2, Wobble.Card))
+            }
         }
 
         if (naming && !busy && food == null) {
@@ -328,8 +342,10 @@ fun QuickPhotoScreen(
                 }
             }
         } else if (busy) {
-            PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
-                Text(message, fontSize = 14.sp, color = p.ink2)
+            if (!animOn) {
+                PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
+                    Text(message, fontSize = 14.sp, color = p.ink2)
+                }
             }
         } else if (failed) {
             PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
@@ -381,6 +397,8 @@ fun QuickPhotoScreen(
         val f = food
         if (f != null && !busy) {
             val unit = if (f.drink) "ml" else "g"
+            // The count-up and the marker swipes play once, for an answer that just came in, not when the page is reopened on an old one.
+            val play = animOn && readToken > 0
             val grams = f.servingGrams * scale
             val shown = f.atGrams(grams)
             val part = shown.onlyTicked(ticked)
@@ -405,7 +423,7 @@ fun QuickPhotoScreen(
                                     colors = CheckboxDefaults.colors(checkedColor = p.ink, checkmarkColor = p.surface, uncheckedColor = p.ink2),
                                 )
                                 Column(Modifier.weight(1f)) {
-                                    Text(item.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = p.ink, maxLines = 1)
+                                    Text(item.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = p.ink, maxLines = 1, modifier = Modifier.markerSwipe(readToken, play, i * 160))
                                     Text(
                                         (if (item.grams > 0) Math.round(item.grams).toString() + " $unit · " else "") + Math.round(item.kcal) + " kcal",
                                         fontSize = 12.sp, color = p.ink2,
@@ -447,10 +465,10 @@ fun QuickPhotoScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Kicker("For this much")
                     Row(Modifier.fillMaxWidth()) {
-                        CheckStat("kcal", Math.round(number("kcal", part.kcal)).toString(), Modifier.weight(1f))
-                        CheckStat("protein g", Math.round(number("protein", part.protein)).toString(), Modifier.weight(1f))
-                        CheckStat("carbs g", Math.round(number("carbs", part.carbs)).toString(), Modifier.weight(1f))
-                        CheckStat("fat g", Math.round(number("fat", part.fat)).toString(), Modifier.weight(1f))
+                        CheckStat("kcal", number("kcal", part.kcal), readToken, play, Modifier.weight(1f))
+                        CheckStat("protein g", number("protein", part.protein), readToken, play, Modifier.weight(1f))
+                        CheckStat("carbs g", number("carbs", part.carbs), readToken, play, Modifier.weight(1f))
+                        CheckStat("fat g", number("fat", part.fat), readToken, play, Modifier.weight(1f))
                     }
                     if (editing && !(split && separate)) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -614,10 +632,10 @@ fun PhotoCheckWindow(startMeal: String, date: LocalDate, source: CheckSource, on
 }
 
 @Composable
-private fun CheckStat(label: String, value: String, modifier: Modifier = Modifier) {
+private fun CheckStat(label: String, value: Double, token: Int, play: Boolean, modifier: Modifier = Modifier) {
     val p = LocalPaper.current
     Column(modifier) {
-        Text(value, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = p.ink)
+        CountUpText(value, token, play, 20.sp, FontWeight.Bold, p.ink)
         Text(label, fontSize = 12.sp, color = p.ink2)
     }
 }
