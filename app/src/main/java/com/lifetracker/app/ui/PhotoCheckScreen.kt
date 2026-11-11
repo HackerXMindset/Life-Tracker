@@ -68,6 +68,7 @@ import com.lifetracker.app.data.PhotoFood
 import com.lifetracker.app.data.atGrams
 import com.lifetracker.app.data.onlyTicked
 import com.lifetracker.app.data.separateItems
+import com.lifetracker.app.data.withCookingFat
 import com.lifetracker.app.data.toMeal
 import com.lifetracker.app.ui.theme.LocalPaper
 import com.lifetracker.app.ui.theme.PaperButton
@@ -401,7 +402,9 @@ fun QuickPhotoScreen(
             val play = animOn && readToken > 0
             val grams = f.servingGrams * scale
             val shown = f.atGrams(grams)
-            val part = shown.onlyTicked(ticked)
+            // Cooking oil, ghee or butter: what you set here replaces what the reader counted, 9 kcal a gram.
+            val oilSet = edits["oil"]?.let { foodParse(it) }
+            val part = shown.onlyTicked(ticked).let { base -> if (oilSet != null) base.withCookingFat(oilSet) else base }
             val split = f.canSplit
 
             fun number(key: String, auto: Double): Double = edits[key]?.let { foodParse(it) } ?: auto
@@ -497,6 +500,28 @@ fun QuickPhotoScreen(
                         PaperButton(
                             if (editing) "Done" else "Fix the numbers", { editing = !editing },
                             style = PaperButtonStyle.Ghost, small = true,
+                        )
+                    }
+                }
+            }
+
+            if (!(split && separate) && (source == CheckSource.Meal || source is CheckSource.Text)) {
+                PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Kicker("Oil, ghee or butter")
+                        Text(
+                            "About ${Math.round(part.cookingFatG)} g is counted in the numbers above, at 9 kcal a gram (about ${Math.round(part.cookingFatG * 9)} kcal). " +
+                                "Restaurant and delivery food usually has more than home cooking, so change it if the food looks oily.",
+                            fontSize = 12.5.sp, color = p.ink2,
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf(0, 5, 10, 20, 30).forEach { v ->
+                                PaperPill("$v g", Math.round(part.cookingFatG).toInt() == v, { edits = edits + ("oil" to v.toString()) }, Modifier.weight(1f))
+                            }
+                        }
+                        PaperField(
+                            edits["oil"] ?: foodNum(part.cookingFatG), { edits = edits + ("oil" to it) }, "Grams of oil, ghee or butter",
+                            singleLine = true, keyboardOptions = DecimalKeys,
                         )
                     }
                 }

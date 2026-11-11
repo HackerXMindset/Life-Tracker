@@ -102,4 +102,19 @@ class FoodPhotoAiTest {
     fun theKeyIsNotPutInBackups() {
         assertFalse(SettingsBackup.included(FoodAiSettings.FILE))
     }
+
+    @Test
+    fun theCookingFatIsReadAndCannotBeMoreThanTheFat() {
+        val some = FoodPhotoAi.parse("""{"name":"Paneer butter masala","serving_size_grams":250,"calories":520,"fat":38,"cooking_fat_grams":22}""")
+        assertEquals(22.0, some.cookingFatG, 1e-9)
+        val capped = FoodPhotoAi.parse("""{"name":"Fruit","serving_size_grams":100,"calories":60,"fat":1,"cooking_fat_grams":12}""")
+        assertEquals(1.0, capped.cookingFatG, 1e-9)
+        assertEquals(0.0, FoodPhotoAi.parse("""{"name":"Tea","serving_size_grams":150,"calories":40,"fat":1}""").cookingFatG, 1e-9)
+    }
+
+    @Test
+    fun onlyAPlateIsAskedForTheCookingFat() {
+        assertTrue(FoodPhotoAi.prompt("").contains("\"cooking_fat_grams\":0.0"))
+        assertFalse(FoodPhotoAi.labelPrompt("").contains("cooking_fat_grams"))
+    }
 }

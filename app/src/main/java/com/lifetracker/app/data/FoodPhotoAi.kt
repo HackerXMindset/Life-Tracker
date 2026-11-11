@@ -72,6 +72,8 @@ data class PhotoFood(
     val micro: Map<String, Double> = emptyMap(),
     /** The foods the photo reader saw on the plate, each with its own weight and main numbers (for the whole amount seen). */
     val items: List<PhotoItem> = emptyList(),
+    /** Grams of cooking oil, ghee, butter, cream or dressing the reader thinks went into it. Already counted in the calories and fat. */
+    val cookingFatG: Double = 0.0,
 ) {
     /** True when the plate holds several foods with calories of their own, so they can be ticked one by one. */
     val canSplit: Boolean get() = items.size >= 2 && items.sumOf { it.kcal } > 0
@@ -122,6 +124,7 @@ object FoodPhotoAi {
             shape.append("}")
         }
         shape.append(",\"is_drink\":false")
+        if (withItems) shape.append(",\"cooking_fat_grams\":0.0")
         if (withItems) shape.append(",\"items\":[{\"name\":\"...\",\"grams\":0.0,\"calories\":0,\"protein\":0.0,\"carbs\":0.0,\"fat\":0.0}]")
         shape.append("}")
         return shape.toString()
@@ -143,6 +146,10 @@ object FoodPhotoAi {
         append("All numbers are for the whole serving (serving_size_grams, or millilitres for a drink), not per 100 g. " + UNITS)
         append(nutrientUnits(fields))
         append("Give only the numbers listed in the shape above. ")
+        append(
+            "cooking_fat_grams is how many grams of cooking oil, ghee, butter, cream or dressing went into the food. It is already counted in the calories and fat, " +
+                "and it is 0 when there is none. Restaurant, delivery and street food usually has more oil than home cooking, so do not assume a little. ",
+        )
         append(
             if (seesPhoto) "If a nutrition label is visible, use its numbers. Otherwise estimate, including the oil and ghee used in cooking. "
             else "Estimate, including the oil and ghee used in cooking. ",
@@ -262,11 +269,12 @@ object FoodPhotoAi {
                 if (v.isFinite() && v > 0) micro[f.id] = v
             }
         }
+        val fatTotal = num("fat")
         return PhotoFood(
             name = name,
             servingGrams = if (grams > 0) grams else 100.0,
             kcal = kcal,
-            protein = num("protein"), carbs = num("carbs"), fat = num("fat"),
+            protein = num("protein"), carbs = num("carbs"), fat = fatTotal,
             fiber = num("fiber"), sugar = num("sugar"), sodiumMg = num("sodium"),
             sat = num("saturated_fat"), mono = num("monounsaturated_fat"), poly = num("polyunsaturated_fat"),
             drink = json.optBoolean("is_drink", false),
@@ -274,6 +282,8 @@ object FoodPhotoAi {
             weightGuessed = grams <= 0,
             micro = micro,
             items = items,
+            // It is part of the fat, so it cannot be more than the fat.
+            cookingFatG = num("cooking_fat_grams").coerceAtMost(fatTotal),
         )
     }
 

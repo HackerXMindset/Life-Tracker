@@ -2,6 +2,14 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🧈 Oil, ghee and butter, out in the open
+
+### ✨ New
+
+- **A new "Oil, ghee or butter" card on the check page** for a meal read from a photo or from your words. The reader now says how many grams of cooking oil, ghee, butter, cream or dressing it thinks went in, and that guess is shown (with its calories, 9 a gram) instead of being hidden inside the totals. Tap 0, 5, 10, 20 or 30 g, or type your own, and the calories and fat change with it.
+- The reader is told that restaurant, delivery and street food usually has more oil than home cooking, so it should not assume a little. In a study of photo calorie apps, missing fat was the biggest single gap.
+- It scales with the amount you slide to, and it is left out when you log each food on its own line (those lines keep the reader's numbers).
+
 ## ✒️ A paper-style animation while the AI reads
 
 ### ✨ New

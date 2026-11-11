@@ -8,8 +8,19 @@ fun PhotoFood.atGrams(grams: Double): PhotoFood {
         servingGrams = grams, kcal = kcal * k, protein = protein * k, carbs = carbs * k, fat = fat * k,
         fiber = fiber * k, sugar = sugar * k, sodiumMg = sodiumMg * k, sat = sat * k, mono = mono * k, poly = poly * k,
         micro = micro.mapValues { it.value * k },
+        cookingFatG = cookingFatG * k,
         items = items.map { it.copy(grams = it.grams * k, kcal = it.kcal * k, protein = it.protein * k, carbs = it.carbs * k, fat = it.fat * k) },
     )
+}
+
+/**
+ * The same food with [grams] of cooking oil, ghee or butter instead of what the reader counted. Each gram is 9 kcal and 1 g of fat; the
+ * rest stays as it was. Nothing goes below zero.
+ */
+fun PhotoFood.withCookingFat(grams: Double): PhotoFood {
+    val g = grams.coerceAtLeast(0.0)
+    val delta = g - cookingFatG
+    return copy(kcal = (kcal + delta * 9.0).coerceAtLeast(0.0), fat = (fat + delta).coerceAtLeast(0.0), cookingFatG = g)
 }
 
 /**
