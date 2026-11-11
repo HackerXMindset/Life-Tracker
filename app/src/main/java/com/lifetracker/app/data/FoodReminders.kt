@@ -36,6 +36,14 @@ object FoodReminderRules {
         return if (today.isAfter(now)) today else today.plusDays(1)
     }
 
+    /** The next Sunday at [minute] after [now] (today, if it is a Sunday that time has not reached yet). */
+    fun nextWeekly(minute: Int, now: LocalDateTime): LocalDateTime {
+        val m = minute.coerceIn(0, 1439)
+        val toSunday = (7 - now.dayOfWeek.value) % 7
+        val thisSunday = at(now.toLocalDate().plusDays(toSunday.toLong()), m)
+        return if (thisSunday.isAfter(now)) thisSunday else thisSunday.plusDays(7)
+    }
+
     /** The minutes of the day water rings: from [start] every [interval] minutes up to and including [end]. */
     fun waterSlots(start: Int, end: Int, interval: Int): List<Int> {
         val step = interval.coerceAtLeast(30)
@@ -71,6 +79,7 @@ object FoodReminderScheduler {
     const val ACTION_DRINK = "com.lifetracker.app.FOOD_REMINDER_DRINK"
     const val EXTRA_ID = "reminder"
     private const val WATER = "water"
+    private const val WEEK = "week"
     private fun mealId(meal: String) = "meal-$meal"
 
     private fun pending(context: Context, action: String, kind: String, id: String): PendingIntent =
@@ -94,6 +103,7 @@ object FoodReminderScheduler {
 
     private fun mealsOn(app: Context) = Features.isOn(app, Feature.FOOD) && FoodSettings.mealReminders(app)
     private fun waterOn(app: Context) = Features.isOn(app, Feature.FOOD) && FoodSettings.waterReminders(app)
+    private fun weekOn(app: Context) = Features.isOn(app, Feature.FOOD) && FoodSettings.weeklyReport(app)
 
     /** Sets every alarm again from the settings as they are now, and takes away those that are switched off. */
     fun rearmAll(context: Context) {
@@ -113,7 +123,12 @@ object FoodReminderScheduler {
         } else {
             cancelAlarm(app, WATER)
         }
-        if (!mealsOn(app) && !waterOn(app)) FoodReminderNotifier.cancelAll(app)
+        if (weekOn(app)) {
+            HabitReminderScheduler.setAlarm(app, FoodReminderRules.nextWeekly(FoodSettings.weeklyMinute(app), now), pending(app, ACTION_RING, "ring", WEEK))
+        } else {
+            cancelAlarm(app, WEEK)
+        }
+        if (!mealsOn(app) && !waterOn(app) && !weekOn(app)) FoodReminderNotifier.cancelAll(app)
     }
 
     /** An alarm went off: say it unless that meal is logged or water is on track, then set the next one. */
@@ -128,6 +143,17 @@ object FoodReminderScheduler {
                 val drunk = dao.water(today.toString())?.ml ?: 0
                 val goal = FoodSettings.waterGoalMl(app)
                 if (!FoodReminderRules.waterOnTrack(drunk, goal, nowMinute, w.start, w.end)) FoodReminderNotifier.postWater(app, drunk, goal)
+            }
+        } else if (id == WEEK) {
+            if (weekOn(app)) {
+                val week = FoodLogic.weekOf(today)
+                val db = AppDatabase.get(app)
+                val goals = dao.allGoals()
+                val report = WeekReport.build(
+                    week, dao.mealsBetweenOnce(week.first().toString(), week.last().toString()),
+                    { day -> FoodStats.goalFor(goals, LocalDate.parse(day)) }, db.foodExtrasDao().allWeights(),
+                )
+                WeekReport.summaryText(report)?.let { FoodReminderNotifier.postWeek(app, it) }
             }
         } else if (id.startsWith("meal-")) {
             val meal = id.removePrefix("meal-")
@@ -157,7 +183,7 @@ object FoodReminderNotifier {
 
     private fun ensureChannel(context: Context) {
         val channel = NotificationChannelCompat.Builder(CHANNEL, NotificationManagerCompat.IMPORTANCE_DEFAULT)
-            .setName("Meal and water reminders")
+            .setName("Meal, water and week reminders")
             .setDescription("A nudge at meal times and through the day, only when the meal is not logged or water is behind")
             .build()
         NotificationManagerCompat.from(context).createNotificationChannel(channel)
@@ -190,6 +216,8 @@ object FoodReminderNotifier {
 
     fun postWater(context: Context, drunkMl: Int, goalMl: Int) =
         post(context, "water", "Time for water", "$drunkMl of $goalMl ml so far today.", true)
+
+    fun postWeek(context: Context, text: String) = post(context, "week", "Your week in food", text, false)
 
     fun cancel(context: Context, tag: String) {
         runCatching { NotificationManagerCompat.from(context).cancel(tag, ID) }

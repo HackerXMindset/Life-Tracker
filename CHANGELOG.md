@@ -2,6 +2,11 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📅 Sunday week report
+
+### ✨ New
+
+- **Sunday week report**, a notification with a short summary of the week: days logged, average calories, days the protein goal was met and the weight change. It rings on Sundays at 19:00 (you can change the time) and says nothing if you logged nothing that week. **Off until you switch it on**, under Food > What to show > Reminders. It uses the same alarms as the meal and water reminders, so it comes back after a restart or a clock change.
 ## 🥘 Say what is in a recipe
 
 ### ✨ New

@@ -51,4 +51,14 @@ class FoodReminderRulesTest {
         assertTrue(FoodReminderRules.waterOnTrack(2000, 2000, 21 * 60, 480, 1320))
         assertFalse(FoodReminderRules.waterOnTrack(1500, 2000, 22 * 60, 480, 1320))
     }
+
+    @Test
+    fun theWeekReportRingsOnTheNextSunday() {
+        // 8 November 2026 is a Sunday, the 10th a Tuesday.
+        val sunday = 19 * 60
+        assertEquals(at(19, day = 8), FoodReminderRules.nextWeekly(sunday, at(10, day = 8)))
+        assertEquals(at(19, day = 15), FoodReminderRules.nextWeekly(sunday, at(20, day = 8)))
+        assertEquals(at(19, day = 15), FoodReminderRules.nextWeekly(sunday, at(9, day = 10)))
+        assertEquals(at(19, day = 15), FoodReminderRules.nextWeekly(sunday, at(19, day = 8)))
+    }
 }
