@@ -111,4 +111,24 @@ class PhotoMealTest {
         assertEquals(PortionKind.Bowl, PortionKind.of("bowl"))
         assertEquals(PortionKind.entries.size, PortionKind.entries.map { it.key }.toSet().size)
     }
+
+    @Test
+    fun cookingFatIsNineKcalAGramAndNeverGoesBelowZero() {
+        val oily = food.copy(cookingFatG = 5.0)
+        val more = oily.withCookingFat(15.0)
+        assertEquals(15.0, more.cookingFatG, 1e-9)
+        assertEquals(540.0, more.kcal, 1e-9)
+        assertEquals(19.0, more.fat, 1e-9)
+        val none = oily.withCookingFat(0.0)
+        assertEquals(405.0, none.kcal, 1e-9)
+        assertEquals(4.0, none.fat, 1e-9)
+        // A guess bigger than the whole meal cannot make the numbers negative.
+        assertEquals(0.0, food.copy(cookingFatG = 100.0, kcal = 100.0, fat = 20.0).withCookingFat(0.0).kcal, 1e-9)
+        assertEquals(0.0, oily.withCookingFat(-3.0).cookingFatG, 1e-9)
+    }
+
+    @Test
+    fun theCookingFatScalesWithTheAmountEaten() {
+        assertEquals(2.5, food.copy(cookingFatG = 5.0).atGrams(150.0).cookingFatG, 1e-9)
+    }
 }
