@@ -2,6 +2,12 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🔁 Meals you eat again
+
+### ✨ New
+
+- **"You have had this before"** on the check page. When a photo or typed meal reads as a dish you already logged in the last 90 days (same words in its name, so "Dal tadka with 3 rotis" matches your "Dal tadka roti" but not "Dal tadka rice"), a card shows it and offers **Use my numbers**. They are applied to today's weight, so the same dish gives the same answer each time instead of a fresh guess. Tap **Back to the reader's numbers** to undo.
+- Nothing new is stored: the meal you checked and logged last time is what gets reused, so correcting it once fixes it for next time.
 ## 🧈 Oil, ghee and butter, out in the open
 
 ### ✨ New

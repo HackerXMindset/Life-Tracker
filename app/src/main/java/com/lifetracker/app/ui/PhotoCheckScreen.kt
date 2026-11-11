@@ -64,7 +64,10 @@ import com.lifetracker.app.data.FoodLogic
 import com.lifetracker.app.data.FoodPhotoAi
 import com.lifetracker.app.data.MealPhotos
 import com.lifetracker.app.data.PhotoAiException
+import com.lifetracker.app.data.MealEntity
 import com.lifetracker.app.data.PhotoFood
+import com.lifetracker.app.data.RepeatMatch
+import com.lifetracker.app.data.withNumbersOf
 import com.lifetracker.app.data.atGrams
 import com.lifetracker.app.data.onlyTicked
 import com.lifetracker.app.data.separateItems
@@ -132,6 +135,9 @@ fun QuickPhotoScreen(
     var food by remember { mutableStateOf<PhotoFood?>(null) }
     var busy by remember { mutableStateOf(false) }
     var readToken by remember { mutableStateOf(0) }
+    // A meal you logged before that is the same dish as this reading, and whether you chose to use its numbers.
+    var before by remember { mutableStateOf<MealEntity?>(null) }
+    var useBefore by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
     var failed by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf("") }
@@ -243,6 +249,19 @@ fun QuickPhotoScreen(
             source is CheckSource.Text -> read(false)
             fromQueue && jpeg != null -> { fromQueue = false; read(false) }
             else -> take.launch(photoUri())
+        }
+    }
+
+    LaunchedEffect(readToken) {
+        before = null
+        useBefore = false
+        val read = food
+        if (readToken > 0 && read != null && (source == CheckSource.Meal || source is CheckSource.Text)) {
+            val today = LocalDate.now()
+            val past = withContext(Dispatchers.IO) {
+                AppDatabase.get(context).foodDao().mealsBetweenOnce(today.minusDays(90).toString(), today.toString())
+            }
+            before = RepeatMatch.find(read.name, past)
         }
     }
 
@@ -395,7 +414,9 @@ fun QuickPhotoScreen(
             }
         }
 
-        val f = food
+        val read = food
+        val mine = before
+        val f = if (read != null && mine != null && useBefore) read.withNumbersOf(mine) else read
         if (f != null && !busy) {
             val unit = if (f.drink) "ml" else "g"
             // The count-up and the marker swipes play once, for an answer that just came in, not when the page is reopened on an old one.
@@ -411,6 +432,24 @@ fun QuickPhotoScreen(
 
             Text("Is this what you ate?", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = p.ink)
             PaperField(name, { name = it }, "What it is", singleLine = true)
+            if (read != null && mine != null) {
+                PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Kicker("You have had this before")
+                        val day = runCatching { LocalDate.parse(mine.date).format(java.time.format.DateTimeFormatter.ofPattern("d MMM", java.util.Locale.ENGLISH)) }.getOrDefault(mine.date)
+                        Text(
+                            "You logged \"${mine.name}\" on $day, at about ${Math.round(mine.kcal100)} kcal per 100 g. The same dish with the same numbers every time " +
+                                "is more reliable than a fresh guess, and it keeps the weight the reader estimated for today.",
+                            fontSize = 12.5.sp, color = p.ink2,
+                        )
+                        if (useBefore) {
+                            PaperButton("Back to the reader's numbers", { useBefore = false; edits = emptyMap() }, Modifier.fillMaxWidth(), style = PaperButtonStyle.Ghost, small = true)
+                        } else {
+                            PaperButton("Use my numbers", { useBefore = true; edits = emptyMap() }, Modifier.fillMaxWidth(), small = true)
+                        }
+                    }
+                }
+            }
             if (split) {
                 PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -505,7 +544,7 @@ fun QuickPhotoScreen(
                 }
             }
 
-            if (!(split && separate) && (source == CheckSource.Meal || source is CheckSource.Text)) {
+            if (!(split && separate) && !(useBefore && mine != null) && (source == CheckSource.Meal || source is CheckSource.Text)) {
                 PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Kicker("Oil, ghee or butter")
