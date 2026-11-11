@@ -67,7 +67,7 @@ Built one small pull request at a time from 22 October to 11 November 2026. Ever
 
 | Part | What you got |
 | --- | --- |
-| **N1 to N7** | Vitamins and minerals you pick, supplements, fasting, weight, meal prep batches and meal plans, import from GymMane, and a two-way sync with GymMane (database 33 to 36) |
+| **N1 to N7** | The food list, vitamins and minerals you pick, a new Food screen, supplements, fasting, weight, meal prep batches and meal plans, custom trackers, and sync with GymMane (database 33 to 36) |
 | **AI add** | Fill a new food from a photo; a check page that reads a plate, a barcode (Open Food Facts) or a label; describing a meal in words; a home-screen camera button, a shortcut and a quick-settings tile; photos that wait for the internet; naming the dish before sending |
 | **Add food** | One screen: search with aliases ("curd" finds dahi), Photo, Barcode and Label always in view, quick picks for the meal, Add several, Undo and Change amount |
 | **Week and cards** | A week window (days, what you ate most, weight); move the cards of the Food page up and down |

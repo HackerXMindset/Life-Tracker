@@ -496,12 +496,13 @@ Each part was its own pull request; all are merged unless marked. Details of eve
 
 | Part | PR | Database | What was built |
 | --- | --- | --- | --- |
-| N1 Vitamins and minerals | #212 | 33 | Pick which ones to count, daily targets, your own additions |
-| N2 | #213 | 34 | More of the Nutrients layer |
-| N3 Import | | | Import from GymMane |
-| N5 | | 35 (backup 36) | Supplements, weight, fasting, prep batches, meal plans |
-| N6 | | 36 (backup 37) | Saved meals keep their own numbers |
-| N7 GymMane sync | | | Two-way sync with GymMane |
+| N1 The food list | #212 | 33 | The list that comes with the app (561 foods, ready dishes, photos) |
+| N2 Vitamins and minerals | #213 | 34 | Pick which ones to count, daily targets, your own additions |
+| N3 The new Food screen | #215, #217 | | The Food tab rebuilt |
+| N5 Shake, supplements, weight, fasting, prep, plans | #216 | 35 (backup 36) | Also protein quality, fat types and What to show |
+| N6 Custom trackers | #218 | 36 (backup 37) | Count anything with one tap; the Diary timeline |
+| N7 GymMane sync | #219 to #221 | | Import from GymMane's backup folder, optional send-back copy |
+| Parts 7 to 10 and supplement reminders | | | Vitamin numbers for the list, Indian foods and the IFCT 2017 tables, the screen in GymMane's look, supplement reminders (#222) |
 | Export for GymMane | #226 | | Export > For GymMane |
 
 **The AI round (database stays at 36)**

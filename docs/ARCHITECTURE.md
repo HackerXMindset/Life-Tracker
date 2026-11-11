@@ -256,7 +256,7 @@ Files of the Food tab since October 2026. The older Food files are in the tree a
 | `BurnedMath.kt` | Which number counts as calories burned (typed, Health Connect, or steps) |
 | `FoodReminders.kt` | When meal, water and Sunday reminders ring and stay quiet; the alarms, the banners and the receiver |
 | `FoodStats.kt` | Also the quick picks for a meal |
-| `gymmane/GymManCodec.kt`, `GymManSync.kt` | The GymMane file format, and the two-way sync (database 36, backup 37) |
+| `gymmane/GymManCodec.kt`, `GymManSync.kt` | The GymMane file format, and the sync with its backup folder |
 
 **Food screens (`ui/`)**
 
