@@ -131,4 +131,22 @@ class PhotoMealTest {
     fun theCookingFatScalesWithTheAmountEaten() {
         assertEquals(2.5, food.copy(cookingFatG = 5.0).atGrams(150.0).cookingFatG, 1e-9)
     }
+
+    @Test
+    fun yourOwnNumbersKeepTodaysWeightAndMoveThePlateWithThem() {
+        val before = food.toMeal("Dal rice", "lunch", "2026-11-01", 780, id = "old").copy(kcal100 = 200.0, protein100 = 8.0, carbs100 = 30.0, fat100 = 4.0)
+        val plate = food.copy(
+            cookingFatG = 10.0,
+            items = listOf(PhotoItem("Rice", 150.0, 200.0, 4.0, 45.0, 1.0), PhotoItem("Dal", 150.0, 250.0, 11.0, 30.0, 8.0)),
+        )
+        val mine = plate.withNumbersOf(before)
+        assertEquals(300.0, mine.servingGrams, 1e-9)
+        assertEquals(600.0, mine.kcal, 1e-9)
+        assertEquals(24.0, mine.protein, 1e-9)
+        assertEquals(12.0, mine.fat, 1e-9)
+        assertEquals(0.0, mine.cookingFatG, 1e-9)
+        // The two foods on the plate still add up to the new total, in the same proportion as before.
+        assertEquals(600.0, mine.items.sumOf { it.kcal }, 1e-6)
+        assertEquals(200.0 / 450.0, mine.items[0].kcal / mine.kcal, 1e-9)
+    }
 }

@@ -24,6 +24,24 @@ fun PhotoFood.withCookingFat(grams: Double): PhotoFood {
 }
 
 /**
+ * The same food at the weight the reader guessed, but with the numbers of a meal you logged before ([meal], kept per 100 g). Everything
+ * the plate list shows follows the new calories. The cooking fat goes back to 0, since your own numbers already include it.
+ */
+fun PhotoFood.withNumbersOf(meal: MealEntity): PhotoFood {
+    val k = servingGrams / 100.0
+    val newKcal = meal.kcal100 * k
+    val ratio = if (kcal > 0) newKcal / kcal else 1.0
+    return copy(
+        kcal = newKcal, protein = meal.protein100 * k, carbs = meal.carbs100 * k, fat = meal.fat100 * k,
+        fiber = meal.fiber100 * k, sugar = meal.sugar100 * k, sodiumMg = meal.sodium100 * k,
+        sat = meal.sat100 * k, mono = meal.mono100 * k, poly = meal.poly100 * k,
+        micro = NutrientValues.decode(meal.extra).mapValues { it.value * k },
+        cookingFatG = 0.0,
+        items = items.map { it.copy(grams = it.grams, kcal = it.kcal * ratio, protein = it.protein * ratio, carbs = it.carbs * ratio, fat = it.fat * ratio) },
+    )
+}
+
+/**
  * The part of the plate that is ticked, as one food. [ticked] are positions in [PhotoFood.items]. Every number is scaled by the share of
  * the items' calories that is ticked, since fibre, sugar and the rest are only known for the whole plate.
  */
