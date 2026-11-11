@@ -113,6 +113,16 @@ fun TrackersSheet(onDismiss: () -> Unit) {
             }
             Text("Water and Protein shake share one row, which sits where the higher of the two is.", fontSize = 12.sp, color = p.ink2)
 
+            MonoLabel("Photo reading")
+            val animOn = remember(tick) { FoodSettings.readingAnimation(context) }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Reading animation", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = p.ink)
+                    Text("A pen, a marker and a stamp play while a photo or your words are read, and when the answer comes back. Android's \"remove animations\" also turns it off.", fontSize = 12.sp, color = p.ink2)
+                }
+                PaperToggle(animOn, { FoodSettings.setReadingAnimation(context, it) })
+            }
+
             MonoLabel("Reminders")
             val mealOn = remember(tick) { FoodSettings.mealReminders(context) }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {

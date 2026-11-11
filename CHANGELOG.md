@@ -2,6 +2,15 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## ✒️ A paper-style animation while the AI reads
+
+### ✨ New
+
+- **While a photo, a label or your words are being read**, your photo (or an empty paper card, for typed words and barcodes) gets a pen that keeps drawing and rubbing out its outline, a yellow marker that sweeps across, and pencil hatching that flickers in the corners. No words, no spinner.
+- **When the answer comes back** an ink stamp lands in the corner and the card dips like pressed paper; the calories and macros count up from 0, and each food on the plate gets a quick marker stroke under its name. **If it fails**, a red pencil scribbles across and the card shakes once; the error text is still shown.
+- It plays on the check page and on "Fill from a photo" in the new-food form.
+- **Switch it off** in Food > What to show > Photo reading. It is on to start, and Android's own "remove animations" setting also turns it off.
+
 ## 📅 Sunday week report
 
 ### ✨ New
