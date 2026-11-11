@@ -13,6 +13,7 @@
 | Data sources and backups | Done |
 | Habits, with Streak import (also focus sessions, to-dos, notes) | Done |
 | Food, with OpenNutriTracker import, water and meal logging | Done |
+| Food rounds: AI photo, barcode, label and describe, Add food, week window, burned kcal, reminders, vitamin watch, recipes, GymMane sync | Built, waiting to be tried on a phone |
 | Your own activities, colours and daily goals | Done |
 | Money: income and spending, monthly items, quick-log items, categories | Done |
 | Phone usage: app sessions on the Timeline, per-app totals, app-to-activity links | Done |
@@ -484,4 +485,51 @@ Asked for as short lists. Each part was its own pull request; all are merged. De
 | Fix | #209 | | The More button no longer reads the hidden count (it crashed while the row was being built) |
 
 Known limits: a stay join is tied to the stay's id, so it does not carry over if the place engine ever rebuilds that stay with a new id; inside a phone period the app's share is by time on screen, because the phone does not record when each app was open.
+
+---
+
+### Food rounds (N1 to N7, then the AI round), October to 11 November 2026
+
+Each part was its own pull request; all are merged unless marked. Details of every change are in [CHANGELOG.md](../CHANGELOG.md).
+
+**N: the Food tab grows**
+
+| Part | PR | Database | What was built |
+| --- | --- | --- | --- |
+| N1 The food list | #212 | 33 | The list that comes with the app (561 foods, ready dishes, photos) |
+| N2 Vitamins and minerals | #213 | 34 | Pick which ones to count, daily targets, your own additions |
+| N3 The new Food screen | #215, #217 | | The Food tab rebuilt |
+| N5 Shake, supplements, weight, fasting, prep, plans | #216 | 35 (backup 36) | Also protein quality, fat types and What to show |
+| N6 Custom trackers | #218 | 36 (backup 37) | Count anything with one tap; the Diary timeline |
+| N7 GymMane sync | #219 to #221 | | Import from GymMane's backup folder, optional send-back copy |
+| Parts 7 to 10 and supplement reminders | | | Vitamin numbers for the list, Indian foods and the IFCT 2017 tables, the screen in GymMane's look, supplement reminders (#222) |
+| Export for GymMane | #226 | | Export > For GymMane |
+
+**The AI round (database stays at 36)**
+
+| Part | PR | What was built |
+| --- | --- | --- |
+| Fill from a photo | #227, #228 | Take or choose a photo in the new-food form and Google's Gemini fills the boxes (your own key, left out of backups); a fix |
+| Widget and check page | #229 | Home-screen camera button, shortcut and quick-settings tile; a check page that reads a plate |
+| Form boxes | #230 | The new-food form gets a box for every number the reader can fill |
+| Calmer Add food | #231 | Calmer Add food, plate ticks, thumbnails |
+| Barcode, label, describe | #232 | Barcode (Open Food Facts), nutrition label and describing a meal in words |
+| Offline queue | #233 | Photos taken without internet wait and are read later; a back-up model; corrections |
+| Name the dish | #234 | Choose to name the dish before sending, and the name goes with the photo |
+| Add food redesign | #235 to #238 | One screen: search with aliases, the three routes under it, quick picks, Add several, Undo and Change amount |
+
+**Finishing the plan**
+
+| Part | PR | What was built |
+| --- | --- | --- |
+| Week window | #239 | Days, what you ate most, weight change; opened from the "This week" card |
+| Card order | #240 | Move the Food cards up and down in What to show |
+| Calories burned | #241 | From Health Connect (optional permission, a switch) or your steps; a number you type always wins |
+| Reminders | #242 | Meal times, water through the day; quiet when the meal is logged or water is on track; all off to start |
+| Vitamin watch | #243 | Says when a picked vitamin ran low over the last seven days and which foods have more |
+| Save a batch as a food | #244 | A prep batch becomes a food of your own (one portion) |
+| Describe ingredients | #245 | Type or speak "200 g rice, 150 g chicken": foods you have are used first, the AI estimates the rest |
+| Sunday week report | #246 | A Sunday notification with a short summary of the week (off to start) |
+
+**Decisions and limits.** The vitamin numbers for the roughly 110 base foods that have none were left as they are, on your word. The check page changes a portion with a multiplier, not the same portion control as the Add food screen. There is no offline notice, because search never needs the internet. Everything above is built by the cloud build only; the phone checks are in the README under "Things only you can do".
 

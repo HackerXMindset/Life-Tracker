@@ -9,7 +9,7 @@ What you did, what you ate, which habits you kept, where you went and where your
 <img alt="Downloads" src="https://img.shields.io/github/downloads/HackerXMindset/Life-Tracker/total?style=flat&logo=github&logoColor=white&label=Downloads&color=7C3AED" />
 ![Android](https://img.shields.io/badge/Android-15-3DDC84?logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-Compose-7F52FF?logo=kotlin&logoColor=white)
-![Database](https://img.shields.io/badge/database-v32-blue)
+![Database](https://img.shields.io/badge/database-v36-blue)
 ![Data](https://img.shields.io/badge/data-stays%20on%20your%20phone-success)
 
 [What it does](#what-it-does) · [Where it stands](#where-it-stands) · [Roadmap](#roadmap) · [Install](#install) · [Rules](#rules-the-project-lives-by) · [Docs](#docs)
@@ -25,7 +25,7 @@ Life Tracker is an Android app built for one person: its owner. It replaces a pi
 | Tab | What you get | Learns from |
 | --- | --- | --- |
 | **Timeline** | Your day in order: logged activities, app use, calls, charging, steps, sleep, places and trips, as a strip and a pie (the pie can show each app too); drag two stays together to join them | LifeXP |
-| **Food** | 561 foods with photos, dishes, vitamins and minerals, water, supplements, fasting, weight, meal prep and plans, your own trackers with a diary; automatic import from GymMane and OpenNutriTracker | GymMane, OpenNutriTracker |
+| **Food** | 561 foods with photos, dishes, vitamins and minerals, water, supplements, fasting, weight, your own trackers with a diary; **add a meal by photo, barcode, label or by describing it** (Google's Gemini reads photos and text with your own key, only when you press); a home-screen camera button and an offline queue; one Add food screen with search, quick picks and Undo; a week window; calories burned from Health Connect or your steps; meal, water and Sunday-week reminders; a vitamin watch; meal prep batches and plans that become recipes (type or speak the ingredients); two-way sync with GymMane and import from OpenNutriTracker | GymMane, OpenNutriTracker, Fud AI, FoodYou |
 | **Habits** | Streaks, schedules, notes, reminders, focus timer; two-way sync with Streak | Streak |
 | **Money** | Income and spending, monthly items, quick-log buttons, your own categories | (new) |
 | **Stats** | Numbers on everything, by day or any range | Simkl |
@@ -45,6 +45,9 @@ Life Tracker is an Android app built for one person: its owner. It replaces a pi
 | Places and trips remake (C1 to C9) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done, 11 pull requests |
 | Places and trips round 2 (E1 to E10) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done (stays and names, live map, replay and GIF, journeys and travel mode, Rules, place goals); needs your check on the phone, see the list below |
 | Places and trips round 3 (F1 to F3, G1 to G4, H1, H2) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done, 9 pull requests (stays inside a place, places list and drawn areas, maps with a size limit, one backup, rules and goals on one page, joining stays, apps in the pie); needs your check on the phone |
+| Food round (N1 to N7: vitamins, supplements, fasting, weight, prep and plans, GymMane sync) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done, merged; needs your check on the phone |
+| Food with the AI (photo, barcode, label, describe, widget, offline queue, Add food redesign) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done, 18 pull requests (#227 to #244); needs your check on the phone |
+| Food finishing (week window, card order, calories burned, reminders, vitamin watch, recipes) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Done; the ingredient describe and the Sunday report are the last two pieces |
 | Money editing (R6b, R6c) | ▰▰▰▰▰▰▰▰▰▰ | ✅ Built, waiting for your test on the phone |
 | Life events, month and year views (Step 14) | ▱▱▱▱▱▱▱▱▱▱ | 💤 Later (the picture of it is done; it starts when you say "build it") |
 
@@ -56,7 +59,22 @@ Life Tracker is an Android app built for one person: its owner. It replaces a pi
 
 ### Now: nothing is being built
 
-Round 3 is finished and merged. The next thing starts when you pick it (see [Next](#next)). What is waiting for you is the phone check in "Things only you can do" at the bottom.
+The Food rounds are finished. The next thing starts when you pick it (see [Next](#next)). What is waiting for you is the phone check in "Things only you can do" at the bottom.
+
+### The Food rounds (done)
+
+Built one small pull request at a time from 22 October to 11 November 2026. Every part is in [docs/ROADMAP-HISTORY.md](docs/ROADMAP-HISTORY.md); the short version:
+
+| Part | What you got |
+| --- | --- |
+| **N1 to N7** | The food list, vitamins and minerals you pick, a new Food screen, supplements, fasting, weight, meal prep batches and meal plans, custom trackers, and sync with GymMane (database 33 to 36) |
+| **AI add** | Fill a new food from a photo; a check page that reads a plate, a barcode (Open Food Facts) or a label; describing a meal in words; a home-screen camera button, a shortcut and a quick-settings tile; photos that wait for the internet; naming the dish before sending |
+| **Add food** | One screen: search with aliases ("curd" finds dahi), Photo, Barcode and Label always in view, quick picks for the meal, Add several, Undo and Change amount |
+| **Week and cards** | A week window (days, what you ate most, weight); move the cards of the Food page up and down |
+| **Calories burned** | From Health Connect (an optional switch) or from your steps when you typed nothing |
+| **Reminders** | Meal times, water through the day, and a Sunday week report; all off until you switch them on, and quiet when there is nothing to say |
+| **Vitamin watch** | Says when a vitamin you picked ran low over the last week and which foods help |
+| **Recipes** | A prep batch can be saved as a food, and its ingredients can be typed or spoken: "200 g rice, 150 g chicken" |
 
 ### Round 3: fixes and polish (done)
 
@@ -298,6 +316,7 @@ Short stops on a long drive stay as they are now. You said no to daily recap not
 - **Step 15** Stats: Simkl-level numbers you shape yourself
 - **Step 16** Polish
 - Two phones in sync (another assistant is planning it)
+- Vitamin numbers for the roughly 110 base foods that still have none (you chose to leave them)
 - More on [the milestones page](https://github.com/HackerXMindset/Life-Tracker/milestones): connectors, automation
 
 <details>
@@ -311,6 +330,7 @@ Short stops on a long drive stay as they are now. You said no to daily recap not
 | Habits | H1 to H13 | Streak-style habits: sync both ways, check times, checklists, rest days, reminders, focus timer |
 | Places and trips remake | C1 to C9 | All-day GPS, profiles, pause zones, new screens, maps, offline areas, import and export |
 | Places and trips rounds 2 and 3 | E1 to E10, F1 to F3, G1 to G4, H1, H2 | Undo and Changes, live map, replay and GIF, rules and goals, stays inside a place, drawn areas, map size limit, one backup, joining stays, apps in the pie |
+| Food rounds | N1 to N7, #226 to #246 | Vitamins, supplements, fasting, weight, prep and plans, GymMane sync, AI photo, barcode, label and describe, widget, offline queue, Add food redesign, week window, calories burned, reminders, vitamin watch, recipes |
 
 Everything, step by step, is in [docs/ROADMAP-HISTORY.md](docs/ROADMAP-HISTORY.md).
 
@@ -329,6 +349,11 @@ Everything, step by step, is in [docs/ROADMAP-HISTORY.md](docs/ROADMAP-HISTORY.m
 - [ ] A short focus-timer test with the screen off, and a reminders test
 - [ ] Compare the phone-usage totals with Digital Wellbeing
 - [ ] Set your height (the stride starts at 0.70 m)
+- [ ] Food on the phone: the camera button on the home screen, the check page (plate, barcode, label, describe), the form boxes, and a photo taken without internet that is read later
+- [ ] Add food: search "curd", the quick picks, Add several, Undo and Change amount; the week window; moving cards in What to show
+- [ ] Food > Burned: the Health Connect switch and its permission; then the three reminders (meal, water, Sunday report) one at a time, since all start off
+- [ ] The vitamin watch (switch it on, pick a vitamin, look after four logged days), "Save as a food" on a prep batch, and the ingredient box ("200 g rice, 150 g chicken")
+- [ ] Gemini: paste your own key in Settings and try one photo; remember photos and text go to Google only when you press the button
 - [ ] Look at the two overlapping Sleep rows
 - [ ] Export the Readings CSV, and send the logs after a day for the 15-minute safety-net check
 
@@ -358,13 +383,14 @@ No computer needed. Every push runs `build.yml` on GitHub: the tests run first, 
 - **Imports read, never change** your Streak, OpenNutriTracker and GymMane folders, and repeat safely. The only file Kairos adds to the GymMane folder is its own `gymmane-kairos-….zip` copy, and only if you switch that on.
 - **Backups are plain JSON files** you can copy and keep. Restore checks the file first and saves a safety copy of your current data.
 - A backup on the phone cannot help if the phone is lost; copy the backup folder somewhere else now and then.
-- The only things that go online are the ones you switch on: map pictures and place-name suggestions (see the help text in Settings).
+- The only things that go online are the ones you switch on or press: map pictures and place-name suggestions (see the help text in Settings); a food photo or a typed meal description, sent to Google's Gemini **only when you press the button**, with your own key; a barcode, sent to Open Food Facts when you scan it. The Gemini key lives in a file that is **left out of backups**, so it stays on this phone.
+- **Health Connect** (steps, sleep, calories burned) is read on the phone and not sent anywhere.
 
 ---
 
 ## Rules the project lives by
 
-1. **Your data stays on your phone.** No accounts, no servers, no tracking.
+1. **Your data stays on your phone.** No accounts, no servers, no tracking. The few things that leave it (map pictures, a barcode, a photo or text you send to the AI yourself) are named above and only happen when you press a button.
 2. **Nothing is lost by an update.** Every database change ships with a migration.
 3. **Nothing is deleted.** "Delete" means hide and keep, so it can come back. The one exception is downloaded offline map tiles.
 4. **Small steps you can try.** Each stage ends with something you can install and use.
@@ -383,4 +409,4 @@ No computer needed. Every push runs `build.yml` on GitHub: the tests run first, 
 
 ## Thanks
 
-The food list and its photos come from [GymMane](https://github.com/InlitX/GymMane) by InlitX (GPL-3.0; the app says "Based on GymMane by InlitX" in Settings). Vitamin and mineral amounts come from the USDA FoodData Central SR Legacy table (public domain). The Indian foods come from the Indian Food Composition Tables 2017 (National Institute of Nutrition, Hyderabad, via github.com/ifct2017, AGPL-3.0) and from typical recipe values marked approximate. Ideas came from [LifeXP](https://lifexp.app), [Streak](https://github.com/streaksapp), [OpenNutriTracker](https://github.com/simonoppowa/OpenNutriTracker), Simkl and [Colota](https://github.com/dietrichmax/colota). Colota is AGPL, so nothing of its code is used; the Places and trips features were written fresh from its documentation.
+The food list and its photos come from [GymMane](https://github.com/InlitX/GymMane) by InlitX (GPL-3.0; the app says "Based on GymMane by InlitX" in Settings). Vitamin and mineral amounts come from the USDA FoodData Central SR Legacy table (public domain). The Indian foods come from the Indian Food Composition Tables 2017 (National Institute of Nutrition, Hyderabad, via github.com/ifct2017, AGPL-3.0) and from typical recipe values marked approximate. Barcodes are looked up on [Open Food Facts](https://world.openfoodfacts.org) (data under ODbL, shown as "From Open Food Facts"). The way the app asks Gemini to read a plate (a small photo, a prompt that asks for JSON only) is the method of the open-source apps Fud AI and CalorieMate (both MIT); ideas for the Add food screen came from FoodYou. No code was copied. Ideas came from [LifeXP](https://lifexp.app), [Streak](https://github.com/streaksapp), [OpenNutriTracker](https://github.com/simonoppowa/OpenNutriTracker), Simkl and [Colota](https://github.com/dietrichmax/colota). Colota is AGPL, so nothing of its code is used; the Places and trips features were written fresh from its documentation.

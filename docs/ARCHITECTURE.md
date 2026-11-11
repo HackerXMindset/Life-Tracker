@@ -232,5 +232,43 @@ The tree above was drawn before the Colota-style remake and the rounds after it,
 | `ui/MapPickers.kt` | The "Download an area" window |
 | `ui/AppRestart.kt` | Restarts the app after a restore that put settings back |
 
-The database is at version 32 and the backup format at 33.
+The database is at version 36 and the backup format at 37 (the Food rounds below).
+
+---
+
+## Added in the Food rounds (N1 to N7 and the AI round)
+
+Files of the Food tab since October 2026. The older Food files are in the tree above.
+
+**Food data (`data/`)**
+
+| File | What it is |
+| --- | --- |
+| `FoodLibrary.kt`, `assets/food/*.tsv` | The list that comes with the app (561 foods, 27 dishes, vitamin numbers in `micro.tsv`), the search with `aliases.tsv` ("curd" finds dahi; alias-only matches rank last) |
+| `FoodExtras.kt` | Supplements, weight, fasting, prep batches and meal plans (database 35), and `FoodSettings`, the small settings of the Food tab (switches, card order, reminders, burned, watch) |
+| `Nutrients.kt`, `NutrientWatch.kt` | The vitamins and minerals you pick and their targets (database 34); the vitamin watch over the last seven days |
+| `SavedMealItems.kt`, `IngredientText.kt` | Foods inside a saved meal; turning "200 g rice, 150 g chicken" into ingredients |
+| `FoodFields.kt`, `FoodPhotoAi.kt` | The boxes of the new-food form; the Gemini key (left out of backups) and the calls for a photo or a text |
+| `PhotoMeal.kt`, `MealPhotos.kt`, `PhotoQueue.kt` | A meal read from a photo and re-sized by grams; the small photo kept with a meal; photos waiting for the internet |
+| `OpenFoodFacts.kt` | Barcode lookup on Open Food Facts (no key) |
+| `CameraWidget.kt`, `QuickPhotoActivity.kt` | The home-screen button, shortcut and quick-settings tile, and the screen they open |
+| `WeekReport.kt`, `FoodCalendar.kt` | The numbers of the week window and the Sunday notification text; the month grid |
+| `BurnedMath.kt` | Which number counts as calories burned (typed, Health Connect, or steps) |
+| `FoodReminders.kt` | When meal, water and Sunday reminders ring and stay quiet; the alarms, the banners and the receiver |
+| `FoodStats.kt` | Also the quick picks for a meal |
+| `gymmane/GymManCodec.kt`, `GymManSync.kt` | The GymMane file format, and the sync with its backup folder |
+
+**Food screens (`ui/`)**
+
+| File | What it is |
+| --- | --- |
+| `FoodScreen.kt`, `FoodViewModel.kt`, `FoodExtrasViewModel.kt` | The tab and what it shows; the cards of the page follow the order set in What to show (`FoodPartOrder`) |
+| `FoodSheets.kt`, `FoodAddRoutes.kt` | The Add food screen (search, Photo, Barcode and Label, quick picks, Add several, Undo) and the three routes under the search |
+| `PhotoCheckScreen.kt`, `FoodPhotoUi.kt`, `FoodEditor.kt`, `FoodPhoto.kt` | The check page (plate, barcode, label, describe, naming the dish); "Fill from a photo" in the new-food form; the form; food pictures |
+| `FoodExtrasCards.kt`, `FoodTrackersUi.kt`, `FoodWatchCard.kt`, `FoodWeekWindow.kt`, `FoodGymLook.kt` | The cards (supplements, fasting, prep, plans, reminders, ingredients), the trackers and their diary, the vitamin watch card, the week window, and the GymMane-style rings and tiles |
+| `NutrientsScreen.kt`, `GymManExportCard.kt` | Settings page for vitamins and minerals; Export > For GymMane |
+
+**What leaves the phone.** Only when you press: a food photo or a typed description to Google's Gemini (your own key, kept out of backups), and a barcode to Open Food Facts. Health Connect numbers stay on the phone.
+
+**Tests added:** `FoodLibraryTest` (search and aliases), `WeekReportTest`, `FoodPartOrderTest`, `BurnedMathTest`, `FoodReminderRulesTest`, `NutrientWatchTest`, `BatchOwnFoodTest` (in `FoodExtrasTest.kt`) and `IngredientTextTest`.
 
