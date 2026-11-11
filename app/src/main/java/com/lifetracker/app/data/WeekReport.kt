@@ -31,6 +31,16 @@ object WeekReport {
         val weightChangeKg: Double?,
     )
 
+    /** The one-line-or-two summary the Sunday notification shows; null when nothing was logged that week. */
+    fun summaryText(r: Report): String? {
+        if (r.loggedDays == 0) return null
+        val parts = ArrayList<String>()
+        parts += "Logged ${r.loggedDays} of 7 days, about ${Math.round(r.avgKcal)} kcal a day."
+        if (r.proteinGoalDays > 0) parts += "Protein goal met on ${r.proteinDays} of ${r.proteinGoalDays} days."
+        r.weightChangeKg?.let { parts += (if (it >= 0) "Weight +" else "Weight ") + String.format(java.util.Locale.US, "%.1f", it) + " kg." }
+        return parts.joinToString(" ")
+    }
+
     fun build(week: List<LocalDate>, meals: List<MealEntity>, goalFor: (String) -> FoodGoalEntity?, weights: List<WeightEntity>): Report {
         val byDay = meals.groupBy { it.date }
         val days = week.map { d -> Day(d, byDay[d.toString()].orEmpty(), goalFor(d.toString())) }
