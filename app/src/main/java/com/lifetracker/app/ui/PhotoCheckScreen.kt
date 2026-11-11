@@ -10,7 +10,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.matchParentSize
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -131,6 +130,7 @@ fun QuickPhotoScreen(
     var jpeg by remember { mutableStateOf<ByteArray?>(null) }
     var food by remember { mutableStateOf<PhotoFood?>(null) }
     var busy by remember { mutableStateOf(false) }
+    var readToken by remember { mutableStateOf(0) }
     var message by remember { mutableStateOf("") }
     var failed by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf("") }
@@ -290,7 +290,6 @@ fun QuickPhotoScreen(
 
     val animOn = rememberReadingAnimation()
     val phase = rememberReadPhase(busy, failed)
-    var readToken by remember { mutableStateOf(0) }
     val preview = remember(jpeg) {
         jpeg?.let { b ->
             BitmapFactory.decodeByteArray(b, 0, b.size, BitmapFactory.Options().apply { inSampleSize = 2 })?.asImageBitmap()
