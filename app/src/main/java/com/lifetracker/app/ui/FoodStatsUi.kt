@@ -76,6 +76,8 @@ fun FoodStatsWindow(
         PeriodStats.build(span, today, meals, { day -> FoodStats.goalFor(goals, LocalDate.parse(day)) }, weights, checks, habits.map { it.id })
     }
     var info by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var patterns by remember { mutableStateOf<String?>(null) }
+    var showPatterns by remember { mutableStateOf(false) }
     val canEarlier = StatSpans.canGoEarlier(period, anchor, today, earliest)
     val canLater = StatSpans.canGoLater(period, anchor, today)
     val title = StatSpans.title(period, span, today)
@@ -120,11 +122,12 @@ fun FoodStatsWindow(
                 ExtremesCard(result, today, onPickDay = { onPickDay(it); onClose() })
                 WeightChangeCard(result)
             }
-            HabitStatsCard(result, habits.associateBy { it.id }, onPickHabits = null)
+            HabitStatsCard(result, habits.associateBy { it.id }, onOpen = { patterns = it; showPatterns = true })
             if (result.topFoods.isNotEmpty()) TopFoodsCard(result, today, onOpen = { id, name -> info = id to name })
             if (period == StatPeriod.WEEK && result.loggedDays > 0) DayList(result, today, onPickDay = { onPickDay(it); onClose() })
         }
     }
+    if (showPatterns) PatternsWindow(x, patterns, onClose = { showPatterns = false })
     info?.let { (id, name) -> FoodInfoWindow(name, id, load = { x.allMeals() }, onClose = { info = null }) }
 }
 
@@ -304,19 +307,19 @@ private fun WeightChangeCard(r: PeriodStats.Result) {
 }
 
 @Composable
-private fun HabitStatsCard(r: PeriodStats.Result, habits: Map<String, com.lifetracker.app.data.FoodTrackerEntity>, onPickHabits: (() -> Unit)?) {
+private fun HabitStatsCard(r: PeriodStats.Result, habits: Map<String, com.lifetracker.app.data.FoodTrackerEntity>, onOpen: (String) -> Unit) {
     val p = LocalPaper.current
     val rows = r.habits.filter { habits.containsKey(it.habitId) }
     if (rows.isEmpty()) return
     PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
-        Kicker("Habits you watch")
+        Kicker("Habits you watch (tap one for what came before it)")
         Spacer(Modifier.height(8.dp))
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             rows.forEach { row ->
                 val habit = habits.getValue(row.habitId)
                 val colour = argbColor(habit.color)
                 val share = if (r.elapsedDays > 0) (row.daysDone.toFloat() / r.elapsedDays).coerceIn(0f, 1f) else 0f
-                Column {
+                Column(Modifier.clickable(role = Role.Button) { onOpen(row.habitId) }) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(9.dp).background(colour, CircleShape))
                         Spacer(Modifier.size(7.dp))

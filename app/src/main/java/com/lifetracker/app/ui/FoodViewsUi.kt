@@ -114,6 +114,7 @@ fun MonthView(
     onMonth: (YearMonth) -> Unit,
     onPick: (LocalDate) -> Unit,
     onPickHabits: () -> Unit,
+    onPatterns: () -> Unit,
 ) {
     val p = LocalPaper.current
     val order = trackers.map { it.id }
@@ -198,7 +199,10 @@ fun MonthView(
             Spacer(Modifier.height(8.dp))
             HabitPills(trackers, off, onToggleHabit)
             Spacer(Modifier.height(4.dp))
-            PaperButton("Change habits", onPickHabits, style = PaperButtonStyle.Ghost, small = true)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PaperButton("Change habits", onPickHabits, style = PaperButtonStyle.Ghost, small = true)
+                PaperButton("What came before", onPatterns, style = PaperButtonStyle.Ghost, small = true)
+            }
         }
     }
 }
@@ -229,10 +233,11 @@ fun LazyListScope.foodTimeline(
     onDay: (LocalDate) -> Unit,
     onEarlier: () -> Unit,
     onPickHabits: () -> Unit,
+    onPatterns: () -> Unit,
 ) {
     val colours = trackers.associate { it.id to it }
     item {
-        TimelineHeader(trackers, onPickHabits)
+        TimelineHeader(trackers, onPickHabits, onPatterns)
     }
     if (days.isEmpty()) {
         item { TimelineEmpty() }
@@ -247,7 +252,7 @@ fun LazyListScope.foodTimeline(
 }
 
 @Composable
-private fun TimelineHeader(trackers: List<FoodTrackerEntity>, onPickHabits: () -> Unit) {
+private fun TimelineHeader(trackers: List<FoodTrackerEntity>, onPickHabits: () -> Unit, onPatterns: () -> Unit) {
     val p = LocalPaper.current
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         Text(
@@ -257,6 +262,10 @@ private fun TimelineHeader(trackers: List<FoodTrackerEntity>, onPickHabits: () -
         )
         Spacer(Modifier.width(8.dp))
         PaperPill(if (trackers.isEmpty()) "Pick" else "Change", false, onPickHabits)
+        if (trackers.isNotEmpty()) {
+            Spacer(Modifier.width(6.dp))
+            PaperPill("Patterns", false, onPatterns)
+        }
     }
 }
 

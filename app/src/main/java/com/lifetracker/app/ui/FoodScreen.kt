@@ -113,6 +113,8 @@ private sealed interface Sheet {
     data object Goals : Sheet
 
     data object Body : Sheet
+
+    data object Patterns : Sheet
     data object Trackers : Sheet
     data object Habits : Sheet
     data object Week : Sheet
@@ -209,12 +211,12 @@ fun FoodScreen(vm: FoodViewModel = viewModel(), x: FoodExtrasViewModel = viewMod
                         month = month, date = date, today = today, ringPct = monthRing,
                         trackers = pickedHabits, checks = checks, off = offHabits,
                         onToggleHabit = { id -> offHabits = if (id in offHabits) offHabits - id else offHabits + id },
-                        onMonth = { month = it }, onPick = vm::select, onPickHabits = { sheet = Sheet.Habits },
+                        onMonth = { month = it }, onPick = vm::select, onPickHabits = { sheet = Sheet.Habits }, onPatterns = { sheet = Sheet.Patterns },
                     )
                 }
                 FoodView.TIMELINE -> foodTimeline(
                     days = diary, trackers = pickedHabits, today = today, spanDays = diarySpan,
-                    onDay = { vm.select(it); view = FoodView.WEEK }, onEarlier = x::showEarlier, onPickHabits = { sheet = Sheet.Habits },
+                    onDay = { vm.select(it); view = FoodView.WEEK }, onEarlier = x::showEarlier, onPickHabits = { sheet = Sheet.Habits }, onPatterns = { sheet = Sheet.Patterns },
                 )
             }
             if (view != FoodView.TIMELINE) {
@@ -391,6 +393,7 @@ fun FoodScreen(vm: FoodViewModel = viewModel(), x: FoodExtrasViewModel = viewMod
         Sheet.SavedMeals -> SavedMealsSheet(vm = vm, mealType = openMeal, onDone = { sheet = null }, onDismiss = { sheet = null })
         Sheet.Goals -> GoalsSheet(vm = vm, onDismiss = { sheet = null }, onBody = { sheet = Sheet.Body })
         Sheet.Body -> BodyWindow(x, vm, onClose = { sheet = null })
+        Sheet.Patterns -> PatternsWindow(x, null, onClose = { sheet = null })
         Sheet.Trackers -> TrackersSheet(onDismiss = { sheet = null })
         Sheet.Habits -> HabitPickerWindow(x, onClose = { sheet = null })
         Sheet.Week -> FoodStatsWindow(x, date, onPickDay = { vm.select(it) }, onClose = { sheet = null })
