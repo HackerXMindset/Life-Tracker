@@ -2,20 +2,6 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
-## 🔗 Trackers are habits now
-
-### ✨ New
-
-- **Your trackers are your habits.** The Habits card on the Food tab (it was "Custom trackers") now shows habits from the Habits tab, only the ones you pick. Tap one and it is a check of that habit, with the time, so the Habits tab, Streak and Food always agree. Checks made on the Habits tab show up in Food too, and in the Diary.
-- **Pick which habits show.** Tap **Pick** or **Change** on the card and switch on the habits you want. **New habit** makes one on the spot (count by tap, no streak) and it also appears in the Habits tab.
-- **Your old trackers moved over by themselves**, once. A tracker joined the habit with the same name, or became a new habit, and every tap became a check with its time. Nothing was deleted from the old tables.
-- **Water is linked three ways.** Water you add on the Food tab counts on a habit called Water, and checks on that habit count as water here, with the same streak and goal rules as any habit. If you have no such habit, one is made (in ml, one glass a tap). A habit called Water in glasses, cups, litres or oz is used as it is. There is a switch, **Link water to Habits**, in What to show (on).
-
-### 🔧 Changed
-
-- A check made without a time (a past day ticked on the Habits tab) shows without a clock time. Tap it to give it one.
-- The note on a tap is gone, since a habit check has none.
-
 ## 🔁 Meals you eat again
 
 ### ✨ New
