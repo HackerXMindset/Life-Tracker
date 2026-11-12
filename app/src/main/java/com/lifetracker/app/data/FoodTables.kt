@@ -151,6 +151,9 @@ interface FoodDao {
     @Query("SELECT * FROM water_log WHERE date = :date")
     fun waterOn(date: String): Flow<WaterEntity?>
 
+    @Query("SELECT * FROM water_log")
+    fun observeAllWater(): Flow<List<WaterEntity>>
+
     @Query("SELECT * FROM meals ORDER BY date DESC, minuteOfDay DESC LIMIT 300")
     fun observeRecentMeals(): Flow<List<MealEntity>>
 

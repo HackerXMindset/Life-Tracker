@@ -123,6 +123,16 @@ fun TrackersSheet(onDismiss: () -> Unit) {
                 PaperToggle(animOn, { FoodSettings.setReadingAnimation(context, it) })
             }
 
+            MonoLabel("Habits")
+            val linkOn = remember(tick) { FoodSettings.waterLinked(context) }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Link water to Habits", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = p.ink)
+                    Text("Water drunk here counts on your Water habit, and the other way round. A habit called Water is made if you have none.", fontSize = 12.sp, color = p.ink2)
+                }
+                PaperToggle(linkOn, { FoodSettings.setWaterLinked(context, it) })
+            }
+
             MonoLabel("Reminders")
             val mealOn = remember(tick) { FoodSettings.mealReminders(context) }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {

@@ -311,7 +311,7 @@ enum class FoodPart(val id: String, val title: String, val hint: String, val onB
     FATS("fats", "Types of fat", "Saturated, mono- and polyunsaturated fat", false),
     WATCH("watch", "Vitamin watch", "Tells you when a vitamin or mineral you picked ran low over the last week", false),
     FASTING("fasting", "Fasting", "A timer for intermittent fasting", false),
-    TRACKERS("trackers", "Custom trackers", "Count anything with one tap, such as a headache or a cup of tea, and the Diary timeline", false),
+    TRACKERS("trackers", "Habits", "Tap the habits you picked from the Habits tab, such as a headache or a cup of tea, and the Diary timeline", false),
 }
 
 /** The two stacks of parts on the Food tab and how a saved order is applied to them. */
@@ -443,6 +443,38 @@ object FoodSettings {
     fun setReadingAnimation(context: Context, on: Boolean) {
         prefs(context).edit { putBoolean("reading_animation", on) }
         changed()
+    }
+
+    /** The habits of the Habits tab that show in the Food tab (their ticks sit beside the meals). Only the ones you pick. */
+    fun watchedHabits(context: Context): List<String> =
+        prefs(context).getString("watched_habits", "").orEmpty().split(',').map { it.trim() }.filter { it.isNotEmpty() }
+
+    fun setWatchedHabits(context: Context, ids: List<String>) {
+        prefs(context).edit { putString("watched_habits", ids.distinct().joinToString(",")) }
+        changed()
+    }
+
+    /** The habit that mirrors the water of the Food tab ("" until one is picked or made). */
+    fun waterHabit(context: Context): String = prefs(context).getString("water_habit", "").orEmpty()
+
+    fun setWaterHabit(context: Context, id: String) {
+        prefs(context).edit { putString("water_habit", id) }
+        changed()
+    }
+
+    /** Whether the water of the Food tab and the Water habit are kept the same. On, since this is what links them. */
+    fun waterLinked(context: Context): Boolean = prefs(context).getBoolean("water_link", true)
+
+    fun setWaterLinked(context: Context, on: Boolean) {
+        prefs(context).edit { putBoolean("water_link", on) }
+        changed()
+    }
+
+    /** Set once the old custom trackers have become habits. */
+    fun trackersMigrated(context: Context): Boolean = prefs(context).getBoolean("trackers_migrated", false)
+
+    fun setTrackersMigrated(context: Context) {
+        prefs(context).edit { putBoolean("trackers_migrated", true) }
     }
 
     /** The Sunday-evening week report: off until you switch it on, at [weeklyMinute] on Sundays (19:00 unless changed). */

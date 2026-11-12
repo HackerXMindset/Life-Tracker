@@ -24,6 +24,8 @@ class LifeTrackerApplication : Application() {
         HabitReminderScheduler.watch(this, CoroutineScope(SupervisorJob() + Dispatchers.IO))
         // Supplement reminders follow the supplements and the switch in Food.
         com.lifetracker.app.data.SupplementReminderScheduler.watch(this, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        // The water of the Food tab and the Water habit stay the same while the app is alive.
+        com.lifetracker.app.data.WaterLink.start(this)
         // A focus session that was running comes back with its alarm and banner (Habits H13).
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch { runCatching { FocusEngine.restore(this@LifeTrackerApplication) } }
         if (ChargeSettings(this).track) {
