@@ -2,6 +2,19 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📅 Week, Month and Timeline
+
+### ✨ New
+
+- **A switch under the Food title: Week, Month, Timeline.** The week strip you know is the Week view and is unchanged. The tab opens on whichever view you used last.
+- **Month view.** A calendar like OpenNutriTracker's, Monday first, each day with its calorie ring. Under a day, a small **tick in the habit's colour** shows that you did a habit you picked that day (up to three, then "+n"). Swipe sideways or use the arrows to change month, tap the month name to come back to this month, tap a day to open it. Tap a habit's pill under the grid to hide or show its ticks.
+- **Timeline view.** Days newest first, each listing your foods and your habit ticks together in the order they happened, with the time, so you can read what you ate before a headache or a bad stomach. A tick made without a time shows first as "no time". Tap a day to open it.
+- The dot under a day in the Week strip now follows the habits you picked, whether or not the Habits card is switched on.
+
+### 🔧 Changed
+
+- The Diary button is gone: the Timeline view replaces it.
+
 ## 🔗 Trackers are habits now
 
 ### ✨ New

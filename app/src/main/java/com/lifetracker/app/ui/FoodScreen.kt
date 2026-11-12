@@ -63,7 +63,10 @@ import com.lifetracker.app.data.FoodSettings
 import com.lifetracker.app.data.FoodRef
 import com.lifetracker.app.data.FoodStats
 import com.lifetracker.app.data.Loggable
+import com.lifetracker.app.data.FoodGoalEntity
+import com.lifetracker.app.data.FoodView
 import com.lifetracker.app.data.MealEntity
+import com.lifetracker.app.data.MonthMath
 import com.lifetracker.app.data.NutrientMath
 import com.lifetracker.app.data.QualityMath
 import com.lifetracker.app.data.SavedMealItems
@@ -76,6 +79,7 @@ import com.lifetracker.app.ui.theme.PaperField
 import com.lifetracker.app.ui.theme.PaperIconButton
 import com.lifetracker.app.ui.theme.PaperPill
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.Locale
 
@@ -108,7 +112,7 @@ private sealed interface Sheet {
     data object SavedMeals : Sheet
     data object Goals : Sheet
     data object Trackers : Sheet
-    data object Diary : Sheet
+    data object Habits : Sheet
     data object Week : Sheet
 }
 
@@ -133,7 +137,18 @@ fun FoodScreen(vm: FoodViewModel = viewModel(), x: FoodExtrasViewModel = viewMod
     val shown = remember(tick) { FoodPart.entries.associateWith { FoodSettings.isOn(context, it) } }
     val order = remember(tick) { FoodSettings.order(context) }
     LaunchedEffect(date) { x.setDay(date) }
-    val tapped = if (shown[FoodPart.TRACKERS] == true) eventDays else emptySet()
+    val tapped = eventDays
+    val pickedHabits by x.trackers.collectAsState()
+    val checks by x.checks.collectAsState()
+    val monthMeals by x.monthMeals.collectAsState()
+    val diary by x.diary.collectAsState()
+    val diarySpan by x.diarySpanDays.collectAsState()
+    // The view you used last is the one the tab opens on. Opening a day from the timeline goes to the week without remembering that.
+    var view by remember { mutableStateOf(FoodSettings.foodView(context)) }
+    var month by remember { mutableStateOf(YearMonth.from(date)) }
+    var offHabits by remember { mutableStateOf(setOf<String>()) }
+    LaunchedEffect(date) { month = YearMonth.from(date) }
+    LaunchedEffect(month) { x.setMonth(month) }
 
     val today = LocalDate.now()
     var sheet by remember { mutableStateOf<Sheet?>(null) }
@@ -150,13 +165,12 @@ fun FoodScreen(vm: FoodViewModel = viewModel(), x: FoodExtrasViewModel = viewMod
         FoodSettings.burnedFor(context, date.toString(), stepsByDay[date.toString()] ?: 0, bodyKg).kcal
     }
     var askBurned by remember { mutableStateOf(false) }
-    val ringPct: (LocalDate) -> Float = remember(weekMeals, allGoals, tick, stepsByDay, bodyKg) {
-        val byDay = weekMeals.groupBy { it.date };
-        { d: LocalDate ->
-            val budget = (FoodStats.goalFor(allGoals, d)?.kcal ?: 0.0) + FoodSettings.burnedFor(context, d.toString(), stepsByDay[d.toString()] ?: 0, bodyKg).kcal
-            if (budget <= 0) 0f else ((byDay[d.toString()]?.sumOf { it.kcal } ?: 0.0) / budget).toFloat()
-        }
-    }
+    val ringPct = remember(weekMeals, allGoals, tick, stepsByDay, bodyKg) { ringOf(context, weekMeals, allGoals, stepsByDay, bodyKg) }
+    val monthSpan = remember(month) { MonthMath.span(month) }
+    val monthStepRows by remember(month) { AppDatabase.get(context).stepDao().daysBetween(monthSpan.first, monthSpan.second) }
+        .collectAsState(emptyList())
+    val monthSteps = remember(monthStepRows) { monthStepRows.associate { it.date to it.steps } }
+    val monthRing = remember(monthMeals, allGoals, tick, monthSteps, bodyKg) { ringOf(context, monthMeals, allGoals, monthSteps, bodyKg) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
@@ -177,14 +191,31 @@ fun FoodScreen(vm: FoodViewModel = viewModel(), x: FoodExtrasViewModel = viewMod
                                     date.year, date.monthValue - 1, date.dayOfMonth,
                                 ).show()
                             })
-                            PaperIconButton(R.drawable.ic_p_timeline, "Diary", onClick = { sheet = Sheet.Diary })
                             PaperIconButton(R.drawable.ic_p_list, "What to show", onClick = { sheet = Sheet.Trackers })
                             PaperIconButton(R.drawable.ic_p_gear, "Goals", onClick = { sheet = Sheet.Goals })
                         }
                     },
                 )
             }
-            item { WeekStrip(date, today, ringPct, tapped, onPick = vm::select, onShift = { vm.shift(it * 7L) }) }
+            item {
+                FoodViewSwitch(view) { picked -> view = picked; FoodSettings.setFoodView(context, picked) }
+            }
+            when (view) {
+                FoodView.WEEK -> item { WeekStrip(date, today, ringPct, tapped, onPick = vm::select, onShift = { vm.shift(it * 7L) }) }
+                FoodView.MONTH -> item {
+                    MonthView(
+                        month = month, date = date, today = today, ringPct = monthRing,
+                        trackers = pickedHabits, checks = checks, off = offHabits,
+                        onToggleHabit = { id -> offHabits = if (id in offHabits) offHabits - id else offHabits + id },
+                        onMonth = { month = it }, onPick = vm::select, onPickHabits = { sheet = Sheet.Habits },
+                    )
+                }
+                FoodView.TIMELINE -> foodTimeline(
+                    days = diary, trackers = pickedHabits, today = today, spanDays = diarySpan,
+                    onDay = { vm.select(it); view = FoodView.WEEK }, onEarlier = x::showEarlier, onPickHabits = { sheet = Sheet.Habits },
+                )
+            }
+            if (view != FoodView.TIMELINE) {
             item {
                 HeroCard(totals.kcal, totals.carbs, totals.protein, totals.fat, goal?.kcal, goal?.carbs, goal?.protein, goal?.fat, burned, onBurned = { askBurned = true })
             }
@@ -284,6 +315,7 @@ fun FoodScreen(vm: FoodViewModel = viewModel(), x: FoodExtrasViewModel = viewMod
                     else -> Unit
                 }
             }
+            }
         }
     }
 
@@ -352,8 +384,19 @@ fun FoodScreen(vm: FoodViewModel = viewModel(), x: FoodExtrasViewModel = viewMod
         Sheet.SavedMeals -> SavedMealsSheet(vm = vm, mealType = openMeal, onDone = { sheet = null }, onDismiss = { sheet = null })
         Sheet.Goals -> GoalsSheet(vm = vm, onDismiss = { sheet = null })
         Sheet.Trackers -> TrackersSheet(onDismiss = { sheet = null })
-        Sheet.Diary -> FoodDiaryWindow(x, onPickDay = { vm.select(it) }, onClose = { sheet = null })
+        Sheet.Habits -> HabitPickerWindow(x, onClose = { sheet = null })
         Sheet.Week -> WeekWindow(x, date, onShiftWeek = { vm.shift(it.toLong()) }, onPickDay = { vm.select(it) }, onClose = { sheet = null })
+    }
+}
+
+/** The share of each day's calorie budget that was eaten, for the rings. The budget is the goal plus what was burned. */
+private fun ringOf(
+    context: android.content.Context, meals: List<MealEntity>, goals: List<FoodGoalEntity>, steps: Map<String, Int>, bodyKg: Double,
+): (LocalDate) -> Float {
+    val byDay = meals.groupBy { it.date }
+    return { d: LocalDate ->
+        val budget = (FoodStats.goalFor(goals, d)?.kcal ?: 0.0) + FoodSettings.burnedFor(context, d.toString(), steps[d.toString()] ?: 0, bodyKg).kcal
+        if (budget <= 0) 0f else ((byDay[d.toString()]?.sumOf { it.kcal } ?: 0.0) / budget).toFloat()
     }
 }
 

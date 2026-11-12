@@ -142,7 +142,7 @@ fun TrackersCard(x: FoodExtrasViewModel, date: LocalDate) {
         }
     }
 
-    if (managing) TrackersWindow(x, onClose = { managing = false })
+    if (managing) HabitPickerWindow(x, onClose = { managing = false })
     editingEvent?.let { e ->
         EventSheet(x, e, trackers.firstOrNull { it.id == e.trackerId }, onDismiss = { editingEvent = null })
     }
@@ -178,8 +178,9 @@ private fun WeekBars(events: List<TrackerEventEntity>, date: LocalDate, tracker:
     }
 }
 
+/** The window that picks which habits show in Food. */
 @Composable
-private fun TrackersWindow(x: FoodExtrasViewModel, onClose: () -> Unit) {
+fun HabitPickerWindow(x: FoodExtrasViewModel, onClose: () -> Unit) {
     val p = LocalPaper.current
     val habits by x.habits.collectAsState()
     val picked by x.picked.collectAsState()
@@ -261,72 +262,6 @@ private fun EventSheet(x: FoodExtrasViewModel, event: TrackerEventEntity, tracke
             )
             PaperButton("Take this check away", { x.deleteEvent(event); onDismiss() }, style = PaperButtonStyle.Danger, small = true)
             Spacer(Modifier.height(12.dp))
-        }
-    }
-}
-
-// ---- the Diary timeline ----
-
-/** Days newest first: the date, the day's calories, the foods with their times and the taps as chips. */
-@Composable
-fun FoodDiaryWindow(x: FoodExtrasViewModel, onPickDay: (LocalDate) -> Unit, onClose: () -> Unit) {
-    val p = LocalPaper.current
-    val days by x.diary.collectAsState()
-    val trackers by x.trackers.collectAsState()
-    val span by x.diarySpanDays.collectAsState()
-    val today = LocalDate.now()
-
-    EditWindow(title = "Diary", sub = "Newest first. Tap a day to open it. The last $span days.", onClose = onClose) {
-        if (days.isEmpty()) Text("Nothing logged in this time.", color = p.ink2, fontSize = 13.sp)
-        days.forEach { day -> DiaryDayCard(day, trackers, today, onClick = { onPickDay(day.date); onClose() }) }
-        PaperButton("Show 30 days earlier", { x.showEarlier() }, style = PaperButtonStyle.Ghost, small = true)
-    }
-}
-
-@Composable
-private fun DiaryDayCard(day: DiaryDay, trackers: List<FoodTrackerEntity>, today: LocalDate, onClick: () -> Unit) {
-    val p = LocalPaper.current
-    val chips = TrackerMath.chips(day.events, trackers)
-    PaperCard(modifier = Modifier.fillMaxWidth(), padding = 12.dp, shadow = false, onClick = onClick) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Box(
-                modifier = Modifier
-                    .size(12.dp)
-                    .background(if (day.hasEvents) p.sun else Color.Transparent, CircleShape)
-                    .border(1.5.dp, if (day.hasEvents) p.sun else p.pen, CircleShape),
-            )
-            Column(modifier = Modifier.weight(1f)) {
-                Text(TimelineTop.title(day.date, today), fontSize = 15.sp, fontWeight = FontWeight.Bold, color = p.ink)
-                Text(day.date.toString(), fontSize = 11.sp, color = p.ink2)
-            }
-            Text(kc(day.kcal) + " kcal", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = p.ink)
-        }
-        if (day.meals.isNotEmpty()) {
-            Column(modifier = Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                day.meals.forEach { m ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(formatMinute(m.minuteOfDay), fontSize = 12.sp, color = p.ink2, modifier = Modifier.width(44.dp))
-                        Text(m.name, fontSize = 13.sp, color = p.ink, modifier = Modifier.weight(1f), maxLines = 1)
-                        Text(kc(m.grams) + " g", fontSize = 12.sp, color = p.ink2)
-                    }
-                }
-            }
-        }
-        if (chips.isNotEmpty()) {
-            ChipFlow(modifier = Modifier.padding(top = 8.dp)) {
-                chips.forEach { c ->
-                    Row(
-                        modifier = Modifier
-                            .background(argbColor(c.color).copy(alpha = 0.16f), RoundedCornerShape(50))
-                            .padding(horizontal = 10.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(5.dp),
-                    ) {
-                        IconGlyph(icon = c.icon, tint = argbColor(c.color), size = 14.dp, fallback = c.name)
-                        Text((c.text + "  " + c.minutes.filter { it >= 0 }.joinToString(" ") { formatMinute(it) }).trim(), fontSize = 12.sp, color = p.ink)
-                    }
-                }
-            }
         }
     }
 }
