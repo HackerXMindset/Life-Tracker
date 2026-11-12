@@ -1125,7 +1125,7 @@ fun SavedMealsSheet(vm: FoodViewModel, mealType: String, onDone: () -> Unit, onD
 // ---- goals ----
 
 @Composable
-fun GoalsSheet(vm: FoodViewModel, onDismiss: () -> Unit) {
+fun GoalsSheet(vm: FoodViewModel, onDismiss: () -> Unit, onBody: () -> Unit = {}) {
     val p = LocalPaper.current
     val goal by vm.goal.collectAsState()
     val date by vm.date.collectAsState()
@@ -1140,6 +1140,7 @@ fun GoalsSheet(vm: FoodViewModel, onDismiss: () -> Unit) {
     PaperSheet(onDismiss = onDismiss) {
         SheetBody {
             SheetTitle("Daily goals", "From ${TimelineTop.title(date, LocalDate.now())} on. Earlier days keep their own goal.")
+            PaperButton("Work it out from my body", { onDismiss(); onBody() }, modifier = Modifier.fillMaxWidth(), style = PaperButtonStyle.Ghost, small = true)
             PaperField(kcal, { kcal = it; error = null }, "Calories (kcal)", singleLine = true, keyboardOptions = DecimalKeys)
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 PaperField(protein, { protein = it }, "Protein g", Modifier.weight(1f), singleLine = true, keyboardOptions = DecimalKeys)
