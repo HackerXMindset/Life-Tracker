@@ -14,6 +14,7 @@ import com.lifetracker.app.data.FoodNutrientEntity
 import com.lifetracker.app.data.FoodRef
 import com.lifetracker.app.data.FoodStats
 import com.lifetracker.app.data.Loggable
+import com.lifetracker.app.data.MealCopy
 import com.lifetracker.app.data.MealEntity
 import com.lifetracker.app.data.MealPhotos
 import com.lifetracker.app.data.NutrientEntity
@@ -186,6 +187,14 @@ class FoodViewModel(app: Application) : AndroidViewModel(app) {
     fun copyMeals(source: List<MealEntity>, to: LocalDate) {
         viewModelScope.launch {
             dao.upsertMeals(source.map { it.copy(id = FoodLogic.newMealId(), date = to.toString(), source = "app") })
+        }
+    }
+
+    /** Copies meals to [to], as [mealType] when one is chosen (see [MealCopy]). */
+    fun copyMealsTo(source: List<MealEntity>, mealType: String?, to: LocalDate) {
+        viewModelScope.launch {
+            val now = java.time.LocalTime.now()
+            dao.upsertMeals(MealCopy.copies(source, mealType, to, LocalDate.now(), now.hour * 60 + now.minute))
         }
     }
 
