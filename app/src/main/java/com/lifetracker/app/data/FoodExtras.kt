@@ -298,20 +298,20 @@ interface FoodExtrasDao {
 
 /** The parts of the Food tab you can switch on or off. */
 enum class FoodPart(val id: String, val title: String, val hint: String, val onByDefault: Boolean) {
-    WATER("water", "Water", "Glasses of water and the daily goal", true),
+    WATER("water", "Water", "Glasses and the daily goal", true),
     SHAKE("shake", "Protein shake", "One tap logs your usual shake", true),
-    SUPPLEMENTS("supplements", "Supplements", "Tablets and powders, ticked off each day", true),
+    SUPPLEMENTS("supplements", "Supplements", "Tablets and powders, ticked daily", true),
     EXTRAS("extras", "Fibre, sugar and sodium", "The day's totals", true),
-    VITAMINS("vitamins", "Vitamins and minerals", "The day's totals against your targets", true),
-    WEIGHT("weight", "Body weight", "Weigh-ins and your goal weight", true),
-    WEEK("week", "This week", "Average calories and protein, and days on target", true),
-    PREP("prep", "Meal prep", "Log a whole pot once, eat it bit by bit", true),
-    PLANS("plans", "Meal plans", "A day of meals to log with one tap", true),
-    QUALITY("quality", "Protein quality", "Animal and plant protein, and the essential amino acids", false),
-    FATS("fats", "Types of fat", "Saturated, mono- and polyunsaturated fat", false),
-    WATCH("watch", "Vitamin watch", "Tells you when a vitamin or mineral you picked ran low over the last week", false),
-    FASTING("fasting", "Fasting", "A timer for intermittent fasting", false),
-    TRACKERS("trackers", "Habits", "Tap the habits you picked from the Habits tab, such as a headache or a cup of tea, and the Diary timeline", false),
+    VITAMINS("vitamins", "Vitamins and minerals", "Totals against your targets", true),
+    WEIGHT("weight", "Body weight", "Weigh-ins, BMI and goal weight", true),
+    WEEK("week", "This week", "Weekly average, swipe for other weeks", true),
+    PREP("prep", "Meal prep", "Log a pot once, eat it in portions", true),
+    PLANS("plans", "Meal plans", "A day of meals in one tap", true),
+    QUALITY("quality", "Protein quality", "Animal and plant protein, amino acids", false),
+    FATS("fats", "Types of fat", "Saturated, mono and poly fat", false),
+    WATCH("watch", "Vitamin watch", "Warns when a vitamin ran low", false),
+    FASTING("fasting", "Fasting", "An intermittent fasting timer", false),
+    TRACKERS("trackers", "Habits", "Your picked habits, one tap each", false),
 }
 
 /** The two stacks of parts on the Food tab and how a saved order is applied to them. */
