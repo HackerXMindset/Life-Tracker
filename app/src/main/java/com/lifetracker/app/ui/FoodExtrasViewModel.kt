@@ -17,6 +17,7 @@ import com.lifetracker.app.data.FoodTrackerEntity
 import com.lifetracker.app.data.HabitEntity
 import com.lifetracker.app.data.HabitLink
 import com.lifetracker.app.data.HabitMarks
+import com.lifetracker.app.data.MonthMath
 import com.lifetracker.app.data.TrackerEventEntity
 import com.lifetracker.app.data.TrackerMigration
 import com.lifetracker.app.data.MealEntity
@@ -26,6 +27,7 @@ import com.lifetracker.app.data.SupplementEntity
 import com.lifetracker.app.data.SupplementTakenEntity
 import com.lifetracker.app.data.WeightEntity
 import java.time.LocalDate
+import java.time.YearMonth
 import java.util.UUID
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -207,6 +209,26 @@ class FoodExtrasViewModel(app: Application) : AndroidViewModel(app) {
     private val marks = combine(habitDao.observeCompletions(), trackers) { completions, picked ->
         HabitMarks.events(completions, picked.map { it.id }.toSet())
     }
+
+    /** Every check of the picked habits, for the month grid and the timeline. */
+    val checks: StateFlow<List<TrackerEventEntity>> = share(emptyList(), marks)
+
+    private val month = MutableStateFlow(YearMonth.now())
+
+    /** The month the month grid shows. */
+    fun setMonth(m: YearMonth) {
+        month.value = m
+    }
+
+    /** The meals of the month on show, for the rings of the month grid. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val monthMeals: StateFlow<List<MealEntity>> = share(
+        emptyList(),
+        month.flatMapLatest { m ->
+            val (from, to) = MonthMath.span(m)
+            foodDao.observeMealsBetween(from, to)
+        },
+    )
 
     /** Days that have at least one check, for the dots on the week strip. */
     val eventDays: StateFlow<Set<String>> = share(emptySet(), marks.map { list -> list.map { it.date }.toSet() })

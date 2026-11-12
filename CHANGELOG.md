@@ -2,6 +2,33 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📅 Week, Month and Timeline
+
+### ✨ New
+
+- **A switch under the Food title: Week, Month, Timeline.** The week strip you know is the Week view and is unchanged. The tab opens on whichever view you used last.
+- **Month view.** A calendar like OpenNutriTracker's, Monday first, each day with its calorie ring. Under a day, a small **tick in the habit's colour** shows that you did a habit you picked that day (up to three, then "+n"). Swipe sideways or use the arrows to change month, tap the month name to come back to this month, tap a day to open it. Tap a habit's pill under the grid to hide or show its ticks.
+- **Timeline view.** Days newest first, each listing your foods and your habit ticks together in the order they happened, with the time, so you can read what you ate before a headache or a bad stomach. A tick made without a time shows first as "no time". Tap a day to open it.
+- The dot under a day in the Week strip now follows the habits you picked, whether or not the Habits card is switched on.
+
+### 🔧 Changed
+
+- The Diary button is gone: the Timeline view replaces it.
+
+## 🔗 Trackers are habits now
+
+### ✨ New
+
+- **Your trackers are your habits.** The Habits card on the Food tab (it was "Custom trackers") now shows habits from the Habits tab, only the ones you pick. Tap one and it is a check of that habit, with the time, so the Habits tab, Streak and Food always agree. Checks made on the Habits tab show up in Food too, and in the Diary.
+- **Pick which habits show.** Tap **Pick** or **Change** on the card and switch on the habits you want. **New habit** makes one on the spot (count by tap, no streak) and it also appears in the Habits tab.
+- **Your old trackers moved over by themselves**, once. A tracker joined the habit with the same name, or became a new habit, and every tap became a check with its time. Nothing was deleted from the old tables.
+- **Water is linked three ways.** Water you add on the Food tab counts on a habit called Water, and checks on that habit count as water here, with the same streak and goal rules as any habit. If you have no such habit, one is made (in ml, one glass a tap). A habit called Water in glasses, cups, litres or oz is used as it is. There is a switch, **Link water to Habits**, in What to show (on).
+
+### 🔧 Changed
+
+- A check made without a time (a past day ticked on the Habits tab) shows without a clock time. Tap it to give it one.
+- The note on a tap is gone, since a habit check has none.
+
 ## 🔁 Meals you eat again
 
 ### ✨ New

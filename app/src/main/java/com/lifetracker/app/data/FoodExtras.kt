@@ -445,6 +445,13 @@ object FoodSettings {
         changed()
     }
 
+    /** Which view of the days the Food tab opens on: the last one you used ([FoodView.key]). */
+    fun foodView(context: Context): FoodView = FoodView.fromKey(prefs(context).getString("food_view", null))
+
+    fun setFoodView(context: Context, view: FoodView) {
+        prefs(context).edit { putString("food_view", view.key) }
+    }
+
     /** The habits of the Habits tab that show in the Food tab (their ticks sit beside the meals). Only the ones you pick. */
     fun watchedHabits(context: Context): List<String> =
         prefs(context).getString("watched_habits", "").orEmpty().split(',').map { it.trim() }.filter { it.isNotEmpty() }
