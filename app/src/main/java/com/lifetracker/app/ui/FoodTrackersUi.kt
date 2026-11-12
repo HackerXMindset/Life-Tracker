@@ -43,7 +43,6 @@ import com.lifetracker.app.ui.theme.LocalPaper
 import com.lifetracker.app.ui.theme.PaperButton
 import com.lifetracker.app.ui.theme.PaperButtonStyle
 import com.lifetracker.app.ui.theme.PaperCard
-import com.lifetracker.app.ui.theme.PaperDialog
 import com.lifetracker.app.ui.theme.PaperField
 import com.lifetracker.app.ui.theme.PaperPill
 import com.lifetracker.app.ui.theme.PaperPillBox
@@ -52,9 +51,13 @@ import com.lifetracker.app.ui.theme.PaperToggle
 import java.time.LocalDate
 
 /*
- * Custom trackers (OpenNutriTracker issue 1304): count anything with one tap, see the time of each tap and a count per day,
- * and read it all next to the food in the Diary timeline. They never touch calories.
+ * Habits in Food (OpenNutriTracker issue 1304): the habits you pick from the Habits tab, tapped here with one tap, with the time
+ * of each check and a count per day, read next to the food in the Diary timeline. They are the same habits as in the Habits
+ * tab, so a check made in either place shows in both. They never touch calories.
  */
+
+/** The time of a check, or nothing when the check has no time. */
+private fun checkTime(minute: Int): String = if (minute < 0) "" else formatMinute(minute)
 
 @Composable
 fun TrackersCard(x: FoodExtrasViewModel, date: LocalDate) {
@@ -73,17 +76,17 @@ fun TrackersCard(x: FoodExtrasViewModel, date: LocalDate) {
     PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
-                Text("Trackers", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = p.ink)
+                Text("Habits", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = p.ink)
                 Text(
                     when {
-                        active.isEmpty() -> "Count anything with one tap, like a headache or a cup of tea."
+                        active.isEmpty() -> "Pick habits from the Habits tab to see their ticks next to your food."
                         today -> "Tap one to log it now"
                         else -> "Tap one, then choose the time"
                     },
                     fontSize = 12.sp, color = p.ink2,
                 )
             }
-            PaperPill(if (trackers.isEmpty()) "Add" else "Manage", false, { managing = true })
+            PaperPill(if (trackers.isEmpty()) "Pick" else "Change", false, { managing = true })
         }
 
         if (active.isNotEmpty()) {
@@ -121,9 +124,8 @@ fun TrackersCard(x: FoodExtrasViewModel, date: LocalDate) {
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         if (t != null) IconGlyph(icon = t.icon, tint = argbColor(t.color), size = 18.dp, fallback = t.name)
-                        Text(t?.name ?: "Removed tracker", fontSize = 14.sp, color = p.ink, modifier = Modifier.weight(1f), maxLines = 1)
-                        if (e.note.isNotBlank()) Text(e.note, fontSize = 12.sp, color = p.ink2, maxLines = 1, modifier = Modifier.weight(1f))
-                        Text(formatMinute(e.minuteOfDay), fontSize = 13.sp, color = p.ink2)
+                        Text(t?.name ?: "Removed habit", fontSize = 14.sp, color = p.ink, modifier = Modifier.weight(1f), maxLines = 1)
+                        Text(checkTime(e.minuteOfDay), fontSize = 13.sp, color = p.ink2)
                     }
                 }
             }
@@ -140,7 +142,7 @@ fun TrackersCard(x: FoodExtrasViewModel, date: LocalDate) {
         }
     }
 
-    if (managing) TrackersWindow(x, trackers, onClose = { managing = false })
+    if (managing) TrackersWindow(x, onClose = { managing = false })
     editingEvent?.let { e ->
         EventSheet(x, e, trackers.firstOrNull { it.id == e.trackerId }, onDismiss = { editingEvent = null })
     }
@@ -177,56 +179,51 @@ private fun WeekBars(events: List<TrackerEventEntity>, date: LocalDate, tracker:
 }
 
 @Composable
-private fun TrackersWindow(x: FoodExtrasViewModel, trackers: List<FoodTrackerEntity>, onClose: () -> Unit) {
+private fun TrackersWindow(x: FoodExtrasViewModel, onClose: () -> Unit) {
     val p = LocalPaper.current
-    var editing by remember { mutableStateOf<FoodTrackerEntity?>(null) }
+    val habits by x.habits.collectAsState()
+    val picked by x.picked.collectAsState()
     var creating by remember { mutableStateOf(false) }
-    EditWindow(title = "Trackers", sub = "Tap one to change it", onClose = onClose) {
-        trackers.forEach { t ->
-            PaperCard(modifier = Modifier.fillMaxWidth(), padding = 12.dp, shadow = false, onClick = { editing = t }) {
+    EditWindow(title = "Habits in Food", sub = "Switch on the habits whose ticks you want next to your food.", onClose = onClose) {
+        if (habits.isEmpty()) Text("You have no habits yet. Make one below, or in the Habits tab.", fontSize = 13.sp, color = p.ink2)
+        habits.forEach { h ->
+            val on = h.id in picked
+            PaperCard(modifier = Modifier.fillMaxWidth(), padding = 12.dp, shadow = false, onClick = { x.setPicked(h.id, !on) }) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Box(Modifier.size(38.dp).clip(CircleShape).background(argbColor(t.color).copy(alpha = 0.18f)), contentAlignment = Alignment.Center) {
-                        IconGlyph(icon = t.icon, tint = argbColor(t.color), size = 22.dp, fallback = t.name)
+                    Box(Modifier.size(38.dp).clip(CircleShape).background(argbColor(h.color).copy(alpha = 0.18f)), contentAlignment = Alignment.Center) {
+                        IconGlyph(icon = h.icon, tint = argbColor(h.color), size = 22.dp, fallback = h.name)
                     }
-                    Text(t.name, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = p.ink, modifier = Modifier.weight(1f))
-                    if (t.archived) Text("Hidden", fontSize = 12.sp, color = p.ink2)
+                    Text(h.name, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = p.ink, modifier = Modifier.weight(1f), maxLines = 1)
+                    PaperToggle(on, { x.setPicked(h.id, it) })
                 }
             }
         }
-        PaperButton("New tracker", { creating = true }, icon = R.drawable.ic_p_plus)
+        PaperButton("New habit", { creating = true }, icon = R.drawable.ic_p_plus)
         Text(
-            "Examples: headache, reflux, bloating, tea or coffee, a medicine dose, a craving, a nap. Trackers never change your calories.",
+            "Examples: headache, reflux, bloating, tea or coffee, a medicine dose, a craving, a nap. A habit made here also appears in the Habits tab, with no streak. Habits never change your calories.",
             fontSize = 12.sp, color = p.ink2,
         )
     }
-    if (creating) TrackerEditor(x, null, onDismiss = { creating = false })
-    editing?.let { TrackerEditor(x, it, onDismiss = { editing = null }) }
+    if (creating) NewHabitWindow(x, onDismiss = { creating = false })
 }
 
 @Composable
-private fun TrackerEditor(x: FoodExtrasViewModel, initial: FoodTrackerEntity?, onDismiss: () -> Unit) {
+private fun NewHabitWindow(x: FoodExtrasViewModel, onDismiss: () -> Unit) {
     val p = LocalPaper.current
-    var name by remember { mutableStateOf(initial?.name.orEmpty()) }
-    var icon by remember { mutableStateOf(initial?.icon.orEmpty()) }
-    var color by remember { mutableStateOf(initial?.color ?: 0xFF5B5FC7L) }
-    var hidden by remember { mutableStateOf(initial?.archived ?: false) }
+    var name by remember { mutableStateOf("") }
+    var icon by remember { mutableStateOf("") }
+    var color by remember { mutableStateOf(0xFF5B5FC7L) }
     var error by remember { mutableStateOf<String?>(null) }
-    var confirmDelete by remember { mutableStateOf(false) }
 
     EditWindow(
-        title = if (initial == null) "New tracker" else name.ifBlank { "Tracker" },
-        sub = "A name and an icon. One tap logs it with the time.",
+        title = "New habit",
+        sub = "It is added to the Habits tab, and one tap here checks it with the time.",
         onClose = onDismiss,
         onSave = {
             if (name.isBlank()) {
                 error = "Give it a name."
             } else {
-                x.saveTracker(
-                    FoodTrackerEntity(
-                        id = initial?.id ?: TrackerMath.newId(), name = name.trim(), icon = icon, color = color,
-                        sortOrder = initial?.sortOrder ?: -1, archived = hidden,
-                    ),
-                )
+                x.createHabit(name, icon, color)
                 onDismiss()
             }
         },
@@ -242,45 +239,27 @@ private fun TrackerEditor(x: FoodExtrasViewModel, initial: FoodTrackerEntity?, o
         ColorPickerPanel(selected = color, onSelected = { color = it })
         MonoLabel("Icon")
         IconPickerPanel(selected = icon, tint = argbColor(color), onSelected = { icon = it })
-        if (initial != null) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("Hide it", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = p.ink)
-                    Text("It is not offered for logging, but its history stays.", fontSize = 12.sp, color = p.ink2)
-                }
-                PaperToggle(hidden, { hidden = it })
-            }
-        }
         if (error != null) Text(error!!, color = p.bad, fontSize = 13.sp)
-        if (initial != null) PaperButton("Delete with its history", { confirmDelete = true }, style = PaperButtonStyle.Danger, small = true)
-    }
-    if (confirmDelete && initial != null) {
-        PaperDialog(
-            title = "Delete ${initial.name}?", onDismiss = { confirmDelete = false }, confirmText = "Delete",
-            confirmStyle = PaperButtonStyle.Danger, dismissText = "Keep",
-            onConfirm = { confirmDelete = false; x.deleteTracker(initial); onDismiss() },
-        ) { Text("Every tap of it is deleted too. Hide it instead to keep the history.", color = p.ink) }
     }
 }
 
 @Composable
 private fun EventSheet(x: FoodExtrasViewModel, event: TrackerEventEntity, tracker: FoodTrackerEntity?, onDismiss: () -> Unit) {
     val p = LocalPaper.current
-    var minute by remember { mutableIntStateOf(event.minuteOfDay) }
-    var note by remember { mutableStateOf(event.note) }
+    var minute by remember { mutableIntStateOf(if (event.minuteOfDay < 0) minuteNow() else event.minuteOfDay) }
     PaperSheet(onDismiss = onDismiss) {
         SheetBody {
-            SheetTitle(tracker?.name ?: "Tracker", event.date)
+            SheetTitle(tracker?.name ?: "Habit", event.date)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("Time", fontSize = 13.sp, color = p.ink2)
                 TimeButton(minute, { minute = it })
             }
-            PaperField(note, { note = it }, "Note (optional)", placeholder = "e.g. after the biryani", singleLine = true)
+            if (event.minuteOfDay < 0) Text("This check was made without a time. Saving gives it one.", fontSize = 12.sp, color = p.ink2)
             PaperButton(
-                "Save", { x.saveEvent(event.copy(minuteOfDay = minute, note = note.trim())); onDismiss() },
+                "Save", { x.saveEvent(event.copy(minuteOfDay = minute)); onDismiss() },
                 modifier = Modifier.fillMaxWidth(),
             )
-            PaperButton("Delete this one", { x.deleteEvent(event); onDismiss() }, style = PaperButtonStyle.Danger, small = true)
+            PaperButton("Take this check away", { x.deleteEvent(event); onDismiss() }, style = PaperButtonStyle.Danger, small = true)
             Spacer(Modifier.height(12.dp))
         }
     }
@@ -344,7 +323,7 @@ private fun DiaryDayCard(day: DiaryDay, trackers: List<FoodTrackerEntity>, today
                         horizontalArrangement = Arrangement.spacedBy(5.dp),
                     ) {
                         IconGlyph(icon = c.icon, tint = argbColor(c.color), size = 14.dp, fallback = c.name)
-                        Text(c.text + "  " + c.minutes.joinToString(" ") { formatMinute(it) }, fontSize = 12.sp, color = p.ink)
+                        Text((c.text + "  " + c.minutes.filter { it >= 0 }.joinToString(" ") { formatMinute(it) }).trim(), fontSize = 12.sp, color = p.ink)
                     }
                 }
             }

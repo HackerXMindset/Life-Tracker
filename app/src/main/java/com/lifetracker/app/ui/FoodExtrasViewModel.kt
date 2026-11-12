@@ -14,8 +14,11 @@ import com.lifetracker.app.data.FoodSettings
 import com.lifetracker.app.data.FoodGoalEntity
 import com.lifetracker.app.data.FoodStats
 import com.lifetracker.app.data.FoodTrackerEntity
+import com.lifetracker.app.data.HabitEntity
+import com.lifetracker.app.data.HabitLink
+import com.lifetracker.app.data.HabitMarks
 import com.lifetracker.app.data.TrackerEventEntity
-import com.lifetracker.app.data.TrackerMath
+import com.lifetracker.app.data.TrackerMigration
 import com.lifetracker.app.data.MealEntity
 import com.lifetracker.app.data.MealPlanEntity
 import com.lifetracker.app.data.PlanMath
@@ -30,6 +33,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -171,24 +175,54 @@ class FoodExtrasViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    // ---- custom trackers ----
+    // ---- trackers are habits ----
+    //
+    // A "tracker" is a habit of the Habits tab that you picked to show in Food. Its checks are the habit's own, so nothing is
+    // kept twice: a tap here is a check there, and a check there shows up here.
 
-    val trackers: StateFlow<List<FoodTrackerEntity>> = share(emptyList(), dao.observeTrackers())
+    private val habitDao = db.habitDao()
 
-    /** Days that have at least one tap, for the dots on the week strip. */
-    val eventDays: StateFlow<Set<String>> = share(emptySet(), dao.observeEventDates().map { it.toSet() })
+    init {
+        viewModelScope.launch { runCatching { TrackerMigration.run(context) } }
+    }
 
-    /** The taps of the week of the chosen day (Monday to Sunday). */
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val weekEvents: StateFlow<List<TrackerEventEntity>> = share(
+    private val watchedIds = FoodSettings.changes.map { FoodSettings.watchedHabits(context) }.distinctUntilChanged()
+
+    /** Every habit you can pick to show here. */
+    val habits: StateFlow<List<HabitEntity>> = share(emptyList(), habitDao.observeHabits().map { list -> list.filter { !it.archived } })
+
+    /** The ids of the habits you picked, in the order you picked them. */
+    val picked: StateFlow<List<String>> = share(emptyList(), watchedIds)
+
+    /** The picked habits that still exist, shaped like the old trackers so the cards and the Diary read them the same way. */
+    val trackers: StateFlow<List<FoodTrackerEntity>> = share(
         emptyList(),
-        day.flatMapLatest { d ->
-            val week = FoodLogic.weekOf(d)
-            dao.observeEventsBetween(week.first().toString(), week.last().toString())
+        combine(habitDao.observeHabits(), watchedIds) { all, ids ->
+            ids.mapNotNull { id -> all.firstOrNull { it.id == id && !it.archived } }
+                .mapIndexed { i, h -> FoodTrackerEntity(h.id, h.name, h.icon, h.color, i, false) }
         },
     )
 
-    /** Taps and meals of the last [days] days up to the chosen day, for the Diary timeline. */
+    /** Every check of the picked habits, one line each. */
+    private val marks = combine(habitDao.observeCompletions(), trackers) { completions, picked ->
+        HabitMarks.events(completions, picked.map { it.id }.toSet())
+    }
+
+    /** Days that have at least one check, for the dots on the week strip. */
+    val eventDays: StateFlow<Set<String>> = share(emptySet(), marks.map { list -> list.map { it.date }.toSet() })
+
+    /** The checks of the week of the chosen day (Monday to Sunday). */
+    val weekEvents: StateFlow<List<TrackerEventEntity>> = share(
+        emptyList(),
+        combine(marks, day) { list, d ->
+            val week = FoodLogic.weekOf(d)
+            val from = week.first().toString()
+            val to = week.last().toString()
+            list.filter { it.date in from..to }
+        },
+    )
+
+    /** Checks and meals of the last [days] days up to the chosen day, for the Diary timeline. */
     private val diaryDays = MutableStateFlow(30)
 
     fun showEarlier() {
@@ -201,39 +235,43 @@ class FoodExtrasViewModel(app: Application) : AndroidViewModel(app) {
         diaryDays.flatMapLatest { n ->
             val to = LocalDate.now()
             val from = to.minusDays(n.toLong())
-            combine(foodDao.observeMealsBetween(from.toString(), to.toString()), dao.observeEventsBetween(from.toString(), to.toString())) { meals, events ->
-                DiaryMath.days(meals, events)
+            combine(foodDao.observeMealsBetween(from.toString(), to.toString()), marks) { meals, events ->
+                DiaryMath.days(meals, events.filter { it.date in from.toString()..to.toString() })
             }
         },
     )
 
     val diarySpanDays: StateFlow<Int> = diaryDays
 
-    fun saveTracker(t: FoodTrackerEntity) {
+    /** Shows a habit in the Food tab, or stops showing it. The habit itself is not touched. */
+    fun setPicked(habitId: String, on: Boolean) {
+        val now = FoodSettings.watchedHabits(context)
+        FoodSettings.setWatchedHabits(context, if (on) now + habitId else now - habitId)
+    }
+
+    /** Makes a new habit (count by tap, no streak) and shows it here. */
+    fun createHabit(name: String, icon: String, color: Long) {
         viewModelScope.launch {
-            val placed = if (t.sortOrder < 0) t.copy(sortOrder = dao.maxTrackerOrder() + 1) else t
-            dao.upsertTracker(placed)
+            val id = HabitLink.create(context, name.trim(), icon, color)
+            setPicked(id, true)
         }
     }
 
-    fun deleteTracker(t: FoodTrackerEntity) {
-        viewModelScope.launch {
-            dao.deleteEventsOf(t.id)
-            dao.deleteTracker(t.id)
-        }
-    }
-
-    /** One tap: records [minuteOfDay] on [date]. */
+    /** One tap: one more check of the habit at [minuteOfDay] on [date]. */
     fun tap(t: FoodTrackerEntity, date: LocalDate, minuteOfDay: Int) {
-        viewModelScope.launch { dao.upsertEvent(TrackerEventEntity(TrackerMath.newEventId(), t.id, date.toString(), minuteOfDay)) }
+        viewModelScope.launch { HabitLink.addCheck(context, t.id, date.toString(), minuteOfDay) }
     }
 
+    /** A check moved to another time. */
     fun saveEvent(e: TrackerEventEntity) {
-        viewModelScope.launch { dao.upsertEvent(e) }
+        val ref = HabitMarks.parseId(e.id) ?: return
+        if (ref.minute == e.minuteOfDay) return
+        viewModelScope.launch { HabitLink.retimeCheck(context, ref.habitId, ref.date, ref.minute, e.minuteOfDay) }
     }
 
     fun deleteEvent(e: TrackerEventEntity) {
-        viewModelScope.launch { dao.deleteEvent(e.id) }
+        val ref = HabitMarks.parseId(e.id) ?: return
+        viewModelScope.launch { HabitLink.removeCheck(context, ref.habitId, ref.date, ref.minute) }
     }
 
     /** The goal in force on [date], for the week summary. */
