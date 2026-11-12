@@ -75,6 +75,7 @@ fun FoodStatsWindow(
     val result = remember(span, meals, goals, weights, checks, habits) {
         PeriodStats.build(span, today, meals, { day -> FoodStats.goalFor(goals, LocalDate.parse(day)) }, weights, checks, habits.map { it.id })
     }
+    var info by remember { mutableStateOf<Pair<String, String>?>(null) }
     val canEarlier = StatSpans.canGoEarlier(period, anchor, today, earliest)
     val canLater = StatSpans.canGoLater(period, anchor, today)
     val title = StatSpans.title(period, span, today)
@@ -120,10 +121,11 @@ fun FoodStatsWindow(
                 WeightChangeCard(result)
             }
             HabitStatsCard(result, habits.associateBy { it.id }, onPickHabits = null)
-            if (result.topFoods.isNotEmpty()) TopFoodsCard(result, today)
+            if (result.topFoods.isNotEmpty()) TopFoodsCard(result, today, onOpen = { id, name -> info = id to name })
             if (period == StatPeriod.WEEK && result.loggedDays > 0) DayList(result, today, onPickDay = { onPickDay(it); onClose() })
         }
     }
+    info?.let { (id, name) -> FoodInfoWindow(name, id, load = { x.allMeals() }, onClose = { info = null }) }
 }
 
 @Composable
@@ -334,14 +336,14 @@ private fun HabitStatsCard(r: PeriodStats.Result, habits: Map<String, com.lifetr
 }
 
 @Composable
-private fun TopFoodsCard(r: PeriodStats.Result, today: LocalDate) {
+private fun TopFoodsCard(r: PeriodStats.Result, today: LocalDate, onOpen: (String, String) -> Unit) {
     val p = LocalPaper.current
     PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
-        Kicker("Eaten most")
+        Kicker("Eaten most (tap a food for its history)")
         Spacer(Modifier.height(8.dp))
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             r.topFoods.forEach { f ->
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth().clickable(role = Role.Button) { onOpen(f.foodId, f.name) }, verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text(f.name, fontSize = 14.sp, color = p.ink, maxLines = 1)
                         Text("last " + AgoText.text(f.last, today), fontSize = 11.5.sp, color = p.ink2)

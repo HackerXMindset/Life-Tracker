@@ -90,7 +90,7 @@ object PeriodStats {
 
     class HabitRow(val habitId: String, val daysDone: Int, val checks: Int, val last: LocalDate?)
 
-    class FoodCount(val name: String, val times: Int, val last: LocalDate)
+    class FoodCount(val name: String, val times: Int, val last: LocalDate, val foodId: String = "")
 
     /** The share of calories from each macro, as 0..1 values that add up to 1. */
     class MacroShare(val carbs: Double, val protein: Double, val fat: Double)
@@ -162,7 +162,7 @@ object PeriodStats {
 
         val foods = meals.filter { it.date in range }
             .groupBy { it.name.trim().lowercase() }
-            .map { (_, list) -> FoodCount(list.first().name.trim(), list.size, list.maxOf { LocalDate.parse(it.date) }) }
+            .map { (_, list) -> FoodCount(list.first().name.trim(), list.size, list.maxOf { LocalDate.parse(it.date) }, list.firstOrNull { it.foodId.isNotBlank() }?.foodId.orEmpty()) }
             .sortedWith(compareBy({ -it.times }, { it.name.lowercase() }))
             .take(6)
 

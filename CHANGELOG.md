@@ -2,6 +2,14 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🔎 A page for each food
+
+### ✨ New
+
+- **Tap a food in Stats ("Eaten most") or open a logged food and tap "When did I last eat this?"** to see its page: when you last ate it, how long ago, and how many times in the last 7, 30 and 90 days and in all (with the number of days, for when you had it twice in a day). If you eat it every day it says how many days in a row.
+- The page also shows a usual helping (grams, calories, protein), the meal you usually have it as, when you first logged it, and your last ten times with their weights.
+- The same food is found whether it came from the food list or was typed by name, ignoring capitals and extra spaces.
+
 ## 📊 Stats rebuilt
 
 ### ✨ New
