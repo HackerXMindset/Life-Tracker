@@ -84,7 +84,7 @@ import java.time.LocalDate
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private val WATER_COLOR = Color(0xFF2878B4)
+internal val WATER_COLOR = Color(0xFF2878B4)
 
 // ---- choosing what to show ----
 

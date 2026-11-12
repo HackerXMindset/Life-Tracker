@@ -2,6 +2,17 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## ⚖️ Body and goals
+
+### ✨ New
+
+- **Body and goals** (from the gear on the Food tab, "Work it out from my body", or the new button under Body weight). Like OpenNutriTracker: your sex, age, height and weight, how active you are (sedentary, low active, active, very active), and what you want (lose weight, maintain, gain weight, at 0.25 to 1 kg a week) with a target weight.
+- **BMI** with a plain label (underweight, healthy range, overweight, obese), a strip showing where you are, and the weights that are healthy for your height.
+- **Calories that fit your goal.** Resting energy (Mifflin-St Jeor), the calories to keep your weight for your activity, and a daily target for your goal and pace. It never goes below the safe minimum (1,200 for women, 1,500 for men) and says so. **Use as my daily goal** sets your calorie goal from today, and scales your protein, carbs and fat to match (or, with no macros yet, sets protein at 1.6 g a kilo and fat at a quarter of the calories).
+- **Progress to your target:** start, now and target on one bar, how many kilos to go, and about how many weeks and which month at your pace.
+- **Weight history:** a chart of your recent weigh-ins with the target as a dashed line, and your last eight with a Remove button. Typing a new weight and saving counts as today's weigh-in.
+- These are estimates for adults, not medical advice, and the page says so.
+
 ## 🔎 A page for each food
 
 ### ✨ New

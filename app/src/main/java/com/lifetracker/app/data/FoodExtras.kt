@@ -445,6 +445,33 @@ object FoodSettings {
         changed()
     }
 
+    /** What you told the app about your body, for BMI and a calorie target. Kept on this phone and in your backup. */
+    fun bodyProfile(context: Context): BodyProfile {
+        val sp = prefs(context)
+        return BodyProfile(
+            sex = Sex.fromKey(sp.getString("body_sex", null)),
+            birthYear = sp.getInt("body_birth_year", 0),
+            heightCm = sp.getFloat("body_height_cm", 0f).toDouble(),
+            activity = Activity.entries.getOrElse(sp.getInt("body_activity", Activity.LOW.ordinal)) { Activity.LOW },
+            goal = GoalKind.fromKey(sp.getString("body_goal", null)),
+            paceKg = sp.getFloat("body_pace", 0.5f).toDouble(),
+            since = sp.getString("body_since", "").orEmpty(),
+        )
+    }
+
+    fun setBodyProfile(context: Context, profile: BodyProfile) {
+        prefs(context).edit {
+            putString("body_sex", profile.sex?.key ?: "")
+            putInt("body_birth_year", profile.birthYear)
+            putFloat("body_height_cm", profile.heightCm.toFloat())
+            putInt("body_activity", profile.activity.ordinal)
+            putString("body_goal", profile.goal.key)
+            putFloat("body_pace", profile.paceKg.toFloat())
+            putString("body_since", profile.since)
+        }
+        changed()
+    }
+
     /** The period the stats window opens on: the last one you used ([StatPeriod.key]). */
     fun statPeriod(context: Context): StatPeriod = StatPeriod.fromKey(prefs(context).getString("stat_period", null))
 
