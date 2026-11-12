@@ -2,6 +2,15 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🔍 What came before
+
+### ✨ New
+
+- **"What came before" for the habits you watch.** Pick a habit (a headache, reflux, a bad stomach), how many hours to look back (3, 6, 12, 24 or 48) and how far back (30 days, 90 days, all time), and see the foods that came before it. Each food shows how many of the times it was eaten in that window, next to how often it is eaten in a window at other times, so something you eat all day does not look suspicious just for being common. It also says about how many hours earlier it usually was.
+- Open it from the Stats window (tap a habit), the **What came before** button under the Month view, or **Patterns** at the top of the Timeline.
+- Checks that are close together count as one time (a headache ticked three times in an afternoon is one). Checks with no time are left out. It needs at least three times with food logged before them before it says anything, and a food has to be in at least two of them.
+- It always says that a pattern is not a cause, and suggests trying leaving one food out for two weeks.
+
 ## ⚖️ Body and goals
 
 ### ✨ New
