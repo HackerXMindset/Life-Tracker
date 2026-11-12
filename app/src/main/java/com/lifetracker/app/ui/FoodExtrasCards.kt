@@ -6,7 +6,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -647,7 +649,7 @@ fun WeightCard(x: FoodExtrasViewModel, date: LocalDate) {
 // ---- the week ----
 
 @Composable
-fun WeekCard(x: FoodExtrasViewModel, date: LocalDate, onOpen: (() -> Unit)? = null) {
+fun WeekCard(x: FoodExtrasViewModel, date: LocalDate, onOpen: (() -> Unit)? = null, onShift: ((Int) -> Unit)? = null) {
     val p = LocalPaper.current
     val meals by x.weekMeals.collectAsState()
     val goals by x.goals.collectAsState()
@@ -657,13 +659,23 @@ fun WeekCard(x: FoodExtrasViewModel, date: LocalDate, onOpen: (() -> Unit)? = nu
     val byDay = meals.groupBy { it.date }
     val goalKcal = FoodStats.goalFor(goals, date)?.kcal?.takeIf { it > 0 }
     val none = summary.loggedDays == 0
+    val shortDay = java.time.format.DateTimeFormatter.ofPattern("d MMM", java.util.Locale.getDefault())
+    Box(
+        modifier = Modifier.pointerInput(date, onShift) {
+            var total = 0f
+            detectHorizontalDragGestures(
+                onDragStart = { total = 0f },
+                onDragEnd = { if (total > 120f) onShift?.invoke(-1) else if (total < -120f) onShift?.invoke(1) },
+            ) { _, delta -> total += delta }
+        },
+    ) {
     ChartCard(
         icon = R.drawable.ic_p_chart,
         color = p.accent,
-        title = "This week",
+        title = if (week.contains(today)) "This week" else week.first().format(shortDay) + " to " + week.last().format(shortDay),
         value = if (none) "-" else kc(summary.avgKcal),
         unit = if (none) "" else "kcal a day",
-        lines = if (none) listOf("Nothing logged yet.") else listOf("${kc(summary.avgProtein)} g protein a day", "${summary.daysOnTarget} of ${summary.loggedDays} days on target"),
+        lines = if (none) listOf("Nothing logged. Swipe for other weeks.") else listOf("${kc(summary.avgProtein)} g protein a day", "${summary.daysOnTarget} of ${summary.loggedDays} days on target"),
         chart = if (none) null else {
             {
                 ValueLineChart(
@@ -679,6 +691,7 @@ fun WeekCard(x: FoodExtrasViewModel, date: LocalDate, onOpen: (() -> Unit)? = nu
         },
         onClick = onOpen,
     )
+    }
 }
 
 @Composable

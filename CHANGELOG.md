@@ -2,6 +2,19 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📊 Stats rebuilt
+
+### ✨ New
+
+- **Swipe sideways to other weeks.** The "This week" card on the Food tab now moves to the week before or after when you swipe it, and shows the dates when it is not this week. Opening it shows the stats window.
+- **Week, Month, 90 days and All time.** One strip at the top of the stats window. Swipe sideways (or use the arrows) to go to the period before or after. It opens on the one you used last.
+- **A calmer, more useful page.** A big average with how far it is above or below your goal, how many days you logged, protein a day, and how many days were near your goal. A chart of calories over the period with your goal as a dashed line (one point a day, a week or a month, depending on the length). Where the calories come from (carbs, protein, fat). Highest and lowest day. Weight change. How many days you did each habit you watch. The foods you ate most, with when you last had them.
+- **Days with nothing logged are left out, not counted as zero**, both in the averages and in the chart, and the page says how many there were. A period with no food shows one short note instead of a page of "nothing logged".
+
+### 🔧 Changed
+
+- The old week window is replaced by this one. For the week you still get every day with its meals at the bottom.
+
 ## 📅 Week, Month and Timeline
 
 ### ✨ New

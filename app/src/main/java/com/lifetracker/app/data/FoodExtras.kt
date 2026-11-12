@@ -445,6 +445,13 @@ object FoodSettings {
         changed()
     }
 
+    /** The period the stats window opens on: the last one you used ([StatPeriod.key]). */
+    fun statPeriod(context: Context): StatPeriod = StatPeriod.fromKey(prefs(context).getString("stat_period", null))
+
+    fun setStatPeriod(context: Context, period: StatPeriod) {
+        prefs(context).edit { putString("stat_period", period.key) }
+    }
+
     /** Which view of the days the Food tab opens on: the last one you used ([FoodView.key]). */
     fun foodView(context: Context): FoodView = FoodView.fromKey(prefs(context).getString("food_view", null))
 

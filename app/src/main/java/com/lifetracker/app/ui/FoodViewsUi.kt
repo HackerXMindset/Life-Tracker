@@ -204,7 +204,7 @@ fun MonthView(
 }
 
 @Composable
-private fun ArrowButton(icon: Int, label: String, onClick: () -> Unit) {
+internal fun ArrowButton(icon: Int, label: String, onClick: () -> Unit) {
     val p = LocalPaper.current
     Box(
         modifier = Modifier.size(40.dp).clip(CircleShape).clickable(role = Role.Button, onClickLabel = label) { onClick() },

@@ -142,6 +142,9 @@ interface FoodDao {
     @Query("SELECT * FROM meals WHERE date BETWEEN :from AND :to ORDER BY date, minuteOfDay, id")
     suspend fun mealsBetweenOnce(from: String, to: String): List<MealEntity>
 
+    @Query("SELECT MIN(date) FROM meals")
+    fun observeFirstMealDate(): Flow<String?>
+
     @Query("SELECT DISTINCT date FROM meals")
     fun datesWithMeals(): Flow<List<String>>
 
