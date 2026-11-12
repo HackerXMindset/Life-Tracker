@@ -39,6 +39,9 @@ import kotlinx.coroutines.launch
 class FoodViewModel(app: Application) : AndroidViewModel(app) {
     private val dao = AppDatabase.get(app).foodDao()
 
+    /** Every meal ever logged, for the history of one food. */
+    suspend fun allMeals(): List<MealEntity> = dao.allMeals()
+
     private val selected = MutableStateFlow(LocalDate.now())
     val date: StateFlow<LocalDate> = selected
 

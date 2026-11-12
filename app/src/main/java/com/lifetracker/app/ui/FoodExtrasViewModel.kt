@@ -231,6 +231,9 @@ class FoodExtrasViewModel(app: Application) : AndroidViewModel(app) {
         },
     )
 
+    /** Every meal ever logged, for the history of one food. */
+    suspend fun allMeals(): List<MealEntity> = foodDao.allMeals()
+
     // ---- the stats window ----
 
     private val statSpan = MutableStateFlow<StatSpan?>(null)

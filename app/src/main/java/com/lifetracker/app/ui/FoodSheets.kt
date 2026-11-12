@@ -890,6 +890,7 @@ fun EntrySheet(vm: FoodViewModel, meal: MealEntity, library: FoodLibraryData?, o
     var type by remember { mutableStateOf(meal.mealType) }
     var minute by remember { mutableIntStateOf(meal.minuteOfDay) }
     var confirmDelete by remember { mutableStateOf(false) }
+    var showHistory by remember { mutableStateOf(false) }
 
     val grams = foodParse(amount) ?: 0.0
     val now = meal.copy(grams = grams, mealType = type, minuteOfDay = minute)
@@ -915,6 +916,7 @@ fun EntrySheet(vm: FoodViewModel, meal: MealEntity, library: FoodLibraryData?, o
                 Text("Time", fontSize = 13.sp, color = p.ink2)
                 TimeButton(minute, { minute = it })
             }
+            PaperButton("When did I last eat this?", { showHistory = true }, style = PaperButtonStyle.Ghost, small = true)
             val vitamins = NutrientMath.forMeal(now)
             if (vitamins.any { it.value > 0 }) {
                 MonoLabel("Vitamins and minerals")
@@ -945,6 +947,8 @@ fun EntrySheet(vm: FoodViewModel, meal: MealEntity, library: FoodLibraryData?, o
             Spacer(Modifier.height(12.dp))
         }
     }
+
+    if (showHistory) FoodInfoWindow(meal.name, meal.foodId, load = { vm.allMeals() }, onClose = { showHistory = false })
 
     if (confirmDelete) {
         PaperDialog(
