@@ -18,6 +18,7 @@ import com.lifetracker.app.data.HabitEntity
 import com.lifetracker.app.data.HabitLink
 import com.lifetracker.app.data.HabitMarks
 import com.lifetracker.app.data.MonthMath
+import com.lifetracker.app.data.StatSpan
 import com.lifetracker.app.data.TrackerEventEntity
 import com.lifetracker.app.data.TrackerMigration
 import com.lifetracker.app.data.MealEntity
@@ -229,6 +230,26 @@ class FoodExtrasViewModel(app: Application) : AndroidViewModel(app) {
             foodDao.observeMealsBetween(from, to)
         },
     )
+
+    // ---- the stats window ----
+
+    private val statSpan = MutableStateFlow<StatSpan?>(null)
+
+    /** The days the stats window shows. */
+    fun setStatSpan(span: StatSpan) {
+        statSpan.value = span
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val statMeals: StateFlow<List<MealEntity>> = share(
+        emptyList(),
+        statSpan.flatMapLatest { span ->
+            if (span == null) kotlinx.coroutines.flow.flowOf(emptyList()) else foodDao.observeMealsBetween(span.from.toString(), span.to.toString())
+        },
+    )
+
+    /** The first day with food logged, for the earliest period and "All time". */
+    val firstMealDate: StateFlow<LocalDate?> = share(null, foodDao.observeFirstMealDate().map { it?.let { d -> runCatching { LocalDate.parse(d) }.getOrNull() } })
 
     /** Days that have at least one check, for the dots on the week strip. */
     val eventDays: StateFlow<Set<String>> = share(emptySet(), marks.map { list -> list.map { it.date }.toSet() })

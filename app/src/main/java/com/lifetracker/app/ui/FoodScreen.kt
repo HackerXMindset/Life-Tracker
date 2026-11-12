@@ -310,7 +310,7 @@ fun FoodScreen(vm: FoodViewModel = viewModel(), x: FoodExtrasViewModel = viewMod
                     FoodPart.WATCH -> if (shown[part] == true) item { NutrientWatchCard(nutrients.filter { !it.hidden }, library) }
                     FoodPart.QUALITY -> if (shown[part] == true) item { QualityCard(meals, weights.lastOrNull()?.kg ?: 70.0) }
                     FoodPart.FATS -> if (shown[part] == true) item { FatsCard(meals, goal) }
-                    FoodPart.WEEK -> if (shown[part] == true) item { WeekCard(x, date, onOpen = { sheet = Sheet.Week }) }
+                    FoodPart.WEEK -> if (shown[part] == true) item { WeekCard(x, date, onOpen = { sheet = Sheet.Week }, onShift = { vm.shift(it * 7L) }) }
                     FoodPart.WEIGHT -> if (shown[part] == true) item { WeightCard(x, date) }
                     else -> Unit
                 }
@@ -385,7 +385,7 @@ fun FoodScreen(vm: FoodViewModel = viewModel(), x: FoodExtrasViewModel = viewMod
         Sheet.Goals -> GoalsSheet(vm = vm, onDismiss = { sheet = null })
         Sheet.Trackers -> TrackersSheet(onDismiss = { sheet = null })
         Sheet.Habits -> HabitPickerWindow(x, onClose = { sheet = null })
-        Sheet.Week -> WeekWindow(x, date, onShiftWeek = { vm.shift(it.toLong()) }, onPickDay = { vm.select(it) }, onClose = { sheet = null })
+        Sheet.Week -> FoodStatsWindow(x, date, onPickDay = { vm.select(it) }, onClose = { sheet = null })
     }
 }
 
