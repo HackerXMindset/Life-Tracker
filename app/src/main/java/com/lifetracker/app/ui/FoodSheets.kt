@@ -52,6 +52,7 @@ import com.lifetracker.app.R
 import com.lifetracker.app.data.FoodCat
 import com.lifetracker.app.data.FoodLibraryData
 import com.lifetracker.app.data.FoodLogic
+import com.lifetracker.app.data.FoodSanity
 import com.lifetracker.app.data.FoodRef
 import com.lifetracker.app.data.FoodStats
 import com.lifetracker.app.data.LibraryFood
@@ -723,6 +724,7 @@ fun LogFoodSheet(
                 }
             }
             FoodLogic.portionText(shown, grams)?.let { Text("That is $it", fontSize = 12.sp, color = p.ink2) }
+            SanityNotes(FoodSanity.bigAmount(grams, kcal))
 
             PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
                 Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(5.dp)) {

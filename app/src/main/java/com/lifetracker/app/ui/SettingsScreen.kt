@@ -30,7 +30,7 @@ import com.lifetracker.app.data.UsageCollector
 import com.lifetracker.app.ui.theme.LocalPaper
 
 /** Everything that can be opened from the Settings tab. The numbers for each live under Stats. */
-enum class Page { Goals, Rules, Phone, Steps, Places, Location, Calls, Charging, Activities, Habits, Appearance, Backup, Timeline, Apps, PlaceCategories, Profiles, Changes, Maps, Permissions, Logs, Trips, Live, Features, Nutrients }
+enum class Page { Goals, Rules, Phone, Steps, Places, Location, Calls, Charging, Activities, Habits, Appearance, Backup, Timeline, Apps, PlaceCategories, Profiles, Changes, Maps, Permissions, Logs, Trips, Live, Features, Nutrients, Ai, Portions }
 
 /**
  * The Settings tab, laid out like the demo: a big title, then four groups of rows. Each row has an icon, a name, one small
@@ -139,6 +139,15 @@ fun SettingsScreen(onOpen: (Page) -> Unit) {
             SettingsRow(R.drawable.ic_p_food, "Vitamins and minerals", "What the Food tab counts and the daily targets") { onOpen(Page.Nutrients) }
         }
 
+        if (foodFeature) {
+            item {
+                SettingsRow(R.drawable.ic_p_food, "My portions", "Your own roti, katori and spoon weights") { onOpen(Page.Portions) }
+            }
+        }
+        item { PaperSection("AI") }
+        item {
+            SettingsRow(R.drawable.ic_p_camera, "AI reader", com.lifetracker.app.data.FoodAiSettings.summary(context) + " · reads food photos and words") { onOpen(Page.Ai) }
+        }
         if (rulesFeature || goalsFeature) item { PaperSection("Rules and goals") }
         if (rulesFeature || goalsFeature) item {
             SettingsRow(

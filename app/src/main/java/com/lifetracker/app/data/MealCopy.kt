@@ -15,6 +15,6 @@ object MealCopy {
     ): List<MealEntity> = source.map { m ->
         val type = toType ?: m.mealType
         val minute = if (toType == null || toType == m.mealType) m.minuteOfDay else FoodLogic.minuteFor(type, toDate == today, nowMinute)
-        m.copy(id = newId(), date = toDate.toString(), mealType = type, minuteOfDay = minute, source = "app")
+        m.copy(id = newId(), date = toDate.toString(), mealType = type, minuteOfDay = minute, source = FoodSource.forCopy(m.source))
     }
 }

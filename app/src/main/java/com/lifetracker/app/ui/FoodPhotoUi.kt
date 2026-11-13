@@ -31,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
+import com.lifetracker.app.data.AiProvider
 import com.lifetracker.app.data.FoodAiSettings
 import com.lifetracker.app.data.FoodPhotoAi
 import com.lifetracker.app.data.PhotoAiException
@@ -157,7 +158,7 @@ fun PhotoFill(onFilled: (PhotoFood) -> Unit) {
     }
 
     if (showKey) {
-        GeminiKeyDialog(
+        AiKeyDialog(
             onSaved = {
                 showKey = false
                 val action = pending
@@ -180,78 +181,15 @@ fun PhotoFill(onFilled: (PhotoFood) -> Unit) {
     }
 }
 
-/** Asks for the free Gemini key (and the two model names) and keeps them on this phone. [onSaved] runs once a key is saved. */
-@Composable
-fun GeminiKeyDialog(onSaved: () -> Unit, onDismiss: () -> Unit) {
-    val context = LocalContext.current
-    val p = LocalPaper.current
-    val uriHandler = LocalUriHandler.current
-    val scope = rememberCoroutineScope()
-    var key by remember { mutableStateOf(FoodAiSettings.key(context)) }
-    var model by remember { mutableStateOf(FoodAiSettings.model(context)) }
-    var strong by remember { mutableStateOf(FoodAiSettings.strongModel(context)) }
-    var checking by remember { mutableStateOf(false) }
-    var checkText by remember { mutableStateOf("") }
-    var checkOk by remember { mutableStateOf(true) }
-    PaperDialog(
-        title = "Gemini key",
-        onDismiss = onDismiss,
-        confirmText = "Save",
-        onConfirm = {
-            if (key.isNotBlank()) {
-                FoodAiSettings.save(context, key, model, strong)
-                onSaved()
-            }
-        },
-    ) {
-        Column(
-            modifier = Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                "A free key from Google lets Kairos read food photos. Open Google AI Studio, sign in, choose Create API key, and paste it here. " +
-                    "The key stays on this phone and is not put in backups.",
-                fontSize = 13.sp, color = p.ink2,
-            )
-            PaperButton("Open Google AI Studio", { uriHandler.openUri("https://aistudio.google.com/apikey") }, style = PaperButtonStyle.Ghost, small = true)
-            PaperField(key, { key = it; checkText = "" }, "Key", singleLine = true)
-            PaperField(model, { model = it; checkText = "" }, "Model (quick)", singleLine = true)
-            PaperField(strong, { strong = it; checkText = "" }, "Model (think harder)", singleLine = true)
-            PaperButton(
-                if (checking) "Testing…" else "Test the key",
-                {
-                    scope.launch {
-                        checking = true
-                        val result = FoodPhotoAi.checkKey(
-                            key,
-                            listOf(
-                                "Quick" to model.trim().ifEmpty { FoodAiSettings.DEFAULT_MODEL },
-                                "Think harder" to strong.trim().ifEmpty { FoodAiSettings.DEFAULT_STRONG_MODEL },
-                            ),
-                        )
-                        checkText = result.message
-                        checkOk = result.ok
-                        checking = false
-                    }
-                },
-                style = PaperButtonStyle.Ghost, small = true, enabled = !checking && key.isNotBlank(),
-            )
-            if (checkText.isNotEmpty()) Text(checkText, fontSize = 12.5.sp, color = if (checkOk) p.ink2 else p.bad)
-            Text(
-                "Google changes the free models from time to time. If a model stops working, type a newer name from the AI Studio list.",
-                fontSize = 12.sp, color = p.ink2,
-            )
-        }
-    }
-}
-
-/** The one-time notice that a photo goes to Google. [onContinue] runs after it is accepted, and the notice is not shown again. */
+/** The one-time notice that a photo goes to the AI provider you chose. [onContinue] runs after it is accepted, and the notice is not shown again for that provider. */
 @Composable
 fun PhotoNoticeDialog(onContinue: () -> Unit, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val p = LocalPaper.current
+    val provider = FoodAiSettings.provider(context)
+    val gemini = provider == AiProvider.GEMINI
     PaperDialog(
-        title = "Your photo or words go to Google",
+        title = if (gemini) "Your photo or words go to Google" else "Your photo or words go to OpenRouter",
         onDismiss = onDismiss,
         confirmText = "Continue",
         onConfirm = {
@@ -260,8 +198,11 @@ fun PhotoNoticeDialog(onContinue: () -> Unit, onDismiss: () -> Unit) {
         },
     ) {
         Text(
-            "The photo (or the words you typed or said) and your note are sent to Google's Gemini to be read. On Google's free plan they may be used to improve Google's products and be seen by reviewers. " +
-                "Do not photograph anything private. Nothing else from Kairos is sent. A barcode is looked up on Open Food Facts instead, which sees only the number.",
+            (if (gemini) {
+                "The photo (or the words you typed or said) and your note are sent to Google's Gemini to be read. On Google's free plan they may be used to improve Google's products and be seen by reviewers. "
+            } else {
+                "The photo (or the words you typed or said) and your note are sent to OpenRouter, which passes them to the model you chose and its maker. Each model has its own privacy rules, and free models may keep what they are sent. "
+            }) + "Do not photograph anything private. Nothing else from Kairos is sent. A barcode is looked up on Open Food Facts instead, which sees only the number.",
             fontSize = 13.sp, color = p.ink2,
         )
     }

@@ -30,6 +30,7 @@ import com.lifetracker.app.data.FoodLogic
 import com.lifetracker.app.data.Loggable
 import com.lifetracker.app.data.NutrientEntity
 import com.lifetracker.app.data.NutrientGroup
+import com.lifetracker.app.data.FoodSanity
 import com.lifetracker.app.data.PortionKind
 import com.lifetracker.app.ui.theme.LocalPaper
 import com.lifetracker.app.ui.theme.PaperButton
@@ -203,6 +204,12 @@ fun FoodEditor(
 
         MonoLabel("In 100 $unit")
         FieldBoxes(defs, box, nutrientText, onTyped = { error = null })
+        SanityNotes(
+            FoodSanity.checkPer100(
+                foodParse(box["kcal"].orEmpty()) ?: 0.0, foodParse(box["protein"].orEmpty()) ?: 0.0,
+                foodParse(box["carbs"].orEmpty()) ?: 0.0, foodParse(box["fat"].orEmpty()) ?: 0.0,
+            ),
+        )
         PaperButton("Change these boxes", { choosing = true }, style = PaperButtonStyle.Ghost, small = true)
 
         PaperButton(
