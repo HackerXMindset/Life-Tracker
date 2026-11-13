@@ -240,6 +240,7 @@ fun AddFoodWindow(vm: FoodViewModel, startMeal: String, focus: Boolean, onClose:
     var creating by remember { mutableStateOf(false) }
     var added by remember { mutableIntStateOf(0) }
     var check by remember { mutableStateOf<CheckSource?>(null) }
+    var checkGallery by remember { mutableStateOf(false) }
     var browse by remember { mutableStateOf(false) }
     var quick by remember { mutableStateOf(false) }
     var just by remember { mutableStateOf<JustAdded?>(null) }
@@ -395,11 +396,11 @@ fun AddFoodWindow(vm: FoodViewModel, startMeal: String, focus: Boolean, onClose:
             }
         }
 
-        AddRouteRow(onRoute = { check = it })
+        AddRouteRow(onRoute = { checkGallery = false; check = it }, onGallery = { checkGallery = true; check = CheckSource.Meal })
 
         if (query.isNotBlank()) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                PaperButton("Describe it with AI", { check = CheckSource.Text(query.trim()) }, Modifier.weight(1f), style = PaperButtonStyle.Ghost, small = true)
+                PaperButton("Describe it with AI", { checkGallery = false; check = CheckSource.Text(query.trim()) }, Modifier.weight(1f), style = PaperButtonStyle.Ghost, small = true)
                 PaperButton("Just calories", { quick = true }, Modifier.weight(1f), style = PaperButtonStyle.Ghost, small = true)
             }
         }
@@ -519,7 +520,7 @@ fun AddFoodWindow(vm: FoodViewModel, startMeal: String, focus: Boolean, onClose:
     }
 
     check?.let { source ->
-        PhotoCheckWindow(startMeal = startMeal, date = day, source = source, onAdded = { added += 1 }, onClose = { check = null })
+        PhotoCheckWindow(startMeal = startMeal, date = day, source = source, onAdded = { added += 1 }, onClose = { check = null }, fromGallery = checkGallery)
     }
     if (quick) {
         QuickAddSheet(

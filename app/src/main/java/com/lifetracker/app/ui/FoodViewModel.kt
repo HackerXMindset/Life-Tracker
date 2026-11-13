@@ -7,6 +7,7 @@ import com.lifetracker.app.data.AppDatabase
 import com.lifetracker.app.data.FoodEntity
 import com.lifetracker.app.data.FoodFavouriteEntity
 import com.lifetracker.app.data.FoodGoalEntity
+import com.lifetracker.app.data.FoodSettings
 import com.lifetracker.app.data.FoodLibrary
 import com.lifetracker.app.data.FoodLibraryData
 import com.lifetracker.app.data.FoodLogic
@@ -199,9 +200,15 @@ class FoodViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** The goal from the chosen day on. */
+    /** The goal from the chosen day on, typed by you. A goal set by hand stops the Body setup from changing it by itself. */
     fun setGoal(kcal: Double, protein: Double, carbs: Double, fat: Double) {
+        FoodSettings.setAutoGoal(getApplication(), false)
         viewModelScope.launch { dao.upsertGoals(listOf(FoodGoalEntity(selected.value.toString(), kcal, carbs, fat, protein))) }
+    }
+
+    /** The goal from [date] on, worked out from the Body setup. */
+    fun setGoalFor(date: java.time.LocalDate, kcal: Double, protein: Double, carbs: Double, fat: Double) {
+        viewModelScope.launch { dao.upsertGoals(listOf(FoodGoalEntity(date.toString(), kcal, carbs, fat, protein))) }
     }
 
     // ---- your foods, stars and saved meals ----

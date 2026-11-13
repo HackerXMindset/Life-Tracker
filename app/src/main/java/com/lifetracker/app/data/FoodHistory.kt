@@ -29,9 +29,14 @@ object FoodHistory {
 
     private fun fold(name: String): String = name.trim().lowercase().replace(Regex("\\s+"), " ")
 
-    /** True when [meal] is this food: the same food id, or when there is none, the same name ignoring case and spacing. */
-    fun matches(meal: MealEntity, foodId: String, name: String): Boolean =
-        (foodId.isNotBlank() && meal.foodId == foodId) || fold(meal.name) == fold(name)
+    /** True when [meal] is this food: the same food id, the same name ignoring case and spacing, or [name] is one food that the meal's name lists. */
+    fun matches(meal: MealEntity, foodId: String, name: String): Boolean {
+        if (foodId.isNotBlank() && meal.foodId == foodId) return true
+        if (fold(meal.name) == fold(name)) return true
+        // A food on its own is found inside meals that list it with others ("chicken curry and roti" counts for the roti too).
+        val wanted = FoodParts.keys(name)
+        return wanted.size == 1 && wanted[0] in FoodParts.keys(meal.name)
+    }
 
     fun build(meals: List<MealEntity>, foodId: String, name: String, today: LocalDate): Info {
         val mine = meals.filter { matches(it, foodId, name) }

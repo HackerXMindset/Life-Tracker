@@ -160,9 +160,17 @@ object PeriodStats {
             HabitRow(id, mine.map { it.date }.distinct().size, mine.size, mine.maxOfOrNull { it.date }?.let { LocalDate.parse(it) })
         }
 
+        // Each food in a line counts on its own: "chicken curry and roti" is one chicken curry and one roti. A food id is kept only
+        // when the line is one food, since for a longer line it names the whole line.
+        class Seen(val key: String, val shown: String, val date: String, val foodId: String)
         val foods = meals.filter { it.date in range }
-            .groupBy { it.name.trim().lowercase() }
-            .map { (_, list) -> FoodCount(list.first().name.trim(), list.size, list.maxOf { LocalDate.parse(it.date) }, list.firstOrNull { it.foodId.isNotBlank() }?.foodId.orEmpty()) }
+            .flatMap { m ->
+                val parts = FoodParts.split(m.name)
+                parts.map { part -> Seen(FoodParts.key(part), FoodParts.display(part), m.date, if (parts.size == 1) m.foodId else "") }
+            }
+            .filter { it.key.isNotEmpty() }
+            .groupBy { it.key }
+            .map { (_, list) -> FoodCount(list.first().shown, list.size, list.maxOf { LocalDate.parse(it.date) }, list.firstOrNull { it.foodId.isNotBlank() }?.foodId.orEmpty()) }
             .sortedWith(compareBy({ -it.times }, { it.name.lowercase() }))
             .take(6)
 

@@ -41,6 +41,7 @@ import com.lifetracker.app.ui.theme.PaperCard
 import com.lifetracker.app.ui.theme.PaperField
 import com.lifetracker.app.ui.theme.PaperPill
 import com.lifetracker.app.ui.theme.PaperSegmented
+import com.lifetracker.app.ui.theme.PaperToggle
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
@@ -69,6 +70,7 @@ fun BodyWindow(x: FoodExtrasViewModel, vm: FoodViewModel, onClose: () -> Unit) {
     var weightText by remember { mutableStateOf(latest?.let { foodNum(it.kg) } ?: "") }
     var targetText by remember { mutableStateOf(FoodSettings.weightGoalKg(context).let { if (it > 0) foodNum(it) else "" }) }
     var note by remember { mutableStateOf<String?>(null) }
+    var auto by remember { mutableStateOf(FoodSettings.autoGoal(context)) }
 
     val age = foodParse(ageText)?.toInt()?.takeIf { it in 10..110 }
     val heightCm = foodParse(heightText)?.takeIf { it in 100.0..250.0 } ?: 0.0
@@ -83,6 +85,12 @@ fun BodyWindow(x: FoodExtrasViewModel, vm: FoodViewModel, onClose: () -> Unit) {
         FoodSettings.setBodyProfile(context, profile.copy(since = if (changedGoal || saved.since.isBlank()) today.toString() else saved.since))
         FoodSettings.setWeightGoal(context, if (kind == GoalKind.MAINTAIN) 0.0 else target)
         if (kg > 0 && (latest == null || Math.abs(latest.kg - kg) > 1e-9)) x.setWeight(today, kg)
+        FoodSettings.setAutoGoal(context, auto)
+        // With "keep my goal up to date" on, the daily goal is set from this plan right now and follows it from then on.
+        if (auto && plan != null) {
+            val (protein, carbs, fat) = BodyMath.macros(plan.target, kg, goal)
+            vm.setGoalFor(today, plan.target, protein, carbs, fat)
+        }
     }
 
     EditWindow(
@@ -116,10 +124,10 @@ fun BodyWindow(x: FoodExtrasViewModel, vm: FoodViewModel, onClose: () -> Unit) {
             PaperField(targetText, { targetText = it }, "Target weight (kg)", singleLine = true, keyboardOptions = DecimalKeys)
         }
 
-        ResultCard(plan, kind) {
+        ResultCard(plan, kind, auto, { auto = it }) {
             if (plan != null) {
                 val (protein, carbs, fat) = BodyMath.macros(plan.target, kg, goal)
-                vm.setGoal(plan.target, protein, carbs, fat)
+                vm.setGoalFor(today, plan.target, protein, carbs, fat)
                 save()
                 note = "Your daily goal from today is " + kc(plan.target) + " kcal."
             }
@@ -188,7 +196,7 @@ private fun ChoiceRow(title: String, hint: String, on: Boolean, onClick: () -> U
 }
 
 @Composable
-private fun ResultCard(plan: BodyMath.Plan?, kind: GoalKind, onUse: () -> Unit) {
+private fun ResultCard(plan: BodyMath.Plan?, kind: GoalKind, auto: Boolean, onAuto: (Boolean) -> Unit, onUse: () -> Unit) {
     val p = LocalPaper.current
     PaperCard(modifier = Modifier.fillMaxWidth(), padding = 16.dp, shadow = false) {
         if (plan == null) {
@@ -204,7 +212,17 @@ private fun ResultCard(plan: BodyMath.Plan?, kind: GoalKind, onUse: () -> Unit) 
             Text("Keeping your weight: " + kc(plan.maintenance) + " kcal. At rest you burn about " + kc(plan.bmr) + ".", fontSize = 12.5.sp, color = p.ink2)
             if (plan.floored) Text("Raised to the lowest amount that is safe to eat. Go slower to stay above it.", fontSize = 12.5.sp, color = p.bad, modifier = Modifier.padding(top = 4.dp))
             Spacer(Modifier.height(10.dp))
-            PaperButton("Use as my daily goal", onUse, small = true)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(Modifier.weight(1f)) {
+                    Text("Keep my daily goal up to date", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = p.ink)
+                    Text("Saving sets it, and a new weigh-in updates it. A goal you type by hand turns this off.", fontSize = 12.sp, color = p.ink2)
+                }
+                PaperToggle(auto, onAuto)
+            }
+            if (!auto) {
+                Spacer(Modifier.height(8.dp))
+                PaperButton("Use as my daily goal once", onUse, small = true)
+            }
             Text("An estimate for adults, not medical advice. Your body is the best check: watch your weight over a few weeks and adjust.", fontSize = 11.5.sp, color = p.ink2, modifier = Modifier.padding(top = 8.dp))
         }
     }

@@ -143,3 +143,19 @@ object BodyMath {
 
     fun daysBetween(from: LocalDate, to: LocalDate): Int = ChronoUnit.DAYS.between(from, to).toInt()
 }
+
+/** Keeps the daily goal in step with the Body setup. Pure, so it can be tested. */
+object BodyGoalSync {
+    /**
+     * The goal to start today so it matches the plan for your latest weight, or null when it already does, or when the Body setup is
+     * not complete yet (sex, age, height and a weigh-in). Protein, carbs and fat keep their proportions.
+     */
+    fun due(profile: BodyProfile, weights: List<WeightEntity>, goals: List<FoodGoalEntity>, today: LocalDate): FoodGoalEntity? {
+        val kg = weights.filter { it.date <= today.toString() }.maxByOrNull { it.date }?.kg ?: return null
+        val plan = BodyMath.plan(profile, kg, today) ?: return null
+        val current = FoodStats.goalFor(goals, today)
+        if (current != null && Math.abs(current.kcal - plan.target) < 1.0) return null
+        val (protein, carbs, fat) = BodyMath.macros(plan.target, kg, current)
+        return FoodGoalEntity(today.toString(), plan.target, carbs, fat, protein)
+    }
+}

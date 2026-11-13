@@ -2,6 +2,20 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🛠️ Food fixes after the first run
+
+### ✨ New
+
+- **Gallery on the Add food page.** Camera, Gallery, Barcode and Label now sit together under the search box. Gallery reads a photo you already have.
+- **Add any number on the check page.** Under **Fix the numbers** you can now change fibre, sugar, sodium, saturated, mono and poly fat, and every vitamin, mineral or nutrient of your own, not only calories, protein, carbs and fat. The ones with a value show in a line under the numbers.
+- **Your daily goal updates by itself.** Save your Body setup and the daily calorie goal (and its protein, carbs and fat) is set from it, then follows your weight when you weigh in. Switch **Keep my daily goal up to date** off, or type a goal by hand, and it stays as you set it.
+- **Stats understand a line with several foods.** "Chicken curry and roti" or "2 rotis, 1 katori dal" counts as a chicken curry, a roti and a dal. **Eaten most** and the page of a food (last eaten, 7/30/90 days, all time) look at each food on its own, and "roti" and "rotis" are the same food. Nothing you logged is changed.
+
+### 🔧 Fixed
+
+- **Wrong pictures in the food list.** Chicken breast showed a banana and chicken thighs an apple, because a picture stayed on a cell when the list changed. Each food shows its own picture now.
+- **What to show** is tidier: one short line per part, and a single **Reorder** mode instead of Up and Down on every row.
+
 ## 🔍 What came before
 
 ### ✨ New

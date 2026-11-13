@@ -15,7 +15,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,8 +59,10 @@ object FoodPhotos {
 fun FoodPhoto(asset: String?, name: String, size: Dp, modifier: Modifier = Modifier) {
     val p = LocalPaper.current
     val context = LocalContext.current
-    val bitmap by produceState(FoodPhotos.cached(asset), asset) {
-        if (asset != null && value == null) value = withContext(Dispatchers.IO) { FoodPhotos.load(context, asset) }
+    // Keyed by the asset: a grid reuses a cell for another food when you change category or scroll, and the old picture must not stay.
+    var bitmap by remember(asset) { mutableStateOf(FoodPhotos.cached(asset)) }
+    LaunchedEffect(asset) {
+        if (asset != null && bitmap == null) bitmap = withContext(Dispatchers.IO) { FoodPhotos.load(context, asset) }
     }
     val shape = RoundedCornerShape(size / 4)
     Box(

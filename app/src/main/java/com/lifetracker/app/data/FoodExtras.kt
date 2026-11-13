@@ -472,6 +472,14 @@ object FoodSettings {
         changed()
     }
 
+    /** Whether the daily goal follows your Body setup (weight, activity, goal) by itself. On; setting a goal by hand turns it off. */
+    fun autoGoal(context: Context): Boolean = prefs(context).getBoolean("auto_goal", true)
+
+    fun setAutoGoal(context: Context, on: Boolean) {
+        prefs(context).edit { putBoolean("auto_goal", on) }
+        changed()
+    }
+
     /** The period the stats window opens on: the last one you used ([StatPeriod.key]). */
     fun statPeriod(context: Context): StatPeriod = StatPeriod.fromKey(prefs(context).getString("stat_period", null))
 
