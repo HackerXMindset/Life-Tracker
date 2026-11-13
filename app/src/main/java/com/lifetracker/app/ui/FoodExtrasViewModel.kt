@@ -14,6 +14,7 @@ import com.lifetracker.app.data.FoodSettings
 import com.lifetracker.app.data.FoodGoalEntity
 import com.lifetracker.app.data.FoodStats
 import com.lifetracker.app.data.FoodTrackerEntity
+import com.lifetracker.app.data.BodyGoalSync
 import com.lifetracker.app.data.HabitEntity
 import com.lifetracker.app.data.HabitLink
 import com.lifetracker.app.data.HabitMarks
@@ -187,6 +188,14 @@ class FoodExtrasViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         viewModelScope.launch { runCatching { TrackerMigration.run(context) } }
+        // The daily goal follows the Body setup: a new weigh-in or a changed setup updates it, unless you set a goal by hand.
+        viewModelScope.launch {
+            combine(dao.observeWeights(), foodDao.observeGoals(), FoodSettings.changes) { w, g, _ -> w to g }.collect { (w, g) ->
+                if (!FoodSettings.autoGoal(context)) return@collect
+                val due = BodyGoalSync.due(FoodSettings.bodyProfile(context), w, g, LocalDate.now()) ?: return@collect
+                foodDao.upsertGoals(listOf(due))
+            }
+        }
     }
 
     private val watchedIds = FoodSettings.changes.map { FoodSettings.watchedHabits(context) }.distinctUntilChanged()
@@ -230,6 +239,9 @@ class FoodExtrasViewModel(app: Application) : AndroidViewModel(app) {
             foodDao.observeMealsBetween(from, to)
         },
     )
+
+    /** Every meal ever logged, for the history of one food. */
+    suspend fun allMeals(): List<MealEntity> = foodDao.allMeals()
 
     // ---- the stats window ----
 

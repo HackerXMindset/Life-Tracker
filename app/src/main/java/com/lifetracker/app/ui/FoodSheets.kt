@@ -240,6 +240,7 @@ fun AddFoodWindow(vm: FoodViewModel, startMeal: String, focus: Boolean, onClose:
     var creating by remember { mutableStateOf(false) }
     var added by remember { mutableIntStateOf(0) }
     var check by remember { mutableStateOf<CheckSource?>(null) }
+    var checkGallery by remember { mutableStateOf(false) }
     var browse by remember { mutableStateOf(false) }
     var quick by remember { mutableStateOf(false) }
     var just by remember { mutableStateOf<JustAdded?>(null) }
@@ -395,11 +396,11 @@ fun AddFoodWindow(vm: FoodViewModel, startMeal: String, focus: Boolean, onClose:
             }
         }
 
-        AddRouteRow(onRoute = { check = it })
+        AddRouteRow(onRoute = { checkGallery = false; check = it }, onGallery = { checkGallery = true; check = CheckSource.Meal })
 
         if (query.isNotBlank()) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                PaperButton("Describe it with AI", { check = CheckSource.Text(query.trim()) }, Modifier.weight(1f), style = PaperButtonStyle.Ghost, small = true)
+                PaperButton("Describe it with AI", { checkGallery = false; check = CheckSource.Text(query.trim()) }, Modifier.weight(1f), style = PaperButtonStyle.Ghost, small = true)
                 PaperButton("Just calories", { quick = true }, Modifier.weight(1f), style = PaperButtonStyle.Ghost, small = true)
             }
         }
@@ -519,7 +520,7 @@ fun AddFoodWindow(vm: FoodViewModel, startMeal: String, focus: Boolean, onClose:
     }
 
     check?.let { source ->
-        PhotoCheckWindow(startMeal = startMeal, date = day, source = source, onAdded = { added += 1 }, onClose = { check = null })
+        PhotoCheckWindow(startMeal = startMeal, date = day, source = source, onAdded = { added += 1 }, onClose = { check = null }, fromGallery = checkGallery)
     }
     if (quick) {
         QuickAddSheet(
@@ -890,6 +891,7 @@ fun EntrySheet(vm: FoodViewModel, meal: MealEntity, library: FoodLibraryData?, o
     var type by remember { mutableStateOf(meal.mealType) }
     var minute by remember { mutableIntStateOf(meal.minuteOfDay) }
     var confirmDelete by remember { mutableStateOf(false) }
+    var showHistory by remember { mutableStateOf(false) }
     var showCopy by remember { mutableStateOf(false) }
 
     val grams = foodParse(amount) ?: 0.0
@@ -916,6 +918,7 @@ fun EntrySheet(vm: FoodViewModel, meal: MealEntity, library: FoodLibraryData?, o
                 Text("Time", fontSize = 13.sp, color = p.ink2)
                 TimeButton(minute, { minute = it })
             }
+            PaperButton("When did I last eat this?", { showHistory = true }, style = PaperButtonStyle.Ghost, small = true)
             val vitamins = NutrientMath.forMeal(now)
             if (vitamins.any { it.value > 0 }) {
                 MonoLabel("Vitamins and minerals")
@@ -943,6 +946,7 @@ fun EntrySheet(vm: FoodViewModel, meal: MealEntity, library: FoodLibraryData?, o
         }
     }
 
+    if (showHistory) FoodInfoWindow(meal.name, meal.foodId, load = { vm.allMeals() }, onClose = { showHistory = false })
     if (showCopy) CopySheet(vm, listOf(now), meal.mealType, date, onDone = { showCopy = false; onDismiss() }, onDismiss = { showCopy = false })
 
     if (confirmDelete) {
@@ -1119,7 +1123,7 @@ fun SavedMealsSheet(vm: FoodViewModel, mealType: String, onDone: () -> Unit, onD
 // ---- goals ----
 
 @Composable
-fun GoalsSheet(vm: FoodViewModel, onDismiss: () -> Unit) {
+fun GoalsSheet(vm: FoodViewModel, onDismiss: () -> Unit, onBody: () -> Unit = {}) {
     val p = LocalPaper.current
     val goal by vm.goal.collectAsState()
     val date by vm.date.collectAsState()
@@ -1134,6 +1138,7 @@ fun GoalsSheet(vm: FoodViewModel, onDismiss: () -> Unit) {
     PaperSheet(onDismiss = onDismiss) {
         SheetBody {
             SheetTitle("Daily goals", "From ${TimelineTop.title(date, LocalDate.now())} on. Earlier days keep their own goal.")
+            PaperButton("Work it out from my body", { onDismiss(); onBody() }, modifier = Modifier.fillMaxWidth(), style = PaperButtonStyle.Ghost, small = true)
             PaperField(kcal, { kcal = it; error = null }, "Calories (kcal)", singleLine = true, keyboardOptions = DecimalKeys)
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 PaperField(protein, { protein = it }, "Protein g", Modifier.weight(1f), singleLine = true, keyboardOptions = DecimalKeys)

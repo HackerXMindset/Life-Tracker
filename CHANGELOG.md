@@ -2,6 +2,48 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🛠️ Food fixes after the first run
+
+### ✨ New
+
+- **Gallery on the Add food page.** Camera, Gallery, Barcode and Label now sit together under the search box. Gallery reads a photo you already have.
+- **Add any number on the check page.** Under **Fix the numbers** you can now change fibre, sugar, sodium, saturated, mono and poly fat, and every vitamin, mineral or nutrient of your own, not only calories, protein, carbs and fat. The ones with a value show in a line under the numbers.
+- **Your daily goal updates by itself.** Save your Body setup and the daily calorie goal (and its protein, carbs and fat) is set from it, then follows your weight when you weigh in. Switch **Keep my daily goal up to date** off, or type a goal by hand, and it stays as you set it.
+- **Stats understand a line with several foods.** "Chicken curry and roti" or "2 rotis, 1 katori dal" counts as a chicken curry, a roti and a dal. **Eaten most** and the page of a food (last eaten, 7/30/90 days, all time) look at each food on its own, and "roti" and "rotis" are the same food. Nothing you logged is changed.
+
+### 🔧 Fixed
+
+- **Wrong pictures in the food list.** Chicken breast showed a banana and chicken thighs an apple, because a picture stayed on a cell when the list changed. Each food shows its own picture now.
+- **What to show** is tidier: one short line per part, and a single **Reorder** mode instead of Up and Down on every row.
+
+## 🔍 What came before
+
+### ✨ New
+
+- **"What came before" for the habits you watch.** Pick a habit (a headache, reflux, a bad stomach), how many hours to look back (3, 6, 12, 24 or 48) and how far back (30 days, 90 days, all time), and see the foods that came before it. Each food shows how many of the times it was eaten in that window, next to how often it is eaten in a window at other times, so something you eat all day does not look suspicious just for being common. It also says about how many hours earlier it usually was.
+- Open it from the Stats window (tap a habit), the **What came before** button under the Month view, or **Patterns** at the top of the Timeline.
+- Checks that are close together count as one time (a headache ticked three times in an afternoon is one). Checks with no time are left out. It needs at least three times with food logged before them before it says anything, and a food has to be in at least two of them.
+- It always says that a pattern is not a cause, and suggests trying leaving one food out for two weeks.
+
+## ⚖️ Body and goals
+
+### ✨ New
+
+- **Body and goals** (from the gear on the Food tab, "Work it out from my body", or the new button under Body weight). Like OpenNutriTracker: your sex, age, height and weight, how active you are (sedentary, low active, active, very active), and what you want (lose weight, maintain, gain weight, at 0.25 to 1 kg a week) with a target weight.
+- **BMI** with a plain label (underweight, healthy range, overweight, obese), a strip showing where you are, and the weights that are healthy for your height.
+- **Calories that fit your goal.** Resting energy (Mifflin-St Jeor), the calories to keep your weight for your activity, and a daily target for your goal and pace. It never goes below the safe minimum (1,200 for women, 1,500 for men) and says so. **Use as my daily goal** sets your calorie goal from today, and scales your protein, carbs and fat to match (or, with no macros yet, sets protein at 1.6 g a kilo and fat at a quarter of the calories).
+- **Progress to your target:** start, now and target on one bar, how many kilos to go, and about how many weeks and which month at your pace.
+- **Weight history:** a chart of your recent weigh-ins with the target as a dashed line, and your last eight with a Remove button. Typing a new weight and saving counts as today's weigh-in.
+- These are estimates for adults, not medical advice, and the page says so.
+
+## 🔎 A page for each food
+
+### ✨ New
+
+- **Tap a food in Stats ("Eaten most") or open a logged food and tap "When did I last eat this?"** to see its page: when you last ate it, how long ago, and how many times in the last 7, 30 and 90 days and in all (with the number of days, for when you had it twice in a day). If you eat it every day it says how many days in a row.
+- The page also shows a usual helping (grams, calories, protein), the meal you usually have it as, when you first logged it, and your last ten times with their weights.
+- The same food is found whether it came from the food list or was typed by name, ignoring capitals and extra spaces.
+
 ## 📊 Stats rebuilt
 
 ### ✨ New

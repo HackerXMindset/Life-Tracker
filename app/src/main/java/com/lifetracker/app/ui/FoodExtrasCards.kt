@@ -33,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -84,7 +85,7 @@ import java.time.LocalDate
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private val WATER_COLOR = Color(0xFF2878B4)
+internal val WATER_COLOR = Color(0xFF2878B4)
 
 // ---- choosing what to show ----
 
@@ -93,62 +94,58 @@ fun TrackersSheet(onDismiss: () -> Unit) {
     val p = LocalPaper.current
     val context = LocalContext.current
     val tick by FoodSettings.changes.collectAsState()
+    var reorder by remember { mutableStateOf(false) }
     PaperSheet(onDismiss = onDismiss) {
         SheetBody {
-            SheetTitle("What to show", "Switch parts of the Food tab on or off, and move them up or down. Nothing you logged is deleted.")
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.weight(1f)) { SheetTitle("What to show", if (reorder) "Use the arrows to move a part. Tap Done when finished." else "Switch parts of the Food tab on or off.") }
+                PaperPill(if (reorder) "Done" else "Reorder", reorder, { reorder = !reorder })
+            }
             val order = remember(tick) { FoodSettings.order(context) }
             listOf("Above the details" to FoodPartOrder.TOP, "Details" to FoodPartOrder.DETAILS).forEach { (heading, group) ->
                 MonoLabel(heading)
                 val sorted = FoodPartOrder.sorted(order, group)
-                sorted.forEachIndexed { index, part ->
-                    val on = remember(tick) { FoodSettings.isOn(context, part) }
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(part.title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = p.ink)
-                            Text(part.hint, fontSize = 12.sp, color = p.ink2)
+                PaperCard(modifier = Modifier.fillMaxWidth(), padding = 4.dp, shadow = false) {
+                    sorted.forEachIndexed { index, part ->
+                        val on = remember(tick) { FoodSettings.isOn(context, part) }
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(part.title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = if (on) p.ink else p.ink2, maxLines = 1)
+                                if (!reorder) Text(part.hint, fontSize = 12.sp, color = p.ink2, maxLines = 1)
+                            }
+                            if (reorder) {
+                                ReorderArrow(up = true, enabled = index > 0) { FoodSettings.move(context, group, part, -1) }
+                                ReorderArrow(up = false, enabled = index < sorted.lastIndex) { FoodSettings.move(context, group, part, 1) }
+                            } else {
+                                PaperToggle(on, { FoodSettings.setOn(context, part, it) })
+                            }
                         }
-                        PaperButton("Up", { FoodSettings.move(context, group, part, -1) }, style = PaperButtonStyle.Ghost, small = true, enabled = index > 0)
-                        PaperButton("Down", { FoodSettings.move(context, group, part, 1) }, style = PaperButtonStyle.Ghost, small = true, enabled = index < sorted.lastIndex)
-                        PaperToggle(on, { FoodSettings.setOn(context, part, it) })
                     }
                 }
             }
-            Text("Water and Protein shake share one row, which sits where the higher of the two is.", fontSize = 12.sp, color = p.ink2)
+            if (!reorder) Text("Water and Protein shake share one row, which sits where the higher of the two is.", fontSize = 12.sp, color = p.ink2)
 
             MonoLabel("Photo reading")
-            val animOn = remember(tick) { FoodSettings.readingAnimation(context) }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("Reading animation", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = p.ink)
-                    Text("A pen, a marker and a stamp play while a photo or your words are read, and when the answer comes back. Android's \"remove animations\" also turns it off.", fontSize = 12.sp, color = p.ink2)
-                }
-                PaperToggle(animOn, { FoodSettings.setReadingAnimation(context, it) })
+            SettingRow("Reading animation", "Plays while a photo or your words are read", remember(tick) { FoodSettings.readingAnimation(context) }) {
+                FoodSettings.setReadingAnimation(context, it)
             }
 
             MonoLabel("Habits")
-            val linkOn = remember(tick) { FoodSettings.waterLinked(context) }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("Link water to Habits", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = p.ink)
-                    Text("Water drunk here counts on your Water habit, and the other way round. A habit called Water is made if you have none.", fontSize = 12.sp, color = p.ink2)
-                }
-                PaperToggle(linkOn, { FoodSettings.setWaterLinked(context, it) })
+            SettingRow("Link water to Habits", "Food water and your Water habit stay the same", remember(tick) { FoodSettings.waterLinked(context) }) {
+                FoodSettings.setWaterLinked(context, it)
             }
 
             MonoLabel("Reminders")
             val mealOn = remember(tick) { FoodSettings.mealReminders(context) }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("Meal reminders", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = p.ink)
-                    Text("At each meal time, only if nothing is logged for that meal yet. Off until you switch it on.", fontSize = 12.sp, color = p.ink2)
-                }
-                PaperToggle(mealOn, { FoodSettings.setMealReminders(context, it) })
-            }
+            SettingRow("Meal reminders", "Only if the meal is still empty", mealOn) { FoodSettings.setMealReminders(context, it) }
             if (mealOn) {
                 FoodReminderRules.MEALS.forEach { meal ->
                     val remind = remember(tick) { FoodSettings.mealRemindOn(context, meal) }
                     val minute = remember(tick) { FoodSettings.mealMinute(context, meal) }
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(start = 12.dp)) {
                         Text(mealTypeLabel(meal), fontSize = 14.sp, color = p.ink, modifier = Modifier.weight(1f))
                         TimeButton(minute, { FoodSettings.setMealMinute(context, meal, it) })
                         PaperToggle(remind, { FoodSettings.setMealRemindOn(context, meal, it) })
@@ -156,21 +153,15 @@ fun TrackersSheet(onDismiss: () -> Unit) {
                 }
             }
             val waterOn = remember(tick) { FoodSettings.waterReminders(context) }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("Water reminders", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = p.ink)
-                    Text("Through the day, only when you are behind on your water goal. Off until you switch it on.", fontSize = 12.sp, color = p.ink2)
-                }
-                PaperToggle(waterOn, { FoodSettings.setWaterReminders(context, it) })
-            }
+            SettingRow("Water reminders", "Only when you are behind on your goal", waterOn) { FoodSettings.setWaterReminders(context, it) }
             if (waterOn) {
                 val w = remember(tick) { FoodSettings.waterWindow(context) }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(start = 12.dp)) {
                     listOf(60 to "Every hour", 120 to "Every 2 h", 180 to "Every 3 h").forEach { (minutes, label) ->
                         PaperPill(label, w.interval == minutes, { FoodSettings.setWaterWindow(context, w.start, w.end, minutes) })
                     }
                 }
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(start = 12.dp)) {
                     Text("From", fontSize = 13.sp, color = p.ink2)
                     TimeButton(w.start, { FoodSettings.setWaterWindow(context, it, w.end, w.interval) })
                     Text("to", fontSize = 13.sp, color = p.ink2)
@@ -178,22 +169,49 @@ fun TrackersSheet(onDismiss: () -> Unit) {
                 }
             }
             val weekOn = remember(tick) { FoodSettings.weeklyReport(context) }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("Sunday week report", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = p.ink)
-                    Text("A short summary of the week, on Sundays, only if you logged something. Off until you switch it on.", fontSize = 12.sp, color = p.ink2)
-                }
-                PaperToggle(weekOn, { FoodSettings.setWeeklyReport(context, it) })
-            }
+            SettingRow("Sunday week report", "A short summary, only if you logged", weekOn) { FoodSettings.setWeeklyReport(context, it) }
             if (weekOn) {
                 val minute = remember(tick) { FoodSettings.weeklyMinute(context) }
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(start = 12.dp)) {
                     Text("Sunday at", fontSize = 13.sp, color = p.ink2)
                     TimeButton(minute, { FoodSettings.setWeeklyMinute(context, it) })
                 }
             }
+            Text("Reminders and the report are off until you switch them on. Nothing you logged is deleted by any of this.", fontSize = 12.sp, color = p.ink2)
             Spacer(Modifier.height(12.dp))
         }
+    }
+}
+
+/** A title, one short line under it, and a switch. */
+@Composable
+private fun SettingRow(title: String, hint: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    val p = LocalPaper.current
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = p.ink, maxLines = 1)
+            Text(hint, fontSize = 12.sp, color = p.ink2, maxLines = 2)
+        }
+        PaperToggle(checked, onChange)
+    }
+}
+
+/** A small round arrow for moving a part up or down. A dimmed one at the end of the list does nothing. */
+@Composable
+private fun ReorderArrow(up: Boolean, enabled: Boolean, onClick: () -> Unit) {
+    val p = LocalPaper.current
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(p.surface2, CircleShape)
+            .then(if (enabled) Modifier.clickable(role = Role.Button, onClickLabel = if (up) "Move up" else "Move down", onClick = onClick) else Modifier),
+        contentAlignment = Alignment.Center,
+    ) {
+        PaperIcon(
+            R.drawable.ic_p_down, size = 18.dp, tint = if (enabled) p.ink else p.ink2.copy(alpha = 0.35f),
+            modifier = if (up) Modifier.rotate(180f) else Modifier,
+        )
     }
 }
 

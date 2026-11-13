@@ -4,6 +4,7 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -28,6 +30,7 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -120,6 +123,8 @@ fun QuickPhotoScreen(
     initialSource: CheckSource = CheckSource.Meal,
     /** A photo that was taken without internet and is being read now. */
     queued: QueuedPhoto? = null,
+    /** Choose the photo from the gallery instead of taking one. */
+    fromGallery: Boolean = false,
 ) {
     val context = LocalContext.current
     val p = LocalPaper.current
@@ -148,6 +153,8 @@ fun QuickPhotoScreen(
     var scale by remember { mutableFloatStateOf(1f) }
     var edits by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var editing by remember { mutableStateOf(false) }
+    // The vitamins, minerals and nutrients of your own that can be added to the numbers under "Fix the numbers".
+    val nutrientList by remember { AppDatabase.get(context).foodDao().observeNutrients() }.collectAsState(emptyList())
     val minute = remember {
         val now = LocalTime.now().let { it.hour * 60 + it.minute }
         if (queued != null) queued.minute
@@ -162,7 +169,16 @@ fun QuickPhotoScreen(
     var offlineFail by remember { mutableStateOf(false) }
     var fromQueue by remember { mutableStateOf(queued != null) }
 
+    // The photo picked from the gallery; the camera writes to a file of ours instead.
+    var picked by remember { mutableStateOf<Uri?>(null) }
+
     fun photoUri(): Uri {
+        picked?.let { return it }
+        val dir = File(context.cacheDir, "food-photos").apply { mkdirs() }
+        return FileProvider.getUriForFile(context, context.packageName + ".photos", File(dir, "snap.jpg"))
+    }
+
+    fun cameraUri(): Uri {
         val dir = File(context.cacheDir, "food-photos").apply { mkdirs() }
         return FileProvider.getUriForFile(context, context.packageName + ".photos", File(dir, "snap.jpg"))
     }
@@ -241,6 +257,13 @@ fun QuickPhotoScreen(
         else if (food == null && jpeg == null && !busy) onClose() // nothing taken and nothing to look at
     }
 
+    val pick = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) {
+            picked = uri
+            shot += 1
+        } else if (food == null && jpeg == null && !busy) onClose()
+    }
+
     fun proceed() {
         when {
             source == CheckSource.Barcode -> scan()
@@ -248,7 +271,8 @@ fun QuickPhotoScreen(
             !FoodAiSettings.noticeSeen(context) -> showNotice = true
             source is CheckSource.Text -> read(false)
             fromQueue && jpeg != null -> { fromQueue = false; read(false) }
-            else -> take.launch(photoUri())
+            fromGallery -> { picked = null; pick.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
+            else -> take.launch(cameraUri())
         }
     }
 
@@ -533,7 +557,49 @@ fun QuickPhotoScreen(
                                 Modifier.weight(1f), singleLine = true, keyboardOptions = DecimalKeys,
                             )
                         }
+                        Kicker("More numbers for this much")
+                        val extras = listOf(
+                            Triple("fiber", "Fibre g", part.fiber), Triple("sugar", "Sugar g", part.sugar),
+                            Triple("sodium", "Sodium mg", part.sodiumMg), Triple("sat", "Saturated fat g", part.sat),
+                            Triple("mono", "Mono fat g", part.mono), Triple("poly", "Poly fat g", part.poly),
+                        )
+                        extras.chunked(2).forEach { row ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                row.forEach { (key, label, auto) ->
+                                    PaperField(
+                                        edits[key] ?: foodNum(auto), { edits = edits + (key to it) }, label,
+                                        Modifier.weight(1f), singleLine = true, keyboardOptions = DecimalKeys,
+                                    )
+                                }
+                            }
+                        }
+                        val visible = nutrientList.filter { !it.hidden }
+                        if (visible.isNotEmpty()) {
+                            Kicker("Vitamins, minerals and your own")
+                            visible.chunked(2).forEach { row ->
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    row.forEach { n ->
+                                        val key = "n:" + n.id
+                                        PaperField(
+                                            edits[key] ?: foodNum(part.micro[n.id] ?: 0.0), { edits = edits + (key to it) },
+                                            n.name + " " + n.unit, Modifier.weight(1f), singleLine = true, keyboardOptions = DecimalKeys,
+                                        )
+                                    }
+                                    if (row.size == 1) Spacer(Modifier.weight(1f))
+                                }
+                            }
+                        }
                         Text("Moving the slider puts the numbers back to what the photo reader said.", fontSize = 12.sp, color = p.ink2)
+                    } else if (!(split && separate)) {
+                        val shownExtras = listOfNotNull(
+                            number("fiber", part.fiber).takeIf { it > 0 }?.let { "Fibre " + foodNum(it) + " g" },
+                            number("sugar", part.sugar).takeIf { it > 0 }?.let { "Sugar " + foodNum(it) + " g" },
+                            number("sodium", part.sodiumMg).takeIf { it > 0 }?.let { "Sodium " + foodNum(it) + " mg" },
+                            number("sat", part.sat).takeIf { it > 0 }?.let { "Sat fat " + foodNum(it) + " g" },
+                        ) + nutrientList.filter { !it.hidden }.mapNotNull { n ->
+                            number("n:" + n.id, part.micro[n.id] ?: 0.0).takeIf { it > 0 }?.let { n.name + " " + foodNum(it) + " " + n.unit }
+                        }
+                        if (shownExtras.isNotEmpty()) Text(shownExtras.joinToString("  ·  "), fontSize = 12.sp, color = p.ink2)
                     }
                     if (!(split && separate)) {
                         PaperButton(
@@ -595,6 +661,12 @@ fun QuickPhotoScreen(
                         val adjusted = part.copy(
                             kcal = number("kcal", part.kcal), protein = number("protein", part.protein),
                             carbs = number("carbs", part.carbs), fat = number("fat", part.fat),
+                            fiber = number("fiber", part.fiber), sugar = number("sugar", part.sugar),
+                            sodiumMg = number("sodium", part.sodiumMg), sat = number("sat", part.sat),
+                            mono = number("mono", part.mono), poly = number("poly", part.poly),
+                            micro = part.micro + nutrientList.mapNotNull { n ->
+                                edits["n:" + n.id]?.let { foodParse(it) }?.let { n.id to it.coerceAtLeast(0.0) }
+                            },
                         )
                         keptFood = if (keep) adjusted else null
                         listOf(adjusted.toMeal(name, mealType, day, minute))
@@ -684,13 +756,15 @@ fun QuickPhotoScreen(
 
 /** The same page as a window on top of the Add food window, adding to that window's meal and day. */
 @Composable
-fun PhotoCheckWindow(startMeal: String, date: LocalDate, source: CheckSource, onAdded: () -> Unit, onClose: () -> Unit) {
+fun PhotoCheckWindow(
+    startMeal: String, date: LocalDate, source: CheckSource, onAdded: () -> Unit, onClose: () -> Unit, fromGallery: Boolean = false,
+) {
     Dialog(
         onDismissRequest = onClose,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
     ) {
         PaperBackground {
-            QuickPhotoScreen(onClose = onClose, startMeal = startMeal, date = date, onAdded = onAdded, initialSource = source)
+            QuickPhotoScreen(onClose = onClose, startMeal = startMeal, date = date, onAdded = onAdded, initialSource = source, fromGallery = fromGallery)
         }
     }
 }

@@ -18,13 +18,14 @@ import com.lifetracker.app.ui.theme.PaperButton
 import com.lifetracker.app.ui.theme.PaperButtonStyle
 
 /**
- * The ways to add food that are not a search, always on screen under the search box: a photo of the meal, the barcode of a
+ * The ways to add food that are not a search, always on screen under the search box: a photo of the meal (taken now or picked from the gallery), the barcode of a
  * pack, the nutrition table of a pack. A few words (typed or spoken) go through the search box. Each ends on the check page.
  */
 @Composable
-fun AddRouteRow(onRoute: (CheckSource) -> Unit) {
+fun AddRouteRow(onRoute: (CheckSource) -> Unit, onGallery: () -> Unit) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        PaperButton("Photo", { onRoute(CheckSource.Meal) }, Modifier.weight(1f), small = true, icon = R.drawable.ic_p_camera)
+        PaperButton("Camera", { onRoute(CheckSource.Meal) }, Modifier.weight(1f), small = true, icon = R.drawable.ic_p_camera)
+        PaperButton("Gallery", onGallery, Modifier.weight(1f), style = PaperButtonStyle.Ghost, small = true)
         PaperButton("Barcode", { onRoute(CheckSource.Barcode) }, Modifier.weight(1f), style = PaperButtonStyle.Ghost, small = true)
         PaperButton("Label", { onRoute(CheckSource.Label) }, Modifier.weight(1f), style = PaperButtonStyle.Ghost, small = true)
     }
