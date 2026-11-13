@@ -21,7 +21,10 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** The key and models for "fill from a photo". Kept in a file that is left out of backups, so the key stays on this phone. */
+/**
+ * The key and models for "fill from a photo". Kept in a file that is left out of backups, so the keys stay on this phone.
+ * Each provider keeps its own key and model names, so switching back and forth loses nothing.
+ */
 object FoodAiSettings {
     const val FILE = "food_ai"
     const val DEFAULT_MODEL = "gemini-3.5-flash-lite"
@@ -29,20 +32,43 @@ object FoodAiSettings {
 
     private fun prefs(context: Context) = context.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
-    fun key(context: Context): String = prefs(context).getString("key", "")?.trim().orEmpty()
-    fun model(context: Context): String = prefs(context).getString("model", DEFAULT_MODEL)?.trim().orEmpty().ifEmpty { DEFAULT_MODEL }
-    fun strongModel(context: Context): String = prefs(context).getString("strong", DEFAULT_STRONG_MODEL)?.trim().orEmpty().ifEmpty { DEFAULT_STRONG_MODEL }
-    fun noticeSeen(context: Context): Boolean = prefs(context).getBoolean("notice", false)
+    /** Gemini keeps the names it always had, so a key saved by an older version still works. */
+    private fun slot(provider: AiProvider, name: String): String = if (provider == AiProvider.GEMINI) name else provider.key + "_" + name
 
-    fun save(context: Context, key: String, model: String, strong: String) {
+    fun provider(context: Context): AiProvider = AiProvider.of(prefs(context).getString("provider", null))
+
+    fun defaultModel(provider: AiProvider): String = if (provider == AiProvider.GEMINI) DEFAULT_MODEL else OpenRouterAi.DEFAULT_MODEL
+    fun defaultStrong(provider: AiProvider): String = if (provider == AiProvider.GEMINI) DEFAULT_STRONG_MODEL else OpenRouterAi.DEFAULT_STRONG_MODEL
+
+    fun key(context: Context, provider: AiProvider = provider(context)): String =
+        prefs(context).getString(slot(provider, "key"), "")?.trim().orEmpty()
+
+    fun model(context: Context, provider: AiProvider = provider(context)): String =
+        prefs(context).getString(slot(provider, "model"), null)?.trim().orEmpty().ifEmpty { defaultModel(provider) }
+
+    fun strongModel(context: Context, provider: AiProvider = provider(context)): String =
+        prefs(context).getString(slot(provider, "strong"), null)?.trim().orEmpty().ifEmpty { defaultStrong(provider) }
+
+    /** The one-time "your photo goes to ..." notice is shown once for each provider. */
+    fun noticeSeen(context: Context, provider: AiProvider = provider(context)): Boolean = prefs(context).getBoolean(slot(provider, "notice"), false)
+
+    fun save(context: Context, provider: AiProvider, key: String, model: String, strong: String) {
         prefs(context).edit {
-            putString("key", key.trim())
-            putString("model", model.trim())
-            putString("strong", strong.trim())
+            putString(slot(provider, "key"), key.trim())
+            putString(slot(provider, "model"), model.trim())
+            putString(slot(provider, "strong"), strong.trim())
         }
     }
 
-    fun markNoticeSeen(context: Context) = prefs(context).edit { putBoolean("notice", true) }
+    fun setProvider(context: Context, provider: AiProvider) = prefs(context).edit { putString("provider", provider.key) }
+
+    fun markNoticeSeen(context: Context, provider: AiProvider = provider(context)) = prefs(context).edit { putBoolean(slot(provider, "notice"), true) }
+
+    /** One line for the Settings list: who reads the photos, and with which model. */
+    fun summary(context: Context): String {
+        val provider = provider(context)
+        return if (key(context, provider).isEmpty()) "Not set up yet · " + provider.label else provider.label + " · " + model(context, provider)
+    }
 }
 
 /** One food on the plate, as the photo reader saw it. */
@@ -378,45 +404,59 @@ object FoodPhotoAi {
         promptFor: (List<FieldDef>, List<Pair<String, String>>) -> String,
         parser: (String, List<FieldDef>) -> PhotoFood,
     ): PhotoFood {
-        val key = FoodAiSettings.key(context)
-        if (key.isEmpty()) throw PhotoAiException("Add your Gemini key first.")
-        val chosen = if (strong) FoodAiSettings.strongModel(context) else FoodAiSettings.model(context)
-        val other = if (strong) FoodAiSettings.model(context) else FoodAiSettings.strongModel(context)
+        val provider = FoodAiSettings.provider(context)
+        val key = FoodAiSettings.key(context, provider)
+        if (key.isEmpty()) throw PhotoAiException("Add your ${provider.label} key first.")
+        val chosen = if (strong) FoodAiSettings.strongModel(context, provider) else FoodAiSettings.model(context, provider)
+        val other = if (strong) FoodAiSettings.model(context, provider) else FoodAiSettings.strongModel(context, provider)
         val models = modelOrder(chosen, other)
         val fields = FoodFields.defs(context)
-        val prompt = promptFor(fields, FoodAiMemory.load(context))
+        val prompt = promptFor(fields, FoodAiMemory.load(context)) + MyPortions.promptLine(context)
         val delays = longArrayOf(2_000, 5_000)
         var lastFailure: PhotoAiException? = null
         for ((index, model) in models.withIndex()) {
-            val payload = if (jpeg != null) requestBody(jpeg, prompt, model) else requestBodyText(prompt, model)
-            val request = Request.Builder()
-                .url("$BASE/models/$model:generateContent")
-                .addHeader("x-goog-api-key", key)
-                .post(payload.toString().toRequestBody(JSON))
-                .build()
+            val request = when (provider) {
+                AiProvider.GEMINI -> {
+                    val payload = if (jpeg != null) requestBody(jpeg, prompt, model) else requestBodyText(prompt, model)
+                    Request.Builder()
+                        .url("$BASE/models/$model:generateContent")
+                        .addHeader("x-goog-api-key", key)
+                        .post(payload.toString().toRequestBody(JSON))
+                        .build()
+                }
+                AiProvider.OPENROUTER -> OpenRouterAi.request("/chat/completions", key)
+                    .post(OpenRouterAi.requestBody(jpeg, prompt, model).toString().toRequestBody(JSON))
+                    .build()
+            }
             var attempt = 0
             attempts@ while (true) {
                 val (code, body) = try {
                     client.newCall(request).execute().use { it.code to it.body?.string().orEmpty() }
                 } catch (e: IOException) {
-                    throw PhotoAiException("Could not reach Google. Check the internet and try again.", offline = true)
+                    throw PhotoAiException("Could not reach ${provider.company}. Check the internet and try again.", offline = true)
                 }
                 when {
-                    code in 200..299 -> return parser(answerText(body), fields)
+                    code in 200..299 -> return parser(answerText(provider, body), fields)
                     // The free allowance of this model is used up: try the other model at once instead of waiting.
                     code == 429 && index < models.lastIndex -> {
-                        lastFailure = failure(code, body, model)
+                        lastFailure = failure(provider, code, body, model)
                         break@attempts
                     }
                     (code == 429 || code == 503 || code == 500) && attempt < delays.size -> {
                         delay(delays[attempt]); attempt++
                     }
-                    else -> throw failure(code, body, model)
+                    else -> throw failure(provider, code, body, model)
                 }
             }
         }
-        throw lastFailure ?: PhotoAiException("Gemini did not answer. Try again in a minute.")
+        throw lastFailure ?: PhotoAiException("${provider.label} did not answer. Try again in a minute.")
     }
+
+    fun failure(provider: AiProvider, code: Int, body: String, model: String): PhotoAiException =
+        if (provider == AiProvider.OPENROUTER) OpenRouterAi.failure(code, body, model) else failure(code, body, model)
+
+    fun answerText(provider: AiProvider, body: String): String =
+        if (provider == AiProvider.OPENROUTER) OpenRouterAi.answerText(body) else answerText(body)
 
     /** What went wrong with a request, said so that you know what to do. */
     fun failure(code: Int, body: String, model: String): PhotoAiException = when (code) {
@@ -438,7 +478,10 @@ object FoodPhotoAi {
     data class KeyCheck(val ok: Boolean, val message: String)
 
     /** Asks each model one tiny question with the key as typed (before saving it), so a wrong key or model name shows up now and not at the first photo. */
-    suspend fun checkKey(key: String, models: List<Pair<String, String>>): KeyCheck = withContext(Dispatchers.IO) {
+    suspend fun checkKey(provider: AiProvider, key: String, models: List<Pair<String, String>>): KeyCheck =
+        if (provider == AiProvider.OPENROUTER) OpenRouterAi.checkKey(key, models) else checkGeminiKey(key, models)
+
+    private suspend fun checkGeminiKey(key: String, models: List<Pair<String, String>>): KeyCheck = withContext(Dispatchers.IO) {
         if (key.isBlank()) return@withContext KeyCheck(false, "Paste the key first.")
         var allOk = true
         val lines = models.map { (label, model) ->

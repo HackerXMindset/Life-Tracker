@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifetracker.app.data.AgoText
 import com.lifetracker.app.data.FoodHistory
+import com.lifetracker.app.data.FoodSource
 import com.lifetracker.app.data.MealEntity
 import com.lifetracker.app.ui.theme.LocalPaper
 import com.lifetracker.app.ui.theme.PaperCard
@@ -142,6 +143,18 @@ fun FoodInfoWindow(name: String, foodId: String, load: suspend () -> List<MealEn
                 }
             }
         }
+        MonoLabel("Where the numbers came from")
+        PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                FoodSource.counts(info.entries).forEach { (label, count) ->
+                    Row(Modifier.fillMaxWidth()) {
+                        Text(label, fontSize = 13.sp, color = p.ink, modifier = Modifier.weight(1f))
+                        Text(if (count == 1) "once" else "$count times", fontSize = 12.5.sp, color = p.ink2)
+                    }
+                }
+                Text("A guess from a photo or words can be off by a lot. Check it against a label, or weigh the food, when it matters.", fontSize = 11.5.sp, color = p.ink2)
+            }
+        }
         MonoLabel("Recent")
         PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -150,6 +163,7 @@ fun FoodInfoWindow(name: String, foodId: String, load: suspend () -> List<MealEn
                         Column(Modifier.weight(1f)) {
                             Text(dayText(LocalDate.parse(m.date)), fontSize = 13.sp, color = p.ink)
                             Text(mealTypeLabel(m.mealType) + " · " + formatMinute(m.minuteOfDay), fontSize = 11.5.sp, color = p.ink2)
+                            Text(FoodSource.label(m.source, m.foodId), fontSize = 11.sp, color = p.ink2)
                         }
                         Text(kc(m.grams) + " g · " + kc(m.kcal) + " kcal", fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, color = p.ink, textAlign = TextAlign.End)
                     }

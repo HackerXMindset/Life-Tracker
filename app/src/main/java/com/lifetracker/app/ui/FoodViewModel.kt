@@ -11,6 +11,7 @@ import com.lifetracker.app.data.FoodSettings
 import com.lifetracker.app.data.FoodLibrary
 import com.lifetracker.app.data.FoodLibraryData
 import com.lifetracker.app.data.FoodLogic
+import com.lifetracker.app.data.FoodSource
 import com.lifetracker.app.data.FoodNutrientEntity
 import com.lifetracker.app.data.FoodRef
 import com.lifetracker.app.data.FoodStats
@@ -190,7 +191,7 @@ class FoodViewModel(app: Application) : AndroidViewModel(app) {
     /** Copies meals to another day, at the same times. */
     fun copyMeals(source: List<MealEntity>, to: LocalDate) {
         viewModelScope.launch {
-            dao.upsertMeals(source.map { it.copy(id = FoodLogic.newMealId(), date = to.toString(), source = "app") })
+            dao.upsertMeals(source.map { it.copy(id = FoodLogic.newMealId(), date = to.toString(), source = FoodSource.forCopy(it.source)) })
         }
     }
 

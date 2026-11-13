@@ -63,6 +63,8 @@ import com.lifetracker.app.data.PhotoQueueNotifier
 import com.lifetracker.app.data.QueuedPhoto
 import com.lifetracker.app.data.PortionKind
 import com.lifetracker.app.data.FoodAiSettings
+import com.lifetracker.app.data.FoodSanity
+import com.lifetracker.app.data.FoodSource
 import com.lifetracker.app.data.FoodLogic
 import com.lifetracker.app.data.FoodPhotoAi
 import com.lifetracker.app.data.MealPhotos
@@ -329,7 +331,7 @@ fun QuickPhotoScreen(
         }
     }
 
-    if (showKey) GeminiKeyDialog(onSaved = { showKey = false; proceed() }, onDismiss = { showKey = false; onClose() })
+    if (showKey) AiKeyDialog(onSaved = { showKey = false; proceed() }, onDismiss = { showKey = false; onClose() })
     if (showNotice) PhotoNoticeDialog(onContinue = { showNotice = false; proceed() }, onDismiss = { showNotice = false; onClose() })
 
     val animOn = rememberReadingAnimation()
@@ -613,6 +615,7 @@ fun QuickPhotoScreen(
                         if (shownExtras.isNotEmpty()) Text("Tap a number to change it, or use Fix the numbers to add one.", fontSize = 11.5.sp, color = p.ink2)
                     }
                     if (!(split && separate)) {
+                        SanityNotes(FoodSanity.check(part.servingGrams, part.kcal, part.protein, part.carbs, part.fat))
                         PaperButton(
                             if (editing) "Done" else "Fix the numbers", { editing = !editing },
                             style = PaperButtonStyle.Ghost, small = true,
@@ -684,6 +687,15 @@ fun QuickPhotoScreen(
                     }
                     val photo = jpeg
                     val kept = keptFood
+                    val tag = FoodSource.tag(
+                        when (source) {
+                            CheckSource.Label -> FoodSource.LABEL
+                            CheckSource.Barcode -> FoodSource.BARCODE
+                            is CheckSource.Text -> FoodSource.TEXT
+                            else -> FoodSource.PHOTO
+                        },
+                        edits.isNotEmpty(),
+                    )
                     scope.launch {
                         val dao = AppDatabase.get(context).foodDao()
                         // Keeping it as a food of your own means the next time it is one tap from Add food, and the meal points to it.
@@ -703,7 +715,7 @@ fun QuickPhotoScreen(
                             entity.id
                         } else null
                         for (m in meals) {
-                            val meal = if (keptId != null) m.copy(foodId = keptId) else m
+                            val meal = (if (keptId != null) m.copy(foodId = keptId) else m).copy(source = tag)
                             dao.upsertMeal(meal)
                             if (photo != null) MealPhotos.save(context, meal.id, photo)
                         }
@@ -755,7 +767,7 @@ fun QuickPhotoScreen(
             Text(
                 when (source) {
                     CheckSource.Barcode -> "From Open Food Facts, where people type in the numbers, so check them against the pack."
-                    CheckSource.Label -> "Read from the label by Gemini, so check the numbers against the pack."
+                    CheckSource.Label -> "Read from the label by the AI, so check the numbers against the pack."
                     is CheckSource.Text -> "This is a guess made from your words, so check the numbers."
                     else -> "This is a guess made from a photo, so check the numbers."
                 },
