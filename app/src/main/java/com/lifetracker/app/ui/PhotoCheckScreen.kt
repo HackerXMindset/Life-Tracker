@@ -591,15 +591,26 @@ fun QuickPhotoScreen(
                         }
                         Text("Moving the slider puts the numbers back to what the photo reader said.", fontSize = 12.sp, color = p.ink2)
                     } else if (!(split && separate)) {
+                        // The other numbers sit in the same tiles as the main four. Tap any of them to change it.
                         val shownExtras = listOfNotNull(
-                            number("fiber", part.fiber).takeIf { it > 0 }?.let { "Fibre " + foodNum(it) + " g" },
-                            number("sugar", part.sugar).takeIf { it > 0 }?.let { "Sugar " + foodNum(it) + " g" },
-                            number("sodium", part.sodiumMg).takeIf { it > 0 }?.let { "Sodium " + foodNum(it) + " mg" },
-                            number("sat", part.sat).takeIf { it > 0 }?.let { "Sat fat " + foodNum(it) + " g" },
+                            number("fiber", part.fiber).takeIf { it > 0 }?.let { "fibre g" to it },
+                            number("sugar", part.sugar).takeIf { it > 0 }?.let { "sugar g" to it },
+                            number("sodium", part.sodiumMg).takeIf { it > 0 }?.let { "sodium mg" to it },
+                            number("sat", part.sat).takeIf { it > 0 }?.let { "saturated fat g" to it },
+                            number("mono", part.mono).takeIf { it > 0 }?.let { "mono fat g" to it },
+                            number("poly", part.poly).takeIf { it > 0 }?.let { "poly fat g" to it },
                         ) + nutrientList.filter { !it.hidden }.mapNotNull { n ->
-                            number("n:" + n.id, part.micro[n.id] ?: 0.0).takeIf { it > 0 }?.let { n.name + " " + foodNum(it) + " " + n.unit }
+                            number("n:" + n.id, part.micro[n.id] ?: 0.0).takeIf { it > 0 }?.let { (n.name + " " + n.unit).lowercase() to it }
                         }
-                        if (shownExtras.isNotEmpty()) Text(shownExtras.joinToString("  ·  "), fontSize = 12.sp, color = p.ink2)
+                        shownExtras.chunked(3).forEach { row ->
+                            Row(Modifier.fillMaxWidth()) {
+                                row.forEach { (label, value) ->
+                                    CheckStat(label, value, readToken, false, Modifier.weight(1f).clickable { editing = true })
+                                }
+                                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                            }
+                        }
+                        if (shownExtras.isNotEmpty()) Text("Tap a number to change it, or use Fix the numbers to add one.", fontSize = 11.5.sp, color = p.ink2)
                     }
                     if (!(split && separate)) {
                         PaperButton(
