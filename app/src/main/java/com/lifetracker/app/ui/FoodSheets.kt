@@ -892,6 +892,7 @@ fun EntrySheet(vm: FoodViewModel, meal: MealEntity, library: FoodLibraryData?, o
     var minute by remember { mutableIntStateOf(meal.minuteOfDay) }
     var confirmDelete by remember { mutableStateOf(false) }
     var showHistory by remember { mutableStateOf(false) }
+    var showCopy by remember { mutableStateOf(false) }
 
     val grams = foodParse(amount) ?: 0.0
     val now = meal.copy(grams = grams, mealType = type, minuteOfDay = minute)
@@ -928,11 +929,7 @@ fun EntrySheet(vm: FoodViewModel, meal: MealEntity, library: FoodLibraryData?, o
                 modifier = Modifier.fillMaxWidth(), enabled = grams > 0,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                PaperButton(
-                    "Copy to a day",
-                    { pickDay(context, date) { day -> vm.copyMeals(listOf(now), day); onDismiss() } },
-                    style = PaperButtonStyle.Ghost, small = true,
-                )
+                PaperButton("Copy to...", { showCopy = true }, style = PaperButtonStyle.Ghost, small = true)
                 if (!FoodRef.isMine(meal.foodId)) {
                     PaperButton(
                         "Keep as my food",
@@ -950,6 +947,7 @@ fun EntrySheet(vm: FoodViewModel, meal: MealEntity, library: FoodLibraryData?, o
     }
 
     if (showHistory) FoodInfoWindow(meal.name, meal.foodId, load = { vm.allMeals() }, onClose = { showHistory = false })
+    if (showCopy) CopySheet(vm, listOf(now), meal.mealType, date, onDone = { showCopy = false; onDismiss() }, onDismiss = { showCopy = false })
 
     if (confirmDelete) {
         PaperDialog(
@@ -974,6 +972,7 @@ fun MealMenuSheet(vm: FoodViewModel, mealType: String, meals: List<MealEntity>, 
     val date by vm.date.collectAsState()
     var name by remember { mutableStateOf(mealTypeLabel(mealType)) }
     var confirmClear by remember { mutableStateOf(false) }
+    var showCopy by remember { mutableStateOf(false) }
 
     PaperSheet(onDismiss = onDismiss) {
         SheetBody {
@@ -984,11 +983,7 @@ fun MealMenuSheet(vm: FoodViewModel, mealType: String, meals: List<MealEntity>, 
                     "Save as a meal", { vm.saveMealAs(name, meals); onDismiss() },
                     modifier = Modifier.fillMaxWidth(), enabled = name.isNotBlank(), icon = R.drawable.ic_p_folder,
                 )
-                PaperButton(
-                    "Copy to another day",
-                    { pickDay(context, date.plusDays(1)) { day -> vm.copyMeals(meals, day); onDismiss() } },
-                    modifier = Modifier.fillMaxWidth(), style = PaperButtonStyle.Ghost,
-                )
+                PaperButton("Copy to...", { showCopy = true }, modifier = Modifier.fillMaxWidth(), style = PaperButtonStyle.Ghost)
                 PaperButton("Clear this meal", { confirmClear = true }, modifier = Modifier.fillMaxWidth(), style = PaperButtonStyle.Danger)
             } else {
                 Text("Add some food first, then you can save it as a meal here.", fontSize = 13.sp, color = p.ink2)
@@ -996,6 +991,8 @@ fun MealMenuSheet(vm: FoodViewModel, mealType: String, meals: List<MealEntity>, 
             Spacer(Modifier.height(12.dp))
         }
     }
+
+    if (showCopy) CopySheet(vm, meals, mealType, date.plusDays(1), onDone = { showCopy = false; onDismiss() }, onDismiss = { showCopy = false })
 
     if (confirmClear) {
         PaperDialog(
