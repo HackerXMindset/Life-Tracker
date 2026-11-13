@@ -11,6 +11,9 @@ Every release page shows the sections below that were added since the last relea
 - **Your daily goal updates by itself.** Save your Body setup and the daily calorie goal (and its protein, carbs and fat) is set from it, then follows your weight when you weigh in. Switch **Keep my daily goal up to date** off, or type a goal by hand, and it stays as you set it.
 - **Stats understand a line with several foods.** "Chicken curry and roti" or "2 rotis, 1 katori dal" counts as a chicken curry, a roti and a dal. **Eaten most** and the page of a food (last eaten, 7/30/90 days, all time) look at each food on its own, and "roti" and "rotis" are the same food. Nothing you logged is changed.
 
+- **More on the page of a food.** Total eaten (all time and in the last 7, 30 and 90 days, with the calories, protein, carbs and fat in all of it), smallest and largest helping, calories per 100 g across the times (so you can see a dish was not the same every time), what meals it was, and the time you usually eat it. The title no longer carries the amount ("500g masala biryani" is "Masala biryani").
+- **Similar names stay apart.** Masala biryani, Moradabadi biryani, Chicken biryani and plain Biryani are four foods with four pages. Each food's page lists the others with the same last word ("Looks similar, kept apart"), with how often you ate them. Tap one to open its page.
+
 ### 🔧 Fixed
 
 - **Wrong pictures in the food list.** Chicken breast showed a banana and chicken thighs an apple, because a picture stayed on a cell when the list changed. Each food shows its own picture now.

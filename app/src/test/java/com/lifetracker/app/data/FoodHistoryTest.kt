@@ -71,3 +71,73 @@ class FoodHistoryTest {
         assertEquals(0.0, info.avgKcal, 1e-9)
     }
 }
+
+class FoodHistoryDetailTest {
+    private val today = LocalDate.of(2026, 11, 12)
+
+    private fun meal(daysAgo: Int, name: String, grams: Double = 300.0, kcal100: Double = 140.0, type: String = "lunch", minute: Int = 780) =
+        MealEntity("$daysAgo$name$minute", today.minusDays(daysAgo.toLong()).toString(), minute, type, name, grams, kcal100, 20.0, 5.0, 6.0, "app", "")
+
+    @Test
+    fun anAmountInFrontOfTheNameIsNotPartOfTheFood() {
+        val meals = listOf(meal(1, "500g masala biryani", 500.0), meal(3, "Masala biryani", 300.0))
+        val info = FoodHistory.build(meals, "", "500g masala biryani", today)
+        assertEquals("Masala biryani", info.title)
+        assertEquals(2, info.times)
+    }
+
+    @Test
+    fun totalsAddUpTheWeightAndTheNumbers() {
+        val meals = listOf(meal(1, "Masala biryani", 500.0, 141.0), meal(3, "Masala biryani", 300.0, 139.0))
+        val t = FoodHistory.build(meals, "", "Masala biryani", today).totals!!
+        assertEquals(800.0, t.grams, 1e-9)
+        assertEquals(500.0 * 1.41 + 300.0 * 1.39, t.kcal, 1e-9)
+        assertEquals(300.0, t.minGrams, 1e-9)
+        assertEquals(500.0, t.maxGrams, 1e-9)
+        assertEquals(139.0, t.minKcal100, 1e-9)
+        assertEquals(141.0, t.maxKcal100, 1e-9)
+        assertEquals(800.0, FoodHistory.build(meals, "", "Masala biryani", today).windows[0].grams, 1e-9)
+    }
+
+    @Test
+    fun aFoodInsideALongerLineIsCountedButItsWeightIsLeftOut() {
+        val meals = listOf(meal(1, "Roti", 60.0), meal(2, "Chicken curry and roti", 400.0))
+        val info = FoodHistory.build(meals, "", "Roti", today)
+        assertEquals(2, info.times)
+        assertEquals(1, info.mixedTimes)
+        assertEquals(60.0, info.totals!!.grams, 1e-9)
+    }
+
+    @Test
+    fun aFoodThatWasOnlyEverPartOfALongerLineHasNoTotals() {
+        val info = FoodHistory.build(listOf(meal(1, "Chicken curry and roti", 400.0)), "", "Roti", today)
+        assertEquals(1, info.times)
+        assertNull(info.totals)
+    }
+
+    @Test
+    fun similarNamedFoodsStayApartButAreListed() {
+        val meals = listOf(
+            meal(1, "Masala biryani"), meal(2, "Moradabadi biryani"), meal(3, "Moradabadi biryani"), meal(4, "Chicken biryani"),
+            meal(5, "Biryani"), meal(6, "Palak paneer"),
+        )
+        val info = FoodHistory.build(meals, "", "Masala biryani", today)
+        assertEquals(1, info.times)
+        assertEquals(listOf("Moradabadi biryani", "Biryani", "Chicken biryani"), info.variants.map { it.name })
+        assertEquals(2, info.variants[0].times)
+        assertEquals(today.minusDays(2), info.variants[0].last)
+    }
+
+    @Test
+    fun aLongerLineHasNoVariantsList() {
+        assertTrue(FoodHistory.variants(listOf(meal(1, "Masala biryani")), "Dal and rice").isEmpty())
+    }
+
+    @Test
+    fun theUsualMinuteAndMealsAreCounted() {
+        val meals = listOf(meal(1, "Dal", minute = 600, type = "breakfast"), meal(2, "Dal", minute = 780), meal(3, "Dal", minute = 800))
+        val info = FoodHistory.build(meals, "", "Dal", today)
+        assertEquals(780, info.usualMinute)
+        assertEquals(listOf("lunch" to 2, "breakfast" to 1), info.byMeal)
+    }
+}
