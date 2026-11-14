@@ -58,4 +58,29 @@ class FoodSourceTest {
             FoodSource.counts(meals),
         )
     }
+
+    @Test
+    fun aChosenModelIsKeptInTheTag() {
+        assertEquals("photo@google/gemini-2.5-flash", FoodSource.tag(FoodSource.PHOTO, false, "google/gemini-2.5-flash"))
+        assertEquals("text@meta/x:free:edited", FoodSource.tag(FoodSource.TEXT, true, " meta/x:free "))
+        assertEquals("photo:edited", FoodSource.tag(FoodSource.PHOTO, true, " "))
+        assertEquals("app", FoodSource.tag(FoodSource.APP, true, "a/b"))
+        assertEquals("photo", FoodSource.kind("photo@google/gemini-2.5-flash:edited"))
+        assertEquals("text", FoodSource.kind("text@meta/x:free"))
+        assertEquals("meta/x:free", FoodSource.model("text@meta/x:free:edited"))
+        assertEquals("a/b", FoodSource.model("label@a/b"))
+        assertEquals(null, FoodSource.model("photo:edited"))
+        assertTrue(FoodSource.edited("text@meta/x:free:edited"))
+        assertFalse(FoodSource.edited("text@meta/x:free"))
+        assertTrue(FoodSource.isGuess("photo@a/b"))
+        assertFalse(FoodSource.isGuess("photo@a/b:edited"))
+    }
+
+    @Test
+    fun theLabelNamesTheChosenModelAndACopyKeepsIt() {
+        assertEquals("Photo guess by the AI (a/b)", FoodSource.label("photo@a/b"))
+        assertEquals("Photo guess, numbers changed by you (a/b)", FoodSource.label("photo@a/b:edited"))
+        assertEquals("Read from the pack label (a/b)", FoodSource.label("label@a/b"))
+        assertEquals("photo@a/b", FoodSource.forCopy("photo@a/b"))
+    }
 }

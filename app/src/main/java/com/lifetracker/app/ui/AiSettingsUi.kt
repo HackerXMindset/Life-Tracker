@@ -20,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -32,6 +33,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifetracker.app.data.AiProvider
+import com.lifetracker.app.data.CompareModel
+import com.lifetracker.app.data.CompareSettings
 import com.lifetracker.app.data.FoodAiSettings
 import com.lifetracker.app.data.FoodPhotoAi
 import com.lifetracker.app.data.OpenRouterAi
@@ -66,6 +69,12 @@ class AiDraft(context: Context) {
         get() = if (provider == AiProvider.GEMINI) gemStrong else orStrong
         set(v) { if (provider == AiProvider.GEMINI) gemStrong = v else orStrong = v }
 
+    var compareOn by mutableStateOf(CompareSettings.on(context))
+    val compareModels = mutableStateListOf<CompareModel>().apply { addAll(CompareSettings.models(context)) }
+
+    /** The key typed for [who], whichever provider is on screen. */
+    fun keyFor(who: AiProvider): String = if (who == AiProvider.GEMINI) gemKey else orKey
+
     /** The quick model to use: what is typed, or the usual one when the box is empty. */
     fun quickModel(): String = model.trim().ifEmpty { FoodAiSettings.defaultModel(provider) }
     fun strongModel(): String = strong.trim().ifEmpty { FoodAiSettings.defaultStrong(provider) }
@@ -75,6 +84,7 @@ class AiDraft(context: Context) {
         FoodAiSettings.save(context, AiProvider.GEMINI, gemKey, gemModel, gemStrong)
         FoodAiSettings.save(context, AiProvider.OPENROUTER, orKey, orModel, orStrong)
         FoodAiSettings.setProvider(context, provider)
+        CompareSettings.save(context, compareOn, compareModels.toList())
     }
 }
 
@@ -243,6 +253,7 @@ fun AiSettingsScreen(onBack: () -> Unit) {
                 }
             }
         }
+        item { CompareSettingsCard(draft) }
         item {
             Text(
                 "Only used when you press Camera, Gallery, Label or type a meal for the AI to read. What is sent is the photo or the words and your note, plus your own portion sizes and a few of your past corrections. " +

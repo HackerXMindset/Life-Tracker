@@ -62,6 +62,8 @@ import com.lifetracker.app.data.PhotoQueue
 import com.lifetracker.app.data.PhotoQueueNotifier
 import com.lifetracker.app.data.QueuedPhoto
 import com.lifetracker.app.data.PortionKind
+import com.lifetracker.app.data.CompareResult
+import com.lifetracker.app.data.CompareSettings
 import com.lifetracker.app.data.FoodAiSettings
 import com.lifetracker.app.data.FoodSanity
 import com.lifetracker.app.data.FoodSource
@@ -140,6 +142,9 @@ fun QuickPhotoScreen(
     var showNotice by remember { mutableStateOf(false) }
     var jpeg by remember { mutableStateOf<ByteArray?>(null) }
     var food by remember { mutableStateOf<PhotoFood?>(null) }
+    // The answers of every model on the compare list, when comparing is on, and the model whose answer was chosen.
+    var options by remember { mutableStateOf<List<CompareResult>?>(null) }
+    var chosenModel by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
     var readToken by remember { mutableStateOf(0) }
     // A meal you logged before that is the same dish as this reading, and whether you chose to use its numbers.
@@ -191,38 +196,69 @@ fun QuickPhotoScreen(
         note.trim(),
     ).filter { it.isNotEmpty() }.joinToString(" ")
 
+    fun accept(result: PhotoFood, model: String?) {
+        food = result
+        chosenModel = model
+        readToken += 1
+        name = dishName.trim().ifBlank { result.name }
+        scale = 1f
+        edits = emptyMap()
+        editing = false
+        ticked = result.items.indices.toSet()
+        separate = false
+        keep = source == CheckSource.Barcode || source == CheckSource.Label
+        message = ""
+    }
+
     fun read(strong: Boolean) {
         naming = false
         busy = true
         failed = false
         offlineFail = false
-        message = when (source) {
-            CheckSource.Barcode -> "Looking the barcode up…"
-            is CheckSource.Text -> if (strong) "Asking the stronger model…" else "Reading what you wrote…"
+        options = null
+        val comparing = source != CheckSource.Barcode && CompareSettings.active(context)
+        message = when {
+            comparing -> "Asking " + CompareSettings.models(context).size + " models…"
+            source == CheckSource.Barcode -> "Looking the barcode up…"
+            source is CheckSource.Text -> if (strong) "Asking the stronger model…" else "Reading what you wrote…"
             else -> if (strong) "Asking the stronger model…" else "Reading the photo…"
         }
         scope.launch {
             try {
-                val result = when (val s = source) {
-                    CheckSource.Barcode -> OpenFoodFacts.lookup(code)
-                        ?: throw PhotoAiException("Open Food Facts has no numbers for this barcode. Photograph the nutrition label instead.")
-                    is CheckSource.Text -> FoodPhotoAi.analyzeText(context, s.text, hint(), strong)
-                    else -> {
-                        val bytes = jpeg ?: FoodPhotoAi.prepare(context, photoUri()).also { jpeg = it }
-                        if (s == CheckSource.Label) FoodPhotoAi.analyzeLabel(context, bytes, hint(), strong)
-                        else FoodPhotoAi.analyze(context, bytes, hint(), strong)
+                if (comparing) {
+                    val s = source
+                    val bytes = if (s is CheckSource.Text) null else (jpeg ?: FoodPhotoAi.prepare(context, photoUri()).also { jpeg = it })
+                    val results = FoodPhotoAi.compare(
+                        context, bytes,
+                        when {
+                            s is CheckSource.Text -> FoodPhotoAi.Read.TEXT
+                            s == CheckSource.Label -> FoodPhotoAi.Read.LABEL
+                            else -> FoodPhotoAi.Read.MEAL
+                        },
+                        hint(), (s as? CheckSource.Text)?.text.orEmpty(),
+                    )
+                    if (results.none { it.food != null }) {
+                        throw PhotoAiException(
+                            "No model could read it.\n" + results.joinToString("\n") { it.entry.model + ": " + it.error.orEmpty() },
+                            offline = results.all { it.offline },
+                        )
                     }
+                    food = null
+                    options = results
+                    message = ""
+                } else {
+                    val result = when (val s = source) {
+                        CheckSource.Barcode -> OpenFoodFacts.lookup(code)
+                            ?: throw PhotoAiException("Open Food Facts has no numbers for this barcode. Photograph the nutrition label instead.")
+                        is CheckSource.Text -> FoodPhotoAi.analyzeText(context, s.text, hint(), strong)
+                        else -> {
+                            val bytes = jpeg ?: FoodPhotoAi.prepare(context, photoUri()).also { jpeg = it }
+                            if (s == CheckSource.Label) FoodPhotoAi.analyzeLabel(context, bytes, hint(), strong)
+                            else FoodPhotoAi.analyze(context, bytes, hint(), strong)
+                        }
+                    }
+                    accept(result, null)
                 }
-                food = result
-                readToken += 1
-                name = dishName.trim().ifBlank { result.name }
-                scale = 1f
-                edits = emptyMap()
-                editing = false
-                ticked = result.items.indices.toSet()
-                separate = false
-                keep = source == CheckSource.Barcode || source == CheckSource.Label
-                message = ""
             } catch (e: PhotoAiException) {
                 message = e.message.orEmpty()
                 failed = true
@@ -269,8 +305,8 @@ fun QuickPhotoScreen(
     fun proceed() {
         when {
             source == CheckSource.Barcode -> scan()
-            FoodAiSettings.key(context).isEmpty() -> showKey = true
-            !FoodAiSettings.noticeSeen(context) -> showNotice = true
+            !CompareSettings.keyReady(context) -> showKey = true
+            !CompareSettings.noticeSeen(context) -> showNotice = true
             source is CheckSource.Text -> read(false)
             fromQueue && jpeg != null -> { fromQueue = false; read(false) }
             fromGallery -> { picked = null; pick.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
@@ -311,6 +347,7 @@ fun QuickPhotoScreen(
         if (shot > 0) {
             jpeg = null
             food = null
+            options = null
             failed = false
             if (source == CheckSource.Meal) {
                 // A plate photo waits for the question "Do you want to name it?" before anything is sent.
@@ -440,6 +477,12 @@ fun QuickPhotoScreen(
             }
         }
 
+        val choices = options
+        if (choices != null && food == null && !busy && !failed) {
+            CompareCards(choices, onPick = { r -> r.food?.let { accept(it, r.entry.model) } })
+            PaperButton("Ask them again", { read(false) }, Modifier.fillMaxWidth(), style = PaperButtonStyle.Ghost)
+        }
+
         val read = food
         val mine = before
         val f = if (read != null && mine != null && useBefore) read.withNumbersOf(mine) else read
@@ -456,6 +499,9 @@ fun QuickPhotoScreen(
 
             fun number(key: String, auto: Double): Double = edits[key]?.let { foodParse(it) } ?: auto
 
+            if (options != null) {
+                PaperButton("See what the other models said", { food = null }, Modifier.fillMaxWidth(), style = PaperButtonStyle.Ghost, small = true)
+            }
             Text("Is this what you ate?", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = p.ink)
             PaperField(name, { name = it }, "What it is", singleLine = true)
             if (read != null && mine != null) {
@@ -695,6 +741,7 @@ fun QuickPhotoScreen(
                             else -> FoodSource.PHOTO
                         },
                         edits.isNotEmpty(),
+                        chosenModel,
                     )
                     scope.launch {
                         val dao = AppDatabase.get(context).foodDao()
@@ -756,7 +803,9 @@ fun QuickPhotoScreen(
                                 singleLine = true,
                             )
                             PaperButton("Read again", { read(false) }, Modifier.fillMaxWidth(), style = PaperButtonStyle.Ghost)
-                            PaperButton("Think harder", { read(true) }, Modifier.fillMaxWidth(), style = PaperButtonStyle.Ghost)
+                            if (!CompareSettings.active(context)) {
+                                PaperButton("Think harder", { read(true) }, Modifier.fillMaxWidth(), style = PaperButtonStyle.Ghost)
+                            }
                             if (source !is CheckSource.Text) {
                                 PaperButton("Take another photo", { proceed() }, Modifier.fillMaxWidth(), style = PaperButtonStyle.Ghost)
                             }
