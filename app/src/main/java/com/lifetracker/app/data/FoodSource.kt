@@ -12,10 +12,17 @@ object FoodSource {
     const val BARCODE = "barcode"
     private const val EDITED = ":edited"
 
-    /** The tag to keep: [kind] plus a mark when you changed the numbers after they were read. */
-    fun tag(kind: String, edited: Boolean): String = if (edited && kind != APP) kind + EDITED else kind
+    /**
+     * The tag to keep: [kind], the model that gave the numbers when you chose one from a comparison ("photo@google/gemini-2.5-flash"),
+     * and a mark when you changed the numbers after they were read.
+     */
+    fun tag(kind: String, edited: Boolean, model: String? = null): String =
+        if (kind == APP) kind else kind + (model?.trim()?.takeIf { it.isNotEmpty() }?.let { "@$it" } ?: "") + (if (edited) EDITED else "")
 
-    fun kind(source: String): String = source.substringBefore(':')
+    fun kind(source: String): String = source.substringBefore('@').substringBefore(':')
+
+    /** The model chosen in a comparison, or null. */
+    fun model(source: String): String? = if ('@' in source) source.substringAfter('@').removeSuffix(EDITED).ifEmpty { null } else null
 
     fun edited(source: String): Boolean = source.endsWith(EDITED)
 
@@ -25,10 +32,11 @@ object FoodSource {
     /** A short line to show beside a meal. [foodId] tells a built-in food from your own when the meal was picked from the list. */
     fun label(source: String, foodId: String = ""): String {
         val changed = edited(source)
+        val by = model(source)?.let { " ($it)" }.orEmpty()
         return when (kind(source)) {
-            PHOTO -> if (changed) "Photo guess, numbers changed by you" else "Photo guess by the AI"
-            TEXT -> if (changed) "AI guess from your words, changed by you" else "AI guess from your words"
-            LABEL -> if (changed) "Read from the pack label, changed by you" else "Read from the pack label"
+            PHOTO -> (if (changed) "Photo guess, numbers changed by you" else "Photo guess by the AI") + by
+            TEXT -> (if (changed) "AI guess from your words, changed by you" else "AI guess from your words") + by
+            LABEL -> (if (changed) "Read from the pack label, changed by you" else "Read from the pack label") + by
             BARCODE -> if (changed) "Open Food Facts, changed by you" else "Open Food Facts"
             "gymmane" -> "Imported from GymMane"
             else -> when {

@@ -11,7 +11,11 @@ import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.util.Base64
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -116,7 +120,8 @@ data class PhotoFood(
     }
 }
 
-class PhotoAiException(message: String, val offline: Boolean = false) : IOException(message)
+/** [busy] marks a model whose free allowance is used up, so the next model can be tried at once. */
+class PhotoAiException(message: String, val offline: Boolean = false, val busy: Boolean = false) : IOException(message)
 
 /**
  * Asks Google's Gemini what is in a food photo. The method is the one the open-source calorie apps (Fud AI, CalorieMate) use:
@@ -412,44 +417,99 @@ object FoodPhotoAi {
         val models = modelOrder(chosen, other)
         val fields = FoodFields.defs(context)
         val prompt = promptFor(fields, FoodAiMemory.load(context)) + MyPortions.promptLine(context)
-        val delays = longArrayOf(2_000, 5_000)
         var lastFailure: PhotoAiException? = null
         for ((index, model) in models.withIndex()) {
-            val request = when (provider) {
-                AiProvider.GEMINI -> {
-                    val payload = if (jpeg != null) requestBody(jpeg, prompt, model) else requestBodyText(prompt, model)
-                    Request.Builder()
-                        .url("$BASE/models/$model:generateContent")
-                        .addHeader("x-goog-api-key", key)
-                        .post(payload.toString().toRequestBody(JSON))
-                        .build()
-                }
-                AiProvider.OPENROUTER -> OpenRouterAi.request("/chat/completions", key)
-                    .post(OpenRouterAi.requestBody(jpeg, prompt, model).toString().toRequestBody(JSON))
-                    .build()
-            }
-            var attempt = 0
-            attempts@ while (true) {
-                val (code, body) = try {
-                    client.newCall(request).execute().use { it.code to it.body?.string().orEmpty() }
-                } catch (e: IOException) {
-                    throw PhotoAiException("Could not reach ${provider.company}. Check the internet and try again.", offline = true)
-                }
-                when {
-                    code in 200..299 -> return parser(answerText(provider, body), fields)
-                    // The free allowance of this model is used up: try the other model at once instead of waiting.
-                    code == 429 && index < models.lastIndex -> {
-                        lastFailure = failure(provider, code, body, model)
-                        break@attempts
-                    }
-                    (code == 429 || code == 503 || code == 500) && attempt < delays.size -> {
-                        delay(delays[attempt]); attempt++
-                    }
-                    else -> throw failure(provider, code, body, model)
-                }
+            try {
+                return callOne(provider, key, model, jpeg, prompt, fields, parser, fallbackReady = index < models.lastIndex)
+            } catch (e: PhotoAiException) {
+                // The free allowance of this model is used up: the other model is tried at once instead of waiting.
+                if (!e.busy) throw e
+                lastFailure = e
             }
         }
         throw lastFailure ?: PhotoAiException("${provider.label} did not answer. Try again in a minute.")
+    }
+
+    /** One model, one request, with a short wait and a retry when it is busy. With [fallbackReady] a used-up allowance is reported at once as busy. */
+    private suspend fun callOne(
+        provider: AiProvider,
+        key: String,
+        model: String,
+        jpeg: ByteArray?,
+        prompt: String,
+        fields: List<FieldDef>,
+        parser: (String, List<FieldDef>) -> PhotoFood,
+        fallbackReady: Boolean,
+    ): PhotoFood {
+        val request = when (provider) {
+            AiProvider.GEMINI -> {
+                val payload = if (jpeg != null) requestBody(jpeg, prompt, model) else requestBodyText(prompt, model)
+                Request.Builder()
+                    .url("$BASE/models/$model:generateContent")
+                    .addHeader("x-goog-api-key", key)
+                    .post(payload.toString().toRequestBody(JSON))
+                    .build()
+            }
+            AiProvider.OPENROUTER -> OpenRouterAi.request("/chat/completions", key)
+                .post(OpenRouterAi.requestBody(jpeg, prompt, model).toString().toRequestBody(JSON))
+                .build()
+        }
+        val delays = longArrayOf(2_000, 5_000)
+        var attempt = 0
+        while (true) {
+            val (code, body) = try {
+                client.newCall(request).execute().use { it.code to it.body?.string().orEmpty() }
+            } catch (e: IOException) {
+                throw PhotoAiException("Could not reach ${provider.company}. Check the internet and try again.", offline = true)
+            }
+            when {
+                code in 200..299 -> return parser(answerText(provider, body), fields)
+                code == 429 && fallbackReady -> throw PhotoAiException(failure(provider, code, body, model).message.orEmpty(), busy = true)
+                (code == 429 || code == 503 || code == 500) && attempt < delays.size -> {
+                    delay(delays[attempt]); attempt++
+                }
+                else -> throw failure(provider, code, body, model)
+            }
+        }
+    }
+
+    /** What is being read, for [compare]. */
+    enum class Read { MEAL, LABEL, TEXT }
+
+    /**
+     * Asks every model on the compare list the same question at once and returns each one's answer, or why it failed, in the order
+     * they were chosen. One model failing never spoils the others.
+     */
+    suspend fun compare(context: Context, jpeg: ByteArray?, read: Read, note: String, text: String = ""): List<CompareResult> = withContext(Dispatchers.IO) {
+        val entries = CompareSettings.models(context)
+        val fields = FoodFields.defs(context)
+        val corrections = FoodAiMemory.load(context)
+        val prompt = when (read) {
+            Read.MEAL -> prompt(note, fields, corrections)
+            Read.LABEL -> labelPrompt(note, fields)
+            Read.TEXT -> textPrompt(text, note, fields, corrections)
+        } + MyPortions.promptLine(context)
+        val parser: (String, List<FieldDef>) -> PhotoFood = if (read == Read.LABEL) { t, f -> parseLabel(t, f) } else { t, f -> parse(t, f) }
+        coroutineScope {
+            entries.map { entry ->
+                async {
+                    val started = System.currentTimeMillis()
+                    fun took() = System.currentTimeMillis() - started
+                    try {
+                        val key = FoodAiSettings.key(context, entry.provider)
+                        if (key.isEmpty()) throw PhotoAiException("Add your ${entry.provider.label} key in Settings → AI first.")
+                        val food = callOne(entry.provider, key, entry.model, jpeg, prompt, fields, parser, fallbackReady = false)
+                        CompareResult(entry, food, null, took())
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: PhotoAiException) {
+                        CompareResult(entry, null, e.message.orEmpty(), took(), e.offline)
+                    } catch (e: Exception) {
+                        CompareResult(entry, null, "Something went wrong: " + (e.message ?: e.javaClass.simpleName), took())
+                    }
+                }
+            }.awaitAll()
+        }
     }
 
     fun failure(provider: AiProvider, code: Int, body: String, model: String): PhotoAiException =

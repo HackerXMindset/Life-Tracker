@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import com.lifetracker.app.data.AiProvider
+import com.lifetracker.app.data.CompareSettings
 import com.lifetracker.app.data.FoodAiSettings
 import com.lifetracker.app.data.FoodPhotoAi
 import com.lifetracker.app.data.PhotoAiException
@@ -181,28 +182,30 @@ fun PhotoFill(onFilled: (PhotoFood) -> Unit) {
     }
 }
 
-/** The one-time notice that a photo goes to the AI provider you chose. [onContinue] runs after it is accepted, and the notice is not shown again for that provider. */
+/** The one-time notice that a photo goes to the AI provider you chose (or to every provider on the compare list). [onContinue] runs after it is accepted. */
 @Composable
 fun PhotoNoticeDialog(onContinue: () -> Unit, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val p = LocalPaper.current
-    val provider = FoodAiSettings.provider(context)
-    val gemini = provider == AiProvider.GEMINI
+    val used = CompareSettings.providersUsed(context).toList()
     PaperDialog(
-        title = if (gemini) "Your photo or words go to Google" else "Your photo or words go to OpenRouter",
+        title = "Your photo or words go to " + used.joinToString(" and ") { it.company },
         onDismiss = onDismiss,
         confirmText = "Continue",
         onConfirm = {
-            FoodAiSettings.markNoticeSeen(context)
+            CompareSettings.markNoticeSeen(context)
             onContinue()
         },
     ) {
-        Text(
-            (if (gemini) {
-                "The photo (or the words you typed or said) and your note are sent to Google's Gemini to be read. On Google's free plan they may be used to improve Google's products and be seen by reviewers. "
+        val parts = used.map { provider ->
+            if (provider == AiProvider.GEMINI) {
+                "Google's Gemini gets the photo (or the words you typed or said) and your note. On Google's free plan they may be used to improve Google's products and be seen by reviewers."
             } else {
-                "The photo (or the words you typed or said) and your note are sent to OpenRouter, which passes them to the model you chose and its maker. Each model has its own privacy rules, and free models may keep what they are sent. "
-            }) + "Do not photograph anything private. Nothing else from Kairos is sent. A barcode is looked up on Open Food Facts instead, which sees only the number.",
+                "OpenRouter gets the photo (or the words) and your note and passes them to the model you chose and its maker. Each model has its own privacy rules, and free models may keep what they are sent."
+            }
+        }
+        Text(
+            parts.joinToString(" ") + " Do not photograph anything private. Nothing else from Kairos is sent. A barcode is looked up on Open Food Facts instead, which sees only the number.",
             fontSize = 13.sp, color = p.ink2,
         )
     }

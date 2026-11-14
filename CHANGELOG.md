@@ -2,6 +2,13 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🔀 Compare AI models
+
+- **Compare models.** Settings → AI has a "Compare models" switch, off by default, and a list of 2 to 4 models to ask. Models from different providers can be mixed (two OpenRouter models and your Gemini one, say), and each is picked from the OpenRouter list or typed.
+- **One card per model.** With the switch on, every photo, label photo or typed meal is sent to all the chosen models at once. The check page shows what each one said (name, weight, calories, protein, carbs, fat, what it saw, the oil it counted, and how long it took), and how far apart the calories are. A model that fails or is out of free allowance gets a card saying why, without spoiling the others. Tap "Use this one" and carry on as usual; "See what the other models said" brings the cards back.
+- **The meal remembers the model.** A meal saved from a comparison shows its model in "Where the numbers came from".
+- **Nothing changes when it is off** (or when fewer than 2 models are on the list). The "your photo goes to ..." notice names every provider on the list, and each call is one request per model, so paid models cost per call.
+
 ## 🛠️ Food fixes after the first run
 
 ### ✨ New
