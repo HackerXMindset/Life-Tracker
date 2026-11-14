@@ -271,6 +271,9 @@ interface ImportDao {
     @Query("SELECT sourceId FROM imported_items WHERE source = :source")
     suspend fun sourceIds(source: String): List<String>
 
+    @Query("SELECT entryId FROM imported_items WHERE source = :source")
+    suspend fun entryIds(source: String): List<Long>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(items: List<ImportedItemEntity>)
 

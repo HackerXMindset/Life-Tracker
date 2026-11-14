@@ -19,9 +19,12 @@ object SettingsBackup {
 
     /** Whether the settings file called [name] goes into a backup. */
     fun included(name: String): Boolean =
-        name.isNotBlank() && name !in LEFT_OUT && !name.contains('.') &&
+        name.isNotBlank() && name !in LEFT_OUT && name !in MEDIA_PRIVATE && !name.contains('.') &&
             !name.startsWith("WebView", ignoreCase = true) && !name.startsWith("mbgl", ignoreCase = true) &&
             !name.startsWith("MapLibre", ignoreCase = true) && !name.startsWith("androidx", ignoreCase = true)
+
+    /** Shows and manga: the sign-ins, and what was seen at the last check (the entries themselves are marked in the database). */
+    private val MEDIA_PRIVATE: Set<String> = setOf("media_accounts", "media_sync")
 
     /** The settings files on this phone that a backup holds, by file name. */
     fun fileNames(context: Context): List<String> {

@@ -20,6 +20,7 @@ enum class Feature(val id: String, val title: String, val hint: String, val tabN
     STEPS_SLEEP("steps", "Steps and sleep", "Steps, sleep and Health Connect"),
     PHONE_USAGE("phone", "Phone usage", "How long you use each app"),
     CALLS("calls", "Calls", "Your calls, copied from the call log"),
+    MEDIA("media", "Shows and manga", "What you read and watched, from AniList, MyAnimeList and Simkl"),
     CHARGING("charging", "Charging", "When and how your phone charges"),
     PLACES("places", "Places and trips", "Your position, stays, trips and the live map"),
     MAPS("maps", "Maps", "Map pictures, offline areas and their downloads"),
