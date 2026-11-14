@@ -30,7 +30,7 @@ import com.lifetracker.app.data.UsageCollector
 import com.lifetracker.app.ui.theme.LocalPaper
 
 /** Everything that can be opened from the Settings tab. The numbers for each live under Stats. */
-enum class Page { Goals, Rules, Phone, Steps, Places, Location, Calls, Charging, Activities, Habits, Appearance, Backup, Timeline, Apps, PlaceCategories, Profiles, Changes, Maps, Permissions, Logs, Trips, Live, Features, Nutrients, Ai, Portions }
+enum class Page { Goals, Rules, Phone, Steps, Places, Location, Calls, Charging, Activities, Habits, Appearance, Backup, Timeline, Apps, PlaceCategories, Profiles, Changes, Maps, Permissions, Logs, Trips, Live, Features, Nutrients, Ai, Portions, Lock }
 
 /**
  * The Settings tab, laid out like the demo: a big title, then four groups of rows. Each row has an icon, a name, one small
@@ -143,6 +143,10 @@ fun SettingsScreen(onOpen: (Page) -> Unit) {
             item {
                 SettingsRow(R.drawable.ic_p_food, "My portions", "Your own roti, katori and spoon weights") { onOpen(Page.Portions) }
             }
+        }
+        item { PaperSection("Privacy") }
+        item {
+            SettingsRow(R.drawable.ic_p_lock, "Lock", "Keep each screen private with your fingerprint, face or PIN") { onOpen(Page.Lock) }
         }
         item { PaperSection("AI") }
         item {

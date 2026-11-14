@@ -2,6 +2,15 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 🔒 Lock screens
+
+- **Lock each screen on its own.** Settings → Lock lists Timeline, Food, Habits, Money, Stats and Settings. Each can be Off, Phone lock or Face scan, so someone you hand the Food screen to cannot open the Timeline. Pages opened from a screen lock with that screen.
+- **Phone lock** uses Android's own prompt: your fingerprint, face, pattern or PIN, whatever the phone is set up with. Needs Android 11 or newer.
+- **Face scan** opens the front camera and lets you in only if the face matches the one you saved. It must be a single, close, live face (a photo held to the camera is turned away, a video or mask may still get through). After 3 scans that do not match, it asks for the phone PIN. If the camera or the face model cannot run, it goes straight to the PIN.
+- **Stay unlocked** is yours to choose: every time, 1, 5, 15 or 30 minutes, or 1 hour. A screen stays open while you use it and locks that long after you leave it or the app. Closing the app locks everything.
+- **My face** is saved from a few pictures taken on the spot, as numbers only (no photo), encrypted with a key held by the phone, and left out of backups. You can test the scan (it shows your match score and whether it would open), remove the face, and choose Relaxed, Normal or Strict matching.
+- **Everything happens on the phone.** The face models (FaceNet and two MiniFASNet liveness models, all Apache-2.0, see app/src/main/assets/MODELS-NOTICE.md) add about 36 MB to the app. Lock settings are not part of backups.
+
 ## 🔀 Compare AI models
 
 - **Compare models.** Settings → AI has a "Compare models" switch, off by default, and a list of 2 to 4 models to ask. Models from different providers can be mixed (two OpenRouter models and your Gemini one, say), and each is picked from the OpenRouter list or typed.
