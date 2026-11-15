@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -36,6 +37,7 @@ import com.lifetracker.app.data.MediaClients
 import com.lifetracker.app.data.MediaException
 import com.lifetracker.app.data.MediaNames
 import com.lifetracker.app.data.MediaParsers
+import com.lifetracker.app.data.ComickAuth
 import com.lifetracker.app.data.MediaService
 import com.lifetracker.app.data.MediaSettings
 import com.lifetracker.app.data.MediaSuggest
@@ -77,6 +79,7 @@ fun MediaSettingsScreen(onBack: () -> Unit) {
     var aniListText by remember { mutableStateOf("") }
     var malText by remember { mutableStateOf("") }
     var clientText by remember { mutableStateOf("") }
+    var comickText by remember { mutableStateOf(accounts.comickClientId) }
     var message by remember { mutableStateOf("") }
     var working by remember { mutableStateOf("") }
     var deviceCode by remember { mutableStateOf<MediaParsers.DeviceCode?>(null) }
@@ -95,6 +98,12 @@ fun MediaSettingsScreen(onBack: () -> Unit) {
             val outcome = runCatching { MediaSync.run(context) }.getOrNull()
             lastLine = outcome?.line ?: state.lastLine
         }
+    }
+
+    // A Comick sign-in finishes in the background, when the browser sends you back, so watch for it.
+    DisposableEffect(Unit) {
+        val stop = accounts.listen { tick++ }
+        onDispose { stop() }
     }
 
     // While a Simkl code is showing, ask Simkl every few seconds whether it was typed in.
@@ -280,6 +289,59 @@ fun MediaSettingsScreen(onBack: () -> Unit) {
                             }, small = true, enabled = working.isEmpty() && clientText.isNotBlank())
                         }
                     }
+                }
+            }
+        }
+
+        // ---- Comick ----
+        item {
+            PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Comick", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = p.ink)
+                    val comickMessage = remember(tick) { accounts.comickMessage }
+                    if (connected[MediaService.COMICK] == true) {
+                        val who = accounts.comickName
+                        Text(if (who.isNotBlank()) "Connected as $who." else "Connected.", fontSize = 13.sp, color = p.ink2)
+                        PaperButton("Remove", {
+                            accounts.disconnect(MediaService.COMICK); accounts.comickMessage = ""; state.clear(MediaService.COMICK); tick++
+                        }, style = PaperButtonStyle.Ghost, small = true)
+                    } else {
+                        Text(
+                            "Comick needs a small app of your own, once (like Simkl). Sign in at comick.dev, open My apps (comick.dev/developers/apps) and make a new app named Kairos: " +
+                                "a native or mobile app (a public one, so there is no secret), with the callback address below, asking only to read your library. " +
+                                "Copy its Client ID, paste it here and press Connect Comick. The browser opens, you press Allow (leave ongoing access ticked), and it brings you back here.",
+                            fontSize = 12.5.sp, color = p.ink2,
+                        )
+                        Text(ComickAuth.REDIRECT, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = p.ink)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            PaperButton("Copy callback address", {
+                                runCatching {
+                                    val clipboard = context.getSystemService(android.content.ClipboardManager::class.java)
+                                    clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("Comick callback", ComickAuth.REDIRECT))
+                                    message = "Copied."
+                                }
+                            }, style = PaperButtonStyle.Ghost, small = true)
+                            PaperButton("Open Comick apps", { openLink(context, "https://comick.dev/developers/apps") }, style = PaperButtonStyle.Ghost, small = true)
+                        }
+                        PaperField(
+                            comickText, { comickText = it }, "Client ID", Modifier.fillMaxWidth(), singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii),
+                        )
+                        PaperButton("Connect Comick", {
+                            val id = comickText.trim()
+                            if (id.length < 8 || id.any { it.isWhitespace() }) {
+                                message = "That does not look like a Client ID. Copy the whole thing from your Comick app."
+                            } else {
+                                message = ""
+                                val attempt = ComickAuth.newAttempt(System.currentTimeMillis())
+                                accounts.comickClientId = id
+                                accounts.comickAttempt = attempt
+                                accounts.comickMessage = ""
+                                openLink(context, ComickAuth.authorizeUrl(id, attempt))
+                            }
+                        }, small = true, enabled = comickText.isNotBlank())
+                    }
+                    if (comickMessage.isNotEmpty()) Text(comickMessage, fontSize = 12.5.sp, color = p.ink, fontWeight = FontWeight.SemiBold)
                 }
             }
         }

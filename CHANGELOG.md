@@ -18,6 +18,14 @@ Every release page shows the sections below that were added since the last relea
 - **The meal remembers the model.** A meal saved from a comparison shows its model in "Where the numbers came from".
 - **Nothing changes when it is off** (or when fewer than 2 models are on the list). The "your photo goes to ..." notice names every provider on the list, and each call is one request per model, so paid models cost per call.
 
+## 🧭 Comick
+
+- **Comick joins the lists.** Settings → Shows and manga → Comick. Your Comick library (manga and anime) is read every 15 minutes like the others, and each chapter or episode you move forward becomes a Timeline entry at the time Comick saved it.
+- **A small app of your own, once.** Comick has no shared sign-in, so you make a free app named Kairos at comick.dev/developers/apps (a native or mobile app, public, no secret), paste the callback address shown in Kairos (com.lifetracker.app:/oauth/comick), allow it to read your library, copy its Client ID into Kairos and press Connect Comick. Your browser opens, you press Allow, and it comes back to Kairos. Nothing is sent to anyone but Comick; the sign-in stays on the phone and out of backups.
+- **Keep ongoing access ticked** when Comick asks. Its sign-in lasts 15 minutes and is renewed in the background; without ongoing access it has to be connected again each time.
+- **Duplicates.** Comick is last in the priority list by default. Titles are matched by every name Comick knows for them, so the same chapter on Comick and AniList is added once.
+- **Chapter numbers like 12.5** count as 12, and a title with no saved progress is ignored.
+
 ## 🎯 Shows and manga: more accurate times
 
 - **Mihon and Kotatsu backups.** Settings → Shows and manga → Backups: choose the folder each app saves its automatic backups in. Kairos only reads from it. Mihon's backup says when every chapter was read and for how long, and Kotatsu's says each reading session, so those entries use the real time and end when you really stopped. Komikku and Tachiyomi backups work like Mihon's.
