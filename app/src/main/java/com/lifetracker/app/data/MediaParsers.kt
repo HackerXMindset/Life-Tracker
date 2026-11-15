@@ -58,6 +58,10 @@ object MediaParsers {
             val kind = if (media.optString("type") == "MANGA") MediaKind.MANGA else MediaKind.ANIME
             val title = media.optJSONObject("title")?.optString("userPreferred").orEmpty().ifBlank { "Untitled" }
             val minutes = media.optInt("duration", 0).takeIf { it > 0 && kind == MediaKind.ANIME }
+            val type = if (kind == MediaKind.MANGA) "manga" else "anime"
+            val ids = HashSet<String>()
+            ids += "anilist:$type:$mediaId"
+            media.optInt("idMal", 0).takeIf { it > 0 }?.let { ids += "mal:$type:$it" }
             out += ListItem(
                 key = mediaId.toString(),
                 title = title,
@@ -65,6 +69,7 @@ object MediaParsers {
                 progress = o.optInt("progress", 0),
                 updatedMs = o.optLong("updatedAt", 0L) * 1000L,
                 minutesPerUnit = minutes,
+                ids = ids,
             )
         }
         return out
@@ -131,6 +136,9 @@ object MediaParsers {
             atMs = at,
             units = 1,
             label = MediaDiff.label(MediaKind.ANIME, parsed.progress, parsed.progress),
+            ids = setOf("mal:anime:${parsed.id}"),
+            numFrom = parsed.progress.toDouble(),
+            numTo = parsed.progress.toDouble(),
         )
     }
 
@@ -139,7 +147,7 @@ object MediaParsers {
         val at = item.pubMs ?: return@mapNotNull null
         val parsed = parse(item) ?: return@mapNotNull null
         if (parsed.kind != "manga") return@mapNotNull null
-        ListItem("manga:${parsed.id}", cleanTitle(item.title), MediaKind.MANGA, parsed.progress, at)
+        ListItem("manga:${parsed.id}", cleanTitle(item.title), MediaKind.MANGA, parsed.progress, at, ids = setOf("mal:manga:${parsed.id}"))
     }
 
     // ---- Simkl ----
@@ -194,6 +202,17 @@ object MediaParsers {
         return out
     }
 
+    /** The title's numbers in Simkl and, for anime, in MyAnimeList and AniList, so the same title elsewhere is recognised. */
+    private fun simklIds(ids: JSONObject?, simklId: Long, kind: MediaKind): Set<String> {
+        val out = HashSet<String>()
+        out += "simkl:$simklId"
+        if (ids != null && kind == MediaKind.ANIME) {
+            ids.optString("mal").toLongOrNull()?.takeIf { it > 0 }?.let { out += "mal:anime:$it" }
+            ids.optString("anilist").toLongOrNull()?.takeIf { it > 0 }?.let { out += "anilist:anime:$it" }
+        }
+        return out
+    }
+
     private fun simklBucket(items: JSONArray?, kind: MediaKind, nested: String, sinceMs: Long, out: MutableList<MediaEvent>) {
         if (items == null) return
         for (i in 0 until items.length()) {
@@ -203,10 +222,11 @@ object MediaParsers {
             if (simklId <= 0L) continue
             val title = info.optString("title").ifBlank { "Untitled" }
             val runtime = info.optInt("runtime", 0).takeIf { it > 0 }
+            val ids = simklIds(info.optJSONObject("ids"), simklId, kind)
             if (kind == MediaKind.MOVIE) {
                 val at = parseInstant(item.optString("last_watched_at")) ?: continue
                 if (item.optString("status") == "completed" && at > PLACEHOLDER_BEFORE_MS && at >= sinceMs) {
-                    out += MediaEvent("simkl|movie|$simklId|$at", MediaService.SIMKL, kind, title, at, 1, "", runtime)
+                    out += MediaEvent("simkl|movie|$simklId|$at", MediaService.SIMKL, kind, title, at, 1, "", runtime, ids)
                 }
                 continue
             }
@@ -227,7 +247,9 @@ object MediaParsers {
                         val label = if (kind == MediaKind.ANIME) "ep $number" else "S${seasonNo}E$number"
                         out += MediaEvent(
                             "simkl|$simklId|$seasonNo|$number|$at", MediaService.SIMKL, kind, title, at, 1, label,
-                            ep.optInt("runtime", 0).takeIf { it > 0 } ?: runtime,
+                            ep.optInt("runtime", 0).takeIf { it > 0 } ?: runtime, ids,
+                            numFrom = if (kind == MediaKind.ANIME) number.toDouble() else null,
+                            numTo = if (kind == MediaKind.ANIME) number.toDouble() else null,
                         )
                     }
                 }
@@ -236,7 +258,7 @@ object MediaParsers {
                 // No episode times (the list only says what was last watched): note that one, at the time it was marked.
                 val at = parseInstant(item.optString("last_watched_at")) ?: continue
                 if (at > PLACEHOLDER_BEFORE_MS && at >= sinceMs) {
-                    out += MediaEvent("simkl|$simklId|last|$at", MediaService.SIMKL, kind, title, at, 1, item.optString("last_watched"), runtime)
+                    out += MediaEvent("simkl|$simklId|last|$at", MediaService.SIMKL, kind, title, at, 1, item.optString("last_watched"), runtime, ids)
                 }
             }
         }

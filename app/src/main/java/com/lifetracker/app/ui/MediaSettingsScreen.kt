@@ -70,7 +70,7 @@ fun MediaSettingsScreen(onBack: () -> Unit) {
     val settings = remember { MediaSettings(context) }
     val state = remember { MediaSyncState(context) }
     var tick by remember { mutableIntStateOf(0) }
-    val connected = remember(tick) { MediaService.entries.associateWith { accounts.connected(it) } }
+    val connected = remember(tick) { MediaService.accounts.associateWith { accounts.connected(it) } }
     val appMap = remember(tick) { settings.appMap() }
     val usageApps by remember { AppDatabase.get(context).usageDao().observeApps() }.collectAsState(initial = emptyList())
 
@@ -84,6 +84,7 @@ fun MediaSettingsScreen(onBack: () -> Unit) {
     var chapterMinutes by remember { mutableIntStateOf(settings.minutesPerChapter) }
     var lookback by remember { mutableIntStateOf(settings.lookbackDays) }
     var episodeMinutes by remember { mutableIntStateOf(settings.episodeMinutes) }
+    var learnSpeed by remember { mutableStateOf(settings.learnSpeed) }
     var pickApp by remember { mutableStateOf(false) }
     var search by remember { mutableStateOf("") }
 
@@ -304,7 +305,7 @@ fun MediaSettingsScreen(onBack: () -> Unit) {
                             if (chosen == null && suggestion != null) Text("Usually goes with ${suggestion.label}", fontSize = 12.sp, color = p.ink2)
                             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 PaperPill("None", chosen == null, { settings.setApp(app.pkg, null); tick++ })
-                                MediaService.entries.forEach { s ->
+                                MediaService.accounts.forEach { s ->
                                     PaperPill(s.label, chosen == s, { settings.setApp(app.pkg, s); tick++ })
                                 }
                             }
@@ -314,6 +315,12 @@ fun MediaSettingsScreen(onBack: () -> Unit) {
                 }
             }
         }
+
+        // ---- Backups, priority, review ----
+        item { MediaBackupCard(onChange = { state.lastSyncMs = 0L; tick++ }) }
+        item { MediaPriorityCard() }
+        item { MediaPendingCard(tick) { tick++ } }
+        item { MediaRecentCard(tick) { tick++ } }
 
         // ---- Sizes ----
         item {
@@ -326,7 +333,14 @@ fun MediaSettingsScreen(onBack: () -> Unit) {
                         }
                     }
                     Text(
-                        "Used for a chapter when there is no app time to take.",
+                        "Used for a chapter when there is no app time to take, until Kairos has learned your own speed.",
+                        fontSize = 12.sp, color = p.ink2,
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        PaperPill("Learn my reading speed", learnSpeed, { learnSpeed = !learnSpeed; settings.learnSpeed = learnSpeed })
+                    }
+                    Text(
+                        "When on, the chapter time follows the middle of the times really measured (from Mihon or Kotatsu backups and app time), once there are 8 of them.",
                         fontSize = 12.sp, color = p.ink2,
                     )
                     Text("How long an episode takes", fontSize = 14.sp, color = p.ink)

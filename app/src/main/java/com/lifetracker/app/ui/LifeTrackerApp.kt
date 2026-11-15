@@ -116,7 +116,7 @@ fun LifeTrackerApp() {
         runCatching { UsageCollector.sync(context) }
         runCatching { UsageSyncWorker.schedule(context) }
         // Check AniList, MyAnimeList and Simkl for new chapters and episodes (after the app usage copy, so its times are fresh).
-        runCatching { if (MediaAccounts(context).anyConnected()) MediaSyncWorker.schedule(context) }
+        runCatching { if (MediaSync.hasSources(context)) MediaSyncWorker.schedule(context) }
         runCatching { MediaSync.run(context) }
         // Update steps (Health Connect or the phone's step counter) and work out last night's sleep.
         runCatching { HealthSync.run(context) }
