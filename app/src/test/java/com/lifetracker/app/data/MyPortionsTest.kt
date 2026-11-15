@@ -51,6 +51,7 @@ class MyPortionsTest {
         assertTrue(MyPortions.SUGGESTED.all { MyPortions.clean(it.name, it.grams) != null })
         assertEquals(MyPortions.SUGGESTED.size, MyPortions.SUGGESTED.map { it.name }.toSet().size)
         assertFalse(SettingsBackup.included("food_ai"))
+        assertFalse(SettingsBackup.included("lock_settings"))
         assertTrue(SettingsBackup.included(MyPortions.FILE))
     }
 }

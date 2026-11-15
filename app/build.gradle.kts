@@ -49,6 +49,10 @@ android {
     buildFeatures {
         compose = true
     }
+    // The face models are read straight from the file, so they must not be compressed in the APK.
+    androidResources {
+        noCompress += "tflite"
+    }
 }
 
 dependencies {
@@ -89,6 +93,16 @@ dependencies {
     // The map (MapLibre, open and free) and the web client it uses, which the app sets up with its own name and 4 requests at a time.
     implementation("org.maplibre.gl:android-sdk:11.13.5")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
+    // Screen lock: the phone's own lock prompt, the front camera, and on-device face recognition.
+    implementation("androidx.biometric:biometric:1.1.0")
+    implementation("androidx.fragment:fragment-ktx:1.8.5")
+    implementation("androidx.camera:camera-core:1.4.1")
+    implementation("androidx.camera:camera-camera2:1.4.1")
+    implementation("androidx.camera:camera-lifecycle:1.4.1")
+    implementation("com.google.guava:guava:33.3.1-android")
+    implementation("com.google.mlkit:face-detection:16.1.7")
+    implementation("org.tensorflow:tensorflow-lite:2.16.1")
 
     // Tests that run in the cloud build. The org.json copy is needed because
     // the Android one is only a stub outside a real phone.

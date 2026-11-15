@@ -2,6 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- The front camera, for the optional Face scan lock. Only used while a locked screen is being opened or your face is being saved. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.front" android:required="false" />
+
     <!-- Reads which app was on screen and for how long (you switch this on once in Android's settings). -->
     <uses-permission
         android:name="android.permission.PACKAGE_USAGE_STATS"

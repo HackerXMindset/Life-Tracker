@@ -151,6 +151,7 @@ fun LifeTrackerApp() {
                 else -> "tab:${tab.name}"
             }
             saver.SaveableStateProvider(screenKey) {
+                LockGate(tab.title) {
                 if (replay != null) {
                     ReplayScreen(
                         from = java.time.LocalDate.parse(replay[0]),
@@ -182,6 +183,7 @@ fun LifeTrackerApp() {
                         Page.Nutrients -> NutrientsScreen(onBack = back)
                         Page.Ai -> AiSettingsScreen(onBack = back)
                         Page.Portions -> PortionsScreen(onBack = back)
+                        Page.Lock -> LockSettingsScreen(onBack = back)
                         Page.Rules -> RulesAndGoalsScreen(onBack = back)
                         Page.Goals -> RulesAndGoalsScreen(onBack = back, startOnGoals = true)
                         Page.Trips -> TripsScreen(onBack = back, onOpenTrip = { openTrip = it }, onOpenReplay = { from, to, title -> replayRange = "$from|$to|$title" })
@@ -224,6 +226,7 @@ fun LifeTrackerApp() {
                         )
                         Tab.Settings -> SettingsScreen(onOpen = { openPage(it, Part.Settings) })
                     }
+                }
                 }
             }
         }
