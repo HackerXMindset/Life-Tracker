@@ -42,6 +42,9 @@ import com.lifetracker.app.data.ChargeSettings
 import com.lifetracker.app.data.ChargeTracker
 import com.lifetracker.app.data.ChargeWorker
 import com.lifetracker.app.data.HealthSync
+import com.lifetracker.app.data.MediaAccounts
+import com.lifetracker.app.data.MediaSync
+import com.lifetracker.app.data.MediaSyncWorker
 import com.lifetracker.app.data.MoneyPoster
 import com.lifetracker.app.data.PlacesSettings
 import com.lifetracker.app.data.PlacesTracker
@@ -112,6 +115,9 @@ fun LifeTrackerApp() {
         // Copy the latest app usage history, and keep copying it every few hours in the background.
         runCatching { UsageCollector.sync(context) }
         runCatching { UsageSyncWorker.schedule(context) }
+        // Check AniList, MyAnimeList and Simkl for new chapters and episodes (after the app usage copy, so its times are fresh).
+        runCatching { if (MediaAccounts(context).anyConnected()) MediaSyncWorker.schedule(context) }
+        runCatching { MediaSync.run(context) }
         // Update steps (Health Connect or the phone's step counter) and work out last night's sleep.
         runCatching { HealthSync.run(context) }
         // Copy new calls from the call log, if you allowed it.

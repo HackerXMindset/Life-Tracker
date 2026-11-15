@@ -57,6 +57,7 @@ fun FeaturesScreen(onBack: () -> Unit) {
                 featureRow(context, Feature.PHONE_USAGE, changed, first = true)
                 featureRow(context, Feature.STEPS_SLEEP, changed)
                 featureRow(context, Feature.CALLS, changed)
+                featureRow(context, Feature.MEDIA, changed)
                 featureRow(context, Feature.CHARGING, changed)
                 featureRow(context, Feature.PLACES, changed)
                 featureRow(context, Feature.MAPS, changed)

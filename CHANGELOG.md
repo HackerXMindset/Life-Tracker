@@ -18,6 +18,15 @@ Every release page shows the sections below that were added since the last relea
 - **The meal remembers the model.** A meal saved from a comparison shows its model in "Where the numbers came from".
 - **Nothing changes when it is off** (or when fewer than 2 models are on the list). The "your photo goes to ..." notice names every provider on the list, and each call is one request per model, so paid models cost per call.
 
+## 📚 Shows and manga on the Timeline
+
+- **Connect your lists.** Settings → Shows and manga. AniList and MyAnimeList need only your name or profile link (the list must be public; MyAnimeList is read through Jikan, a free service for public lists). Simkl needs a Client ID from a small app of your own (one minute at Simkl's developer page) and a code you type at simkl.com.
+- **What you read and watched appears by itself.** Kairos checks every 15 minutes or so, and when the app opens. Each new chapter or episode becomes an entry under Reading or Movies and shows, with the title and chapter.
+- **App time is used when there is some.** Tie an app to an account (Mihon to AniList, Kotatsu to MyAnimeList, CloudStream to Simkl are suggested) and the time you spent in that app is the time of the entry. With no app time, the entry ends when the service noted it and takes as long as the chapters or episodes take (your chapter length, or the length Simkl or AniList knows).
+- **Past entries count.** Something you add in Simkl for an earlier day is placed on that day, within the look-back you choose (2 weeks to 1 year).
+- **Nothing you wrote is covered,** and an entry you delete stays deleted. A switch for the whole feature is on the Features page.
+- The sign-ins and what was seen at the last check are not part of backups.
+
 ## 🛠️ Food fixes after the first run
 
 ### ✨ New

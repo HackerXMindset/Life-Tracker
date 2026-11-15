@@ -12,6 +12,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -52,6 +53,10 @@ fun SettingsScreen(onOpen: (Page) -> Unit) {
     val foodFeature = featureOn(Feature.FOOD)
     val rulesFeature = featureOn(Feature.RULES)
     val goalsFeature = featureOn(Feature.GOALS)
+    val mediaFeature = featureOn(Feature.MEDIA)
+    // Shows and manga is a page inside this tab; the list state is kept here so the scroll place survives going there and back.
+    var showMedia by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     val featureSummary = FeatureRules.summary { Features.isOn(context, it) }
     val places = PlacesSettings(context)
     val usageOn = UsageCollector.hasAccess(context)
@@ -61,7 +66,13 @@ fun SettingsScreen(onOpen: (Page) -> Unit) {
     val permStates = quickPermissionStates(context)
     val permSummary = com.lifetracker.app.data.PermissionGuide.summary(permStates.count { it.value }, permStates.size)
 
+    if (showMedia) {
+        MediaSettingsScreen(onBack = { showMedia = false })
+        return
+    }
+
     LazyColumn(
+        state = listState,
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -126,6 +137,12 @@ fun SettingsScreen(onOpen: (Page) -> Unit) {
                 R.drawable.ic_p_bolt, "Charging",
                 (if (chargingOn) "" else "Switched off · ") + "Recording and the banner",
             ) { onOpen(Page.Charging) }
+        }
+        if (mediaFeature) item {
+            SettingsRow(
+                R.drawable.ic_p_star, "Shows and manga",
+                com.lifetracker.app.data.MediaSyncState(context).lastLine.ifBlank { "AniList, MyAnimeList and Simkl on the Timeline" },
+            ) { showMedia = true }
         }
 
         if (habitsFeature || foodFeature) item { PaperSection("Trackers") }
