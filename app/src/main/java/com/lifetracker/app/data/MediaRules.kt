@@ -163,12 +163,17 @@ object MediaPlacer {
     const val DEFAULT_SHOW_MIN = 42
     const val DEFAULT_MOVIE_MIN = 100
 
-    class Result(val placed: List<MediaPlacement>, val skipped: List<MediaEvent>)
+    /** Three or more with no app time, each within this of the one before, are one bulk update (a list import, a "mark all as read"). */
+    const val BURST_GAP_MS = 3 * 60_000L
+    const val BURST_SIZE = 3
 
-    fun lengthMs(event: MediaEvent, minutesPerChapter: Int): Long {
+    /** [bulk] are the events left out because they look like many things marked at once, not read or watched one after another. */
+    class Result(val placed: List<MediaPlacement>, val skipped: List<MediaEvent>, val bulk: List<MediaEvent> = emptyList())
+
+    fun lengthMs(event: MediaEvent, minutesPerChapter: Int, minutesPerEpisode: Int = DEFAULT_ANIME_MIN): Long {
         val each = event.minutesPerUnit?.takeIf { it > 0 } ?: when (event.kind) {
             MediaKind.MANGA -> minutesPerChapter
-            MediaKind.ANIME -> DEFAULT_ANIME_MIN
+            MediaKind.ANIME -> minutesPerEpisode
             MediaKind.SHOW -> DEFAULT_SHOW_MIN
             MediaKind.MOVIE -> DEFAULT_MOVIE_MIN
         }
@@ -188,18 +193,28 @@ object MediaPlacer {
         minutesPerChapter: Int,
         nowMs: Long,
         zone: ZoneId,
+        minutesPerEpisode: Int = DEFAULT_ANIME_MIN,
     ): Result {
         val ordered = events.sortedWith(compareBy({ it.atMs }, { it.id }))
         val auto = autoBusy.toMutableList()
         val placed = ArrayList<MediaPlacement>()
         val skipped = ArrayList<MediaEvent>()
+        val bulk = ArrayList<MediaEvent>()
+        val sessionById = ordered.associate { it.id to sessionFor(it.atMs, sessionsFor(it.service)) }
+        val bulkIds = bulkIds(ordered) { sessionById[it.id] != null }
         for (event in ordered) {
+            if (event.id in bulkIds) {
+                bulk += event
+                continue
+            }
             val sessions = sessionsFor(event.service)
-            val session = sessionFor(event.atMs, sessions)
-            val span = if (session != null) {
-                inSession(event, session, ordered, sessions, userBusy, auto, nowMs)
-            } else {
-                alone(event, userBusy, auto, minutesPerChapter, zone)
+            val session = sessionById[event.id]
+            val span = when {
+                // A chapter takes the app time it was read in. An episode or a movie takes its whole length, whatever the app time was,
+                // ending when the service noted it (or when the app was closed, if that was sooner).
+                session != null && event.kind == MediaKind.MANGA -> inSession(event, session, ordered, sessions, userBusy, auto, nowMs)
+                session != null -> alone(event, userBusy, auto, minutesPerChapter, minutesPerEpisode, zone, event.atMs.coerceIn(session.startMs, session.endMs))
+                else -> alone(event, userBusy, auto, minutesPerChapter, minutesPerEpisode, zone, event.atMs)
             }
             if (span == null || span.endMs - span.startMs < MIN_BLOCK_MS) {
                 skipped += event
@@ -209,7 +224,24 @@ object MediaPlacer {
             auto += MediaSpan(rounded.first, rounded.second)
             placed += MediaPlacement(event, rounded.first, rounded.second, session != null)
         }
-        return Result(placed, skipped)
+        return Result(placed, skipped, bulk)
+    }
+
+    /** Ids of events that look like one bulk update: a run of three or more with no app time, each close after the one before. */
+    fun bulkIds(ordered: List<MediaEvent>, hasSession: (MediaEvent) -> Boolean): Set<String> {
+        val out = HashSet<String>()
+        for ((_, group) in ordered.filter { !hasSession(it) }.groupBy { it.service }) {
+            var run = ArrayList<MediaEvent>()
+            for (event in group.sortedBy { it.atMs }) {
+                if (run.isNotEmpty() && event.atMs - run.last().atMs > BURST_GAP_MS) {
+                    if (run.size >= BURST_SIZE) run.forEach { out += it.id }
+                    run = ArrayList()
+                }
+                run += event
+            }
+            if (run.size >= BURST_SIZE) run.forEach { out += it.id }
+        }
+        return out
     }
 
     private fun inSession(
@@ -232,8 +264,16 @@ object MediaPlacer {
         return if (end > start) MediaSpan(start, end) else null
     }
 
-    private fun alone(event: MediaEvent, userBusy: List<MediaSpan>, auto: List<MediaSpan>, minutesPerChapter: Int, zone: ZoneId): MediaSpan? {
-        var end = event.atMs
+    private fun alone(
+        event: MediaEvent,
+        userBusy: List<MediaSpan>,
+        auto: List<MediaSpan>,
+        minutesPerChapter: Int,
+        minutesPerEpisode: Int,
+        zone: ZoneId,
+        anchorMs: Long,
+    ): MediaSpan? {
+        var end = anchorMs
         // Events that land on the same moment stack one before the other instead of on top of each other.
         var moved = true
         while (moved) {
@@ -243,7 +283,7 @@ object MediaPlacer {
             }
         }
         if (userBusy.any { it.startMs < end && it.endMs > end }) return null
-        var start = end - lengthMs(event, minutesPerChapter)
+        var start = end - lengthMs(event, minutesPerChapter, minutesPerEpisode)
         val dayStart = Instant.ofEpochMilli(end - 1).atZone(zone).toLocalDate().atStartOfDay(zone).toInstant().toEpochMilli()
         start = max(start, dayStart)
         val blockers = userBusy + auto

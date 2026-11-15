@@ -5,7 +5,7 @@ import java.time.OffsetDateTime
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** Reads what AniList, Jikan (MyAnimeList) and Simkl send back, with no Android in it so it can be tested. */
+/** Reads what AniList, MyAnimeList and Simkl send back, with no Android in it so it can be tested. */
 object MediaParsers {
     /** A watched time of 1970 is how Simkl says "I do not remember when". */
     private const val PLACEHOLDER_BEFORE_MS = 86_400_000L
@@ -70,36 +70,76 @@ object MediaParsers {
         return out
     }
 
-    // ---- MyAnimeList, through Jikan ----
+    // ---- MyAnimeList, through its own public feeds ----
 
-    /** Jikan's answer to a user lookup: true when the user exists. */
-    fun jikanUserExists(body: String): Boolean =
-        runCatching { JSONObject(body).optJSONObject("data")?.optString("username").orEmpty().isNotBlank() }.getOrDefault(false)
+    /** One line of a MyAnimeList feed: the title, its page, "Reading - 17 of 72 chapters" and when it was noted. */
+    class FeedItem(val title: String, val link: String, val description: String, val pubMs: Long?)
 
-    /** What the user read or watched, as events at the times MyAnimeList noted. */
-    fun jikanHistory(body: String, sinceMs: Long): List<MediaEvent> {
-        val data = runCatching { JSONObject(body).optJSONArray("data") }.getOrNull() ?: return emptyList()
-        val out = ArrayList<MediaEvent>()
-        for (i in 0 until data.length()) {
-            val o = data.optJSONObject(i) ?: continue
-            val entry = o.optJSONObject("entry") ?: continue
-            val malId = entry.optInt("mal_id", 0)
-            val at = parseInstant(o.optString("date")) ?: continue
-            if (malId <= 0 || at < sinceMs) continue
-            val manga = entry.optString("type") == "manga"
-            val kind = if (manga) MediaKind.MANGA else MediaKind.ANIME
-            val number = o.optInt("increment", 0)
-            out += MediaEvent(
-                id = "mal|${entry.optString("type")}|$malId|$number|$at",
-                service = MediaService.MAL,
-                kind = kind,
-                title = entry.optString("name").ifBlank { "Untitled" },
-                atMs = at,
-                units = 1,
-                label = if (number > 0) MediaDiff.label(kind, number, number) else "",
-            )
-        }
-        return out
+    class Feed(val channelTitle: String, val items: List<FeedItem>)
+
+    private val TYPE_SUFFIX = Regex(
+        " - (TV Special|TV|ONA|OVA|Movie|Special|Music|CM|PV|Manga|Manhwa|Manhua|Light Novel|Novel|One-shot|Doujinshi|OEL|Unknown)$",
+    )
+    private val PROGRESS = Regex("^(.+?) - (\\d+) of (\\d+|\\?) (?:episodes|chapters)")
+    private val LINK_ID = Regex("/(anime|manga)/(\\d+)")
+
+    private fun xmlText(raw: String): String = raw
+        .replace("<![CDATA[", "").replace("]]>", "")
+        .replace("&apos;", "'").replace("&quot;", "\"").replace("&lt;", "<").replace("&gt;", ">")
+        .replace(Regex("&#(\\d+);")) { m -> m.groupValues[1].toIntOrNull()?.toChar()?.toString() ?: "" }
+        .replace("&amp;", "&")
+        .trim()
+
+    private fun tag(block: String, name: String): String =
+        Regex("(?s)<$name>(.*?)</$name>").find(block)?.groupValues?.get(1)?.let { xmlText(it) }.orEmpty()
+
+    fun malFeed(body: String): Feed {
+        val channel = tag(body.substringBefore("<item>"), "title")
+        val items = Regex("(?s)<item>(.*?)</item>").findAll(body).map { m ->
+            val block = m.groupValues[1]
+            val pub = runCatching {
+                java.time.ZonedDateTime.parse(tag(block, "pubDate"), java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME).toInstant().toEpochMilli()
+            }.getOrNull()
+            FeedItem(tag(block, "title"), tag(block, "link"), tag(block, "description"), pub)
+        }.toList()
+        return Feed(channel, items)
+    }
+
+    /** A feed with a title belongs to a real user whose list can be read; an empty one means no such user, or a private list. */
+    fun malFeedHasUser(body: String): Boolean = malFeed(body).channelTitle.isNotBlank()
+
+    private fun cleanTitle(title: String): String = title.replace(TYPE_SUFFIX, "").ifBlank { "Untitled" }
+
+    private class Parsed(val kind: String, val id: Long, val status: String, val progress: Int)
+
+    private fun parse(item: FeedItem): Parsed? {
+        val link = LINK_ID.find(item.link) ?: return null
+        val progress = PROGRESS.find(item.description) ?: return null
+        return Parsed(link.groupValues[1], link.groupValues[2].toLong(), progress.groupValues[1], progress.groupValues[2].toInt())
+    }
+
+    /** Episodes watched, from the "recently watched" feed: one event for each time the count was moved up. */
+    fun malAnimeEvents(items: List<FeedItem>, sinceMs: Long): List<MediaEvent> = items.mapNotNull { item ->
+        val at = item.pubMs ?: return@mapNotNull null
+        val parsed = parse(item) ?: return@mapNotNull null
+        if (parsed.kind != "anime" || parsed.progress <= 0 || at < sinceMs) return@mapNotNull null
+        MediaEvent(
+            id = "mal|anime|${parsed.id}|${parsed.progress}|$at",
+            service = MediaService.MAL,
+            kind = MediaKind.ANIME,
+            title = cleanTitle(item.title),
+            atMs = at,
+            units = 1,
+            label = MediaDiff.label(MediaKind.ANIME, parsed.progress, parsed.progress),
+        )
+    }
+
+    /** The manga list, newest change first. The feed shows where each title is now, so changes are found by comparing with last time. */
+    fun malMangaItems(items: List<FeedItem>): List<ListItem> = items.mapNotNull { item ->
+        val at = item.pubMs ?: return@mapNotNull null
+        val parsed = parse(item) ?: return@mapNotNull null
+        if (parsed.kind != "manga") return@mapNotNull null
+        ListItem("manga:${parsed.id}", cleanTitle(item.title), MediaKind.MANGA, parsed.progress, at)
     }
 
     // ---- Simkl ----

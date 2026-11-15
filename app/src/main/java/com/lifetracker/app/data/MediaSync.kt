@@ -31,12 +31,13 @@ object MediaSync {
     private const val OVERLAP_MS = 10L * 60 * 1000
     private val mutex = Mutex()
 
-    class Outcome(val added: Int, val skipped: Int, val problems: List<String>) {
+    class Outcome(val added: Int, val skipped: Int, val problems: List<String>, val bulk: Int = 0) {
         val line: String
             get() {
                 val parts = ArrayList<String>()
                 parts += if (added == 0) "Nothing new" else "Added $added"
                 if (skipped > 0) parts += "$skipped left out (that time was already filled)"
+                if (bulk > 0) parts += "$bulk left out (many marked at once, so no real time)"
                 parts += problems
                 return parts.joinToString(" · ")
             }
@@ -72,7 +73,11 @@ object MediaSync {
         }
         if (accounts.connected(MediaService.MAL)) {
             try {
-                events += MediaClients.malHistory(accounts.malUser, lookbackStart)
+                // Manga: the feed shows where each title is now, so changes come from comparing with last time. Anime: the feed lists each update.
+                val manga = MediaDiff.events(MediaService.MAL, MediaClients.malMangaItems(accounts.malUser), state.snapshot(MediaService.MAL), since)
+                events += manga.events
+                afterWrite += { state.saveSnapshot(MediaService.MAL, manga.snapshot) }
+                events += MediaClients.malAnimeEvents(accounts.malUser, lookbackStart)
             } catch (e: MediaException) {
                 problems += "MyAnimeList: ${e.message}"
             }
@@ -134,6 +139,7 @@ object MediaSync {
             minutesPerChapter = settings.minutesPerChapter,
             nowMs = now,
             zone = zone,
+            minutesPerEpisode = settings.episodeMinutes,
         )
 
         db.withTransaction {
@@ -159,7 +165,7 @@ object MediaSync {
             }
             db.importDao().insertAll(marks)
         }
-        return Outcome(result.placed.size, result.skipped.size, problems)
+        return Outcome(result.placed.size, result.skipped.size, problems, result.bulk.size)
     }
 }
 

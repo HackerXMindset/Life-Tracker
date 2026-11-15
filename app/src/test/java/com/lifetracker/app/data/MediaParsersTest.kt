@@ -44,29 +44,53 @@ class MediaParsersTest {
         }
     }
 
+    private val malManga = """<?xml version="1.0"?><rss version="2.0"><channel><title>dmmrx&apos;s Manga from MyAnimeList.net</title><link>https://myanimelist.net/</link>
+        <item><title>'Til Debt Do Us Part - Manhwa</title><link>https://myanimelist.net/manga/147736/Til_Debt_Do_Us_Part</link><description>Reading - 17 of 72 chapters</description><pubDate>Fri, 06 Nov 2026 07:45:14 -0800</pubDate></item>
+        <item><title>Fight Class 3 - Manhwa</title><link>https://myanimelist.net/manga/118805/Fight_Class_3</link><description>Plan to Read - 0 of ? chapters</description><pubDate>Fri, 06 Nov 2026 07:45:28 -0800</pubDate></item>
+        </channel></rss>"""
+
+    private val malAnime = """<?xml version="1.0"?><rss version="2.0"><channel><title>dmmrx&apos;s Recently Watched Anime from MyAnimeList.net</title>
+        <item><title>Jujutsu Kaisen: Shimetsu Kaiyuu - Zenpen</title><link>https://myanimelist.net/anime/57658/Jujutsu_Kaisen</link><description>Completed - 12 of 12 episodes</description><pubDate>Fri, 06 Nov 2026 07:40:32 -0800</pubDate></item>
+        <item><title>Kusuriya no Hitorigoto</title><link>https://myanimelist.net/anime/54492/Kusuriya_no_Hitorigoto</link><description>Watching - 4 of 24 episodes</description><pubDate>Tue, 27 Oct 2026 04:11:39 -0700</pubDate></item>
+        <item><title>One Piece</title><link>https://myanimelist.net/anime/21/One_Piece</link><description>Watching - 1180 of ? episodes</description><pubDate>Mon, 28 Sep 2026 03:43:36 -0700</pubDate></item>
+        <item><title>Prism Rondo - ONA</title><link>https://myanimelist.net/anime/63019/Prism_Rondo</link><description>Plan to Watch - 0 of 20 episodes</description><pubDate>Fri, 06 Nov 2026 07:44:09 -0800</pubDate></item>
+        </channel></rss>"""
+
     @Test
-    fun jikanHistoryGivesEventsAtTheTimesMyAnimeListNoted() {
-        val body = """{"data":[
-            {"entry":{"mal_id":2,"type":"manga","name":"Berserk"},"increment":364,"date":"2026-11-14T14:30:00+00:00"},
-            {"entry":{"mal_id":20,"type":"anime","name":"Naruto"},"increment":5,"date":"2026-01-01T00:00:00+00:00"}
-        ]}"""
-        val events = MediaParsers.jikanHistory(body, ms("2026-11-01T00:00:00Z"))
-        assertEquals(1, events.size)
-        assertEquals("Berserk", events[0].title)
-        assertEquals("ch 364", events[0].label)
-        assertEquals(MediaKind.MANGA, events[0].kind)
-        assertEquals(MediaService.MAL, events[0].service)
-        assertEquals(ms("2026-11-14T14:30:00Z"), events[0].atMs)
-        val all = MediaParsers.jikanHistory(body, 0)
-        assertEquals(2, all.size)
-        assertEquals("ep 5", all[1].label)
-        assertEquals(all.map { it.id }.toSet().size, all.size)
+    fun aMyAnimeListFeedIsRead() {
+        val feed = MediaParsers.malFeed(malManga)
+        assertEquals("dmmrx's Manga from MyAnimeList.net", feed.channelTitle)
+        assertEquals(2, feed.items.size)
+        assertEquals(ms("2026-11-06T15:45:14Z"), feed.items[0].pubMs)
+        assertEquals("Reading - 17 of 72 chapters", feed.items[0].description)
+        assertTrue(MediaParsers.malFeedHasUser(malManga))
+        assertFalse(MediaParsers.malFeedHasUser("<rss><channel><title></title></channel></rss>"))
     }
 
     @Test
-    fun jikanUsersAreRecognised() {
-        assertTrue(MediaParsers.jikanUserExists("""{"data":{"username":"Neko"}}"""))
-        assertFalse(MediaParsers.jikanUserExists("""{"status":404}"""))
+    fun myAnimeListMangaIsReadAsAListWithCleanTitles() {
+        val items = MediaParsers.malMangaItems(MediaParsers.malFeed(malManga).items)
+        assertEquals(2, items.size)
+        assertEquals("manga:147736", items[0].key)
+        assertEquals("'Til Debt Do Us Part", items[0].title)
+        assertEquals(MediaKind.MANGA, items[0].kind)
+        assertEquals(17, items[0].progress)
+        assertEquals(0, items[1].progress)
+    }
+
+    @Test
+    fun myAnimeListAnimeGivesOneEventPerUpdateAtItsTime() {
+        val items = MediaParsers.malFeed(malAnime).items
+        val events = MediaParsers.malAnimeEvents(items, ms("2026-10-01T00:00:00Z"))
+        assertEquals(2, events.size)
+        val kusuriya = events.first { it.title == "Kusuriya no Hitorigoto" }
+        assertEquals("ep 4", kusuriya.label)
+        assertEquals(ms("2026-10-27T11:11:39Z"), kusuriya.atMs)
+        assertEquals(MediaService.MAL, kusuriya.service)
+        assertEquals("Jujutsu Kaisen: Shimetsu Kaiyuu - Zenpen", events.first { it.label == "ep 12" }.title)
+        // A plan-to-watch row (0 episodes) and anything before the look-back give nothing.
+        assertEquals(3, MediaParsers.malAnimeEvents(items, 0).size)
+        assertEquals(events.map { it.id }.toSet().size, events.size)
     }
 
     private val simkl = """{
