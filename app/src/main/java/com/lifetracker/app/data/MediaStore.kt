@@ -34,9 +34,10 @@ class MediaAccounts(context: Context) {
         MediaService.ANILIST -> aniListUser.isNotBlank() && aniListId > 0
         MediaService.MAL -> malUser.isNotBlank()
         MediaService.SIMKL -> simklClientId.isNotBlank() && simklToken.isNotBlank()
+        MediaService.MIHON, MediaService.KOTATSU -> false
     }
 
-    fun anyConnected(): Boolean = MediaService.entries.any { connected(it) }
+    fun anyConnected(): Boolean = MediaService.accounts.any { connected(it) }
 
     fun disconnect(service: MediaService) {
         val e = prefs.edit()
@@ -44,6 +45,7 @@ class MediaAccounts(context: Context) {
             MediaService.ANILIST -> e.remove("anilist_user").remove("anilist_id")
             MediaService.MAL -> e.remove("mal_user")
             MediaService.SIMKL -> e.remove("simkl_token")
+            MediaService.MIHON, MediaService.KOTATSU -> {}
         }
         e.apply()
     }
@@ -79,6 +81,20 @@ class MediaSettings(context: Context) {
     var episodeMinutes: Int
         get() = prefs.getInt("episode_minutes", DEFAULT_EPISODE_MINUTES).coerceIn(5, 180)
         set(v) { prefs.edit().putInt("episode_minutes", v.coerceIn(5, 180)).apply() }
+
+    /** Which place wins when the same chapter or episode is noted in more than one: first is the most trusted. */
+    var priority: List<MediaService>
+        get() = MediaMatch.completeOrder(prefs.getString("priority", "").orEmpty().split(',').mapNotNull { MediaService.of(it) })
+        set(v) { prefs.edit().putString("priority", MediaMatch.completeOrder(v).joinToString(",") { it.key }).apply() }
+
+    /** Whether how long a chapter takes is learned from the times that were really measured. */
+    var learnSpeed: Boolean
+        get() = prefs.getBoolean("learn_speed", true)
+        set(v) { prefs.edit().putBoolean("learn_speed", v).apply() }
+
+    /** What a chapter is taken to be when no time is known: the learned one if switched on and there are enough measured times. */
+    fun chapterMinutesFor(samples: List<Int>): Int =
+        (if (learnSpeed) MediaSpeed.learnedMinutes(samples) else null) ?: minutesPerChapter
 
     /** How far back the first check, and a backdated Simkl entry, may fill. */
     var lookbackDays: Int
@@ -123,8 +139,16 @@ class MediaSyncState(context: Context) {
         prefs.edit().putString("snap_" + service.key, json.toString()).apply()
     }
 
+    /** The name, time and size of the backup file already read for [service], so an unchanged file is not read again. */
+    fun backupSeen(service: MediaService): String = prefs.getString("seen_" + service.key, "").orEmpty()
+
+    fun setBackupSeen(service: MediaService, key: String) {
+        prefs.edit().putString("seen_" + service.key, key).apply()
+    }
+
     fun clear(service: MediaService) {
-        prefs.edit().remove("snap_" + service.key).also { if (service == MediaService.SIMKL) it.remove("simkl_stamp") }.apply()
+        prefs.edit().remove("snap_" + service.key).remove("seen_" + service.key)
+            .also { if (service == MediaService.SIMKL) it.remove("simkl_stamp") }.apply()
     }
 
     companion object {

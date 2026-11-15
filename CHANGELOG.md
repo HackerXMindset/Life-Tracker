@@ -18,6 +18,16 @@ Every release page shows the sections below that were added since the last relea
 - **The meal remembers the model.** A meal saved from a comparison shows its model in "Where the numbers came from".
 - **Nothing changes when it is off** (or when fewer than 2 models are on the list). The "your photo goes to ..." notice names every provider on the list, and each call is one request per model, so paid models cost per call.
 
+## 🎯 Shows and manga: more accurate times
+
+- **Mihon and Kotatsu backups.** Settings → Shows and manga → Backups: choose the folder each app saves its automatic backups in. Kairos only reads from it. Mihon's backup says when every chapter was read and for how long, and Kotatsu's says each reading session, so those entries use the real time and end when you really stopped. Komikku and Tachiyomi backups work like Mihon's.
+- **Episodes are as long as they are, but no longer than the time you spent.** A 24 minute episode (30 if Simkl or AniList say so) is a 24 minute entry, unless the app was only open for 12 minutes, then it is 12. An app stretch under 3 minutes is too little to go by.
+- **Priority for the same thing in two places.** The same chapter or episode noted in Mihon, Kotatsu, Simkl, AniList and MyAnimeList is added once, from the place highest in your list (default: Mihon, Kotatsu, Simkl, AniList, MyAnimeList; reorder it with Up and Down). Titles are matched by their MyAnimeList and AniList numbers, then by name, plus chapter number and time. If a better record arrives later (a backup after a tracker), it replaces the earlier entry, unless you changed or deleted that entry.
+- **Learns your reading speed.** Once 8 chapters have a measured time, the chapter time follows the middle of them instead of the fixed setting. Switch it off under "How long a chapter takes".
+- **Maybe list.** Doubtful ones are held back for you: 10 chapters or 4 episodes noted at once with no app time, or several noted with almost no app time. Add or Skip each one. Skipped ones never return.
+- **Recently added.** Shows what was added, where, and how its time was found (real, app, estimated), with Remove on each and "Undo the last check". A removed entry stays removed. Each entry's note says where the time came from.
+- **Not included yet:** Comick (its API documentation could not be read, and it needs a sign-in app of your own).
+
 ## 🔧 Shows and manga: MyAnimeList fix, full episode length
 
 - **MyAnimeList connects again.** It no longer goes through Jikan (which could not be reached). Kairos now reads MyAnimeList's own public feeds for your list, with exact times. The list must be public. The error now also says what went wrong ("UnknownHostException", "SocketTimeoutException"...).

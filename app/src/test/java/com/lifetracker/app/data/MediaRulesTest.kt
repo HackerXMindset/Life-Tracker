@@ -195,11 +195,11 @@ class MediaRulesTest {
     // ---- full length, and bulk updates ----
 
     @Test
-    fun anEpisodeTakesItsWholeLengthEvenWhenTheAppWasOpenForLess() {
+    fun anEpisodeTakesNoMoreThanTheTimeSpentInTheApp() {
         val session = MediaSession("com.lagradost.cloudstream3", t0 - 12 * min, t0 + 2 * min)
         val p = place(listOf(event("a", t0, kind = MediaKind.ANIME, minutes = 30)), listOf(session)).placed.single()
         assertTrue(p.fromSession)
-        assertEquals(t0 - 30 * min, p.startMs)
+        assertEquals(t0 - 12 * min, p.startMs)
         assertEquals(t0, p.endMs)
     }
 
@@ -208,7 +208,60 @@ class MediaRulesTest {
         val session = MediaSession("com.lagradost.cloudstream3", t0 - 12 * min, t0)
         val p = place(listOf(event("a", t0 + 10 * min, kind = MediaKind.ANIME, minutes = 30)), listOf(session)).placed.single()
         assertEquals(t0, p.endMs)
-        assertEquals(t0 - 30 * min, p.startMs)
+        assertEquals(t0 - 12 * min, p.startMs)
+    }
+
+    @Test
+    fun anEpisodeWithPlentyOfAppTimeTakesItsFullLength() {
+        val session = MediaSession("x", t0 - 90 * min, t0 + 2 * min)
+        val p = place(listOf(event("a", t0, kind = MediaKind.ANIME, minutes = 30)), listOf(session)).placed.single()
+        assertEquals(30 * min, p.endMs - p.startMs)
+    }
+
+    @Test
+    fun aTinyAppStretchIsTooLittleToShortenAnEpisode() {
+        val session = MediaSession("x", t0 - 1 * min, t0 + min)
+        val p = place(listOf(event("a", t0, kind = MediaKind.ANIME, minutes = 30)), listOf(session)).placed.single()
+        assertEquals(30 * min, p.endMs - p.startMs)
+    }
+
+    @Test
+    fun aMeasuredTimeIsUsedAsItIs() {
+        val e = MediaEvent("m1", MediaService.MIHON, MediaKind.MANGA, "T", t0, 1, "ch 1", exactMs = 7 * min)
+        val p = place(listOf(e)).placed.single()
+        assertTrue(p.exact)
+        assertEquals("real", p.how)
+        assertEquals(7 * min, p.endMs - p.startMs)
+        assertEquals(t0, p.endMs)
+    }
+
+    @Test
+    fun aBigJumpWithNothingToBackItIsHeldUntilYouSayYes() {
+        val big = event("a", t0, units = 12)
+        val held = place(listOf(big))
+        assertTrue(held.placed.isEmpty())
+        assertEquals(1, held.maybe.size)
+        val forced = MediaPlacer.place(listOf(big), { emptyList() }, emptyList(), emptyList(), 8, t0 + 60 * min, utc, force = setOf("a"))
+        assertEquals(1, forced.placed.size)
+    }
+
+    @Test
+    fun manyNotedInAlmostNoAppTimeAreHeld() {
+        val session = MediaSession("app.mihon", t0 - 2 * min, t0 + min)
+        val r = place(listOf(event("a", t0, units = 5)), listOf(session))
+        assertEquals(1, r.maybe.size)
+        assertTrue(r.placed.isEmpty())
+    }
+
+    @Test
+    fun readingSpeedIsLearnedOnlyFromEnoughMeasuredTimes() {
+        assertNull(MediaSpeed.learnedMinutes(listOf(300, 300, 300)))
+        assertEquals(5, MediaSpeed.learnedMinutes(List(8) { 300 }))
+        assertEquals(2, MediaSpeed.learnedMinutes(List(9) { 30 }))
+        val real = MediaPlacement(MediaEvent("m", MediaService.MIHON, MediaKind.MANGA, "T", t0), t0 - 6 * min, t0, false, true)
+        assertEquals(360, MediaSpeed.sample(real))
+        val guess = MediaPlacement(MediaEvent("m", MediaService.ANILIST, MediaKind.MANGA, "T", t0), t0 - 6 * min, t0, false, false)
+        assertNull(MediaSpeed.sample(guess))
     }
 
     @Test

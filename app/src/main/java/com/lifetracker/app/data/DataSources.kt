@@ -19,6 +19,8 @@ class DataSources(context: Context) {
         OpenNutriTracker("nutri_folder", writable = false),
         Export("export_folder", writable = true),
         GymMane("gymmane_folder", writable = true),
+        Mihon("mihon_folder", writable = false),
+        Kotatsu("kotatsu_folder", writable = false),
     }
 
     fun folder(slot: Slot): Uri? = prefs.getString(slot.key, null)?.let(Uri::parse)
@@ -34,6 +36,13 @@ class DataSources(context: Context) {
             // Let go of the folder that was replaced; Android allows only so many.
             runCatching { app.contentResolver.releasePersistableUriPermission(old, flags) }
         }
+    }
+
+    /** Forgets the folder and lets Android release access to it. */
+    fun clearFolder(slot: Slot) {
+        val old = folder(slot) ?: return
+        prefs.edit().remove(slot.key).apply()
+        runCatching { app.contentResolver.releasePersistableUriPermission(old, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
     }
 
     /** The folder's display name, or "Unavailable" if it was moved, deleted or access was lost. */

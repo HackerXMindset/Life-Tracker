@@ -44,6 +44,12 @@ interface EntryDao {
     @Query("SELECT * FROM entries WHERE date >= :from AND date <= :to")
     suspend fun between(from: String, to: String): List<EntryEntity>
 
+    @Query("SELECT * FROM entries WHERE id = :id")
+    suspend fun byId(id: Long): EntryEntity?
+
+    @Query("DELETE FROM entries WHERE id = :id")
+    suspend fun deleteById(id: Long)
+
     @Insert
     suspend fun insert(entry: EntryEntity): Long
 

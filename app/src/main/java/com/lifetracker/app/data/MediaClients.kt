@@ -53,7 +53,7 @@ object MediaClients {
 
     suspend fun aniListItems(userId: Int): List<ListItem> = withContext(Dispatchers.IO) {
         val query = "query(\$id:Int){Page(perPage:50){mediaList(userId:\$id,sort:UPDATED_TIME_DESC){" +
-            "id progress status updatedAt media{id type duration title{userPreferred}}}}}"
+            "id progress status updatedAt media{id idMal type duration title{userPreferred}}}}}"
         MediaParsers.aniListItems(aniList(query, JSONObject().put("id", userId)))
     }
 
