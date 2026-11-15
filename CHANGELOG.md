@@ -18,6 +18,12 @@ Every release page shows the sections below that were added since the last relea
 - **The meal remembers the model.** A meal saved from a comparison shows its model in "Where the numbers came from".
 - **Nothing changes when it is off** (or when fewer than 2 models are on the list). The "your photo goes to ..." notice names every provider on the list, and each call is one request per model, so paid models cost per call.
 
+## 🔧 Shows and manga: MyAnimeList fix, full episode length
+
+- **MyAnimeList connects again.** It no longer goes through Jikan (which could not be reached). Kairos now reads MyAnimeList's own public feeds for your list, with exact times. The list must be public. The error now also says what went wrong ("UnknownHostException", "SocketTimeoutException"...).
+- **An episode or movie takes its whole length** (a 30 minute episode is a 30 minute entry), ending when the service noted it or when the app was closed. A chapter still takes the time you spent in the app. A new "How long an episode takes" setting covers the services that do not say (MyAnimeList never does).
+- **Bulk updates are left out.** Three or more things noted within a few minutes of each other with no app time (a list import, "mark all as read") have no real time, so they are not put on the Timeline. The check page says how many were left out.
+
 ## 📚 Shows and manga on the Timeline
 
 - **Connect your lists.** Settings → Shows and manga. AniList and MyAnimeList need only your name or profile link (the list must be public; MyAnimeList is read through Jikan, a free service for public lists). Simkl needs a Client ID from a small app of your own (one minute at Simkl's developer page) and a code you type at simkl.com.

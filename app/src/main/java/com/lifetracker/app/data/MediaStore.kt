@@ -75,6 +75,11 @@ class MediaSettings(context: Context) {
         get() = prefs.getInt("chapter_minutes", DEFAULT_CHAPTER_MINUTES).coerceIn(1, 60)
         set(v) { prefs.edit().putInt("chapter_minutes", v.coerceIn(1, 60)).apply() }
 
+    /** How long an episode is taken to be when the service does not say (MyAnimeList never does). */
+    var episodeMinutes: Int
+        get() = prefs.getInt("episode_minutes", DEFAULT_EPISODE_MINUTES).coerceIn(5, 180)
+        set(v) { prefs.edit().putInt("episode_minutes", v.coerceIn(5, 180)).apply() }
+
     /** How far back the first check, and a backdated Simkl entry, may fill. */
     var lookbackDays: Int
         get() = prefs.getInt("lookback_days", DEFAULT_LOOKBACK_DAYS)
@@ -85,6 +90,8 @@ class MediaSettings(context: Context) {
         val LOOKBACK_OPTIONS = listOf(14 to "2 weeks", 30 to "1 month", 90 to "3 months", 365 to "1 year")
         const val FILE = "media_settings"
         const val DEFAULT_CHAPTER_MINUTES = 8
+        const val DEFAULT_EPISODE_MINUTES = 24
+        val EPISODE_OPTIONS = listOf(20, 24, 30, 45)
         val CHAPTER_OPTIONS = listOf(4, 8, 12, 20)
     }
 }

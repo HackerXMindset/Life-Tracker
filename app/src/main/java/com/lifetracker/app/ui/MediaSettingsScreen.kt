@@ -83,6 +83,7 @@ fun MediaSettingsScreen(onBack: () -> Unit) {
     var lastLine by remember(tick) { mutableStateOf(state.lastLine) }
     var chapterMinutes by remember { mutableIntStateOf(settings.minutesPerChapter) }
     var lookback by remember { mutableIntStateOf(settings.lookbackDays) }
+    var episodeMinutes by remember { mutableIntStateOf(settings.episodeMinutes) }
     var pickApp by remember { mutableStateOf(false) }
     var search by remember { mutableStateOf("") }
 
@@ -193,7 +194,7 @@ fun MediaSettingsScreen(onBack: () -> Unit) {
                         PaperButton("Remove", { accounts.disconnect(MediaService.MAL); tick++ }, style = PaperButtonStyle.Ghost, small = true)
                     } else {
                         Text(
-                            "Just your MyAnimeList name or profile link, and the list must be public. It is read through Jikan, a free service that shows public MyAnimeList lists, so no sign-in is needed.",
+                            "Just your MyAnimeList name or profile link, and the list must be public. Kairos reads the public feeds MyAnimeList gives for every list, so no sign-in is needed.",
                             fontSize = 12.5.sp, color = p.ink2,
                         )
                         PaperField(malText, { malText = it }, "MyAnimeList name or link", Modifier.fillMaxWidth(), singleLine = true)
@@ -325,9 +326,16 @@ fun MediaSettingsScreen(onBack: () -> Unit) {
                         }
                     }
                     Text(
-                        "Used when a chapter has no app time to take. Episodes and movies use the length the service knows.",
+                        "Used for a chapter when there is no app time to take.",
                         fontSize = 12.sp, color = p.ink2,
                     )
+                    Text("How long an episode takes", fontSize = 14.sp, color = p.ink)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        MediaSettings.EPISODE_OPTIONS.forEach { minutes ->
+                            PaperPill("$minutes min", episodeMinutes == minutes, { episodeMinutes = minutes; settings.episodeMinutes = minutes })
+                        }
+                    }
+                    Text("Only for episodes whose length the service does not say (MyAnimeList never does). Simkl and AniList lengths are used as they are.", fontSize = 12.sp, color = p.ink2)
                     Text("How far back to fill", fontSize = 14.sp, color = p.ink)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         MediaSettings.LOOKBACK_OPTIONS.forEach { (days, label) ->

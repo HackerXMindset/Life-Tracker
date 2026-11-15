@@ -3,7 +3,6 @@ package com.lifetracker.app.data
 import java.net.URLEncoder
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import okhttp3.FormBody
 import okhttp3.MediaType.Companion.toMediaType
@@ -12,7 +11,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 
-/** The calls to AniList, Jikan (which reads public MyAnimeList lists) and Simkl. Each throws a [MediaException] that says what to do. */
+/** The calls to AniList, MyAnimeList (its public feeds) and Simkl. Each throws a [MediaException] that says what to do. */
 object MediaClients {
     private const val APP_NAME = "kairos"
     private const val APP_VERSION = "1.0"
@@ -30,7 +29,7 @@ object MediaClients {
     private fun send(request: Request, who: String): Pair<Int, String> = try {
         client.newCall(request).execute().use { it.code to it.body?.string().orEmpty() }
     } catch (e: java.io.IOException) {
-        throw MediaException("Could not reach $who. Check the internet and try again.", offline = true)
+        throw MediaException("Could not reach $who (${e.javaClass.simpleName}). Check the internet and try again.", offline = true)
     }
 
     // ---- AniList: no sign-in, just the user name (the list must be public) ----
@@ -58,34 +57,29 @@ object MediaClients {
         MediaParsers.aniListItems(aniList(query, JSONObject().put("id", userId)))
     }
 
-    // ---- MyAnimeList: Jikan reads the public list history, so no key is needed ----
+    // ---- MyAnimeList: its own public feeds, so no sign-in and no key (the list must be public) ----
 
-    private const val JIKAN = "https://api.jikan.moe/v4"
+    private const val MAL_FEED = "https://myanimelist.net/rss.php"
 
-    private suspend fun jikan(path: String): String = withContext(Dispatchers.IO) {
-        val request = Request.Builder().url("$JIKAN$path").get().addHeader("User-Agent", USER_AGENT).build()
-        for (attempt in 0..2) {
-            val (code, text) = send(request, "Jikan (the service that reads MyAnimeList lists)")
-            when {
-                code in 200..299 -> return@withContext text
-                code == 404 -> throw MediaException("MyAnimeList has no user with that name, or the list is private. Check the spelling and that the list is public.")
-                code == 429 && attempt < 2 -> delay(1500L * (attempt + 1))
-                code == 429 -> break
-                else -> throw MediaException("Jikan (the service that reads MyAnimeList lists) had a problem (error $code). Try again later.")
-            }
+    private suspend fun malFeedBody(type: String, name: String): String = withContext(Dispatchers.IO) {
+        val request = Request.Builder().url("$MAL_FEED?type=$type&u=" + URLEncoder.encode(name, "UTF-8")).get()
+            .addHeader("User-Agent", USER_AGENT).addHeader("Accept", "application/rss+xml, application/xml, text/xml, */*").build()
+        val (code, text) = send(request, "MyAnimeList")
+        when {
+            code in 200..299 -> text
+            code == 404 -> throw MediaException("MyAnimeList has no user with that name. Check the spelling.")
+            code == 403 || code == 429 -> throw MediaException("MyAnimeList turned the request away (error $code). Try again in a few minutes.")
+            else -> throw MediaException("MyAnimeList had a problem (error $code). Try again in a minute.")
         }
-        throw MediaException("Jikan says too many requests. Try again in a minute.")
     }
 
-    suspend fun malUserExists(name: String): Boolean = MediaParsers.jikanUserExists(jikan("/users/" + URLEncoder.encode(name, "UTF-8")))
+    suspend fun malUserExists(name: String): Boolean = MediaParsers.malFeedHasUser(malFeedBody("rw", name))
 
-    suspend fun malHistory(name: String, sinceMs: Long): List<MediaEvent> {
-        val encoded = URLEncoder.encode(name, "UTF-8")
-        val manga = MediaParsers.jikanHistory(jikan("/users/$encoded/history?type=manga"), sinceMs)
-        delay(500)
-        val anime = MediaParsers.jikanHistory(jikan("/users/$encoded/history?type=anime"), sinceMs)
-        return manga + anime
-    }
+    suspend fun malAnimeEvents(name: String, sinceMs: Long): List<MediaEvent> =
+        MediaParsers.malAnimeEvents(MediaParsers.malFeed(malFeedBody("rwe", name)).items, sinceMs)
+
+    suspend fun malMangaItems(name: String): List<ListItem> =
+        MediaParsers.malMangaItems(MediaParsers.malFeed(malFeedBody("rm", name)).items)
 
     // ---- Simkl: your own client id, then a code typed at simkl.com ----
 

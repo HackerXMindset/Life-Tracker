@@ -191,4 +191,59 @@ class MediaRulesTest {
         assertEquals(Instant.parse("2026-11-15T00:00:00Z").toEpochMilli(), p.startMs)
         assertEquals(at, p.endMs)
     }
+
+    // ---- full length, and bulk updates ----
+
+    @Test
+    fun anEpisodeTakesItsWholeLengthEvenWhenTheAppWasOpenForLess() {
+        val session = MediaSession("com.lagradost.cloudstream3", t0 - 12 * min, t0 + 2 * min)
+        val p = place(listOf(event("a", t0, kind = MediaKind.ANIME, minutes = 30)), listOf(session)).placed.single()
+        assertTrue(p.fromSession)
+        assertEquals(t0 - 30 * min, p.startMs)
+        assertEquals(t0, p.endMs)
+    }
+
+    @Test
+    fun anEpisodeNotedAfterTheAppClosedEndsWhenTheAppClosed() {
+        val session = MediaSession("com.lagradost.cloudstream3", t0 - 12 * min, t0)
+        val p = place(listOf(event("a", t0 + 10 * min, kind = MediaKind.ANIME, minutes = 30)), listOf(session)).placed.single()
+        assertEquals(t0, p.endMs)
+        assertEquals(t0 - 30 * min, p.startMs)
+    }
+
+    @Test
+    fun anEpisodeWithNoLengthUsesYourEpisodeLength() {
+        val p = MediaPlacer.place(
+            listOf(event("a", t0, kind = MediaKind.ANIME)), { emptyList() }, emptyList(), emptyList(), 8, t0 + 60 * min, utc, minutesPerEpisode = 30,
+        ).placed.single()
+        assertEquals(30 * min, p.endMs - p.startMs)
+    }
+
+    @Test
+    fun manyThingsMarkedAtOnceAreLeftOutBecauseTheirTimeIsNotReal() {
+        val burst = listOf(
+            event("a", t0, service = MediaService.MAL), event("b", t0 + min, service = MediaService.MAL), event("c", t0 + 2 * min, service = MediaService.MAL),
+        )
+        val r = MediaPlacer.place(burst, { emptyList() }, emptyList(), emptyList(), 8, t0 + 60 * min, utc)
+        assertTrue(r.placed.isEmpty())
+        assertEquals(3, r.bulk.size)
+    }
+
+    @Test
+    fun twoCloseTogetherOrThreeFarApartAreNotBulk() {
+        val two = place(listOf(event("a", t0), event("b", t0 + min)))
+        assertEquals(2, two.placed.size)
+        assertTrue(two.bulk.isEmpty())
+        val spread = place(listOf(event("a", t0), event("b", t0 + 10 * min), event("c", t0 + 20 * min)))
+        assertEquals(3, spread.placed.size)
+    }
+
+    @Test
+    fun aRunWithAppTimeIsNotBulk() {
+        val session = MediaSession("app.mihon", t0 - 60 * min, t0 + 10 * min)
+        val run = listOf(event("a", t0 - 2 * min), event("b", t0 - min), event("c", t0))
+        val r = place(run, listOf(session), now = t0 + 5 * min)
+        assertTrue(r.bulk.isEmpty())
+        assertEquals(3, r.placed.size)
+    }
 }
