@@ -30,7 +30,10 @@ object MediaMatch {
     fun sameTitle(a: MediaEvent, b: MediaEvent): Boolean {
         if (a.ids.isNotEmpty() && b.ids.isNotEmpty() && a.ids.any { it in b.ids }) return true
         val x = normalize(a.title)
-        return x.isNotEmpty() && x == normalize(b.title)
+        val y = normalize(b.title)
+        if (x.isEmpty()) return false
+        // Comick lists every name a title is known by, as "title:" ids.
+        return x == y || "title:$x" in b.ids || "title:$y" in a.ids
     }
 
     /** Do the chapter or episode numbers touch? Unknown numbers are taken to touch. */

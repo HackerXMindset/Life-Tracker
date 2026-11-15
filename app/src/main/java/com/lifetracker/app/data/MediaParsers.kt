@@ -75,6 +75,58 @@ object MediaParsers {
         return out
     }
 
+    // ---- Comick ----
+
+    class ComickTokens(val access: String, val expiresInSeconds: Long, val refresh: String?, val scope: String)
+
+    fun comickTokens(text: String): ComickTokens {
+        val json = runCatching { JSONObject(text) }.getOrNull() ?: throw MediaException("Comick sent something that could not be read. Try again.")
+        val error = json.optString("error")
+        if (error.isNotEmpty()) {
+            throw MediaException(if (error == "invalid_grant") ComickAuth.RECONNECT else "Comick said no ($error). Check your Client ID and callback, then connect again.")
+        }
+        val access = json.optString("access_token")
+        if (access.isEmpty()) throw MediaException("Comick did not send a sign-in. Connect again.")
+        return ComickTokens(access, json.optLong("expires_in", 900L), json.optString("refresh_token").takeIf { it.isNotEmpty() }, json.optString("scope"))
+    }
+
+    fun comickName(text: String): String? =
+        runCatching { JSONObject(text).optString("username") }.getOrNull()?.takeIf { it.isNotBlank() && it != "null" }
+
+    class ComickPage(val items: List<ListItem>, val next: String?)
+
+    /**
+     * One page of the library. Progress is the last chapter or episode (kept as a whole number, so "12.5" counts as 12), and its
+     * time is when it was saved. Every name the title has is added as a "title:" id so the same title elsewhere is recognised.
+     */
+    fun comickPage(text: String): ComickPage {
+        val json = runCatching { JSONObject(text) }.getOrNull() ?: throw MediaException("Comick sent something that could not be read. Try again.")
+        val data = json.optJSONArray("data") ?: throw MediaException("Comick's list had an unexpected shape. Try again later.")
+        val out = ArrayList<ListItem>()
+        for (i in 0 until data.length()) {
+            val item = data.optJSONObject(i) ?: continue
+            val hid = item.optString("hid")
+            val title = item.optString("title")
+            if (hid.isEmpty() || title.isEmpty()) continue
+            val kind = if (item.optString("media_type") == "anime") MediaKind.ANIME else MediaKind.MANGA
+            val number = item.optJSONObject("progress")?.optString("number")?.toDoubleOrNull() ?: continue
+            if (number < 0) continue
+            val at = parseInstant(item.optString("progressed_at")) ?: parseInstant(item.optString("updated_at")) ?: 0L
+            val ids = HashSet<String>()
+            ids += "comick:$hid"
+            item.optJSONArray("titles")?.let { names ->
+                for (k in 0 until minOf(names.length(), 10)) {
+                    val name = MediaMatch.normalize(names.optJSONObject(k)?.optString("title").orEmpty())
+                    if (name.isNotEmpty()) ids += "title:$name"
+                }
+            }
+            val type = if (kind == MediaKind.MANGA) "manga" else "anime"
+            out += ListItem("$type:$hid", title, kind, number.toInt(), at, null, ids)
+        }
+        val next = if (json.isNull("next_cursor")) null else json.optString("next_cursor").takeIf { it.isNotEmpty() }
+        return ComickPage(out, next)
+    }
+
     // ---- MyAnimeList, through its own public feeds ----
 
     /** One line of a MyAnimeList feed: the title, its page, "Reading - 17 of 72 chapters" and when it was noted. */

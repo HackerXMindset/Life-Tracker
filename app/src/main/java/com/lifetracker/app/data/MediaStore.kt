@@ -30,10 +30,68 @@ class MediaAccounts(context: Context) {
         get() = prefs.getString("simkl_token", "").orEmpty()
         set(v) { prefs.edit().putString("simkl_token", v).apply() }
 
+    var comickClientId: String
+        get() = prefs.getString("comick_client", "").orEmpty()
+        set(v) { prefs.edit().putString("comick_client", v).apply() }
+
+    var comickAccess: String
+        get() = prefs.getString("comick_access", "").orEmpty()
+        set(v) { prefs.edit().putString("comick_access", v).apply() }
+
+    var comickRefresh: String
+        get() = prefs.getString("comick_refresh", "").orEmpty()
+        set(v) { prefs.edit().putString("comick_refresh", v).apply() }
+
+    var comickExpiryMs: Long
+        get() = prefs.getLong("comick_expiry", 0L)
+        set(v) { prefs.edit().putLong("comick_expiry", v).apply() }
+
+    var comickName: String
+        get() = prefs.getString("comick_name", "").orEmpty()
+        set(v) { prefs.edit().putString("comick_name", v).apply() }
+
+    /** What the last sign-in said, for the settings page to show. */
+    var comickMessage: String
+        get() = prefs.getString("comick_message", "").orEmpty()
+        set(v) { prefs.edit().putString("comick_message", v).apply() }
+
+    /** The sign-in that was started and is waiting for the browser to come back. */
+    var comickAttempt: ComickAuth.Attempt?
+        get() {
+            val state = prefs.getString("comick_state", "").orEmpty()
+            val verifier = prefs.getString("comick_verifier", "").orEmpty()
+            return if (state.isEmpty() || verifier.isEmpty()) null else ComickAuth.Attempt(state, verifier, prefs.getLong("comick_started", 0L))
+        }
+        set(v) {
+            val e = prefs.edit()
+            if (v == null) e.remove("comick_state").remove("comick_verifier").remove("comick_started")
+            else e.putString("comick_state", v.state).putString("comick_verifier", v.verifier).putLong("comick_started", v.createdMs)
+            e.commit()
+        }
+
+    /** Saves a new access token and, when one came, the new refresh token (the old one stops working once used). */
+    fun saveComickTokens(tokens: MediaParsers.ComickTokens, nowMs: Long) {
+        val e = prefs.edit().putString("comick_access", tokens.access).putLong("comick_expiry", nowMs + tokens.expiresInSeconds * 1000L)
+        if (tokens.refresh != null) e.putString("comick_refresh", tokens.refresh)
+        e.commit()
+    }
+
+    fun clearComickTokens() {
+        prefs.edit().remove("comick_access").remove("comick_refresh").remove("comick_expiry").remove("comick_name").commit()
+    }
+
+    /** Calls [onChange] whenever an account setting changes (a sign-in finishing in the background). Returns the way to stop. */
+    fun listen(onChange: () -> Unit): () -> Unit {
+        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> onChange() }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        return { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
+
     fun connected(service: MediaService): Boolean = when (service) {
         MediaService.ANILIST -> aniListUser.isNotBlank() && aniListId > 0
         MediaService.MAL -> malUser.isNotBlank()
         MediaService.SIMKL -> simklClientId.isNotBlank() && simklToken.isNotBlank()
+        MediaService.COMICK -> comickClientId.isNotBlank() && (comickAccess.isNotBlank() || comickRefresh.isNotBlank())
         MediaService.MIHON, MediaService.KOTATSU -> false
     }
 
@@ -45,6 +103,7 @@ class MediaAccounts(context: Context) {
             MediaService.ANILIST -> e.remove("anilist_user").remove("anilist_id")
             MediaService.MAL -> e.remove("mal_user")
             MediaService.SIMKL -> e.remove("simkl_token")
+            MediaService.COMICK -> e.remove("comick_access").remove("comick_refresh").remove("comick_expiry").remove("comick_name")
             MediaService.MIHON, MediaService.KOTATSU -> {}
         }
         e.apply()

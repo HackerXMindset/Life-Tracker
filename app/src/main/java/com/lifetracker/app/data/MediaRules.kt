@@ -14,6 +14,7 @@ enum class MediaService(val key: String, val label: String, val backup: Boolean 
     ANILIST("anilist", "AniList"),
     MAL("mal", "MyAnimeList"),
     SIMKL("simkl", "Simkl"),
+    COMICK("comick", "Comick"),
     MIHON("mihon", "Mihon backup", true),
     KOTATSU("kotatsu", "Kotatsu backup", true);
 
@@ -24,7 +25,7 @@ enum class MediaService(val key: String, val label: String, val backup: Boolean 
         val accounts: List<MediaService> get() = entries.filter { !it.backup }
 
         /** Who wins when the same chapter or episode is noted in more than one place: real reading time first, then Simkl. */
-        val DEFAULT_PRIORITY: List<MediaService> get() = listOf(MIHON, KOTATSU, SIMKL, ANILIST, MAL)
+        val DEFAULT_PRIORITY: List<MediaService> get() = listOf(MIHON, KOTATSU, SIMKL, ANILIST, MAL, COMICK)
     }
 }
 

@@ -132,6 +132,18 @@ object MediaSync {
             }
         }
 
+        if (accounts.connected(MediaService.COMICK)) {
+            tried++
+            try {
+                val items = MediaClients.comickLibrary(ComickAuth.accessToken(context, now))
+                val result = MediaDiff.events(MediaService.COMICK, items, state.snapshot(MediaService.COMICK), since)
+                events += result.events
+                afterWrite += { state.saveSnapshot(MediaService.COMICK, result.snapshot) }
+            } catch (e: MediaException) {
+                problems += "Comick: ${e.message}"
+            }
+        }
+
         // The backups are read when a newer file is there. Their own times only ever grow, so what is new is found by comparing.
         val mihonFolder = sources.folder(DataSources.Slot.Mihon)
         if (mihonFolder != null) {

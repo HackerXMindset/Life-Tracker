@@ -81,6 +81,64 @@ object MediaClients {
     suspend fun malMangaItems(name: String): List<ListItem> =
         MediaParsers.malMangaItems(MediaParsers.malFeed(malFeedBody("rm", name)).items)
 
+    // ---- Comick: your own app's client id, then a sign-in in the browser ----
+
+    private const val COMICK_TOKEN = "https://comick.dev/api/auth/oauth2/token"
+
+    private fun comickForm(vararg fields: Pair<String, String>): MediaParsers.ComickTokens {
+        val body = FormBody.Builder().also { b -> fields.forEach { b.add(it.first, it.second) } }.build()
+        val request = Request.Builder().url(COMICK_TOKEN).post(body).addHeader("Accept", "application/json").addHeader("User-Agent", USER_AGENT).build()
+        val (code, text) = send(request, "Comick")
+        if (code == 429) throw MediaException("Comick says too many requests. Try again in a minute.")
+        if (code >= 500) throw MediaException("Comick had a problem (error $code). Try again in a minute.")
+        if (code in 400..499 && text.isBlank()) throw MediaException(ComickAuth.RECONNECT)
+        return MediaParsers.comickTokens(text)
+    }
+
+    suspend fun comickExchange(clientId: String, code: String, verifier: String): MediaParsers.ComickTokens = withContext(Dispatchers.IO) {
+        comickForm(
+            "grant_type" to "authorization_code", "client_id" to clientId, "code" to code,
+            "redirect_uri" to ComickAuth.REDIRECT, "code_verifier" to verifier, "resource" to ComickAuth.RESOURCE,
+        )
+    }
+
+    suspend fun comickRefresh(clientId: String, refreshToken: String): MediaParsers.ComickTokens = withContext(Dispatchers.IO) {
+        comickForm("grant_type" to "refresh_token", "client_id" to clientId, "refresh_token" to refreshToken, "resource" to ComickAuth.RESOURCE)
+    }
+
+    private fun comickGet(url: String, token: String): String {
+        val request = Request.Builder().url(url).get()
+            .addHeader("Authorization", "Bearer $token").addHeader("Accept", "application/json").addHeader("User-Agent", USER_AGENT).build()
+        val (code, text) = send(request, "Comick")
+        return when {
+            code in 200..299 -> text
+            code == 401 -> throw MediaException(ComickAuth.RECONNECT)
+            code == 403 -> throw MediaException("Comick refused the request. Check the app's settings at Comick (library read) and connect again.")
+            code == 404 -> throw MediaException("Comick's library address is not available on that site right now.")
+            code == 429 -> throw MediaException("Comick says too many requests. Try again in a minute.")
+            else -> throw MediaException("Comick had a problem (error $code). Try again in a minute.")
+        }
+    }
+
+    suspend fun comickMe(token: String): String? = withContext(Dispatchers.IO) {
+        MediaParsers.comickName(comickGet("${ComickAuth.RESOURCE}/me", token))
+    }
+
+    /** Everything in your Comick library (manga and anime), a hundred at a time. */
+    suspend fun comickLibrary(token: String): List<ListItem> = withContext(Dispatchers.IO) {
+        val out = ArrayList<ListItem>()
+        var cursor: String? = null
+        var pages = 0
+        do {
+            val url = "${ComickAuth.RESOURCE}/me/library?limit=100" + (cursor?.let { "&cursor=" + URLEncoder.encode(it, "UTF-8") } ?: "")
+            val page = MediaParsers.comickPage(comickGet(url, token))
+            out += page.items
+            cursor = page.next
+            pages++
+        } while (cursor != null && pages < 30)
+        out
+    }
+
     // ---- Simkl: your own client id, then a code typed at simkl.com ----
 
     private const val SIMKL = "https://api.simkl.com"
