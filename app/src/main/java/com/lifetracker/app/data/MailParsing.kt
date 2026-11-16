@@ -276,7 +276,7 @@ object MailPurchases {
         }
         val purchase = Purchase(merchant, best.amount, kind, if (kind == KIND_INCOME) "i-other" else category, id, doc.dateMs, doc.subject)
         if (best.currency != "INR") return MailVerdict.Unsure("amount is in ${best.currency}", purchase)
-        if (best.priority >= 100 || (strong && best.priority >= 80)) return MailVerdict.Found(purchase)
+        if (best.priority >= 100 || ((strong || known != null) && best.priority >= 80)) return MailVerdict.Found(purchase)
         return MailVerdict.Unsure("not sure which amount is the total", purchase)
     }
 
