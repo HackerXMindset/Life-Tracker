@@ -149,6 +149,12 @@ fun SettingsScreen(onOpen: (Page) -> Unit) {
                 com.lifetracker.app.data.MediaSyncState(context).lastLine.ifBlank { "AniList, MyAnimeList and Simkl on the Timeline" },
             ) { showMedia = true }
         }
+        item {
+            SettingsRow(
+                R.drawable.ic_p_star, "Gmail purchases",
+                com.lifetracker.app.data.GmailRunState(context).lastLine.ifBlank { "Fill the Money tab from your email" },
+            ) { showGmail = true }
+        }
 
         if (habitsFeature || foodFeature) item { PaperSection("Trackers") }
         if (habitsFeature) item {
