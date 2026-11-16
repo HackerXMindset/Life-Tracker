@@ -144,6 +144,9 @@ interface MoneyDao {
     @androidx.room.Delete
     suspend fun deleteEntry(entry: MoneyEntryEntity)
 
+    @Query("DELETE FROM money_entries WHERE id = :id")
+    suspend fun deleteEntryById(id: String)
+
     @Query("DELETE FROM money_items WHERE id = :id")
     suspend fun deleteItem(id: String)
 
