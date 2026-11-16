@@ -24,7 +24,7 @@ object SettingsBackup {
             !name.startsWith("MapLibre", ignoreCase = true) && !name.startsWith("androidx", ignoreCase = true)
 
     /** Shows and manga: the sign-ins, and what was seen at the last check (the entries themselves are marked in the database). */
-    private val MEDIA_PRIVATE: Set<String> = setOf("media_accounts", "media_sync", "media_log", "gmail_accounts", "gmail_log")
+    private val MEDIA_PRIVATE: Set<String> = setOf("media_accounts", "media_sync", "media_log", "gmail_accounts", "gmail_log", "sms_state", "sms_log")
 
     /** The settings files on this phone that a backup holds, by file name. */
     fun fileNames(context: Context): List<String> {

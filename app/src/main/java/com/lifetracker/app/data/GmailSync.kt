@@ -170,13 +170,17 @@ object GmailSync {
         return ScanResult(read, listed, newest, oldest, finished)
     }
 
-    private fun categoryFor(wanted: String, kind: Int, existing: Set<String>): String {
+    internal fun categoryFor(wanted: String, kind: Int, existing: Set<String>): String {
         if (wanted in existing) return wanted
         val fallback = if (kind == KIND_INCOME) "i-other" else "x-other"
         return if (fallback in existing) fallback else existing.firstOrNull().orEmpty()
     }
 
-    private suspend fun write(context: Context, email: String, docs: List<MailDoc>, now: Long, log: GmailLog, db: AppDatabase, counts: Counts) {
+    private suspend fun write(context: Context, email: String, docs: List<MailDoc>, now: Long, log: GmailLog, db: AppDatabase, counts: Counts) =
+        MoneyMerge.lock.withLock { writeLocked(context, email, docs, now, log, db, counts) }
+
+    private suspend fun writeLocked(context: Context, email: String, docs: List<MailDoc>, now: Long, log: GmailLog, db: AppDatabase, counts: Counts) {
+        val replaced = HashSet<String>()
         val zone = ZoneId.systemDefault()
         val categories = db.moneyDao().allCategories().map { it.id }.toSet()
         val recent = log.recent().toMutableList()
@@ -205,6 +209,9 @@ object GmailSync {
                     } else {
                         val id = "gmail-" + hash(key)
                         val date = LocalDate.ofInstant(Instant.ofEpochMilli(p.atMs), zone).toString()
+                        // The same spending may already be there from a bank SMS; the receipt says more (the shop), so it takes its place.
+                        db.moneyDao().entriesOn(date, "sms-%").filter { MoneyMerge.sameSpend(p.merchant, p.amount, p.kind, it.name, it.amount, it.kind) }
+                            .forEach { replaced += it.id }
                         entries += MoneyEntryEntity(
                             id = id, date = date, kind = p.kind, categoryId = categoryFor(p.categoryId, p.kind, categories), name = p.merchant,
                             amount = p.amount, note = "Gmail · " + p.subject.take(80), itemId = "",
@@ -218,9 +225,11 @@ object GmailSync {
             }
         }
         db.withTransaction {
+            replaced.forEach { db.moneyDao().deleteEntryById(it) }
             if (entries.isNotEmpty()) db.moneyDao().upsertEntries(entries)
             if (marks.isNotEmpty()) db.importDao().insertAll(marks)
         }
+        if (replaced.isNotEmpty()) GmailLog(context, SmsSync.LOG_FILE).removeRecent(replaced)
         if (items.isNotEmpty()) log.addRecent(items, now)
         if (unsure.isNotEmpty()) log.setUnsure(log.unsure() + unsure)
         counts.added += entries.size

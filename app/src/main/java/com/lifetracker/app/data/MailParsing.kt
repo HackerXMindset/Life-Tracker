@@ -139,6 +139,15 @@ object Merchants {
         return address.substringAfter('@', "").trim().lowercase()
     }
 
+    /** A shop named in plain text (an SMS says "at ZOMATO" or "to swiggy@icici"): any word of it that starts with a known name. */
+    fun byText(text: String): Known? {
+        for (token in text.lowercase().split(Regex("[^a-z0-9]+"))) {
+            if (token.length < 3) continue
+            KNOWN.entries.firstOrNull { token == it.key || (it.key.length >= 4 && token.startsWith(it.key)) }?.let { return it.value }
+        }
+        return null
+    }
+
     fun known(from: String): Known? {
         val labels = domainOf(from).split('.')
         return labels.firstNotNullOfOrNull { KNOWN[it] }
