@@ -87,6 +87,8 @@ dependencies {
 
     // Android's geofences (arrive at and leave a named place), still/moving detection and one-off position reads.
     implementation("com.google.android.gms:play-services-location:21.3.0")
+    // Gmail sign-in with the phone's own Google account (reads purchases from your mail).
+    implementation("com.google.android.gms:play-services-auth:21.3.0")
     // Barcode scanner screen from Google Play services: no camera permission and no scanner screen of our own to maintain.
     implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
 

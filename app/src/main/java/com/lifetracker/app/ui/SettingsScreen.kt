@@ -56,6 +56,7 @@ fun SettingsScreen(onOpen: (Page) -> Unit) {
     val mediaFeature = featureOn(Feature.MEDIA)
     // Shows and manga is a page inside this tab; the list state is kept here so the scroll place survives going there and back.
     var showMedia by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var showGmail by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     val featureSummary = FeatureRules.summary { Features.isOn(context, it) }
     val places = PlacesSettings(context)
@@ -66,6 +67,10 @@ fun SettingsScreen(onOpen: (Page) -> Unit) {
     val permStates = quickPermissionStates(context)
     val permSummary = com.lifetracker.app.data.PermissionGuide.summary(permStates.count { it.value }, permStates.size)
 
+    if (showGmail) {
+        GmailSettingsScreen(onBack = { showGmail = false })
+        return
+    }
     if (showMedia) {
         MediaSettingsScreen(onBack = { showMedia = false })
         return

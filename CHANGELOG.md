@@ -2,6 +2,17 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📧 Gmail purchases
+
+- **Money from your email.** Settings → Gmail purchases reads the receipt, order and payment emails in the Gmail accounts you connect and adds each purchase, payment or refund to the Money tab: the shop's name, the total, the day and a category (food, shopping, travel, bills). Zomato, Swiggy, Blinkit, Amazon, Flipkart, Uber and many more are known by name; any other shop is named from its sender.
+- **Read-only and on the phone.** It can only read mail (it cannot send, change or delete anything) and nothing leaves the phone. No key is typed in: Google recognises the app by its package name and signing key from the Android client in your own Google Cloud project, with the Gmail API switched on.
+- **Several Gmail accounts**, added one at a time, each with its own place in its history. Reconnect or remove any of them.
+- **How far back**: 3 months, a year, 3 years, 5 years or everything. New mail is checked every 15 minutes or so and when the app opens; older mail is read a few hundred emails at a time, newest first, until the start you chose, and carries on where it stopped. "Read now" does it all in one go.
+- **Careful with the total.** It takes the grand total or amount paid, never the subtotal, the delivery fee, tax or a discount. Offers, cancelled and failed orders are skipped. A refund is added as money in. The same order in several emails (confirmed, then delivered) is added once, and an entry you delete does not come back.
+- **To check** holds mail that looked like money but whose amount was not certain (another currency, no clear total). Add it, skip it, or never read that sender again. **Recently added** lets you remove an entry or switch a sender off for good.
+- Gmail's own lists and what was read are left out of backups.
+- Google Takeout files and SMS come next.
+
 ## 🔒 Lock screens
 
 - **Lock each screen on its own.** Settings → Lock lists Timeline, Food, Habits, Money, Stats and Settings. Each can be Off, Phone lock or Face scan, so someone you hand the Food screen to cannot open the Timeline. Pages opened from a screen lock with that screen.
