@@ -2,6 +2,15 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 💬 SMS purchases
+
+- **Money from bank and UPI texts.** Settings → SMS purchases reads the texts your bank, card and UPI apps send ("Rs.471 debited ... to ZOMATO") and adds each payment to the Money tab: the shop, the amount, the day and a category. Zomato, Swiggy, Blinkit, Amazon and the other known shops are named; for others the name in the text is used, or "UPI payment", "Card payment" or "ATM cash" when it has none.
+- **You allow it once.** It asks for Android's SMS permission inside the app (if Android calls it restricted, the page says where to switch that on). It only reads; texts are never sent, changed or deleted, and nothing leaves the phone. Only the amount, the shop and a short note with long numbers hidden are kept.
+- **How far back**: 3 months to everything. New texts are read every 15 minutes or so and when the app opens; "Read now" does the older ones too.
+- **Careful what counts.** One-time codes, offers, failed payments, upcoming bills and mandates, balance messages and card bill payments are left out; amounts that are a balance or limit are never taken. Refunds count as money in. Other money received (salary, people paying you) is added only if you choose "Everything credited".
+- **Same payment, one entry.** A bank sending the same alert twice is added once. If a Gmail receipt exists for the same payment, only one entry stays, with the shop's name from the receipt, whichever was read first. An entry you remove does not come back.
+- SMS state is left out of backups.
+
 ## 📧 Gmail purchases
 
 - **Where to find it:** Settings → Gmail purchases (always shown, whether or not the Money feature is on).

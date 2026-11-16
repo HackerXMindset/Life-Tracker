@@ -57,6 +57,7 @@ fun SettingsScreen(onOpen: (Page) -> Unit) {
     // Shows and manga is a page inside this tab; the list state is kept here so the scroll place survives going there and back.
     var showMedia by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     var showGmail by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var showSms by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     val featureSummary = FeatureRules.summary { Features.isOn(context, it) }
     val places = PlacesSettings(context)
@@ -67,6 +68,10 @@ fun SettingsScreen(onOpen: (Page) -> Unit) {
     val permStates = quickPermissionStates(context)
     val permSummary = com.lifetracker.app.data.PermissionGuide.summary(permStates.count { it.value }, permStates.size)
 
+    if (showSms) {
+        SmsSettingsScreen(onBack = { showSms = false })
+        return
+    }
     if (showGmail) {
         GmailSettingsScreen(onBack = { showGmail = false })
         return
@@ -154,6 +159,12 @@ fun SettingsScreen(onOpen: (Page) -> Unit) {
                 R.drawable.ic_p_star, "Gmail purchases",
                 com.lifetracker.app.data.GmailRunState(context).lastLine.ifBlank { "Fill the Money tab from your email" },
             ) { showGmail = true }
+        }
+        item {
+            SettingsRow(
+                R.drawable.ic_p_call, "SMS purchases",
+                com.lifetracker.app.data.SmsSettings(context).lastLine.ifBlank { "Fill the Money tab from bank and UPI texts" },
+            ) { showSms = true }
         }
 
         if (habitsFeature || foodFeature) item { PaperSection("Trackers") }

@@ -109,8 +109,8 @@ class GmailUnsure(
 )
 
 /** What the Gmail reading remembers about its work. Left out of backups. */
-class GmailLog(context: Context) {
-    private val prefs = context.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+class GmailLog(context: Context, file: String = FILE) {
+    private val prefs = context.applicationContext.getSharedPreferences(file, Context.MODE_PRIVATE)
 
     fun recent(): List<GmailRecent> {
         val array = runCatching { JSONArray(prefs.getString("recent", "[]").orEmpty()) }.getOrNull() ?: return emptyList()

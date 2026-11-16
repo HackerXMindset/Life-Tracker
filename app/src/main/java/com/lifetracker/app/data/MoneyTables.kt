@@ -144,6 +144,10 @@ interface MoneyDao {
     @androidx.room.Delete
     suspend fun deleteEntry(entry: MoneyEntryEntity)
 
+    /** The entries of one day whose id starts with [prefix] ("gmail-%", "sms-%"), to tell whether the same spending was already added from another place. */
+    @Query("SELECT * FROM money_entries WHERE date = :date AND id LIKE :prefix")
+    suspend fun entriesOn(date: String, prefix: String): List<MoneyEntryEntity>
+
     @Query("DELETE FROM money_entries WHERE id = :id")
     suspend fun deleteEntryById(id: String)
 
