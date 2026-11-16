@@ -4,6 +4,7 @@ Every release page shows the sections below that were added since the last relea
 
 ## 📧 Gmail purchases
 
+- **Where to find it:** Settings → Gmail purchases (always shown, whether or not the Money feature is on).
 - **Money from your email.** Settings → Gmail purchases reads the receipt, order and payment emails in the Gmail accounts you connect and adds each purchase, payment or refund to the Money tab: the shop's name, the total, the day and a category (food, shopping, travel, bills). Zomato, Swiggy, Blinkit, Amazon, Flipkart, Uber and many more are known by name; any other shop is named from its sender.
 - **Read-only and on the phone.** It can only read mail (it cannot send, change or delete anything) and nothing leaves the phone. No key is typed in: Google recognises the app by its package name and signing key from the Android client in your own Google Cloud project, with the Gmail API switched on.
 - **Several Gmail accounts**, added one at a time, each with its own place in its history. Reconnect or remove any of them.
