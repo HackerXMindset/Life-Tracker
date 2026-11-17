@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
@@ -42,6 +43,8 @@ import com.lifetracker.app.data.MoneyCategoryEntity
 import com.lifetracker.app.data.MoneyEntryEntity
 import com.lifetracker.app.data.MoneyItemEntity
 import com.lifetracker.app.data.MoneyStats
+import com.lifetracker.app.data.MoneyViews
+import com.lifetracker.app.data.Period
 import com.lifetracker.app.ui.theme.LocalPaper
 import com.lifetracker.app.ui.theme.PaperButton
 import com.lifetracker.app.ui.theme.PaperButtonStyle
@@ -52,6 +55,7 @@ import com.lifetracker.app.ui.theme.PaperPill
 import com.lifetracker.app.ui.theme.PaperSegmented
 import com.lifetracker.app.ui.theme.Wobble
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 
 private const val GREY = 0xFF738078L
@@ -65,7 +69,9 @@ private data class Form(val kind: Int, val type: Int)
 @Composable
 fun MoneyScreen(vm: MoneyViewModel = viewModel()) {
     val paper = LocalPaper.current
-    val month by vm.month.collectAsState()
+    val period by vm.period.collectAsState()
+    val anchor by vm.anchor.collectAsState()
+    val previous by vm.previousEntries.collectAsState()
     val entries by vm.entries.collectAsState()
     val categories by vm.categories.collectAsState()
     val items by vm.items.collectAsState()
@@ -95,7 +101,12 @@ fun MoneyScreen(vm: MoneyViewModel = viewModel()) {
 
     val sort = MoneyStats.Sort.entries[sortIndex]
     val totals = MoneyStats.totals(entries)
-    val title = remember(month) { month.format(DateTimeFormatter.ofPattern("MMMM yyyy")) }
+    val previousTotals = remember(previous) { MoneyStats.totals(previous) }
+    val today = remember { LocalDate.now() }
+    val title = remember(period, anchor, today) { MoneyViews.title(period, anchor, today) }
+    val buckets = remember(entries, period, anchor) { MoneyViews.buckets(period, anchor, entries) }
+    var selectedDay by remember(period, anchor) { mutableStateOf<LocalDate?>(null) }
+    var calendarMode by remember { mutableStateOf(false) }
     fun money(v: Double) = MoneyStats.format(v, currency)
 
     val activeItems = items.filter { !it.archived }
@@ -109,24 +120,45 @@ fun MoneyScreen(vm: MoneyViewModel = viewModel()) {
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 110.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            item { ScreenHeader(label = "Money", badge = "Saved on this phone", title = title) }
+            item { ScreenHeader(label = "Money", badge = "Saved on this phone", title = "Money") }
+            item { PaperSegmented(Period.entries.map { it.label }, period.ordinal, { vm.setPeriod(Period.entries[it]) }) }
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    PaperButton("‹ Earlier", { vm.shiftMonth(-1) }, style = PaperButtonStyle.Ghost, small = true)
-                    PaperButton("This month", vm::goThisMonth, style = PaperButtonStyle.Ghost, small = true, modifier = Modifier.weight(1f))
-                    PaperButton("Later ›", { vm.shiftMonth(1) }, style = PaperButtonStyle.Ghost, small = true)
+                    PaperButton("‹", { vm.shift(-1) }, style = PaperButtonStyle.Ghost, small = true)
+                    PaperButton(title, vm::goToday, style = PaperButtonStyle.Ghost, small = true, modifier = Modifier.weight(1f))
+                    PaperButton("›", { vm.shift(1) }, style = PaperButtonStyle.Ghost, small = true)
                 }
             }
             item {
                 PaperCard(modifier = Modifier.fillMaxWidth()) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    MonoLabel("Spent · $title")
+                    Text(money(totals.spent), fontSize = 36.sp, fontWeight = FontWeight.Bold, color = paper.ink, modifier = Modifier.padding(top = 2.dp))
+                    val change = MoneyViews.change(totals.spent, previousTotals.spent)
+                    if (change != null) {
+                        val said = MoneyViews.changeText(change)
+                        Text(
+                            if (said == "no change") "About the same as ${MoneyViews.previousWord(period)}" else "$said vs ${MoneyViews.previousWord(period)}",
+                            fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                            color = when {
+                                change > 0.005 -> paper.bad
+                                change < -0.005 -> paper.accent
+                                else -> paper.ink2
+                            },
+                        )
+                    }
+                    Row(modifier = Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         MoneyStat("In", money(totals.income), Modifier.weight(1f))
-                        MoneyStat("Out", money(totals.spent), Modifier.weight(1f))
                         MoneyStat("Left", money(totals.net), Modifier.weight(1f))
+                        if (period == Period.Day) {
+                            MoneyStat("Entries", entries.size.toString(), Modifier.weight(1f))
+                        } else {
+                            val days = MoneyViews.elapsedDays(period, anchor, today)
+                            MoneyStat("Per day", money(MoneyViews.dailyAverage(totals.spent, days)), Modifier.weight(1f))
+                        }
                     }
                     if (totals.paidByOthers > 0) {
                         Text(
@@ -139,6 +171,56 @@ fun MoneyScreen(vm: MoneyViewModel = viewModel()) {
                             "To decide: ${money(totals.toDecide)}",
                             fontSize = 13.sp, color = paper.ink2, modifier = Modifier.padding(top = 2.dp),
                         )
+                    }
+                }
+            }
+            if (period != Period.Day && entries.isNotEmpty()) {
+                item(key = "chart") {
+                    PaperCard(modifier = Modifier.fillMaxWidth()) {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            if (period == Period.Month) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    PaperPill("Bars", !calendarMode, { calendarMode = false })
+                                    PaperPill("Calendar", calendarMode, { calendarMode = true })
+                                }
+                            }
+                            if (period == Period.Month && calendarMode) {
+                                SpendCalendar(
+                                    month = YearMonth.from(MoneyViews.start(period, anchor)),
+                                    daily = MoneyViews.dailySpent(entries),
+                                    today = today,
+                                    selected = selectedDay,
+                                    onSelect = { selectedDay = it },
+                                )
+                            } else {
+                                SpendBars(
+                                    buckets = buckets,
+                                    period = period,
+                                    today = today,
+                                    selected = buckets.indexOfFirst { it.start == selectedDay }.takeIf { it >= 0 },
+                                    onSelect = { i ->
+                                        if (period == Period.Year) {
+                                            if (i != null) vm.open(Period.Month, buckets[i].start)
+                                        } else {
+                                            selectedDay = i?.let { buckets[it].start }
+                                        }
+                                    },
+                                )
+                            }
+                            val sd = selectedDay
+                            val picked = buckets.firstOrNull { it.start == sd }
+                            val busiest = MoneyViews.busiest(buckets)
+                            Text(
+                                when {
+                                    period == Period.Year -> "Tap a month to open it."
+                                    picked != null -> dayLabel(picked.start.toString()) + " · " + money(picked.spent)
+                                    sd != null -> dayLabel(sd.toString()) + " · " + money(MoneyViews.dailySpent(entries)[sd] ?: 0.0)
+                                    busiest != null -> "Busiest: " + dayLabel(busiest.start.toString()) + " · " + money(busiest.spent) + ". Tap a day to look at it."
+                                    else -> "Tap a day to look at it."
+                                },
+                                fontSize = 12.5.sp, color = paper.ink2,
+                            )
+                        }
                     }
                 }
             }
@@ -165,25 +247,99 @@ fun MoneyScreen(vm: MoneyViewModel = viewModel()) {
                     PaperCard(modifier = Modifier.fillMaxWidth()) {
                         Text("Nothing in $title", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = paper.ink)
                         Text(
-                            "Tap Add to record an expense or income. It asks what kind it is first, so rent, a lassi and a one-off buy each get the right treatment.",
+                            "Tap Add to record an expense or income, or connect Gmail and SMS in Settings to fill this in by itself. " +
+                                "Add asks what kind it is first, so rent, a lassi and a one-off buy each get the right treatment.",
                             color = paper.ink2, modifier = Modifier.padding(top = 4.dp),
                         )
                     }
                 }
             } else {
-                spendingBlock("Where it went", KIND_EXPENSE, entries, categories, ::money)
-                spendingBlock("Where it came from", KIND_INCOME, entries, categories, ::money)
+                val shown = selectedDay?.let { d -> entries.filter { it.date == d.toString() } } ?: entries
+                if (selectedDay != null) {
+                    item(key = "showing") {
+                        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Showing " + dayLabel(selectedDay.toString()), modifier = Modifier.weight(1f), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = paper.ink)
+                            PaperButton("Show all", { selectedDay = null }, style = PaperButtonStyle.Ghost, small = true)
+                        }
+                    }
+                }
+
+                val cats = MoneyStats.byCategory(shown, KIND_EXPENSE)
+                if (cats.isNotEmpty()) {
+                    item(key = "donut") {
+                        val sum = cats.sumOf { it.second }
+                        PaperCard(modifier = Modifier.fillMaxWidth()) {
+                            MonoLabel("Where it went")
+                            Column(
+                                modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                Donut(cats.map { (id, total) -> argbColor(categories.named(id).color) to total }) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text(money(sum), fontSize = 15.sp, fontWeight = FontWeight.Bold, color = paper.ink)
+                                        Text("spent", fontSize = 11.sp, color = paper.ink2)
+                                    }
+                                }
+                                Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    cats.take(8).forEach { (id, total) ->
+                                        val category = categories.named(id)
+                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            Box(Modifier.size(10.dp).background(argbColor(category.color), CircleShape))
+                                            Text(category.name, modifier = Modifier.weight(1f), fontSize = 14.sp, color = paper.ink, maxLines = 1)
+                                            Text(money(total), fontSize = 13.sp, color = paper.ink)
+                                            Text("${Math.round(total / sum * 100)}%", fontSize = 12.sp, color = paper.ink2, modifier = Modifier.width(38.dp))
+                                        }
+                                    }
+                                    if (cats.size > 8) Text("+ ${cats.size - 8} more categories", fontSize = 12.sp, color = paper.ink2)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                val places = MoneyViews.places(shown, KIND_EXPENSE).take(5)
+                if (places.isNotEmpty()) {
+                    item(key = "places") {
+                        PaperCard(modifier = Modifier.fillMaxWidth()) {
+                            MonoLabel("Top places")
+                            Column(modifier = Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                places.forEach { place ->
+                                    val category = categories.named(place.categoryId)
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                        MerchantBadge(place.name, argbColor(category.color), 38.dp)
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(place.name, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = paper.ink, maxLines = 1)
+                                            Text(
+                                                (if (place.count == 1) "Once" else "${place.count} times") + " · " + category.name,
+                                                fontSize = 12.sp, color = paper.ink2, maxLines = 1,
+                                            )
+                                        }
+                                        Text(money(place.total), fontSize = 15.sp, fontWeight = FontWeight.Bold, color = paper.ink)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                spendingBlock("Where it came from", KIND_INCOME, shown, categories, ::money)
 
                 item { MonoLabel("Entries") }
                 item { PaperSegmented(MoneyStats.Sort.entries.map { it.label }, sortIndex, { sortIndex = it }) }
                 if (sort == MoneyStats.Sort.Biggest) {
-                    items(MoneyStats.sorted(entries, sort), key = { "e" + it.id }) { entry ->
+                    items(MoneyStats.sorted(shown, sort), key = { "e" + it.id }) { entry ->
                         EntryRow(entry, categories.named(entry.categoryId), ::money, showDate = true) { editEntry = entry }
                     }
                 } else {
-                    val sorted = MoneyStats.sorted(entries, sort)
+                    val sorted = MoneyStats.sorted(shown, sort)
                     sorted.groupBy { it.date }.forEach { (date, dayEntries) ->
-                        item(key = "d$date") { MonoLabel(dayLabel(date)) }
+                        item(key = "d$date") {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                MonoLabel(dayLabel(date))
+                                Text(money(MoneyStats.totals(dayEntries).spent), fontSize = 12.sp, color = paper.ink2)
+                            }
+                        }
                         items(dayEntries, key = { "e" + it.id }) { entry ->
                             EntryRow(entry, categories.named(entry.categoryId), ::money, showDate = false) { editEntry = entry }
                         }
@@ -458,17 +614,17 @@ private fun EntryRow(
     val tint = argbColor(category.color)
     PaperCard(modifier = Modifier.fillMaxWidth(), padding = 12.dp, shadow = false, onClick = onClick) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconGlyph(icon = category.icon, tint = tint, size = 26.dp, fallback = category.name)
+            MerchantBadge(entry.name, tint, 40.dp)
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(entry.name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = paper.ink)
+                Text(entry.name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = paper.ink, maxLines = 1)
                 val detail = listOfNotNull(
                     if (showDate) dayLabel(entry.date) else null,
                     category.name,
                     if (entry.kind == KIND_EXPENSE) MoneyStats.sourceNote(entry.source, entry.paidBy) else null,
-                    if (entry.id.startsWith("auto|")) "added automatically" else null,
+                    MoneyViews.sourceTag(entry),
                     entry.note.takeIf { it.isNotBlank() },
                 ).joinToString(" · ")
-                Text(detail, fontSize = 12.sp, color = paper.ink2)
+                Text(detail, fontSize = 12.sp, color = paper.ink2, maxLines = 2)
             }
             Text(
                 text = (if (income) "+" else "-") + format(entry.amount),
