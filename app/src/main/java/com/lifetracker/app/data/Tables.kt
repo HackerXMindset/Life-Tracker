@@ -279,4 +279,11 @@ interface ImportDao {
 
     @Query("DELETE FROM imported_items")
     suspend fun deleteAll()
+
+    /** For a file import that keeps the time of its run in [ImportedItemEntity.entryId], so the run can be taken back. */
+    @Query("SELECT sourceId FROM imported_items WHERE source = :source AND entryId = :run")
+    suspend fun sourceIdsForRun(source: String, run: Long): List<String>
+
+    @Query("DELETE FROM imported_items WHERE source = :source AND entryId = :run")
+    suspend fun deleteForRun(source: String, run: Long)
 }

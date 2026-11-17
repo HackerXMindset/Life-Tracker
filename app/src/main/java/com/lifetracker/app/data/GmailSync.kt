@@ -202,7 +202,10 @@ object GmailSync {
                 }
                 is MailVerdict.Found -> {
                     val p = verdict.purchase
-                    val repeat = recent.any { r -> MailPurchases.samePurchase(p, Purchase(r.merchant, r.amount, r.kind, "", r.orderId, r.atMs, r.subject)) }
+                    // Already added from a Google Takeout file?
+                    val dayOf = LocalDate.ofInstant(Instant.ofEpochMilli(p.atMs), zone).toString()
+                    val fromTakeout = db.moneyDao().entriesOn(dayOf, "mbox-%").any { TakeoutImport.sameOrder(p, it) }
+                    val repeat = fromTakeout || recent.any { r -> MailPurchases.samePurchase(p, Purchase(r.merchant, r.amount, r.kind, "", r.orderId, r.atMs, r.subject)) }
                     if (repeat) {
                         marks += ImportedItemEntity(SOURCE, key, 0L)
                         counts.duplicates++
