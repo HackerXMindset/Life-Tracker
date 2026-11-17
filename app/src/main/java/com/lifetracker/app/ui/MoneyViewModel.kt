@@ -10,12 +10,14 @@ import com.lifetracker.app.data.MoneyItemEntity
 import com.lifetracker.app.data.MoneyPoster
 import com.lifetracker.app.data.MoneySettings
 import com.lifetracker.app.data.MoneyStats
+import com.lifetracker.app.data.MoneyViews
+import com.lifetracker.app.data.Period
 import java.time.LocalDate
-import java.time.YearMonth
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
@@ -25,8 +27,12 @@ class MoneyViewModel(app: Application) : AndroidViewModel(app) {
     private val dao = AppDatabase.get(app).moneyDao()
     private val settings = MoneySettings(app)
 
-    private val selectedMonth = MutableStateFlow(YearMonth.now())
-    val month: StateFlow<YearMonth> = selectedMonth
+    private val selectedPeriod = MutableStateFlow(Period.Month)
+    val period: StateFlow<Period> = selectedPeriod
+
+    /** Any day inside the period being shown. */
+    private val selectedAnchor = MutableStateFlow(LocalDate.now())
+    val anchor: StateFlow<LocalDate> = selectedAnchor
 
     private val currencyFlow = MutableStateFlow(settings.currency)
     val currency: StateFlow<String> = currencyFlow
@@ -37,9 +43,17 @@ class MoneyViewModel(app: Application) : AndroidViewModel(app) {
     @OptIn(ExperimentalCoroutinesApi::class)
     val entries: StateFlow<List<MoneyEntryEntity>> = share(
         emptyList(),
-        selectedMonth.flatMapLatest { m ->
-            val (from, to) = MoneyStats.range(m)
-            dao.entriesBetween(from, to)
+        combine(selectedPeriod, selectedAnchor) { p, a -> p to a }.flatMapLatest { (p, a) ->
+            dao.entriesBetween(MoneyViews.start(p, a).toString(), MoneyViews.endExclusive(p, a).toString())
+        },
+    )
+
+    /** The period just before the one shown, to say whether spending went up or down. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val previousEntries: StateFlow<List<MoneyEntryEntity>> = share(
+        emptyList(),
+        combine(selectedPeriod, selectedAnchor) { p, a -> p to MoneyViews.shift(p, a, -1) }.flatMapLatest { (p, a) ->
+            dao.entriesBetween(MoneyViews.start(p, a).toString(), MoneyViews.endExclusive(p, a).toString())
         },
     )
 
@@ -51,12 +65,22 @@ class MoneyViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { runCatching { MoneyPoster.postDue(app) } }
     }
 
-    fun shiftMonth(months: Long) {
-        selectedMonth.value = selectedMonth.value.plusMonths(months)
+    fun setPeriod(period: Period) {
+        selectedPeriod.value = period
     }
 
-    fun goThisMonth() {
-        selectedMonth.value = YearMonth.now()
+    fun shift(n: Int) {
+        selectedAnchor.value = MoneyViews.shift(selectedPeriod.value, selectedAnchor.value, n)
+    }
+
+    fun goToday() {
+        selectedAnchor.value = LocalDate.now()
+    }
+
+    /** Opens a month directly (from a bar of the year view). */
+    fun open(period: Period, day: LocalDate) {
+        selectedPeriod.value = period
+        selectedAnchor.value = day
     }
 
     fun setCurrency(symbol: String) {
