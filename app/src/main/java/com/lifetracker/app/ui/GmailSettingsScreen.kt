@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -42,6 +43,8 @@ import com.lifetracker.app.data.KIND_INCOME
 import com.lifetracker.app.data.MediaException
 import com.lifetracker.app.data.Merchants
 import com.lifetracker.app.data.MoneySettings
+import com.lifetracker.app.data.TakeoutImport
+import com.lifetracker.app.data.TakeoutPrefs
 import com.lifetracker.app.ui.theme.LocalPaper
 import com.lifetracker.app.ui.theme.PaperButton
 import com.lifetracker.app.ui.theme.PaperButtonStyle
@@ -114,6 +117,11 @@ fun GmailSettingsScreen(onBack: () -> Unit) {
                 message = GmailAuth.explain(e)
             }
         }
+    }
+
+    val takeout by TakeoutImport.status.collectAsState()
+    val takeoutPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        if (uris.isNotEmpty()) TakeoutImport.start(context, uris)
     }
 
     fun connect(email: String?) {
@@ -210,6 +218,41 @@ fun GmailSettingsScreen(onBack: () -> Unit) {
                         }
                     }, small = true, enabled = !reading && emails.isNotEmpty())
                     val shown = if (reading || progress.isNotEmpty()) progress else last
+                    if (shown.isNotEmpty()) Text(shown, fontSize = 12.5.sp, color = p.ink)
+                }
+            }
+        }
+
+        // ---- Google Takeout ----
+        item {
+            val takeoutPrefs = remember { TakeoutPrefs(context) }
+            val shown = if (takeout.running || takeout.line.isNotEmpty()) takeout.line else takeoutPrefs.lastLine
+            val canUndo = !takeout.running && takeoutPrefs.lastRun != 0L
+            PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp, shadow = false) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Import a Google Takeout file", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = p.ink)
+                    Text(
+                        "For all your old mail at once, with no sign-in. On takeout.google.com press Deselect all, tick Mail (you can pick just some labels, such as Purchases), and export. " +
+                            "Google emails you when the file is ready, which can take hours for a big mailbox. Download it to this phone, then choose it here. " +
+                            "Pick the .zip as it is, or the .mbox inside it; several files at once are fine. Several Gmail accounts: import each one's file.",
+                        fontSize = 12.5.sp, color = p.ink2,
+                    )
+                    Text(
+                        "It reads the file as it goes, so a very large one works, but it can take a while: keep Kairos open until it says it has finished. " +
+                            "If it stops, start it again; nothing is added twice. Mail also found live from Gmail, or by text message, is added once.",
+                        fontSize = 12.sp, color = p.ink2,
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (takeout.running) {
+                            PaperButton("Stop", { TakeoutImport.stop() }, style = PaperButtonStyle.Ghost, small = true)
+                        } else {
+                            PaperButton("Choose file(s)", { takeoutPicker.launch(arrayOf("*/*")) }, small = true)
+                        }
+                        if (canUndo) {
+                            PaperButton("Undo the last import", { scope.launch { runCatching { TakeoutImport.undoLast(context) }; tick++ } }, style = PaperButtonStyle.Ghost, small = true)
+                        }
+                    }
+                    takeout.fraction?.takeIf { takeout.running }?.let { Text("${(it * 100).toInt()}%", fontSize = 12.5.sp, color = p.ink, fontWeight = FontWeight.SemiBold) }
                     if (shown.isNotEmpty()) Text(shown, fontSize = 12.5.sp, color = p.ink)
                 }
             }

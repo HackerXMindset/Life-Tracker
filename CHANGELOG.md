@@ -2,6 +2,15 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## 📦 Google Takeout import
+
+- **All your old Gmail, with no sign-in.** In Settings → Gmail purchases, "Import a Google Takeout file" reads the mailbox Google gives you at takeout.google.com (the .zip as it is, or the .mbox inside it; several files at once, one per Gmail account) and adds the purchases in it to the Money tab, found the same careful way as live Gmail reading.
+- **Any size.** The file is read as a stream, so a mailbox of many gigabytes works; it shows the percentage and can be stopped. Spam and Trash are skipped, and so are promotions from the shops it knows, and senders you switched off for Gmail.
+- **Never twice.** The same email is added once even if it is in two files, and a purchase already added from live Gmail or from a text message is not doubled (a receipt replaces a bank text for the same spending). Two different orders for the same price on one day are kept apart by their order numbers.
+- **Undo the last import** takes off everything it added, in one press. Entries can also be removed one by one in Money.
+- Receipts with no clear total are left out of an import (live Gmail lists them under "To check").
+- The Takeout state is left out of backups.
+
 ## 💬 SMS purchases
 
 - **Money from bank and UPI texts.** Settings → SMS purchases reads the texts your bank, card and UPI apps send ("Rs.471 debited ... to ZOMATO") and adds each payment to the Money tab: the shop, the amount, the day and a category. Zomato, Swiggy, Blinkit, Amazon and the other known shops are named; for others the name in the text is used, or "UPI payment", "Card payment" or "ATM cash" when it has none.
