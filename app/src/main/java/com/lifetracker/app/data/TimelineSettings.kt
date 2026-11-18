@@ -17,9 +17,9 @@ class TimelineSettings(context: Context) {
         get() = prefs.getBoolean("group_repeated_opens", true)
         set(value) = prefs.edit { putBoolean("group_repeated_opens", value) }
 
-    /** Show the quick buttons that ask how you travelled under a journey whose way is not known. */
+    /** Show the quick buttons that ask how you travelled under a journey whose way is not known. Off unless you turn it on: the journey just says "Moved" and how far. */
     var askHowTravelled: Boolean
-        get() = prefs.getBoolean("ask_how_travelled", true)
+        get() = prefs.getBoolean("ask_how_travelled", false)
         set(value) = prefs.edit { putBoolean("ask_how_travelled", value) }
 
     /** A category you give a single-app period on the Timeline is also kept for that app on every day. */
@@ -36,4 +36,9 @@ class TimelineSettings(context: Context) {
     var collapseAll: Boolean
         get() = prefs.getBoolean("collapse_all", false)
         set(value) = prefs.edit { putBoolean("collapse_all", value) }
+
+    /** The numbers in the box above the Timeline (none hides the box). */
+    var statsBox: List<TimelineStats.Cell>
+        get() = TimelineStats.parse(prefs.getString("stats_box", null))
+        set(value) = prefs.edit { putString("stats_box", TimelineStats.encode(value)) }
 }

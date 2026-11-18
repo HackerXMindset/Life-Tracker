@@ -65,8 +65,11 @@ object PieApps {
         return (0xFF shl 24) or (r shl 16) or (g shl 8) or b
     }
 
-    /** Each stretch with its colour: the apps of one category are ranked by the time they had in the whole day and shaded one by one. */
-    fun shaded(stretches: List<Stretch>): List<Pair<Stretch, Int>> {
+    /**
+     * Each stretch with its colour. An app with a known logo colour ([appColors], by app name) gets that colour. Any other: the apps of one
+     * category are ranked by the time they had in the whole day and shaded one by one.
+     */
+    fun shaded(stretches: List<Stretch>, appColors: Map<String, Int> = emptyMap()): List<Pair<Stretch, Int>> {
         val rank = HashMap<Pair<String, String>, Int>()
         val count = HashMap<String, Int>()
         stretches.groupBy { it.family }.forEach { (family, list) ->
@@ -74,6 +77,6 @@ object PieApps {
             apps.forEachIndexed { i, e -> rank[family to e.key] = i }
             count[family] = apps.size
         }
-        return stretches.map { it to shade(it.argb, rank.getValue(it.family to it.app), count.getValue(it.family)) }
+        return stretches.map { it to (appColors[it.app] ?: shade(it.argb, rank.getValue(it.family to it.app), count.getValue(it.family))) }
     }
 }

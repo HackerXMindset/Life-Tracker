@@ -218,14 +218,13 @@ fun PaperWeekStrip(selected: LocalDate, datesWithEntries: Set<String>, onSelect:
     }
 }
 
-/** Steps, phone and studied time in one card, split by continuous lines. */
+/** The chosen numbers (label to value) in one card, split by continuous lines. */
 @Composable
-fun PaperTrio(steps: String, phone: String, study: String) {
+fun PaperStats(cells: List<Pair<String, String>>) {
+    if (cells.isEmpty()) return
     PaperCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp) {
         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp, horizontal = 4.dp)) {
-            TrioCell("Steps", steps, first = true, modifier = Modifier.weight(1f))
-            TrioCell("Phone", phone, first = false, modifier = Modifier.weight(1f))
-            TrioCell("Studied", study, first = false, modifier = Modifier.weight(1f))
+            cells.forEachIndexed { i, (label, value) -> TrioCell(label, value, first = i == 0, modifier = Modifier.weight(1f)) }
         }
     }
 }

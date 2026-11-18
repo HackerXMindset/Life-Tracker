@@ -8,7 +8,19 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextOverflow
+import com.lifetracker.app.R
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -54,13 +66,15 @@ class EditTarget(
     /** Lines of what is inside this thing (every app in a phone period, with its time), shown under [detailsTitle]. */
     val details: List<String> = emptyList(),
     val detailsTitle: String = "Inside",
+    /** For each line of [details] (same order), every time that app was opened (start, end). Holding the line shows them to the second. */
+    val detailOpens: List<List<Pair<Long, Long>>> = emptyList(),
     /** For things you can delete (a trip): a button that deletes it, with Undo and a Deleted list to bring it back from. */
     val onDelete: (() -> Unit)? = null,
     val deleteLabel: String = "Delete",
 )
 
 /** Change when something happened and which category it counts as, hide it, or put it back the way the phone recorded it. */
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun EditItemWindow(
     target: EditTarget,
@@ -74,6 +88,8 @@ fun EditItemWindow(
     var startMinute by remember(target) { mutableIntStateOf(TimelineEdits.minuteOf(target.startMs, target.baseDayStartMs)) }
     var endMinute by remember(target) { mutableIntStateOf(target.endMs?.let { TimelineEdits.minuteOf(it, target.baseDayStartMs) } ?: 0) }
     var activityId by remember(target) { mutableStateOf(target.activityId) }
+    var categoryOpen by remember(target) { mutableStateOf(false) }
+    var opensOf by remember(target) { mutableStateOf<Int?>(null) }
 
     fun pick(initial: Int, onPicked: (Int) -> Unit) {
         TimePickerDialog(context, { _, h, m -> onPicked(h * 60 + m) }, initial / 60, initial % 60, false).show()
@@ -109,22 +125,68 @@ fun EditItemWindow(
             MonoLabel(target.detailsTitle)
             PaperCard(modifier = Modifier.fillMaxWidth(), padding = 12.dp, shadow = false) {
                 target.details.forEachIndexed { i, line ->
+                    val opens = target.detailOpens.getOrNull(i).orEmpty()
                     Text(
                         text = line,
-                        modifier = Modifier.padding(top = if (i == 0) 0.dp else 6.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = if (i == 0) 0.dp else 6.dp)
+                            .combinedClickable(
+                                onClick = { if (opens.isNotEmpty()) opensOf = if (opensOf == i) null else i },
+                                onLongClick = { if (opens.isNotEmpty()) opensOf = if (opensOf == i) null else i },
+                            ),
                         fontSize = 13.sp,
                         lineHeight = 17.sp,
                         color = paper.ink,
+                    )
+                    if (opensOf == i) {
+                        MonoLabel("App opened in this period")
+                        opens.forEach { (from, to) ->
+                            Text(
+                                text = "Opened at " + clockWithSeconds(from) + ", closed at " + clockWithSeconds(to) + " (" + secondsText(to - from) + ")",
+                                modifier = Modifier.padding(top = 3.dp),
+                                fontSize = 12.sp,
+                                lineHeight = 16.sp,
+                                color = paper.ink2,
+                            )
+                        }
+                    }
+                }
+                if (target.detailOpens.any { it.isNotEmpty() }) {
+                    Text(
+                        text = "Hold an app to see exactly when it was opened and closed.",
+                        modifier = Modifier.padding(top = 8.dp),
+                        fontSize = 11.sp,
+                        color = paper.ink2,
                     )
                 }
             }
         }
         if (target.canChangeCategory) {
-            MonoLabel("Category")
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                PaperPill("As recorded", activityId.isEmpty(), { activityId = "" })
-                types.filter { !it.archived }.forEach { t ->
-                    PaperPill(t.name, activityId == t.id, { activityId = t.id }, dot = t.displayColor())
+            val chosen = if (activityId.isEmpty()) "As recorded" else types.firstOrNull { it.id == activityId }?.name ?: activityId
+            Row(
+                modifier = Modifier.fillMaxWidth().clickable { categoryOpen = !categoryOpen }.padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                MonoLabel("Category")
+                Text(chosen, modifier = Modifier.weight(1f), fontSize = 13.sp, color = paper.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Icon(
+                    painter = painterResource(if (categoryOpen) R.drawable.ic_chevrons_downup else R.drawable.ic_chevrons_updown),
+                    contentDescription = if (categoryOpen) "Close the categories" else "Show the categories",
+                    modifier = Modifier.size(16.dp),
+                    tint = paper.ink2,
+                )
+            }
+            if (categoryOpen) {
+                // A fixed height with its own scroll, so the list never pushes the buttons off the screen.
+                Column(modifier = Modifier.fillMaxWidth().heightIn(max = 160.dp).verticalScroll(rememberScrollState())) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        PaperPill("As recorded", activityId.isEmpty(), { activityId = ""; categoryOpen = false })
+                        types.filter { !it.archived }.forEach { t ->
+                            PaperPill(t.name, activityId == t.id, { activityId = t.id; categoryOpen = false }, dot = t.displayColor())
+                        }
+                    }
                 }
             }
         }
@@ -149,5 +211,25 @@ fun EditItemWindow(
         if (target.onDelete != null) {
             PaperButton(target.deleteLabel, { target.onDelete.invoke(); onDismiss() }, style = PaperButtonStyle.Danger, small = true)
         }
+    }
+}
+
+/** A clock time to the second, like "12:01:03 am", in the phone's time zone. */
+internal fun clockWithSeconds(ms: Long): String =
+    java.time.Instant.ofEpochMilli(ms).atZone(java.time.ZoneId.systemDefault()).toLocalTime().let { t ->
+        val h = t.hour % 12
+        "%d:%02d:%02d %s".format(if (h == 0) 12 else h, t.minute, t.second, if (t.hour < 12) "am" else "pm")
+    }
+
+/** "42 s", "3 min 05 s" or "1 h 02 min": how long one opening lasted, exact enough to tell a glance from a stay. */
+internal fun secondsText(ms: Long): String {
+    val total = (ms / 1000L).coerceAtLeast(0L)
+    val h = total / 3600
+    val m = (total % 3600) / 60
+    val s = total % 60
+    return when {
+        h > 0 -> "%d h %02d min".format(h, m)
+        m > 0 -> "%d min %02d s".format(m, s)
+        else -> "$s s"
     }
 }

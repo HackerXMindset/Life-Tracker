@@ -2,6 +2,16 @@
 
 Every release page shows the sections below that were added since the last release, newest first. Older sections stay here as the history.
 
+## ✨ Timeline polish
+
+- **One block per phone stretch.** Phone use is no longer chopped into a new row every time the app's category changes: a stretch of use is one row, "Phone · 20m · 1:15-1:35 am · Instagram 16m, Brave 4m". Tap it to see every app with its minutes and how many times it was opened. Each app's time still counts for its own category, so Study and your goals are not affected.
+- **Join phone periods by dragging.** Hold a phone row and drag it onto the one before or after it. Nothing is deleted: "Separate the joined periods again" is in its edit page.
+- **Exact open and close times.** In a phone period's edit page, hold an app to see "App opened in this period": every opening with the time to the second and how long it lasted.
+- **A small Category row.** The category list in the edit page is closed by default (it shows the current choice) and opens in a short scrolling box.
+- **"Moved" instead of a question.** A journey whose way of travel is not known now just says "Moved" with how long and how far. The quick "How did you go?" buttons are an option in Settings → Timeline (off by default).
+- **A tidier top.** The category chips show only in Pie. Choose what the box above the day shows (Steps, Phone, Studied, Sleep, Calls, Food, Places, or none) in Settings → Timeline. Collapse/expand every place and trip is one small icon next to "In order".
+- **Pie.** With apps shown, each app's slice takes the colour of its own logo. Tap the eye on any task or place to hide it from the pie (Sleep, say) and see the rest at full size; "Show all" brings everything back.
+
 ## 📦 Google Takeout import
 
 - **All your old Gmail, with no sign-in.** In Settings → Gmail purchases, "Import a Google Takeout file" reads the mailbox Google gives you at takeout.google.com (the .zip as it is, or the .mbox inside it; several files at once, one per Gmail account) and adds the purchases in it to the Money tab, found the same careful way as live Gmail reading.

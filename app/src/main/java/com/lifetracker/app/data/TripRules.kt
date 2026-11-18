@@ -161,12 +161,12 @@ object TripModes {
     fun asksHow(trip: TripEntity?, guessOn: Boolean = TripGuess.enabled): Boolean =
         trip == null || (trip.modeSource != "you" && (!guessOn || trip.mode == "vehicle"))
 
-    /** What a trip is called: your answer, else (guessing on) the app's guess, else just "Trip". */
+    /** What a trip is called: your answer, else (guessing on) the app's guess, else just "Trip"; "Moved" when the way is not known. */
     fun title(trip: TripEntity?, guessOn: Boolean = TripGuess.enabled): String = when {
-        trip == null -> "Unknown way of travel"
+        trip == null -> "Moved"
         trip.modeSource == "you" -> label(trip.mode)
         !guessOn -> "Trip"
-        trip.mode == "vehicle" -> "Unknown way of travel"
+        trip.mode == "vehicle" -> "Moved"
         else -> label(trip.mode) + " (guess)"
     }
 

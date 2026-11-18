@@ -18,7 +18,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextDecoration
+import com.lifetracker.app.R
+import com.lifetracker.app.ui.theme.PaperPill
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -58,14 +66,24 @@ import kotlin.math.sqrt
 fun DayPieView(what: List<StripSeg>, where: List<StripSeg>, trips: List<TripEntity>) {
     val paper = LocalPaper.current
     // Trips all go into one "Travel" slice on the places ring.
-    val taskPieces = what.map { DayPieMath.Piece(it.label, it.color.toArgb(), it.startMs, it.endMs, it.family) }
-    val placePieces = where.map { DayPieMath.Piece(if (it.hatch) "Travel" else it.label, it.color.toArgb(), it.startMs, it.endMs) }
+    val allTaskPieces = what.map { DayPieMath.Piece(it.label, it.color.toArgb(), it.startMs, it.endMs, it.family) }
+    val allPlacePieces = where.map { DayPieMath.Piece(if (it.hatch) "Travel" else it.label, it.color.toArgb(), it.startMs, it.endMs) }
+    val allTasks = DayPieMath.slices(allTaskPieces)
+    val allPlaces = DayPieMath.slices(allPlacePieces)
+    // What you hid from the pie ("a:Sleep", "p:Home"): the rest fills the pie, and each hidden one waits in its list to be shown again.
+    var hidden by remember { mutableStateOf(setOf<String>()) }
+    val taskPieces = allTaskPieces.filter { "a:" + it.label !in hidden }
+    val placePieces = allPlacePieces.filter { "p:" + it.label !in hidden }
     val tasks = DayPieMath.slices(taskPieces)
     val places = DayPieMath.slices(placePieces)
     val total = DayPieMath.totalMs(tasks)
     var sel by remember { mutableStateOf<String?>(null) }
+    fun toggle(id: String) {
+        hidden = if (id in hidden) hidden - id else hidden + id
+        if (sel == id) sel = null
+    }
 
-    if (total <= 0L) {
+    if (allTasks.isEmpty() || (total <= 0L && hidden.isEmpty())) {
         PaperCard(modifier = Modifier.fillMaxWidth(), shadow = false) {
             Text("Nothing was recorded on this day.", fontSize = 11.5.sp, color = paper.ink2)
         }
@@ -79,7 +97,20 @@ fun DayPieView(what: List<StripSeg>, where: List<StripSeg>, trips: List<TripEnti
     val relatedTasks: Set<String>? = if (selKind == "p") DayPieMath.related(selName!!, placePieces, taskPieces).map { it.first }.toSet() else null
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp) {
+        if (hidden.isNotEmpty()) {
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    "${hidden.size} hidden from the pie",
+                    modifier = Modifier.weight(1f), fontSize = 12.sp, color = paper.ink2,
+                )
+                PaperPill("Show all", false, { hidden = emptySet(); sel = null })
+            }
+        }
+        if (total <= 0L) {
+            PaperCard(modifier = Modifier.fillMaxWidth(), shadow = false) {
+                Text("Everything is hidden. Show something again from the lists below.", fontSize = 11.5.sp, color = paper.ink2)
+            }
+        } else PaperCard(modifier = Modifier.fillMaxWidth(), padding = 14.dp) {
             Canvas(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -168,10 +199,10 @@ fun DayPieView(what: List<StripSeg>, where: List<StripSeg>, trips: List<TripEnti
         }
 
         PaperSection("Tasks", "the inner pie")
-        PieList(tasks, "a", sel) { sel = if (sel == it) null else it }
-        if (places.isNotEmpty()) {
+        PieList(allTasks, "a", sel, hidden, ::toggle) { sel = if (sel == it) null else it }
+        if (allPlaces.isNotEmpty()) {
             PaperSection("Places", "the outer ring")
-            PieList(places, "p", sel) { sel = if (sel == it) null else it }
+            PieList(allPlaces, "p", sel, hidden, ::toggle) { sel = if (sel == it) null else it }
         }
         HowYouGotAround(trips)
     }
@@ -179,16 +210,25 @@ fun DayPieView(what: List<StripSeg>, where: List<StripSeg>, trips: List<TripEnti
 
 /** The rows under the pie: a colour square, the name and the time. Tapping one picks that slice. */
 @Composable
-private fun PieList(slices: List<DayPieMath.Slice>, key: String, sel: String?, onPick: (String) -> Unit) {
+private fun PieList(
+    slices: List<DayPieMath.Slice>,
+    key: String,
+    sel: String?,
+    hidden: Set<String>,
+    onToggle: (String) -> Unit,
+    onPick: (String) -> Unit,
+) {
     val paper = LocalPaper.current
     PaperCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp, shadow = false) {
         Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
             slices.forEachIndexed { i, slice ->
                 val id = "$key:${slice.label}"
                 val on = sel == id
+                val off = id in hidden
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .alpha(if (off) 0.5f else 1f)
                         .then(if (on) Modifier.background(paper.surface2, RoundedCornerShape(10.dp)) else Modifier)
                         .drawBehind {
                             if (!on && i < slices.lastIndex) {
@@ -197,7 +237,7 @@ private fun PieList(slices: List<DayPieMath.Slice>, key: String, sel: String?, o
                                 )
                             }
                         }
-                        .clickable { onPick(id) }
+                        .clickable { if (off) onToggle(id) else onPick(id) }
                         .padding(horizontal = 4.dp, vertical = 11.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -209,8 +249,22 @@ private fun PieList(slices: List<DayPieMath.Slice>, key: String, sel: String?, o
                             .padding(2.dp)
                             .background(Color(slice.argb), RoundedCornerShape(4.dp)),
                     )
-                    Text(slice.label, modifier = Modifier.weight(1f), fontSize = 14.sp, color = paper.ink)
+                    Text(
+                        slice.label, modifier = Modifier.weight(1f), fontSize = 14.sp, color = paper.ink,
+                        textDecoration = if (off) TextDecoration.LineThrough else null,
+                    )
                     Text(lengthOfMs(slice.ms), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = paper.ink2)
+                    // Hiding takes it out of the pie so the rest is easier to read; nothing is deleted.
+                    if (off) {
+                        Text("Show", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = paper.ink)
+                    } else {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_p_eyeoff),
+                            contentDescription = "Hide " + slice.label + " from the pie",
+                            modifier = Modifier.clip(CircleShape).clickable { onToggle(id) }.padding(6.dp).size(18.dp),
+                            tint = paper.ink2,
+                        )
+                    }
                 }
             }
         }
