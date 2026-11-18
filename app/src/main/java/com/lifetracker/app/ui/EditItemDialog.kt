@@ -143,7 +143,7 @@ fun EditItemWindow(
                         MonoLabel("App opened in this period")
                         opens.forEach { (from, to) ->
                             Text(
-                                text = "Opened at " + clockSeconds(from) + ", closed at " + clockSeconds(to) + " (" + secondsText(to - from) + ")",
+                                text = "Opened at " + clockWithSeconds(from) + ", closed at " + clockWithSeconds(to) + " (" + secondsText(to - from) + ")",
                                 modifier = Modifier.padding(top = 3.dp),
                                 fontSize = 12.sp,
                                 lineHeight = 16.sp,
@@ -215,7 +215,7 @@ fun EditItemWindow(
 }
 
 /** A clock time to the second, like "12:01:03 am", in the phone's time zone. */
-internal fun clockSeconds(ms: Long): String =
+internal fun clockWithSeconds(ms: Long): String =
     java.time.Instant.ofEpochMilli(ms).atZone(java.time.ZoneId.systemDefault()).toLocalTime().let { t ->
         val h = t.hour % 12
         "%d:%02d:%02d %s".format(if (h == 0) 12 else h, t.minute, t.second, if (t.hour < 12) "am" else "pm")
