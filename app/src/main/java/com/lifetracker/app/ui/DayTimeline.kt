@@ -121,6 +121,8 @@ class DayActions(
     val onEditTrip: (TripEntity) -> Unit,
     /** You dragged the stay (first) onto the stay next to it (second): they are to be joined. Null when joining is off. */
     val onJoinStays: ((DayLayout.Place, DayLayout.Place) -> Unit)? = null,
+    /** You dragged a phone period (first) onto the one next to it (second): they are to be joined. Null when joining is off. */
+    val onJoinPhone: ((DayLayout.Item, DayLayout.Item) -> Unit)? = null,
     /** Whether to show the quick buttons that ask how you travelled (Timeline settings). */
     val askHowTravelled: Boolean = true,
     /** The icon you gave an app, by its package name (apps without one are left out). */
@@ -182,6 +184,7 @@ private val PLACE_BAR = 20.dp
 private val FRAME_PAD = 5.dp
 
 /** The space between two rows, and the smallest a row is: a thing, place or journey, and an Offline / No data line. */
+private const val PHONE_DRAG = "ph|"
 private val ROW_GAP = 6.dp
 private val ROW_MIN = 44.dp
 private val GAP_MIN = 26.dp
@@ -228,6 +231,14 @@ fun DayCalendar(rows: List<DayLayout.Row>, a: DayActions, collapsed: Boolean = f
     val frames = ArrayList<Frame>()
     val stayDrag = remember { StayDrag() }
     val placeByKey = rows.filterIsInstance<DayLayout.Place>().associateBy { it.key }
+    // Every phone period of the day in order: a period can be dragged onto the one before or after it.
+    val phoneItems = rows.flatMap { r ->
+        when (r) {
+            is DayLayout.Place -> r.children.filterIsInstance<DayLayout.Thing>().map { it.item }
+            is DayLayout.Thing -> listOf(r.item)
+            else -> emptyList()
+        }
+    }.filter { it.kind == DayLayout.Kind.PHONE }.sortedBy { it.startMs }
 
     @Composable
     fun thingSlot(item: DayLayout.Item): Slot {
@@ -242,7 +253,15 @@ fun DayCalendar(rows: List<DayLayout.Row>, a: DayActions, collapsed: Boolean = f
             endMs = if (moment) item.coveredEndMs else item.endMs,
             bar = if (moment) Bar.MOMENT else Bar.THING,
             color = look.color,
-            card = { ThingCard(item, look, chargedMs) },
+            card = {
+                val at = phoneItems.indexOfFirst { it.key == item.key }
+                val near = if (item.kind != DayLayout.Kind.PHONE || a.onJoinPhone == null || at < 0) emptyList()
+                else listOfNotNull(phoneItems.getOrNull(at - 1), phoneItems.getOrNull(at + 1)).map { PHONE_DRAG + it.key }
+                ThingCard(
+                    item, look, chargedMs, stayDrag, near,
+                    onJoin = { other -> phoneItems.firstOrNull { PHONE_DRAG + it.key == other }?.let { a.onJoinPhone?.invoke(item, it) } },
+                )
+            },
         )
     }
 
@@ -546,6 +565,8 @@ private class Look(
     val hint: Boolean = false,
     /** A picture name or emoji drawn before the title; empty for none. */
     val icon: String = "",
+    /** A short line of what is inside (a phone stretch: "Instagram 16m, Brave 4m"), shown on the row after the time. */
+    val summary: String? = null,
     val onClick: (() -> Unit)?,
 )
 
@@ -572,7 +593,8 @@ private fun describe(item: DayLayout.Item, a: DayActions): Look {
             val b = item.ref as UsageDays.Block
             val type = b.activityId.takeIf { it.isNotEmpty() }?.let { a.types.byId(it) }
             Look(
-                color = type?.displayColor() ?: quiet, title = b.label,
+                color = type?.displayColor() ?: quiet, title = if (b.apps.size > 1) "Phone" else b.label,
+                summary = if (b.apps.size > 1) appSummary(b.apps) else null,
                 lines = if (b.apps.size > 1) {
                     b.apps.map { u ->
                         u.label + " · " + formatDuration(((u.activeMs + 30_000L) / 60_000L).toInt().coerceAtLeast(1)) +
@@ -673,10 +695,29 @@ private fun ChargeBolt() {
     )
 }
 
+/** "Instagram 16m, Brave 4m, +2 more": the apps of a phone stretch, longest first. */
+internal fun appSummary(apps: List<UsageDays.AppUse>, show: Int = 3): String {
+    val shown = apps.take(show).joinToString(", ") {
+        it.label + " " + formatDuration(((it.activeMs + 30_000L) / 60_000L).toInt().coerceAtLeast(1))
+    }
+    return if (apps.size > show) shown + ", +" + (apps.size - show) + " more" else shown
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ThingCard(item: DayLayout.Item, look: Look, chargedMs: Long) {
+private fun ThingCard(
+    item: DayLayout.Item,
+    look: Look,
+    chargedMs: Long,
+    drag: StayDrag? = null,
+    /** The drag keys of the phone periods next to this one, the only ones it can be dragged onto. */
+    near: List<String> = emptyList(),
+    onJoin: (String) -> Unit = {},
+) {
     val paper = LocalPaper.current
+    val dragKey = PHONE_DRAG + item.key
+    val draggable = drag != null && near.isNotEmpty()
+    val dragged = drag != null && drag.key == dragKey
     val shape = Wobble.Small
     var open by remember { mutableStateOf(false) }
     val details = look.lines.filter { it.isNotBlank() }
@@ -686,12 +727,15 @@ private fun ThingCard(item: DayLayout.Item, look: Look, chargedMs: Long) {
     val meta = listOfNotNull(
         look.trailing,
         if (moment) clock(item.startMs) else range(item.startMs, item.endMs),
+        look.summary,
         if (look.chip != null && !look.hint) look.chip else null,
     ).joinToString(" · ")
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(paper.surface, shape)
+            .onGloballyPositioned { drag?.coordinates?.put(dragKey, it) }
+            .graphicsLayer { translationY = if (dragged) drag?.dy ?: 0f else 0f }
+            .background(if (drag != null && drag.over == dragKey) paper.sun.copy(alpha = 0.35f) else paper.surface, shape)
             .penOutline(shape, paper.line)
             .clip(shape)
             .combinedClickable(
@@ -702,9 +746,33 @@ private fun ThingCard(item: DayLayout.Item, look: Look, chargedMs: Long) {
                         look.onClick?.invoke()
                     }
                 },
-                // Holding a row opens the full edit page.
-                onLongClick = { if (look.editable) look.onClick?.invoke() },
-            ),
+                // Holding a row opens the full edit page, except a phone period, where holding starts a drag onto its neighbour
+                // (its Edit button is inside the open row).
+                onLongClick = { if (look.editable && !draggable) look.onClick?.invoke() },
+            )
+            .pointerInput(dragKey, near) {
+                if (drag == null || near.isEmpty()) return@pointerInput
+                detectDragGesturesAfterLongPress(
+                    onDragStart = { offset ->
+                        drag.key = dragKey
+                        drag.dy = 0f
+                        drag.over = null
+                        drag.startY = (drag.windowTop(dragKey) ?: 0f) + offset.y
+                    },
+                    onDrag = { change, amount ->
+                        change.consume()
+                        drag.dy += amount.y
+                        val y = drag.startY + drag.dy
+                        drag.over = near.firstOrNull { drag.contains(it, y) }
+                    },
+                    onDragEnd = {
+                        val target = drag.over
+                        drag.reset()
+                        if (target != null) onJoin(target)
+                    },
+                    onDragCancel = { drag.reset() },
+                )
+            },
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().heightIn(min = ROW_MIN).padding(horizontal = 10.dp, vertical = 6.dp),
@@ -842,7 +910,7 @@ private fun TravelCard(t: DayLayout.Travel, a: DayActions) {
     val title = TripModes.title(trip)
     val stopsText = if (t.stops.isEmpty()) "" else " · " + t.stops.size + (if (t.stops.size == 1) " stop" else " stops")
     val numbers = when {
-        trip == null -> length
+        trip == null -> length + if (t.straightLineM > 0) " · about " + TripRules.distanceText(t.straightLineM) else ""
         // A trip that is only your own answer has no readings: say so instead of showing a distance as if it were the route.
         !t.routeKnown -> length + " · no record of the route"
         else -> length + " · " + TripRules.distanceText(t.distanceM) + stopsText

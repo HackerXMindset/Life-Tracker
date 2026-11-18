@@ -209,28 +209,33 @@ class UsageSessionsTest {
     }
 
     @Test
-    fun anAppOfAnotherCategoryStartsANewPeriod() {
+    fun appsOfDifferentCategoriesStayOnePeriodButCountForTheirOwnCategory() {
         val day = UsageDays.build(
             listOf(session("a", 0, 10 * min), session("g", 11 * min, 20 * min), session("a", 21 * min, 25 * min)),
             mapOf(app("a", "Anki", "Study"), app("g", "Game", "Screen")),
             dayStart,
             dayEnd,
         )
-        assertEquals(listOf("Study", "Screen", "Study"), day.blocks.map { it.activityId })
+        val block = day.blocks.single()
+        assertEquals(UsageDays.MIXED_ACTIVITY_ID, block.activityId)
         assertEquals(14, day.minutesByActivity["Study"])
         assertEquals(9, day.minutesByActivity["Screen"])
+        assertEquals(2, block.appSpans["a"]?.size)
+        assertEquals(listOf(11 * min to 20 * min), block.appSpans["g"])
     }
 
     @Test
-    fun aCategorisedAppAndAnUncategorisedAppAreNotMixed() {
+    fun aCategorisedAppAndAnUncategorisedAppShareOnePeriod() {
         val day = UsageDays.build(
             listOf(session("a", 0, 10 * min), session("x", 11 * min, 14 * min)),
             mapOf(app("a", "Anki", "Study")),
             dayStart,
             dayEnd,
         )
-        assertEquals(2, day.blocks.size)
-        assertEquals("", day.blocks[1].activityId)
+        val block = day.blocks.single()
+        assertEquals(2, block.apps.size)
+        assertEquals(10, day.minutesByActivity["Study"])
+        assertEquals(3, day.minutesByActivity[UsageDays.MIXED_ACTIVITY_ID])
     }
 
     @Test
@@ -281,7 +286,7 @@ class UsageSessionsTest {
     }
 
     @Test
-    fun aLongInterruptionStillBreaksTheCombination() {
+    fun aLongInterruptionKeepsOnePeriodButTheCombinationStillCountsItsOwnApps() {
         val combos = listOf(UsageDays.Combo("study-pw", setOf("pw", "gpt"), "Study"))
         val day = UsageDays.build(
             listOf(
@@ -296,7 +301,10 @@ class UsageSessionsTest {
             dayEnd,
             combos = combos,
         )
-        assertEquals(listOf("Study", "Screen", "Study"), day.blocks.map { it.activityId })
+        val block = day.blocks.single()
+        assertEquals("", block.comboId)
+        assertEquals(20, day.minutesByActivity["Study"])
+        assertEquals(20, day.minutesByActivity["Screen"])
     }
 
     @Test

@@ -99,10 +99,11 @@ object UsageSessions {
 /**
  * Turns one day's sessions into what the Timeline and the Phone usage screen show.
  *
- * A **period of use** is a run of phone use. It ends after [IDLE_GAP_MS] without using any app, or when an app from a
- * different category starts (unless the two apps are part of a combination you named). Every app used inside a period
- * counts towards the period's activity, so ChatGPT used while studying counts as studying when you have said so.
- * Which activity a period gets:
+ * A **period of use** is a run of phone use. It ends after [IDLE_GAP_MS] without using any app, and only then: every app used
+ * inside a stretch is part of one period, however many categories they have. Each app's time counts for its own category
+ * (see [Block.credit]), and a combination you named counts its own apps for the combination's activity, so ChatGPT used
+ * while studying counts as studying when you have said so.
+ * Which activity a period is shown as:
  *  1. the activity of a named combination whose apps were used together,
  *  2. else the category the apps share (one app, or several apps with the same category),
  *  3. else, when several apps with no category were used together, Screen and leisure,
@@ -146,6 +147,12 @@ object UsageDays {
         val apps: List<AppUse> = emptyList(),
         /** The named combination that decided the activity, or empty. */
         val comboId: String = "",
+        /** Every time each app was opened inside the period (start, end), so the exact times can be shown. */
+        val appSpans: Map<String, List<Pair<Long, Long>>> = emptyMap(),
+        /** Minutes (as ms) of this period that count for each activity: the combination's apps for the combination, else each app's own. */
+        val credit: Map<String, Long> = emptyMap(),
+        /** The refs of the periods you joined into this one (see [PhoneJoin]); empty for a period on its own. */
+        val joined: List<String> = emptyList(),
     )
 
     data class Day(
@@ -159,14 +166,6 @@ object UsageDays {
         val appLabels: Map<String, String> = emptyMap(),
     )
 
-    /** Whether app [pkg] belongs to the period that already holds [inPeriod]. */
-    internal fun joins(inPeriod: Set<String>, pkg: String, category: (String) -> String, combos: List<Combo>): Boolean {
-        if (pkg in inPeriod) return true
-        if (combos.any { pkg in it.pkgs && inPeriod.any { a -> a in it.pkgs } }) return true
-        val first = category(inPeriod.first())
-        return inPeriod.all { category(it) == first } && category(pkg) == first
-    }
-
     /** Share of a period's time that the apps of a combination must make up, so one app used on the side does not decide it. */
     const val COMBO_MIN_SHARE = 0.8
 
@@ -175,11 +174,11 @@ object UsageDays {
      * up at least 80% of the period's time (so an app of another kind used for less than 20% does not break it), and the one
      * covering the most time wins.
      */
-    internal fun bestCombo(use: Map<String, Long>, combos: List<Combo>): Combo? {
+    internal fun bestCombo(use: Map<String, Long>, combos: List<Combo>, minShare: Double = COMBO_MIN_SHARE): Combo? {
         val total = use.values.sum()
         return combos
             .filter { c -> c.pkgs.count { it in use } >= minOf(2, c.pkgs.size) }
-            .filter { c -> c.pkgs.sumOf { use[it] ?: 0L } >= total * COMBO_MIN_SHARE }
+            .filter { c -> c.pkgs.sumOf { use[it] ?: 0L } >= total * minShare }
             .maxWithOrNull(compareBy<Combo>({ c -> c.pkgs.sumOf { use[it] ?: 0L } }, { it.id }))
     }
 
@@ -187,30 +186,6 @@ object UsageDays {
         val out = LinkedHashMap<String, Long>()
         for (s in run) out[s.pkg] = (out[s.pkg] ?: 0L) + (s.endMs - s.startMs)
         return out
-    }
-
-    /**
-     * A short stretch of something else between two stretches of a named combination (you studied, glanced at a game for two
-     * minutes, and went back) does not end the combination: the three become one period when together they still match it.
-     */
-    private fun absorbInterruptions(runs: MutableList<MutableList<UsageSessionEntity>>, combos: List<Combo>, idleGapMs: Long) {
-        if (combos.isEmpty()) return
-        var i = 1
-        while (i < runs.size - 1) {
-            val before = runs[i - 1]
-            val mid = runs[i]
-            val after = runs[i + 1]
-            val closeBefore = mid.first().startMs - before.maxOf { it.endMs } < idleGapMs
-            val closeAfter = after.first().startMs - mid.maxOf { it.endMs } < idleGapMs
-            if (closeBefore && closeAfter && bestCombo(activeByApp(before + mid + after), combos) != null) {
-                runs[i - 1] = (before + mid + after).toMutableList()
-                runs.removeAt(i + 1)
-                runs.removeAt(i)
-                i = maxOf(1, i - 1)
-            } else {
-                i++
-            }
-        }
     }
 
     fun build(
@@ -238,7 +213,7 @@ object UsageDays {
         var lastEnd = 0L
         for (s in clipped) {
             val run = current
-            if (run != null && s.startMs - lastEnd < idleGapMs && joins(inCurrent, s.pkg, ::category, combos)) {
+            if (run != null && s.startMs - lastEnd < idleGapMs) {
                 run += s
             } else {
                 val fresh = mutableListOf(s)
@@ -249,8 +224,6 @@ object UsageDays {
             inCurrent += s.pkg
             lastEnd = maxOf(lastEnd, s.endMs)
         }
-
-        absorbInterruptions(runs, combos, idleGapMs)
 
         val blocks = runs.map { run ->
             val active = activeByApp(run)
@@ -272,6 +245,19 @@ object UsageDays {
                 uses.take(3).joinToString(" + ") { it.label } + if (uses.size > 3) " + ${uses.size - 3} more" else ""
             }
             val first = run.first()
+            // Time counts for each app's own category; a named combination takes its own apps (even when something else was used
+            // for longer in the same stretch). Apps with no category in a mixed stretch count as Screen and leisure.
+            val creditCombo = bestCombo(active, combos, minShare = 0.0)
+            val credit = HashMap<String, Long>()
+            for (u in uses) {
+                val id = when {
+                    creditCombo != null && u.pkg in creditCombo.pkgs -> creditCombo.activityId
+                    u.activityId.isNotEmpty() -> u.activityId
+                    uses.size > 1 -> MIXED_ACTIVITY_ID
+                    else -> ""
+                }
+                if (id.isNotEmpty()) credit[id] = (credit[id] ?: 0L) + u.activeMs
+            }
             Block(
                 pkg = first.pkg,
                 label = title,
@@ -283,6 +269,8 @@ object UsageDays {
                 spans = run.map { it.startMs to it.endMs },
                 apps = uses,
                 comboId = combo?.id.orEmpty(),
+                appSpans = run.groupBy({ it.pkg }, { it.startMs to it.endMs }),
+                credit = credit,
             )
         }
 
@@ -290,7 +278,7 @@ object UsageDays {
             .map { (pkg, list) -> pkg to list.sumOf { it.endMs - it.startMs } }
             .sortedByDescending { it.second }
         val byActivity = HashMap<String, Long>()
-        for (b in blocks) if (b.activityId.isNotEmpty()) byActivity[b.activityId] = (byActivity[b.activityId] ?: 0L) + b.activeMs
+        for (b in blocks) for ((id, ms) in b.credit) byActivity[id] = (byActivity[id] ?: 0L) + ms
         return Day(
             blocks = blocks,
             totalMs = perApp.sumOf { it.second },

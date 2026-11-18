@@ -21,6 +21,7 @@ import com.lifetracker.app.data.InsideWalk
 import com.lifetracker.app.data.StepDayEntity
 import com.lifetracker.app.data.TodoEntity
 import com.lifetracker.app.data.PlacesSettings
+import com.lifetracker.app.data.PhoneJoin
 import com.lifetracker.app.data.StayJoin
 import com.lifetracker.app.data.TripAdjust
 import com.lifetracker.app.data.TripEntity
@@ -306,6 +307,20 @@ class TimelineViewModel(app: Application) : AndroidViewModel(app) {
     /** Joins the stay [dropId] into [keepId]: one stay on the Timeline (see [StayJoin]). */
     fun joinStays(keepId: String, dropId: String, keepTimes: Pair<Long, Long>, dropTimes: Pair<Long, Long>, trips: List<TripEntity>) {
         viewModelScope.launch { StayJoin.join(db, keepId, dropId, keepTimes, dropTimes, trips) }
+    }
+
+    /** Joins the phone period [dropRef] into the one before it, [keepRef] (see [PhoneJoin]). */
+    fun joinPhone(keepRef: String, dropRef: String, edits: Collection<TimelineEditEntity>) {
+        viewModelScope.launch {
+            for (e in PhoneJoin.join(keepRef, dropRef, edits, System.currentTimeMillis())) db.timelineEditDao().upsert(e)
+        }
+    }
+
+    /** Brings back every phone period that was joined into [keepRef]. */
+    fun separatePhone(keepRef: String, edits: Collection<TimelineEditEntity>) {
+        viewModelScope.launch {
+            for (e in PhoneJoin.separate(keepRef, edits, System.currentTimeMillis())) db.timelineEditDao().upsert(e)
+        }
     }
 
     /** Takes a join apart again (Undo). */

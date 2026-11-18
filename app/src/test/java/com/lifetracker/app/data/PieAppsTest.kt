@@ -58,6 +58,20 @@ class PieAppsTest {
     }
 
     @Test
+    fun anAppWithALogoColourUsesItInsteadOfTheCategoryShade() {
+        val c = 0xFF2E7D32.toInt()
+        val logo = 0xFFE1306C.toInt()
+        val stretches = listOf(
+            PieApps.Stretch("Social", c, "Instagram", 0, 10 * min),
+            PieApps.Stretch("Social", c, "Chat", 20 * min, 25 * min),
+        )
+        val out = PieApps.shaded(stretches, mapOf("Instagram" to logo))
+        assertEquals(logo, out[0].second)
+        // The app with no known logo colour still gets a category shade.
+        assertTrue(out[1].second != logo)
+    }
+
+    @Test
     fun appSlicesOfOneCategorySitTogetherInThePie() {
         val green = 0xFF2E7D32.toInt()
         val pieces = listOf(

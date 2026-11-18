@@ -88,7 +88,9 @@ import com.lifetracker.app.data.SleepStats
 import com.lifetracker.app.data.StepDayEntity
 import com.lifetracker.app.data.StepStats
 import com.lifetracker.app.data.TimelineEdits
+import com.lifetracker.app.data.PhoneJoin
 import com.lifetracker.app.data.StayJoin
+import com.lifetracker.app.data.TimelineStats
 import com.lifetracker.app.data.TripEditing
 import com.lifetracker.app.data.TimelineSettings
 import com.lifetracker.app.data.TimelineEditEntity
@@ -221,16 +223,29 @@ fun TimelineScreen(
         val (s, en) = TimelineEdits.times(t.startMs, t.endMs, e)
         t.copy(startMs = s, endMs = en)
     }
-    val blocksEff = (if (featureOn(Feature.PHONE_USAGE)) usageDay.blocks else emptyList()).mapNotNull { b ->
+    // A period you joined into the one before it is folded into that one (see PhoneJoin); the rest are shown as recorded.
+    val joinedInto = HashMap<String, MutableList<UsageDays.Block>>()
+    val blocksOwn = (if (featureOn(Feature.PHONE_USAGE)) usageDay.blocks else emptyList()).mapNotNull { b ->
         val e = editOf(TimelineEdits.APP, TimelineEdits.appRef(b.pkg, b.refStartMs))
+        PhoneJoin.keeperOf(e)?.let { keeper ->
+            joinedInto.getOrPut(keeper) { ArrayList() } += b
+            return@mapNotNull null
+        }
         if (TimelineEdits.isHidden(e)) return@mapNotNull null
         val (s, en) = TimelineEdits.times(b.startMs, b.endMs, e)
         val shift = s - b.startMs
         b.copy(
             startMs = s, endMs = en, activityId = TimelineEdits.category(e) ?: b.activityId,
             spans = b.spans.map { (from, to) -> (from + shift) to (to + shift) },
+            appSpans = b.appSpans.mapValues { (_, list) -> list.map { (from, to) -> (from + shift) to (to + shift) } },
         )
     }
+    val ownRefs = blocksOwn.map { TimelineEdits.appRef(it.pkg, it.refStartMs) }.toSet()
+    // A period joined into one that is not there any more (the day was worked out differently since) is shown as recorded.
+    val blocksEff = blocksOwn.map { b ->
+        val folded = joinedInto[TimelineEdits.appRef(b.pkg, b.refStartMs)]
+        if (folded == null) b else PhoneJoin.merge(b, folded.sortedBy { it.startMs })
+    } + joinedInto.filterKeys { it !in ownRefs }.values.flatten()
 
     var showLog by remember { mutableStateOf(false) }
     var toDelete by remember { mutableStateOf<EntryEntity?>(null) }
@@ -315,12 +330,23 @@ fun TimelineScreen(
     }
     // The same stretches split between the apps of each period (the Pie can show them, in shades of the category's colour).
     var appsInPie by remember { mutableStateOf(timelineSettings.appsInPie) }
+    val statCells = remember { timelineSettings.statsBox }
     val appStretches = if (!usageAccess || !appsInPie) emptyList() else blocksEff.flatMap {
         val t = it.activityId.takeIf { id -> id.isNotEmpty() }?.let { id -> types.byId(id) }
         val argb = t?.displayColor()?.toArgb() ?: 0xFF738078.toInt()
         val family = t?.name ?: "Phone"
         PieApps.split(it.spans.ifEmpty { listOf(it.startMs to it.endMs) }, it.apps.map { a -> a.label to a.activeMs })
             .map { (app, from, to) -> PieApps.Stretch(family, argb, app, from, to) }
+    }
+    // Each app's slice in the pie is the colour of its logo.
+    val logoColors = remember(appStretches.size, blocksEff.size) {
+        if (appStretches.isEmpty()) {
+            emptyMap<String, Int>()
+        } else {
+            val out = HashMap<String, Int>()
+            for (block in blocksEff) for (u in block.apps) AppIconColor.of(context, u.pkg)?.let { out[u.label] = it }
+            out
+        }
     }
     val collectedOther = buildList {
         sleepShown?.let {
@@ -346,7 +372,7 @@ fun TimelineScreen(
     val flatAll = DaySegments.flatten(loggedSegs + collectedSegs, dayStartMs, dayEndMs)
     // For the pie: the apps in place of their category's stretches.
     val flatPie = if (appStretches.isEmpty()) flatAll else DaySegments.flatten(
-        loggedSegs + collectedOther + PieApps.shaded(appStretches).map { (s, argb) -> DaySegments.Seg(s.fromMs, s.toMs, argb, s.app, false, s.family) },
+        loggedSegs + collectedOther + PieApps.shaded(appStretches, logoColors).map { (s, argb) -> DaySegments.Seg(s.fromMs, s.toMs, argb, s.app, false, s.family) },
         dayStartMs, dayEndMs,
     )
     val nowMarker = if (nowMs in dayStartMs until dayEndMs) nowMs else null
@@ -381,14 +407,14 @@ fun TimelineScreen(
         kind: String, ref: String, title: String, startMs: Long, endMs: Long?,
         extraLabel: String? = null, onExtra: (() -> Unit)? = null, openLabel: String? = null, onOpen: (() -> Unit)? = null,
         extra2Label: String? = null, onExtra2: (() -> Unit)? = null,
-        details: List<String> = emptyList(), detailsTitle: String = "Inside",
+        details: List<String> = emptyList(), detailsTitle: String = "Inside", detailOpens: List<List<Pair<Long, Long>>> = emptyList(),
         onDelete: (() -> Unit)? = null, deleteLabel: String = "Delete",
     ): EditTarget {
         val e = edits[TimelineEdits.key(kind, ref)]
         return EditTarget(
             kind, ref, title, startMs, endMs, TimelineEdits.category(e).orEmpty(), e != null && !e.hidden, dayStartOf(startMs),
             extraLabel = extraLabel, onExtra = onExtra, extra2Label = extra2Label, onExtra2 = onExtra2, openLabel = openLabel, onOpen = onOpen,
-            details = details, detailsTitle = detailsTitle, onDelete = onDelete, deleteLabel = deleteLabel,
+            details = details, detailsTitle = detailsTitle, detailOpens = detailOpens, onDelete = onDelete, deleteLabel = deleteLabel,
         )
     }
     val actions = DayActions(
@@ -432,6 +458,7 @@ fun TimelineScreen(
                             u.label + " · " + formatDuration(((u.activeMs + 30_000L) / 60_000L).toInt().coerceAtLeast(1)) +
                                 (if (u.opens > 1) " · opened ${u.opens} times" else "")
                         },
+                        detailOpens = b.apps.map { u -> b.appSpans[u.pkg].orEmpty().sortedBy { it.first } },
                         detailsTitle = if (b.apps.size > 1) "Apps in this period" else "Opened",
                         extraLabel = when {
                             b.apps.size < 2 -> "Set this app's category on every day"
@@ -442,12 +469,21 @@ fun TimelineScreen(
                             if (b.apps.size > 1) comboFor = b
                             else editApp = usageApps[b.pkg] ?: UsageAppEntity(b.pkg, b.label, "", false)
                         },
+                        extra2Label = if (b.joined.isNotEmpty()) "Separate the joined periods again" else null,
+                        onExtra2 = if (b.joined.isNotEmpty()) ({ vm.separatePhone(TimelineEdits.appRef(b.pkg, b.refStartMs), edits.values) }) else null,
                     )
                 }
                 else -> Unit
             }
         },
         onJoinStays = { first, second -> joinAsk = first to second },
+        onJoinPhone = { first, second ->
+            // The earlier period keeps going; the later one is folded into it.
+            val (early, late) = if (first.startMs <= second.startMs) first to second else second to first
+            val a = early.ref as? UsageDays.Block
+            val b = late.ref as? UsageDays.Block
+            if (a != null && b != null) vm.joinPhone(TimelineEdits.appRef(a.pkg, a.refStartMs), TimelineEdits.appRef(b.pkg, b.refStartMs), edits.values)
+        },
         onEditPlace = { p ->
             val (before, after) = DayLayout.stayNeighbours(rows, p.key)
             editTarget = target(
@@ -468,7 +504,7 @@ fun TimelineScreen(
             )
         },
     )
-    val hiddenToday = edits.values.filter { it.hidden && !TripEditing.isJoinedAway(it) && !StayJoin.isJoined(it) && it.startMs in dayStartMs until dayEndMs }
+    val hiddenToday = edits.values.filter { it.hidden && !TripEditing.isJoinedAway(it) && !StayJoin.isJoined(it) && !PhoneJoin.isJoined(it) && it.startMs in dayStartMs until dayEndMs }
     val anyTimeTodos = todos.filter { it.minutes == null }
     val anyTimeNotes = notes.filter { it.minutes == null }
     val plannedMinutes = todos.filter { !it.done }.sumOf { it.estimate ?: 0 }
@@ -492,11 +528,19 @@ fun TimelineScreen(
             item(key = "view-switch") {
                 PaperSegmented(listOf("Timeline", "Pie"), if (pie) 1 else 0, { pie = it == 1 })
             }
-            item(key = "day-numbers") {
-                PaperTrio(
-                    steps = if (stepCount > 0) StepStats.text(stepCount) else "–",
-                    phone = if (phoneMinutes > 0) formatDuration(phoneMinutes) else "–",
-                    study = if (studyMinutes > 0) formatDuration(studyMinutes) else "–",
+            if (statCells.isNotEmpty()) item(key = "day-numbers") {
+                PaperStats(
+                    statCells.map { cell ->
+                        cell.label to when (cell) {
+                            TimelineStats.Cell.STEPS -> if (stepCount > 0) StepStats.text(stepCount) else "–"
+                            TimelineStats.Cell.PHONE -> if (phoneMinutes > 0) formatDuration(phoneMinutes) else "–"
+                            TimelineStats.Cell.STUDIED -> if (studyMinutes > 0) formatDuration(studyMinutes) else "–"
+                            TimelineStats.Cell.SLEEP -> sleepShown?.let { formatDuration(((it.endMs - it.startMs) / 60_000L).toInt()) } ?: "–"
+                            TimelineStats.Cell.CALLS -> if (shownCalls.isNotEmpty()) shownCalls.size.toString() else "–"
+                            TimelineStats.Cell.FOOD -> mealsEff.sumOf { it.kcal }.let { if (it > 0) Math.round(it).toString() + " kcal" else "–" }
+                            TimelineStats.Cell.PLACES -> rows.count { it is DayLayout.Place }.let { if (it > 0) it.toString() else "–" }
+                        }
+                    },
                 )
             }
             if (pie) {
@@ -508,10 +552,29 @@ fun TimelineScreen(
                         )
                     }
                 }
+                item(key = "activity-pills") { ActivityPills(DaySegments.byLabel(flatAll)) }
                 item(key = "pie") { DayPieView(pieSegs, whereSegs, if (showTrips) tripsEff else emptyList()) }
             } else {
-                item(key = "activity-pills") { ActivityPills(DaySegments.byLabel(flatAll)) }
-                if (rows.isNotEmpty()) item(key = "in-order-heading") { PaperSection("In order", "tap a row to open it") }
+                if (rows.isNotEmpty()) item(key = "in-order-heading") {
+                    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Box(modifier = Modifier.weight(1f)) { PaperSection("In order", "tap a row to open it") }
+                        // One small icon, so the button does not take a whole line.
+                        if (rows.any { it is DayLayout.Place || it is DayLayout.Travel }) {
+                            val ink = LocalPaper.current.ink2
+                            Icon(
+                                painter = painterResource(if (collapsed) R.drawable.ic_chevrons_updown else R.drawable.ic_chevrons_downup),
+                                contentDescription = if (collapsed) "Expand every place and trip" else "Collapse every place and trip",
+                                modifier = Modifier
+                                    .padding(start = 6.dp)
+                                    .clip(CircleShape)
+                                    .clickable { collapsed = !collapsed; timelineSettings.collapseAll = collapsed }
+                                    .padding(8.dp)
+                                    .size(20.dp),
+                                tint = ink,
+                            )
+                        }
+                    }
+                }
             }
             if (pie) {
                 // Only the pie is shown.
@@ -556,15 +619,6 @@ fun TimelineScreen(
                         Text(
                             "Two stays side by side? Hold one and drag it onto the other to join them.",
                             fontSize = 11.5.sp, color = LocalPaper.current.ink2,
-                        )
-                    }
-                }
-                if (rows.any { it is DayLayout.Place || it is DayLayout.Travel }) {
-                    item(key = "collapse-all") {
-                        PaperButton(
-                            if (collapsed) "Expand every place and trip" else "Collapse every place and trip",
-                            { collapsed = !collapsed; timelineSettings.collapseAll = collapsed },
-                            style = PaperButtonStyle.Ghost, small = true,
                         )
                     }
                 }
@@ -753,7 +807,7 @@ fun TimelineScreen(
     }
 
     if (showHidden) {
-        val hidden = edits.values.filter { it.hidden && !TripEditing.isJoinedAway(it) && !StayJoin.isJoined(it) && it.startMs in dayStartMs until dayEndMs }.sortedBy { it.startMs }
+        val hidden = edits.values.filter { it.hidden && !TripEditing.isJoinedAway(it) && !StayJoin.isJoined(it) && !PhoneJoin.isJoined(it) && it.startMs in dayStartMs until dayEndMs }.sortedBy { it.startMs }
         PaperDialog(title = "Hidden by you", onDismiss = { showHidden = false }, dismissText = "Close") {
             if (hidden.isEmpty()) Text("Nothing is hidden on this day.", color = LocalPaper.current.ink2)
             hidden.forEach { e ->

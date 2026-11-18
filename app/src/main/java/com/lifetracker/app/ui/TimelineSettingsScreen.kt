@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lifetracker.app.data.TimelineSettings
+import com.lifetracker.app.data.TimelineStats
 import com.lifetracker.app.data.TripGuess
 
 /**
@@ -31,6 +32,7 @@ fun TimelineSettingsScreen(onBack: () -> Unit) {
     var ask by remember { mutableStateOf(settings.askHowTravelled) }
     var keep by remember { mutableStateOf(settings.rememberCategoryChanges) }
     var appsInPie by remember { mutableStateOf(settings.appsInPie) }
+    var statCells by remember { mutableStateOf(settings.statsBox) }
     val context = LocalContext.current
     var guess by remember { mutableStateOf(TripGuess.enabled) }
     BackHandler(onBack = onBack)
@@ -41,6 +43,29 @@ fun TimelineSettingsScreen(onBack: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item { SettingsTop("Timeline", "What a day shows and asks", onBack) }
+
+        item { PaperSection("The box above the day", "pick what it shows") }
+        item {
+            SetCard {
+                TimelineStats.Cell.entries.forEachIndexed { i, cell ->
+                    ToggleRow(
+                        cell.label, cell in statCells,
+                        { on ->
+                            statCells = if (on) statCells + cell else statCells - cell
+                            settings.statsBox = statCells
+                        },
+                        hint = cell.hint, first = i == 0,
+                    )
+                }
+            }
+        }
+        item {
+            Text(
+                "Switch them all off to hide the box and give the day more room.",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
 
         item { PaperSection("What the day shows") }
         item {
@@ -75,7 +100,7 @@ fun TimelineSettingsScreen(onBack: () -> Unit) {
             SetCard {
                 ToggleRow(
                     "Ask how I travelled", ask, { ask = it; settings.askHowTravelled = it },
-                    hint = "Quick buttons under a journey with an unknown way", first = true,
+                    hint = "Off: a journey with an unknown way just says Moved and how far. On: quick buttons under it", first = true,
                 )
                 ToggleRow(
                     "Remember my category changes", keep, { keep = it; settings.rememberCategoryChanges = it },

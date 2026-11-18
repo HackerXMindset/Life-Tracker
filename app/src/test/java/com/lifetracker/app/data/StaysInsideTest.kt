@@ -157,7 +157,7 @@ class StaysInsideTest {
     fun withGuessingOnTheOldWordsComeBack() {
         TripGuess.forTest(true)
         assertTrue(TripModes.title(guessed("walk")).endsWith("(guess)"))
-        assertEquals("Unknown way of travel", TripModes.title(guessed("vehicle")))
+        assertEquals("Moved", TripModes.title(guessed("vehicle")))
         assertTrue(TripModes.styledUnknown(guessed("vehicle")))
         assertFalse(TripModes.asksHow(guessed("walk")))
         assertTrue(TripModes.asksHow(guessed("vehicle")))
