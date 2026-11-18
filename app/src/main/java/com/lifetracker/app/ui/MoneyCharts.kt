@@ -28,6 +28,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -64,6 +66,7 @@ fun SpendBars(
     period: Period,
     today: LocalDate,
     selected: Int?,
+    describe: (MoneyViews.Bucket) -> String,
     onSelect: (Int?) -> Unit,
 ) {
     val paper = LocalPaper.current
@@ -95,6 +98,7 @@ fun SpendBars(
                     .weight(1f)
                     .fillMaxHeight()
                     .clip(RoundedCornerShape(4.dp))
+                    .semantics(mergeDescendants = true) { contentDescription = describe(b) }
                     .clickable { onSelect(if (picked) null else i) },
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Bottom,
@@ -150,6 +154,7 @@ fun SpendCalendar(
     daily: Map<LocalDate, Double>,
     today: LocalDate,
     selected: LocalDate?,
+    describe: (LocalDate, Double) -> String,
     onSelect: (LocalDate?) -> Unit,
 ) {
     val paper = LocalPaper.current
@@ -184,6 +189,7 @@ fun SpendCalendar(
                                     },
                                 )
                                 .clip(shape)
+                                .semantics(mergeDescendants = true) { contentDescription = describe(day, daily[day] ?: 0.0) }
                                 .clickable { onSelect(if (picked) null else day) },
                             contentAlignment = Alignment.Center,
                         ) {

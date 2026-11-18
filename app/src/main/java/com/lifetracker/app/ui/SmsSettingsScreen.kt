@@ -31,6 +31,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.lifetracker.app.data.CallsCollector
+import com.lifetracker.app.data.Feature
+import com.lifetracker.app.data.Features
 import com.lifetracker.app.data.GmailLog
 import com.lifetracker.app.data.GmailSettings
 import com.lifetracker.app.data.KIND_INCOME
@@ -61,6 +63,7 @@ fun SmsSettingsScreen(onBack: () -> Unit) {
     val allowed = remember(tick) { SmsSync.hasAccess(context) }
     val recent = remember(tick) { log.recent().sortedByDescending { it.atMs } }
     val last = remember(tick) { settings.lastLine }
+    val moneyOn = remember(tick) { Features.isOn(context, Feature.MONEY) }
     var reading by remember { mutableStateOf(false) }
     var months by remember { mutableIntStateOf(settings.months) }
     var income by remember { mutableStateOf(settings.includeIncome) }
@@ -96,6 +99,14 @@ fun SmsSettingsScreen(onBack: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item { SettingsTop("SMS purchases", "Money from bank and UPI texts", onBack) }
+        if (!moneyOn) {
+            item {
+                Text(
+                    "The Money feature is switched off, so nothing will be added to the Money tab until you switch it on (Settings → Features).",
+                    fontSize = 13.sp, color = p.bad, fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
         item {
             Text(
                 "Kairos reads the texts your bank, card and UPI apps send (\"Rs.471 debited ... to ZOMATO\") and adds each payment to the Money tab with the shop, the amount and the day. " +

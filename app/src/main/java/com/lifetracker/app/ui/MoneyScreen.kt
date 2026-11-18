@@ -102,11 +102,17 @@ fun MoneyScreen(vm: MoneyViewModel = viewModel()) {
     val sort = MoneyStats.Sort.entries[sortIndex]
     val totals = MoneyStats.totals(entries)
     val previousTotals = remember(previous) { MoneyStats.totals(previous) }
-    val today = remember { LocalDate.now() }
+    // Read each time, so a screen left open past midnight still knows what today is.
+    val today = LocalDate.now()
     val title = remember(period, anchor, today) { MoneyViews.title(period, anchor, today) }
     val buckets = remember(entries, period, anchor) { MoneyViews.buckets(period, anchor, entries) }
     var selectedDay by remember(period, anchor) { mutableStateOf<LocalDate?>(null) }
     var calendarMode by remember { mutableStateOf(false) }
+    val dailyByDay = remember(entries) { MoneyViews.dailySpent(entries) }
+    // What the cards and the list below show: the whole period, or only the day picked in the chart.
+    val shown = remember(entries, selectedDay) { selectedDay?.let { d -> entries.filter { it.date == d.toString() } } ?: entries }
+    val cats = remember(shown) { MoneyStats.byCategory(shown, KIND_EXPENSE) }
+    val places = remember(shown) { MoneyViews.places(shown, KIND_EXPENSE).take(5) }
     fun money(v: Double) = MoneyStats.format(v, currency)
 
     val activeItems = items.filter { !it.archived }
@@ -187,9 +193,10 @@ fun MoneyScreen(vm: MoneyViewModel = viewModel()) {
                             if (period == Period.Month && calendarMode) {
                                 SpendCalendar(
                                     month = YearMonth.from(MoneyViews.start(period, anchor)),
-                                    daily = MoneyViews.dailySpent(entries),
+                                    daily = dailyByDay,
                                     today = today,
                                     selected = selectedDay,
+                                    describe = { d, v -> dayLabel(d.toString()) + ", spent " + money(v) },
                                     onSelect = { selectedDay = it },
                                 )
                             } else {
@@ -198,6 +205,10 @@ fun MoneyScreen(vm: MoneyViewModel = viewModel()) {
                                     period = period,
                                     today = today,
                                     selected = buckets.indexOfFirst { it.start == selectedDay }.takeIf { it >= 0 },
+                                    describe = { b ->
+                                        (if (period == Period.Year) b.start.format(DateTimeFormatter.ofPattern("MMMM yyyy")) else dayLabel(b.start.toString())) +
+                                            ", spent " + money(b.spent)
+                                    },
                                     onSelect = { i ->
                                         if (period == Period.Year) {
                                             if (i != null) vm.open(Period.Month, buckets[i].start)
@@ -214,7 +225,7 @@ fun MoneyScreen(vm: MoneyViewModel = viewModel()) {
                                 when {
                                     period == Period.Year -> "Tap a month to open it."
                                     picked != null -> dayLabel(picked.start.toString()) + " · " + money(picked.spent)
-                                    sd != null -> dayLabel(sd.toString()) + " · " + money(MoneyViews.dailySpent(entries)[sd] ?: 0.0)
+                                    sd != null -> dayLabel(sd.toString()) + " · " + money(dailyByDay[sd] ?: 0.0)
                                     busiest != null -> "Busiest: " + dayLabel(busiest.start.toString()) + " · " + money(busiest.spent) + ". Tap a day to look at it."
                                     else -> "Tap a day to look at it."
                                 },
@@ -254,7 +265,6 @@ fun MoneyScreen(vm: MoneyViewModel = viewModel()) {
                     }
                 }
             } else {
-                val shown = selectedDay?.let { d -> entries.filter { it.date == d.toString() } } ?: entries
                 if (selectedDay != null) {
                     item(key = "showing") {
                         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -264,7 +274,6 @@ fun MoneyScreen(vm: MoneyViewModel = viewModel()) {
                     }
                 }
 
-                val cats = MoneyStats.byCategory(shown, KIND_EXPENSE)
                 if (cats.isNotEmpty()) {
                     item(key = "donut") {
                         val sum = cats.sumOf { it.second }
@@ -298,7 +307,6 @@ fun MoneyScreen(vm: MoneyViewModel = viewModel()) {
                     }
                 }
 
-                val places = MoneyViews.places(shown, KIND_EXPENSE).take(5)
                 if (places.isNotEmpty()) {
                     item(key = "places") {
                         PaperCard(modifier = Modifier.fillMaxWidth()) {

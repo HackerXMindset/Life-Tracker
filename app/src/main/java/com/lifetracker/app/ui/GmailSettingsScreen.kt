@@ -31,6 +31,8 @@ import androidx.compose.ui.unit.sp
 import com.google.android.gms.auth.api.identity.AuthorizationResult
 import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.gms.common.api.ApiException
+import com.lifetracker.app.data.Feature
+import com.lifetracker.app.data.Features
 import com.lifetracker.app.data.GmailAccounts
 import com.lifetracker.app.data.GmailAuth
 import com.lifetracker.app.data.GmailClient
@@ -80,6 +82,7 @@ fun GmailSettingsScreen(onBack: () -> Unit) {
     val recent = remember(tick) { log.recent().sortedByDescending { it.atMs } }
     val ignored = remember(tick) { settings.ignored().sorted() }
     val last = remember(tick) { GmailRunState(context).lastLine }
+    val moneyOn = remember(tick) { Features.isOn(context, Feature.MONEY) }
     var message by remember { mutableStateOf("") }
     var reading by remember { mutableStateOf(false) }
     var progress by remember { mutableStateOf("") }
@@ -151,6 +154,14 @@ fun GmailSettingsScreen(onBack: () -> Unit) {
                     "Delete an entry and it does not come back. When the total is not certain, the email waits in a short list below.",
                 fontSize = 13.sp, color = p.ink2,
             )
+        }
+        if (!moneyOn) {
+            item {
+                Text(
+                    "The Money feature is switched off, so nothing will be added to the Money tab until you switch it on (Settings → Features).",
+                    fontSize = 13.sp, color = p.bad, fontWeight = FontWeight.SemiBold,
+                )
+            }
         }
         if (message.isNotEmpty()) item { Text(message, fontSize = 13.sp, color = p.ink, fontWeight = FontWeight.SemiBold) }
 
